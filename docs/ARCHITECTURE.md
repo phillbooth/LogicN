@@ -152,6 +152,30 @@ workspace note is `docs/APP_CRASH_HANDLING. md`.
 
 
 
+The runtime architecture direction is the LogicN Securely Governed Runtime.
+
+Runtime authority must be established before code acts. Policy, capabilities,
+effects and audit hooks are part of execution itself, not optional middleware.
+The runtime should separate a small trusted core, a governed runtime zone and an
+untrusted zone for plugins, third-party packages, external services,
+AI-generated code, unsafe interop and hardware accelerators.
+
+Execution should follow:
+
+```text
+request -> planning -> verification -> capability locking -> execution -> audit proof
+```
+
+The runtime may use verified fast paths only when a workload matches a known
+execution signature and the fast path lease remains valid. Fast paths must not
+bypass policy, capability checks, effect boundaries, data contracts or audit.
+
+AI workloads should be described as typed AI compute plans rather than opaque
+model calls. The runtime can then enforce policy, minimise data, reduce copying,
+batch compatible work, choose suitable hardware and produce compliance evidence.
+
+
+
 Environment secret handling is a typed security boundary.
 
  `.

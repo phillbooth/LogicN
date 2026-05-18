@@ -1,3 +1,6 @@
+this the content is also requied to be stored in the knowlagebase folder in one or mutiple documents as a concept not as a discussion, name the file after the concept for indexing in .md format C:\laragon\www\LO\docs\Knowledge-Bases
+
+analyse this document, update concepts, documents and todo's with in reason
 # Framework: Core Model
 
 ## Purpose

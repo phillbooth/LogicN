@@ -80,6 +80,19 @@ must not be treated as implemented app functionality.
   explicit fallback handling. For security-sensitive matches, catch-all branches
   must return a typed error, explicit ignored response, safe log, manual review
   or fail-closed result instead of silently swallowing unknown states.
+- LogicN runtime execution must follow the Securely Governed Runtime direction:
+  authority is verified before execution; policy, capabilities, effects and
+  audit hooks are part of execution itself; untrusted packages, plugins,
+  AI-generated code, external services and hardware accelerators may execute
+  only through declared boundaries.
+- LogicN may use verified fast paths only for workloads that match a known
+  execution signature. Fast paths must expire, remain auditable and revalidate
+  when policy, package versions, model versions, hardware, trust state or output
+  contracts change.
+- LogicN AI workloads must be declared as typed AI compute plans rather than
+  opaque model calls. Plans should declare input/output types, model class, data
+  sensitivity, precision, latency, compute target, memory needs, allowed tools
+  and audit needs.
 - LogicN must not claim production language maturity until it has an enforceable
   language core: parser, AST, symbol table, type checker, memory checker, effect
   checker, module system, protocols/interfaces, trusted interop boundary, test

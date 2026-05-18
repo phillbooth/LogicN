@@ -7,7 +7,7 @@
 </head>
 <body>
 <h1>LogicN Project Graph</h1>
-<p>1127 nodes, 1969 relationships.</p>
+<p>1124 nodes, 1970 relationships.</p>
 <h2>Nodes</h2>
 <ul><li><strong>logicn-core</strong> <span>Package</span></li>
 <li><strong>logicn-core-compiler</strong> <span>Package</span></li>
@@ -117,6 +117,7 @@
 <li><strong>framework-secure-flows.md</strong> <span>Document</span></li>
 <li><strong>framework-secure-runtime.md</strong> <span>Document</span></li>
 <li><strong>framework-tests.md</strong> <span>Document</span></li>
+<li><strong>ai-compute-plan.md</strong> <span>Document</span></li>
 <li><strong>benchmark-success-plan.md</strong> <span>Document</span></li>
 <li><strong>boundary-safety-proof.md</strong> <span>Document</span></li>
 <li><strong>capabilities.md</strong> <span>Document</span></li>
@@ -129,8 +130,10 @@
 <li><strong>permission-capability-actor-model.md</strong> <span>Document</span></li>
 <li><strong>photonic-resolution-boundary.md</strong> <span>Document</span></li>
 <li><strong>scoped-vaults.md</strong> <span>Document</span></li>
+<li><strong>securely-governed-runtime.md</strong> <span>Document</span></li>
 <li><strong>software-as-declared-intent.md</strong> <span>Document</span></li>
 <li><strong>startup-and-boot-warmup.md</strong> <span>Document</span></li>
+<li><strong>verified-fast-paths.md</strong> <span>Document</span></li>
 <li><strong>KUBERNETES_DEPLOYMENT.md</strong> <span>Document</span></li>
 <li><strong>LEARNING_MODE.md</strong> <span>Document</span></li>
 <li><strong>logicn-logic-compute-runtime-proposal.md</strong> <span>Document</span></li>
@@ -325,12 +328,6 @@
 <li><strong>warnings-and-diagnostics.md</strong> <span>Document</span></li>
 <li><strong>webhooks.md</strong> <span>Document</span></li>
 <li><strong>xml-support.md</strong> <span>Document</span></li>
-<li><strong>compute-mix-throughput-2026-05-17T11-20-57-851Z.json</strong> <span>Document</span></li>
-<li><strong>compute-mix-throughput-2026-05-17T11-43-52-543Z.json</strong> <span>Document</span></li>
-<li><strong>compute-mix-throughput-2026-05-17T11-49-25-521Z.json</strong> <span>Document</span></li>
-<li><strong>compute-mix-throughput-2026-05-17T11-52-31-927Z.json</strong> <span>Document</span></li>
-<li><strong>compute-mix-throughput-2026-05-17T11-52-42-230Z.json</strong> <span>Document</span></li>
-<li><strong>compute-mix-throughput-2026-05-17T11-58-15-343Z.json</strong> <span>Document</span></li>
 <li><strong>README.md</strong> <span>Document</span></li>
 <li><strong>GETTING_STARTED.md</strong> <span>Document</span></li>
 <li><strong>GIT.md</strong> <span>Document</span></li>
@@ -1327,6 +1324,12 @@
 <li>doc:docs/framework/framework-project-structure.md <code>documents</code> package:logicn-framework-api-server</li>
 <li>doc:docs/framework/framework-project-structure.md <code>documents</code> package:logicn-devtools-project-graph</li>
 <li>doc:docs/framework/framework-project-structure.md <code>documents</code> package:logicn-framework-example-app</li>
+<li>doc:docs/Knowledge-Bases/ai-compute-plan.md <code>documents</code> package:logicn-core</li>
+<li>doc:docs/Knowledge-Bases/ai-compute-plan.md <code>documents</code> package:logicn-core-runtime</li>
+<li>doc:docs/Knowledge-Bases/ai-compute-plan.md <code>documents</code> package:logicn-core-security</li>
+<li>doc:docs/Knowledge-Bases/ai-compute-plan.md <code>documents</code> package:logicn-core-reports</li>
+<li>doc:docs/Knowledge-Bases/ai-compute-plan.md <code>documents</code> package:logicn-core-compute</li>
+<li>doc:docs/Knowledge-Bases/ai-compute-plan.md <code>documents</code> package:logicn-ai</li>
 <li>doc:docs/Knowledge-Bases/benchmark-success-plan.md <code>documents</code> package:logicn-core</li>
 <li>doc:docs/Knowledge-Bases/startup-and-boot-warmup.md <code>documents</code> package:logicn-core</li>
 <li>doc:docs/Knowledge-Bases/startup-and-boot-warmup.md <code>documents</code> package:logicn-core-runtime</li>
@@ -1630,12 +1633,6 @@
 <li>package:logicn-core <code>owns</code> report:packages-logicn/logicn-core/build/examples/app.precision-report.json</li>
 <li>package:logicn-core <code>owns</code> report:packages-logicn/logicn-core/build/examples/app.runtime-report.json</li>
 <li>package:logicn-core <code>owns</code> doc:packages-logicn/logicn-core/build/examples/app.schemas.json</li>
-<li>package:logicn-core <code>owns</code> report:packages-logicn/logicn-core/build/examples/app.security-report.json</li>
-<li>package:logicn-core <code>owns</code> doc:packages-logicn/logicn-core/build/examples/app.source-map.json</li>
-<li>package:logicn-core <code>owns</code> report:packages-logicn/logicn-core/build/examples/app.target-report.json</li>
-<li>package:logicn-core <code>owns</code> doc:packages-logicn/logicn-core/build/examples/app.tokens.json</li>
-<li>package:logicn-core <code>owns</code> doc:packages-logicn/logicn-core/build/examples/docs/ai-summary.md</li>
-<li>package:logicn-core <code>owns</code> doc:packages-logicn/logicn-core/build/examples/docs/api-guide.md</li>
-<li>package:logicn-core <code>owns</code> doc:packages-logicn/logicn-core/build/examples/docs/deployment-guide.md</li></ul>
+<li>package:logicn-core <code>owns</code> report:packages-logicn/logicn-core/build/examples/app.security-report.json</li></ul>
 </body>
 </html>

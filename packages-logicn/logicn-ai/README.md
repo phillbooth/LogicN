@@ -22,7 +22,37 @@ passive LLM cache policy contracts
 LLM provider cache key contracts
 embedding cache policy contracts
 target-neutral generation contracts
+AI compute plan declarations
 ```
+
+## AI Compute Plans
+
+`logicn-ai` should describe AI work as typed, governed compute plans rather than
+opaque model calls.
+
+AI compute plans should declare:
+
+```text
+input type
+output type
+model class
+data sensitivity
+precision
+latency target
+compute target
+memory needs
+allowed tools
+audit needs
+```
+
+This lets `logicn-core-runtime` enforce policy before execution, reduce copying,
+batch compatible work, choose smaller models or quantised execution where safe,
+and validate typed outputs.
+
+AI compute plans must not let AI grant capabilities to itself or bypass policy,
+type checks, effect checks, data minimisation or audit.
+
+See `../../docs/Knowledge-Bases/ai-compute-plan.md`.
 
 ## Boundary
 

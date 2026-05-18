@@ -84,6 +84,9 @@ All notable changes to this app should be documented here.
 - Added a Match Catch-All Branch concept documenting `_ => { ... }` as the
   explicit fallback branch for `match`, including webhook and security-sensitive
   handling rules.
+- Added Securely Governed Runtime, AI Compute Plan and Verified Fast Paths
+  Knowledge Base concepts, plus runtime package guidance and TODOs for governed
+  execution plans, AI compute hooks and fast path signatures.
 - Expanded scoped vaults as the no-global-variable efficiency model, including
   vault scopes, capability-based access, `VaultRef`, safe write declarations,
   vault reports and fast response planning.

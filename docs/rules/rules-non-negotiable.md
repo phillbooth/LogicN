@@ -13,6 +13,9 @@ These rules define behavior LogicN must not silently weaken.
 - Production data fields must be classified.
 - Secrets redact by default.
 - Effects must be declared.
+- Runtime authority must be verified before execution.
+- Policy, capabilities, effects and audit boundaries are part of execution, not
+  optional middleware.
 - Sensitive action requires permission.
 - Sensitive data exposure requires permission.
 - Package authority must be explicit.
@@ -27,6 +30,9 @@ These rules define behavior LogicN must not silently weaken.
 - Native interop must be explicit, permissioned and reportable.
 - Runtime mutation and monkey patching are forbidden in normal code.
 - Target fallback must be declared and reported.
+- Verified fast paths must never bypass policy, capability limits, effect
+  boundaries, data contracts or audit requirements.
+- AI compute must be declared, typed, permissioned, bounded and auditable.
 - Photonic and optical values must be resolved or matched before controlling
   ordinary application flow.
 - Generated AI content starts untrusted.

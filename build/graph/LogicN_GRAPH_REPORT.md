@@ -1,15 +1,15 @@
 # LogicN Graph Report
 
 Workspace: LogicN-app
-Generated: 2026-05-17T17:45:41.514Z
+Generated: 2026-05-18T16:26:41.680Z
 
 ## Summary
 
 - Packages: 54
-- Documents: 517
+- Documents: 514
 - Types/interfaces: 376
 - Functions: 154
-- Relationships: 1969
+- Relationships: 1970
 
 ## Package Nodes
 

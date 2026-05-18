@@ -30,7 +30,103 @@ network timeout and backpressure enforcement hooks
 runtime reports
 verified boot-profile loading
 safe startup warmup hooks
+governed execution planning
+verified fast path planning
+AI compute plan execution hooks
 ```
+
+## Securely Governed Runtime
+
+`logicn-core-runtime` should evolve as the execution package for the LogicN
+Securely Governed Runtime direction.
+
+The runtime philosophy is:
+
+```text
+Security first.
+Code second.
+Authority never implicit.
+```
+
+The runtime must establish governance before code acts. Packages, plugins,
+AI tools, storage, network access and compute targets must not receive authority
+automatically.
+
+Runtime execution should follow:
+
+```text
+request
+ -> planning
+ -> verification
+ -> capability locking
+ -> execution
+ -> audit proof
+```
+
+The runtime should treat policy, effects, capabilities and audit hooks as part
+of execution itself rather than external middleware.
+
+Core runtime zones:
+
+```text
+trusted core           execution integrity, memory integrity, policy and audit
+governed runtime zone  application execution, effects, packages and AI/tool work
+untrusted zone         plugins, third-party packages, external services, hardware accelerators and unsafe interop
+```
+
+Untrusted systems may execute only through declared boundaries.
+
+See `../../docs/Knowledge-Bases/securely-governed-runtime.md`.
+
+## Verified Fast Paths
+
+The runtime may use verified fast paths to reduce repeated planning,
+validation, allocation and compute negotiation.
+
+A verified fast path is not less security. It is pre-verified execution for a
+workload that matches a known execution signature.
+
+Fast paths must never bypass:
+
+```text
+policy
+capability limits
+effect boundaries
+data contracts
+audit requirements
+```
+
+Fast path authority is leased and contextual, never permanent. Fast paths must
+expire and must be invalidated when policy, package versions, model versions,
+hardware, trust state or output contracts change.
+
+See `../../docs/Knowledge-Bases/verified-fast-paths.md`.
+
+## AI Compute Plans
+
+The runtime should understand AI workloads as declared compute plans rather than
+opaque model calls.
+
+AI compute plans should declare:
+
+```text
+input type
+output type
+model class
+data sensitivity
+precision
+latency target
+compute target
+memory needs
+allowed tools
+audit needs
+```
+
+This lets the runtime enforce policy before execution, reduce copying, batch
+compatible work, select suitable CPU/GPU/NPU/WASM targets, validate typed output
+and produce compliance evidence.
+
+See `../../docs/Knowledge-Bases/ai-compute-plan.md`.
 
 ## Startup And Boot Warmup
 

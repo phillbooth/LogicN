@@ -74,6 +74,9 @@
 - [x] Add framework docs for routes, classification, context, scopes/lifetimes,
   errors, packages and tests
 - [x] Document `_ => { ... }` match catch-all branches and safe fallback rules
+- [x] Document LogicN Securely Governed Runtime principles and trust zones
+- [x] Document AI compute plans as typed, governed runtime work
+- [x] Document verified fast paths as leased, auditable execution signatures
 - [x] Document scoped vaults as controlled runtime state instead of global
   variables
 - [x] Document scoped vaults as a fast response mechanism with typed owner,
@@ -115,6 +118,9 @@
   `logicn-target-ai-accelerator`
 - [x] Add package scaffold for `logicn-devtools-project-graph`
 - [x] Add package scaffold for `logicn-tools-benchmark`
+- [ ] Add runtime contract implementation for governed execution plans
+- [ ] Add runtime contract implementation for verified fast path signatures
+- [ ] Add runtime contract implementation for AI compute plan hooks
 - [x] Add TODO documents for `logicn-framework-api-server` and `logicn-framework-app-kernel`
 - [x] Add README and TODO documents for `packages-logicn/logicn-framework-example-app`
 - [ ] Add unit tests

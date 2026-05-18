@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-05-17T17:45:41.514Z",
+  "generatedAt": "2026-05-18T16:26:41.680Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -1029,6 +1029,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/ai-compute-plan.md",
+      "kind": "Document",
+      "label": "ai-compute-plan.md",
+      "sourcePath": "docs/Knowledge-Bases/ai-compute-plan.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/benchmark-success-plan.md",
       "kind": "Document",
       "label": "benchmark-success-plan.md",
@@ -1137,6 +1146,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/securely-governed-runtime.md",
+      "kind": "Document",
+      "label": "securely-governed-runtime.md",
+      "sourcePath": "docs/Knowledge-Bases/securely-governed-runtime.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/software-as-declared-intent.md",
       "kind": "Document",
       "label": "software-as-declared-intent.md",
@@ -1150,6 +1168,15 @@
       "kind": "Document",
       "label": "startup-and-boot-warmup.md",
       "sourcePath": "docs/Knowledge-Bases/startup-and-boot-warmup.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/verified-fast-paths.md",
+      "kind": "Document",
+      "label": "verified-fast-paths.md",
+      "sourcePath": "docs/Knowledge-Bases/verified-fast-paths.md",
       "tags": [
         "document"
       ]
@@ -3047,66 +3074,6 @@
       "sourcePath": "packages-logicn/logicn-core/docs/xml-support.md",
       "tags": [
         "document",
-        "logicn-core"
-      ]
-    },
-    {
-      "id": "doc:packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-20-57-851Z.json",
-      "kind": "Document",
-      "label": "compute-mix-throughput-2026-05-17T11-20-57-851Z.json",
-      "sourcePath": "packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-20-57-851Z.json",
-      "tags": [
-        "report",
-        "logicn-core"
-      ]
-    },
-    {
-      "id": "doc:packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-43-52-543Z.json",
-      "kind": "Document",
-      "label": "compute-mix-throughput-2026-05-17T11-43-52-543Z.json",
-      "sourcePath": "packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-43-52-543Z.json",
-      "tags": [
-        "report",
-        "logicn-core"
-      ]
-    },
-    {
-      "id": "doc:packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-49-25-521Z.json",
-      "kind": "Document",
-      "label": "compute-mix-throughput-2026-05-17T11-49-25-521Z.json",
-      "sourcePath": "packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-49-25-521Z.json",
-      "tags": [
-        "report",
-        "logicn-core"
-      ]
-    },
-    {
-      "id": "doc:packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-52-31-927Z.json",
-      "kind": "Document",
-      "label": "compute-mix-throughput-2026-05-17T11-52-31-927Z.json",
-      "sourcePath": "packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-52-31-927Z.json",
-      "tags": [
-        "report",
-        "logicn-core"
-      ]
-    },
-    {
-      "id": "doc:packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-52-42-230Z.json",
-      "kind": "Document",
-      "label": "compute-mix-throughput-2026-05-17T11-52-42-230Z.json",
-      "sourcePath": "packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-52-42-230Z.json",
-      "tags": [
-        "report",
-        "logicn-core"
-      ]
-    },
-    {
-      "id": "doc:packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-58-15-343Z.json",
-      "kind": "Document",
-      "label": "compute-mix-throughput-2026-05-17T11-58-15-343Z.json",
-      "sourcePath": "packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-58-15-343Z.json",
-      "tags": [
-        "report",
         "logicn-core"
       ]
     },
@@ -12493,6 +12460,48 @@
       "evidencePath": "docs/framework/framework-project-structure.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/ai-compute-plan.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/ai-compute-plan.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/ai-compute-plan.md",
+      "to": "package:logicn-core-runtime",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/ai-compute-plan.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/ai-compute-plan.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/ai-compute-plan.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/ai-compute-plan.md",
+      "to": "package:logicn-core-reports",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/ai-compute-plan.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/ai-compute-plan.md",
+      "to": "package:logicn-core-compute",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/ai-compute-plan.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/ai-compute-plan.md",
+      "to": "package:logicn-ai",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/ai-compute-plan.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/benchmark-success-plan.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -16876,48 +16885,6 @@
     },
     {
       "from": "package:logicn-core",
-      "to": "doc:packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-20-57-851Z.json",
-      "kind": "owns",
-      "confidence": "EXTRACTED",
-      "evidencePath": "packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-20-57-851Z.json"
-    },
-    {
-      "from": "package:logicn-core",
-      "to": "doc:packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-43-52-543Z.json",
-      "kind": "owns",
-      "confidence": "EXTRACTED",
-      "evidencePath": "packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-43-52-543Z.json"
-    },
-    {
-      "from": "package:logicn-core",
-      "to": "doc:packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-49-25-521Z.json",
-      "kind": "owns",
-      "confidence": "EXTRACTED",
-      "evidencePath": "packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-49-25-521Z.json"
-    },
-    {
-      "from": "package:logicn-core",
-      "to": "doc:packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-52-31-927Z.json",
-      "kind": "owns",
-      "confidence": "EXTRACTED",
-      "evidencePath": "packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-52-31-927Z.json"
-    },
-    {
-      "from": "package:logicn-core",
-      "to": "doc:packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-52-42-230Z.json",
-      "kind": "owns",
-      "confidence": "EXTRACTED",
-      "evidencePath": "packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-52-42-230Z.json"
-    },
-    {
-      "from": "package:logicn-core",
-      "to": "doc:packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-58-15-343Z.json",
-      "kind": "owns",
-      "confidence": "EXTRACTED",
-      "evidencePath": "packages-logicn/logicn-core/examples/benchmark-results/compute-mix-throughput-2026-05-17T11-58-15-343Z.json"
-    },
-    {
-      "from": "package:logicn-core",
       "to": "doc:packages-logicn/logicn-core/examples/README.md",
       "kind": "owns",
       "confidence": "EXTRACTED",
@@ -20307,6 +20274,13 @@
     {
       "from": "doc:packages-logicn/logicn-ai/README.md",
       "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "packages-logicn/logicn-ai/README.md"
+    },
+    {
+      "from": "doc:packages-logicn/logicn-ai/README.md",
+      "to": "package:logicn-core-runtime",
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "packages-logicn/logicn-ai/README.md"
