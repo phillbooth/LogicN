@@ -1,0 +1,106 @@
+# Boundary Extension Concepts
+
+## Purpose
+
+LogicN uses the five-part core model:
+
+```text
+data -> flow -> permission -> boundary -> report
+```
+
+Some older concept lists name events, repositories, storage, adapters and
+connectors as separate top-level concepts. In the current structure, these are
+best understood as boundary concepts.
+
+## Short Definition
+
+Boundary extension concepts are specialised ways that LogicN crosses trust,
+system or execution boundaries.
+
+## Concept Map
+
+| Concept | Current placement | Meaning |
+| --- | --- | --- |
+| `events` | boundary | Typed asynchronous messages, queues, webhooks or job payloads |
+| `repositories` | boundary | Named storage access surfaces for models |
+| `storage` | boundary | Databases, files, object stores or persistence systems |
+| `adapters` | boundary | Governed implementations for external contracts |
+| `connectors` | boundary | Integrations with external systems, services or tools |
+
+## Events
+
+Events are typed messages that enter, leave or move through the system outside a
+direct request/response call.
+
+Events should declare:
+
+- payload type
+- schema version
+- topic or source
+- idempotency policy
+- replay policy
+- classification
+- effects
+- audit rules
+
+Events are important, but full event runtime support can be later work unless a
+v1 secure web runtime feature needs webhook handling.
+
+## Repositories And Storage
+
+Repositories keep database behaviour out of models.
+
+The preferred pattern is:
+
+```logicn
+let user = try UsersRepository.findRequired(userId)
+```
+
+not:
+
+```logicn
+User.findById(id)
+user.save()
+```
+
+This keeps storage access explicit, permissioned, effect-checked and reportable.
+
+## Adapters And Connectors
+
+Adapters and connectors wrap external systems.
+
+Examples include:
+
+- payment provider adapter
+- email provider adapter
+- search adapter
+- object storage connector
+- AI model adapter
+- legacy API connector
+
+Adapters must declare contracts, effects, permissions, timeout policy, retry
+policy, secret handling and reports.
+
+## V1 Split
+
+V1-critical concept work:
+
+- document these as boundary concepts
+- deny hidden external/storage access
+- require typed contracts and effects
+- generate report targets
+
+Later implementation work:
+
+- full event runtime
+- queue/job/schedule engines
+- large adapter/provider ecosystem
+- database migrations
+- advanced storage provider packages
+
+## Core Rule
+
+```text
+Events, repositories, storage, adapters and connectors are not hidden framework magic.
+They are boundary concepts and must be declared, permissioned, effect-checked and reportable.
+```

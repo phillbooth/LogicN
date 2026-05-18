@@ -123,6 +123,47 @@ Agents should normally propose code patches, docs changes, tests, reports and
 deployment requests. Applying dangerous changes requires explicit policy and
 human approval.
 
+## AI Self-Modification Governance
+
+AI agents may generate code, propose policy, request capabilities and produce
+reports. They must not grant capabilities to themselves, approve their own
+policy changes, edit their own execution boundary or modify trust roots without
+external governance.
+
+AI-authored code should enter quarantine before promotion:
+
+```text
+AI writes code
+ -> quarantine
+ -> syntax/type checks
+ -> effect extraction
+ -> policy evaluation
+ -> sandbox tests
+ -> audit report
+ -> human/policy approval
+ -> promotion
+```
+
+Agent authority should be issued as a revocable lease:
+
+```text
+capability
+scope
+duration
+approver chain
+audit required
+```
+
+Delegation must use capability attenuation: an agent may delegate only equal or
+narrower authority than it already holds. No agent should have a `god mode`
+role, and no process may grant itself broader authority than its approver chain
+possesses.
+
+Reports should include AI authority requests, code quarantine status, approval
+decisions, changed files, tests run, granted capabilities and lease expiry.
+
+See `../../docs/Knowledge-Bases/ai-self-modification-governance.md`.
+
 Final rule:
 
 ```text

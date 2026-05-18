@@ -73,10 +73,17 @@
 - [x] Add detailed concept map under the five-part LogicN core model
 - [x] Add framework docs for routes, classification, context, scopes/lifetimes,
   errors, packages and tests
+- [x] Document boundary extension concepts for events, repositories/storage and
+  adapters/connectors under the five-part model
+- [x] Document explicit polymorphism through contracts, adapters, variants and
+  constrained generics while excluding hidden inheritance-style behaviour
 - [x] Document `_ => { ... }` match catch-all branches and safe fallback rules
 - [x] Document LogicN Securely Governed Runtime principles and trust zones
 - [x] Document AI compute plans as typed, governed runtime work
 - [x] Document verified fast paths as leased, auditable execution signatures
+- [x] Document AI self-modification governance and capability attenuation
+- [x] Document deny-by-default risk features and complexity features to leave
+  out of the core runtime
 - [x] Document scoped vaults as controlled runtime state instead of global
   variables
 - [x] Document scoped vaults as a fast response mechanism with typed owner,
@@ -121,6 +128,9 @@
 - [ ] Add runtime contract implementation for governed execution plans
 - [ ] Add runtime contract implementation for verified fast path signatures
 - [ ] Add runtime contract implementation for AI compute plan hooks
+- [ ] Add agent contracts for AI-generated code quarantine
+- [ ] Add agent contracts for capability leases and attenuation
+- [ ] Add agent contracts for immutable AI audit logs
 - [x] Add TODO documents for `logicn-framework-api-server` and `logicn-framework-app-kernel`
 - [x] Add README and TODO documents for `packages-logicn/logicn-framework-example-app`
 - [ ] Add unit tests
@@ -230,6 +240,9 @@
 - [ ] Define IDE/LSP, debugger, source-map and test-framework roadmap
 - [ ] Define exhaustive match, sealed variant, generic constraint and protocol
   requirements for production-readiness
+- [ ] Define polymorphism effective report contracts for selected
+  implementations, contract implementations, generic constraints and variant
+  exhaustiveness
 - [ ] Define deterministic resource cleanup model for files, sockets, streams,
   handles, DB connections and secrets
 - [ ] Define FFI/trusted module model with ownership, nullability, layout and

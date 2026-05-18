@@ -182,3 +182,6 @@ ai-audit-report.json
 
 AI may request capabilities, but it may not grant capabilities to itself or
 bypass policy, type checks, effect checks or audit.
+
+AI systems that generate or modify code must follow
+[AI Self-Modification Governance](ai-self-modification-governance.md).

@@ -32,6 +32,9 @@ documentation lives in `../packages-logicn/logicn-core/`.
 - [Scopes And Lifetimes](framework/framework-scopes-lifetimes.md)
 - [Errors](framework/framework-errors.md)
 - [Boundaries](framework/framework-boundaries.md)
+- [Events](framework/framework-events.md)
+- [Repositories And Storage](framework/framework-repositories-storage.md)
+- [Adapters And Connectors](framework/framework-adapters-connectors.md)
 - [Packages](framework/framework-packages.md)
 - [Scoped Vaults](framework/framework-scoped-vaults.md)
 - [Reports](framework/framework-reports.md)
@@ -79,11 +82,15 @@ documentation lives in `../packages-logicn/logicn-core/`.
 - [Software As Declared Intent](Knowledge-Bases/software-as-declared-intent.md)
 - [Securely Governed Runtime](Knowledge-Bases/securely-governed-runtime.md)
 - [AI Compute Plan](Knowledge-Bases/ai-compute-plan.md)
+- [AI Self-Modification Governance](Knowledge-Bases/ai-self-modification-governance.md)
 - [Verified Fast Paths](Knowledge-Bases/verified-fast-paths.md)
+- [Deny By Default Risk Features](Knowledge-Bases/deny-by-default-risk-features.md)
 - [Benchmark Success Plan](Knowledge-Bases/benchmark-success-plan.md)
 - [Match Catch-All Branch](Knowledge-Bases/match-catch-all-branch.md)
 - [Startup And Boot Warmup](Knowledge-Bases/startup-and-boot-warmup.md)
 - [Fast Response And Keep-Alive](Knowledge-Bases/fast-response-and-keep-alive.md)
+- [Boundary Extension Concepts](Knowledge-Bases/boundary-extension-concepts.md)
+- [Polymorphism](Knowledge-Bases/polymorphism.md)
 
 ## Existing App And Workspace Docs
 
@@ -103,5 +110,6 @@ documentation lives in `../packages-logicn/logicn-core/`.
 
 - [Language Core Maturity Roadmap](../packages-logicn/logicn-core/docs/language-core-maturity-roadmap.md)
 - [Syntax And Logic Status](../packages-logicn/logicn-core/docs/syntax-logic-status.md)
+- [Polymorphism Direction](../packages-logicn/logicn-core/docs/polymorphism.md)
 - [Machine Profile Bridge](../packages-logicn/logicn-core/docs/machine-profile-bridge.md)
 - [Benchmark Diagnostics](../packages-logicn/logicn-tools-benchmark/README.md)

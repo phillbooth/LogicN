@@ -15,6 +15,10 @@
 [ ] Define typed message bus and data classification contracts
 [ ] Define tool gateway, secret guard, memory guard and cache guard contracts
 [ ] Define sandbox policy and human approval gate examples
+[ ] Define AI-generated code quarantine contracts
+[ ] Define capability lease and attenuation contracts
+[ ] Define self-modification governance report examples
+[ ] Define immutable AI audit log contract
 [ ] Define loop/crash protection report examples
 [ ] Add examples
 [ ] Add tests

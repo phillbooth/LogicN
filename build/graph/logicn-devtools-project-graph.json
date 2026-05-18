@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-05-18T16:26:41.680Z",
+  "generatedAt": "2026-05-18T17:03:09.367Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -822,6 +822,15 @@
       ]
     },
     {
+      "id": "doc:docs/framework/framework-adapters-connectors.md",
+      "kind": "Document",
+      "label": "framework-adapters-connectors.md",
+      "sourcePath": "docs/framework/framework-adapters-connectors.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/framework/framework-boundaries.md",
       "kind": "Document",
       "label": "framework-boundaries.md",
@@ -894,6 +903,15 @@
       ]
     },
     {
+      "id": "doc:docs/framework/framework-events.md",
+      "kind": "Document",
+      "label": "framework-events.md",
+      "sourcePath": "docs/framework/framework-events.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/framework/framework-models.md",
       "kind": "Document",
       "label": "framework-models.md",
@@ -952,6 +970,15 @@
       "kind": "Document",
       "label": "framework-reports.md",
       "sourcePath": "docs/framework/framework-reports.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/framework/framework-repositories-storage.md",
+      "kind": "Document",
+      "label": "framework-repositories-storage.md",
+      "sourcePath": "docs/framework/framework-repositories-storage.md",
       "tags": [
         "document"
       ]
@@ -1038,10 +1065,28 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/ai-self-modification-governance.md",
+      "kind": "Document",
+      "label": "ai-self-modification-governance.md",
+      "sourcePath": "docs/Knowledge-Bases/ai-self-modification-governance.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/benchmark-success-plan.md",
       "kind": "Document",
       "label": "benchmark-success-plan.md",
       "sourcePath": "docs/Knowledge-Bases/benchmark-success-plan.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/boundary-extension-concepts.md",
+      "kind": "Document",
+      "label": "boundary-extension-concepts.md",
+      "sourcePath": "docs/Knowledge-Bases/boundary-extension-concepts.md",
       "tags": [
         "document"
       ]
@@ -1069,6 +1114,15 @@
       "kind": "Document",
       "label": "core-application-model.md",
       "sourcePath": "docs/Knowledge-Bases/core-application-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/deny-by-default-risk-features.md",
+      "kind": "Document",
+      "label": "deny-by-default-risk-features.md",
+      "sourcePath": "docs/Knowledge-Bases/deny-by-default-risk-features.md",
       "tags": [
         "document"
       ]
@@ -1132,6 +1186,15 @@
       "kind": "Document",
       "label": "photonic-resolution-boundary.md",
       "sourcePath": "docs/Knowledge-Bases/photonic-resolution-boundary.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/polymorphism.md",
+      "kind": "Document",
+      "label": "polymorphism.md",
+      "sourcePath": "docs/Knowledge-Bases/polymorphism.md",
       "tags": [
         "document"
       ]
@@ -2532,6 +2595,16 @@
       "kind": "Document",
       "label": "pending-logicn-additions.md",
       "sourcePath": "packages-logicn/logicn-core/docs/pending-logicn-additions.md",
+      "tags": [
+        "document",
+        "logicn-core"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core/docs/polymorphism.md",
+      "kind": "Document",
+      "label": "polymorphism.md",
+      "sourcePath": "packages-logicn/logicn-core/docs/polymorphism.md",
       "tags": [
         "document",
         "logicn-core"
@@ -16189,6 +16262,13 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "packages-logicn/logicn-core/docs/pending-logicn-additions.md"
+    },
+    {
+      "from": "package:logicn-core",
+      "to": "doc:packages-logicn/logicn-core/docs/polymorphism.md",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core/docs/polymorphism.md"
     },
     {
       "from": "package:logicn-core",

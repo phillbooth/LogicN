@@ -78,9 +78,11 @@ HTML or CSS badges may be added later by the documentation renderer.
 | Runtime mutation | forbidden in normal code; use adapters, interfaces, pipelines, test mocks or signed hotfix packages | Documented draft | High | Hidden mutation breaks type, effect, source-map and report guarantees. |
 | Imports/modules | `imports { use ... }` direction | Documented draft | Potential | Final module syntax remains open. |
 | Packages | package registry/lock/profile docs | TODO | High | Package resolution must be reproducible and permissioned. |
-| Classes/inheritance | not the initial core model | Not core | Potential | v1 favours records, enums, flows and explicit composition. |
+| Classes/inheritance | not the initial core model | Not core | Potential | Use records, enums, flows, contracts and explicit composition instead. |
+| Contract polymorphism | contracts plus explicit implementations/adapters | Documented draft | Managed | Allows different implementations without hiding authority. |
+| Variant polymorphism | sealed variants plus exhaustive `match` | TODO | Managed | Needed for safe domain variation without inheritance chains. |
 | Generics | `Array<T>`, `Result<T,E>`, typed contracts | Documented draft | Potential | Generic constraints/protocols remain production-readiness work. |
-| Protocols/interfaces | protocol/constraint model pending | TODO | Potential | Needed before mature generic libraries. |
+| Protocols/interfaces | protocol/constraint model pending | TODO | Potential | Needed before mature generic libraries and contract polymorphism. |
 | Native interop | `interop native` with explicit `abi` and audited contracts | TODO | High | Interop must declare ownership, nullability, layout and audit reports. |
 | Systems backend output | generated backend artifacts from checked IR | TODO/package-owned | High | Future output target, not normal unsafe source style. |
 | Vector/matrix/tensor | `Vector`, `Matrix`, `Tensor` contracts | Package-owned | Potential | `logicn-core-vector` owns validation and reports. |
@@ -125,6 +127,7 @@ invented as core syntax later.
 | Data | variant/sealed union | TODO | Needed for mature domain modelling. |
 | Data | destructor/finalizer | TODO | Deterministic cleanup model must come first. |
 | Data | protocol/interface | TODO | Needed later for generic packages. |
+| Data | explicit polymorphism | Documented draft | Use contracts, adapters, constrained generics and variant matches; selected implementations must be reportable. |
 | Values | immutable binding | Implemented prototype | Immutable-by-default direction. |
 | Values | mutable binding | TODO | Must align with ownership/borrowing rules. |
 | Values | constant | Documented draft | Needs module and initialization rules. |
@@ -185,7 +188,7 @@ package boundaries are stable.
 | Data | class | Potential | Use records plus flows first; class syntax can wait. |
 | Data | method | Potential | Prefer namespaced flows until the object model is designed. |
 | Data | constructor | Potential | Prefer typed values and validation flows. |
-| Data | inheritance | Potential | Avoid fragile hierarchy before protocols/interfaces exist. |
+| Data | inheritance | Potential | Excluded as the main polymorphism model; use contracts, adapters, variants and generics. |
 | Values | global variable | High | Conflicts with strict global registry and effect visibility. |
 | Values | static local | High | Hidden state should be explicit and reported. |
 | Operators | null coalescing | Potential | Prefer explicit `Option` matching. |

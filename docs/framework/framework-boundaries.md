@@ -60,6 +60,13 @@ ai-tool-boundary-report.json
 compute-boundary-report.json
 ```
 
+## Related Boundary Concepts
+
+- [Events](framework-events.md)
+- [Repositories And Storage](framework-repositories-storage.md)
+- [Adapters And Connectors](framework-adapters-connectors.md)
+
 ## Knowledge Base
 
-See [Core Application Model](../Knowledge-Bases/core-application-model.md).
+See [Core Application Model](../Knowledge-Bases/core-application-model.md) and
+[Boundary Extension Concepts](../Knowledge-Bases/boundary-extension-concepts.md).

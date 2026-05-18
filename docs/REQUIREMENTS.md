@@ -76,6 +76,18 @@ must not be treated as implemented app functionality.
   requests, responses/views, secure flows, models, contracts, policies,
   effects, capabilities, classification, context, scopes/lifetimes, errors,
   reports, packages and tests.
+- LogicN boundary concept documentation must index events, repositories/storage
+  and adapters/connectors as boundary specializations. Events, queue/job
+  engines, large provider ecosystems and database migration systems may remain
+  later implementation work unless needed by the secure web runtime.
+- LogicN polymorphism must be explicit rather than hidden. Contract-based
+  polymorphism, adapter-based polymorphism, union/match variants and constrained
+  generics are allowed directions; inheritance-based behaviour, implicit
+  provider swapping and unreported plugin dispatch must not become the main
+  application model.
+- Polymorphic implementations must keep permissions, effects, data exposure,
+  boundaries, errors, audit requirements and selected implementation visible in
+  effective reports.
 - LogicN match catch-all branches using `_ => { ... }` must be documented as
   explicit fallback handling. For security-sensitive matches, catch-all branches
   must return a typed error, explicit ignored response, safe log, manual review
@@ -93,6 +105,26 @@ must not be treated as implemented app functionality.
   opaque model calls. Plans should declare input/output types, model class, data
   sensitivity, precision, latency, compute target, memory needs, allowed tools
   and audit needs.
+- LogicN AI systems may generate code, propose policy and request capabilities,
+  but they must not grant capabilities to themselves, approve their own policy
+  changes, edit their own boundary or modify trust roots without external
+  governance.
+- LogicN must support AI-generated code quarantine before promotion to trusted
+  code. Quarantine requires syntax/type checks, effect extraction, policy
+  evaluation, sandbox tests, audit reports and human or policy approval.
+- LogicN capability delegation must support attenuation: delegated authority may
+  be equal or narrower than the delegator's authority, never broader. Authority
+  should be issued as scoped, revocable, auditable leases where possible.
+- LogicN must deny hidden authority features by default, including dynamic eval,
+  unrestricted shell execution, hidden network access, raw filesystem access,
+  global mutable state, unsafe native interop, raw pointers, monkey patching,
+  policy-bypassing reflection and AI self-granted capabilities.
+- LogicN should leave out complexity features that hide behaviour or force
+  runtime guessing, including inheritance-heavy object models, multiple
+  inheritance, heavy reflection, dynamic typing as the main model, magic
+  decorators, automatic global dependency injection, implicit async behaviour,
+  unbounded background runtime work and large default frameworks bundled into
+  the runtime.
 - LogicN must not claim production language maturity until it has an enforceable
   language core: parser, AST, symbol table, type checker, memory checker, effect
   checker, module system, protocols/interfaces, trusted interop boundary, test

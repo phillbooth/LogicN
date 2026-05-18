@@ -41,6 +41,47 @@ Risk rank 4 must require explicit permission.
 Risk X must be rejected in normal LogicN code.
 ```
 
+## Deny By Default Top Risks
+
+The following features are denied by default in normal LogicN code:
+
+```text
+1. Dynamic eval / runtime code execution
+2. Unrestricted shell execution
+3. Hidden network access
+4. Raw filesystem access
+5. Global mutable variables
+6. Unsafe native interop
+7. Raw pointers / unchecked memory
+8. Monkey patching
+9. Reflection that bypasses policy
+10. AI self-granting capabilities
+```
+
+If supported at all, they require:
+
+```text
+declared effect
++ capability
++ policy approval
++ audit record
+```
+
+Complexity features to leave out of the core runtime include inheritance-heavy
+object models, multiple inheritance, heavy reflection, dynamic typing as the
+main model, hidden magic decorators, automatic global dependency injection,
+unbounded runtime background work, implicit async behaviour and a large default
+framework bundled into the runtime.
+
+The design rule is:
+
+```text
+No hidden power.
+No hidden mutation.
+No hidden execution.
+No hidden cost.
+```
+
 ---
 
 ## Security Baseline

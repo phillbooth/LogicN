@@ -174,6 +174,17 @@ AI workloads should be described as typed AI compute plans rather than opaque
 model calls. The runtime can then enforce policy, minimise data, reduce copying,
 batch compatible work, choose suitable hardware and produce compliance evidence.
 
+AI-generated code and AI-driven policy changes must pass through
+self-modification governance. AI can request capability leases, but cannot issue
+them to itself. AI-authored code should enter quarantine, pass syntax/type and
+effect checks, run sandbox tests, produce an audit report and receive human or
+policy approval before promotion to trusted code.
+
+Capability delegation must attenuate authority. A delegated capability can be
+equal or narrower than the delegator's authority, never broader. No runtime
+process, including an AI agent, may grant itself broader authority than its
+approver chain possesses.
+
 
 
 Environment secret handling is a typed security boundary.

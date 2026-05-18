@@ -56,6 +56,15 @@ Nothing is trusted by default:
 Authority must always be declared, visible, attributable, revocable and
 auditable.
 
+### AI Authority Is Not Self-Granted
+
+AI may generate code, propose policy, request capabilities and produce reports.
+AI may not grant capabilities to itself, approve its own policy changes or edit
+its own execution boundary.
+
+AI-authored work must remain reproducible, reviewable, testable and auditable.
+See [AI Self-Modification Governance](ai-self-modification-governance.md).
+
 ### Policy-Native Execution
 
 Policy is not middleware. Policy is part of execution itself.

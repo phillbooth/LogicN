@@ -293,6 +293,9 @@ LogicN core:
 | 10 | Stable diagnostics and AI report schemas |
 
 Detailed analysis lives in `docs/backend-runtime-capability-roadmap.md`.
+The language-level polymorphism direction lives in `docs/polymorphism.md` and
+prefers contracts, adapters, variants and constrained generics over class
+inheritance as the main model.
 
 ## File Extension
 

@@ -33,9 +33,21 @@ These rules define behavior LogicN must not silently weaken.
 - Verified fast paths must never bypass policy, capability limits, effect
   boundaries, data contracts or audit requirements.
 - AI compute must be declared, typed, permissioned, bounded and auditable.
+- AI may request capabilities, but AI may not grant capabilities to itself.
+- AI-generated code must be quarantined, checked, tested, audited and approved
+  before promotion to trusted code.
+- No process may grant itself broader authority than its approver chain
+  possesses.
 - Photonic and optical values must be resolved or matched before controlling
   ordinary application flow.
 - Generated AI content starts untrusted.
+- Dynamic eval, unrestricted shell execution, hidden network access, raw
+  filesystem access, unsafe native interop, raw pointers, monkey patching,
+  policy-bypassing reflection and AI self-granted capabilities are denied by
+  default.
+- Risky authority features require declared effects, capabilities, policy
+  approval and audit records.
+- No hidden power, hidden mutation, hidden execution or hidden cost.
 
 ## v1 Scope
 

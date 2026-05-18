@@ -81,12 +81,27 @@ All notable changes to this app should be documented here.
 - Added a LogicN Concept Map Knowledge Base entry and framework docs for routes,
   classification, context, scopes/lifetimes, errors, packages and tests under
   the newer `data -> flow -> permission -> boundary -> report` structure.
+- Added boundary extension concept docs for events, repositories/storage and
+  adapters/connectors, keeping them under the newer `boundary` model instead of
+  restoring the older flat concept structure.
+- Expanded the main LogicN Concept Map with a dedicated Events section and final
+  mental-model entries for events, repositories/storage and adapters/connectors.
+- Added Polymorphism concept docs covering contract-based polymorphism,
+  adapter-based polymorphism, union/match variants, constrained generics,
+  permission-aware implementation selection and effective reports.
 - Added a Match Catch-All Branch concept documenting `_ => { ... }` as the
   explicit fallback branch for `match`, including webhook and security-sensitive
   handling rules.
 - Added Securely Governed Runtime, AI Compute Plan and Verified Fast Paths
   Knowledge Base concepts, plus runtime package guidance and TODOs for governed
   execution plans, AI compute hooks and fast path signatures.
+- Added AI Self-Modification Governance concept covering AI-generated code
+  quarantine, capability leases, attenuation, approval gates, immutable AI audit
+  logs and the rule that AI may request but not self-grant authority.
+- Added Deny By Default Risk Features concept covering eval, shell, hidden
+  network/filesystem access, globals, unsafe interop, raw pointers, monkey
+  patching, policy-bypassing reflection, AI self-grants and complexity features
+  to leave out of the core runtime.
 - Expanded scoped vaults as the no-global-variable efficiency model, including
   vault scopes, capability-based access, `VaultRef`, safe write declarations,
   vault reports and fast response planning.

@@ -16,11 +16,11 @@ five-concept model instead of replacing it.
 
 | Core concept | Detailed concepts |
 | --- | --- |
-| `data` | models, requests, responses/views, classification, validators, projectors, redactors |
-| `flow` | secure flows, routes, guards, context, scopes/lifetimes, errors, jobs, schedules |
+| `data` | models, requests, responses/views, classification, validators, projectors, redactors, generic and variant data shapes |
+| `flow` | secure flows, routes, guards, context, scopes/lifetimes, errors, contract-defined behaviour, jobs, schedules |
 | `permission` | policies, effects, capabilities, actor authority, audit rules |
-| `boundary` | contracts, packages, repositories/storage, adapters/connectors, events, AI/tools, compute targets |
-| `report` | security reports, exposure reports, effect reports, capability reports, audit evidence, tests |
+| `boundary` | contracts, packages, repositories/storage, adapters/connectors, events, AI/tools, compute targets, polymorphic implementations |
+| `report` | security reports, exposure reports, effect reports, capability reports, polymorphism reports, audit evidence, tests |
 
 ## V1-Critical Concepts
 
@@ -42,6 +42,8 @@ The first serious LogicN version should define these early:
 - reports
 - packages
 - tests
+- explicit polymorphism through contracts, adapters, variants and constrained
+  generics
 
 These concepts support secure web/API runtime work without pulling in later
 platform features too early.
@@ -204,6 +206,20 @@ closed.
 
 See [Match Catch-All Branch](match-catch-all-branch.md).
 
+### Events
+
+Events define typed asynchronous messages, webhook payloads, queue messages or
+job payloads that cross a boundary.
+
+Event contracts should define payload shape, topic or source, schema version,
+idempotency, replay handling, classification, effects and audit rules.
+
+Events are important boundary concepts, but full event runtime, queue, job and
+schedule engines can remain later implementation work unless needed by the
+secure web runtime.
+
+See [Boundary Extension Concepts](boundary-extension-concepts.md).
+
 ### Repositories And Storage
 
 Models should not directly own database behaviour.
@@ -216,6 +232,8 @@ let user = try UsersRepository.findRequired(userId)
 
 Storage contracts define data source, allowed queries, mapping, effects,
 encryption requirements and parameterised query rules.
+
+See [Boundary Extension Concepts](boundary-extension-concepts.md).
 
 ### Adapters And Connectors
 
@@ -231,6 +249,19 @@ Examples:
 
 Adapters are boundaries and must be permissioned, effect-checked and
 reportable.
+
+See [Boundary Extension Concepts](boundary-extension-concepts.md).
+
+### Polymorphism
+
+LogicN supports explicit polymorphism through contracts, adapters, union/match
+variants and constrained generics.
+
+It should not use class inheritance as the main model, and polymorphic behaviour
+must not hide permissions, effects, data exposure, boundaries, errors or audit
+requirements.
+
+See [Polymorphism](polymorphism.md).
 
 ### Packages
 
@@ -281,6 +312,12 @@ Effects define what the code can do.
 Contracts define boundary agreements.
 Context replaces global request state.
 Scopes control sensitive lifetime.
+Events define asynchronous boundary messages.
+Repositories and storage define persistence boundaries.
+Adapters and connectors define external integration boundaries.
+Polymorphism allows different implementations only through visible contracts,
+variants, constraints and reports.
+Packages define code and authority boundaries.
 Reports prove what was checked.
 Tests verify the rules stay true.
 ```
