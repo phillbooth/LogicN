@@ -18,6 +18,7 @@ storage
 external API
 event/queue
 AI/tool
+MCP server/tool/resource/prompt
 compute target
 vault
 native interop
@@ -49,6 +50,10 @@ boundary external PaymentProvider {
 - Every boundary crossing must be reportable.
 - Unknown trust must default to untrusted.
 - Native, AI/tool and external boundaries require stricter reports.
+- MCP boundaries must declare tools, resources, prompts, token-boundary rules,
+  typed input/output, limits, effects and audit requirements before use.
+- MCP tool availability is not permission; LogicN permission checks still
+  decide whether a caller may use a tool or resource.
 
 ## Generated Reports
 
@@ -57,6 +62,7 @@ boundary-report.json
 external-boundary-report.json
 storage-boundary-report.json
 ai-tool-boundary-report.json
+mcp-boundary-report.json
 compute-boundary-report.json
 ```
 
@@ -65,6 +71,7 @@ compute-boundary-report.json
 - [Events](framework-events.md)
 - [Repositories And Storage](framework-repositories-storage.md)
 - [Adapters And Connectors](framework-adapters-connectors.md)
+- [MCP AI Tool Boundaries](framework-mcp-ai-tool-boundaries.md)
 
 ## Knowledge Base
 

@@ -20,6 +20,8 @@ runtime work.
 [ ] Define timeout enforcement contract
 [ ] Define stream backpressure runtime contract
 [ ] Define runtime memory policy contract
+[ ] Define Node-hosted runtime adapter contract
+[ ] Define host-runtime overhead report contract
 [ ] Define Securely Governed Runtime execution plan contract
 [ ] Define verified fast path execution signature and invalidation contract
 [ ] Define AI compute plan runtime hook contract

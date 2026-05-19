@@ -19,7 +19,8 @@ boundary = package + storage + external + event + AI/tool + compute
 ```
 
 They connect LogicN to systems such as payment providers, email services, search
-engines, object storage, AI models, analytics systems and legacy APIs.
+engines, object storage, AI models, MCP servers, analytics systems and legacy
+APIs.
 
 ## Syntax Example
 
@@ -60,6 +61,8 @@ Adapters should declare:
 - Adapter-based polymorphism must not hide effects, permissions or boundaries.
 - Dynamic plugin loading must require governed registration.
 - Network, file, shell, AI/tool and compute access must be declared as effects.
+- MCP tools, resources and prompts must go through declared AI/tool boundaries;
+  raw tool exposure is not an adapter shortcut.
 - Secrets must be passed as secret references, not raw strings in logs or
   reports.
 - Retries must be safe for the operation type.
@@ -79,6 +82,7 @@ external-boundary-report.json
 provider-effect-report.json
 connector-security-report.json
 polymorphism-effective-report.json
+mcp-tool-definitions.json
 ```
 
 ## Knowledge Base

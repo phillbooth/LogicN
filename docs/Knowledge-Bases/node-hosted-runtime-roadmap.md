@@ -1,0 +1,172 @@
+# Node-Hosted Runtime Roadmap
+
+## Purpose
+
+LogicN must be honest about its current execution model.
+
+Today, practical LogicN web/API execution is Node-hosted. Future LogicN may
+compile to secure runtime targets, but it is not currently a standalone native
+web server/runtime.
+
+## Short Definition
+
+```text
+today = Node-hosted secure LogicN layer
+future = target-independent checked runtime and compiled outputs
+```
+
+## Current Position
+
+For a web/API app today, the likely stack is:
+
+```text
+HTTP request
+  -> Node.js server
+  -> LogicN framework/API server adapter
+  -> LogicN app kernel
+  -> LogicN checked rules and flows
+  -> Node.js executes the runtime path
+  -> HTTP response
+```
+
+So LogicN is currently:
+
+```text
+a secure language/framework layer running on Node.js
+```
+
+It is not yet:
+
+```text
+a standalone native web server/runtime
+```
+
+## Why This Is Acceptable Now
+
+Node hosting lets LogicN focus first on its differentiators:
+
+- typed requests
+- response contracts
+- policies
+- effects
+- capabilities
+- secure flows
+- classified models
+- audit reports
+- AI/tool boundaries
+- project graphs and AI-readable reports
+
+Node can handle the current host runtime concerns:
+
+- HTTP serving
+- process runtime
+- filesystem and network APIs
+- package execution
+- development tooling
+
+## Target-Independent Design Rule
+
+LogicN may be Node-hosted today, but the core language must remain
+target-independent.
+
+Rules:
+
+```text
+Do not bake Node.js semantics into LogicN source meaning.
+Do not make V8 optimisation behaviour a language guarantee.
+Do not claim native runtime speed from Node-hosted benchmark results.
+Do not make Node package access equal LogicN package authority.
+Do keep host runtime effects permissioned, reportable and replaceable.
+```
+
+## Roadmap Layers To Standalone Runtime
+
+| Layer | Needed capability | Status meaning |
+| --- | --- | --- |
+| 1 | stable language core | syntax, AST, type system, effects and modules become stable |
+| 2 | LogicN IR | typed internal instruction graph for multiple outputs |
+| 3 | runtime memory model | ownership, references, buffers, allocation and cleanup |
+| 4 | VM or interpreter | deterministic execution independent of V8 semantics |
+| 5 | native/WASM backend | C, LLVM, Cranelift, WASM or native binary output |
+| 6 | async/event runtime | scheduler, timers, sockets, cancellation and backpressure |
+| 7 | HTTP/web runtime | HTTP parsing, routing, TLS, streaming and health handling |
+| 8 | storage/network libraries | database, filesystem, stream and outbound network support |
+| 9 | security runtime | effects, permissions, packages, AI/tools, audit and sandboxing |
+| 10 | production tooling | debugger, profiler, package manager, testing and observability |
+
+This is roughly:
+
+```text
+10-15 major architectural milestones
+```
+
+The milestones are not equal. IR, memory model, runtime execution and async I/O
+are the hardest turning points.
+
+## Recommended Work Order
+
+```text
+1. stabilise language rules
+2. stabilise effect/capability/permission system
+3. create LogicN IR
+4. add WASM target planning and selected WASM output
+5. add LogicN VM/runtime
+6. add native backend
+7. add async runtime
+8. add HTTP/web runtime
+9. add storage/network libraries
+10. add production runtime tooling
+```
+
+LogicN should not build a native web server before the language core, IR, memory
+model and checked runtime semantics are stable.
+
+## Benchmark Interpretation
+
+Node-hosted LogicN benchmarks measure:
+
+```text
+LogicN runner overhead on Node/V8
+```
+
+They do not prove:
+
+```text
+native LogicN compiler performance
+```
+
+Recommended wording:
+
+```text
+The current LogicN prototype is Node-hosted. Benchmarks can show prototype
+runner overhead and checked-runtime feasibility, but they do not prove native
+LogicN runtime speed.
+```
+
+## Positioning
+
+LogicN should compete first as:
+
+```text
+secure governed execution layer
+```
+
+not as:
+
+```text
+faster Node replacement
+```
+
+The strongest current claim is:
+
+```text
+LogicN aims to make secure web/API/agent execution typed, explicit, governed,
+auditable and AI-readable while initially using Node.js as a practical host.
+```
+
+## Best Short Statement
+
+```text
+Today: LogicN runs on Node.
+Future: LogicN compiles to secure runtime targets.
+```

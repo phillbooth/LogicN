@@ -13,6 +13,7 @@ part of the active v1 language surface.
 [x] Define inference target selection contract
 [x] Define AI output trust and policy checks
 [x] Define AI inference report schema
+[ ] Define local AI review and report explanation contracts
 [x] Add examples
 [x] Add tests
 ```

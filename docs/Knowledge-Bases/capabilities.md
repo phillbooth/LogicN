@@ -185,6 +185,41 @@ audit requirements
 report proof
 ```
 
+## Boundary Check Points
+
+Capabilities should be checked wherever protected authority crosses a LogicN
+boundary.
+
+| Boundary | Capability question |
+| --- | --- |
+| secure flow | May this actor perform this protected action? |
+| route | May this caller enter this public/API boundary? |
+| response/view | May this actor see this classified output? |
+| package | May this package expose or request this authority? |
+| adapter/connector | May this integration perform this external action? |
+| AI/tool or MCP boundary | May this agent/tool call this action or see this resource? |
+| scoped vault | May this actor read/write this scoped value? |
+
+Capability checks at these boundaries should produce effective reports so
+humans, AI tools and deployment systems can see what authority was required and
+where it was granted or denied.
+
+## Capability Grant Rules
+
+Capabilities may be granted by role, policy, app profile, package manifest or
+temporary lease.
+
+Rules:
+
+```text
+grants must be explicit
+grants must be attributable
+grants must be scoped where possible
+grants must be revocable where possible
+delegated grants must not be broader than the delegator's authority
+missing grants fail closed
+```
+
 ## Security Rules
 
 ```text
@@ -193,6 +228,7 @@ Sensitive data exposure requires capability.
 Capabilities must be checked at secure flow, route, package, response and tool boundaries.
 Missing capability must fail closed.
 Capability checks must be reportable.
+Effects must not be used as a substitute for actor authority.
 ```
 
 ## Performance Rule

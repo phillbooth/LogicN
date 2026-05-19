@@ -7,6 +7,34 @@ The first milestone should not depend on native executable compilation. LogicN
 should be useful for normal web applications through a LogicN secure runtime
 that can check, serve and run typed application code with reports.
 
+## Current Node-Hosted Reality
+
+At this stage, practical LogicN web/API execution is Node-hosted.
+
+```text
+HTTP request
+  -> Node.js server
+  -> LogicN framework/API server adapter
+  -> LogicN app kernel
+  -> LogicN checked rules and flows
+  -> Node.js executes the runtime path
+  -> HTTP response
+```
+
+This is acceptable for the current phase. It lets LogicN focus on typed
+requests, response contracts, policies, effects, capabilities, audit reports and
+AI/tool boundaries while Node provides the host process, HTTP and platform I/O.
+
+The design rule is:
+
+```text
+Node-hosted today.
+Target-independent core.
+Secure runtime targets later.
+```
+
+Node/V8 behavior must not become the definition of LogicN source semantics.
+
 ## Primary Direction
 
 ```text
@@ -321,6 +349,11 @@ Staged target order:
 5. Native executable output where deployment needs it.
 6. Accelerator planning and reports for AI/vector workloads.
 ```
+
+Standalone runtime work requires more layers: stable language core, LogicN IR,
+runtime memory model, VM/interpreter or native/WASM backend, async/event
+runtime, HTTP/web runtime, storage/network libraries, security runtime
+enforcement and production runtime tooling.
 
 The first public promise should be:
 

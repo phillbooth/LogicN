@@ -55,6 +55,8 @@ secure flow updateUserEmail(
 
 - Sensitive actions require permissions.
 - Sensitive data exposure requires permissions.
+- Permissions must include actor authority, not only code effects.
+- Effects show technical powers; capabilities show actor authority.
 - Missing permission fails closed.
 - Permission must compile into effective capability, effect, policy and report data.
 

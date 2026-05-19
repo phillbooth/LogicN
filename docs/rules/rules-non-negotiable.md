@@ -2,6 +2,9 @@
 
 These rules define behavior LogicN must not silently weaken.
 
+Non-negotiable rules are the highest-priority category in LogicN's planning
+model. See [Priority Categories](rules-priority-categories.md).
+
 ## Rules
 
 - Only `Bool` controls ordinary conditions.
@@ -10,6 +13,9 @@ These rules define behavior LogicN must not silently weaken.
 - Recoverable errors use `Result<T, E>` or an equivalent typed result form.
 - Public routes must not return raw internal models.
 - Public routes must use typed requests and declared responses/views.
+- Encapsulation is controlled by secure flow boundaries, classification,
+  response/view contracts, capabilities, effects, scoped lifetimes, package
+  exports and reports; public/private visibility alone is not sufficient.
 - Production data fields must be classified.
 - Secrets redact by default.
 - Effects must be declared.
@@ -18,6 +24,8 @@ These rules define behavior LogicN must not silently weaken.
   optional middleware.
 - Sensitive action requires permission.
 - Sensitive data exposure requires permission.
+- Effects are not actor authorization; protected actions and protected data
+  exposure require capabilities or permissions.
 - Package authority must be explicit.
 - Scoped vaults must not become global variables.
 - Vault reads and writes must be scoped, typed, permission-checked,
@@ -28,6 +36,7 @@ These rules define behavior LogicN must not silently weaken.
 - Match catch-all branches must be explicit, observable and safe; they must not
   silently hide unknown security-sensitive states.
 - Native interop must be explicit, permissioned and reportable.
+- Inheritance and inherited authority are disallowed in normal LogicN source.
 - Runtime mutation and monkey patching are forbidden in normal code.
 - Target fallback must be declared and reported.
 - Verified fast paths must never bypass policy, capability limits, effect
@@ -40,6 +49,11 @@ These rules define behavior LogicN must not silently weaken.
   possesses.
 - Photonic and optical values must be resolved or matched before controlling
   ordinary application flow.
+- Quantum state must be measured into an explicit classical result before
+  controlling ordinary application flow.
+- Security randomness must use `SecureRandom`; `Random` is forbidden for
+  secrets, keys, tokens, salts and nonces.
+- Cryptographic choices must be policy-driven and reportable.
 - Generated AI content starts untrusted.
 - Dynamic eval, unrestricted shell execution, hidden network access, raw
   filesystem access, unsafe native interop, raw pointers, monkey patching,
@@ -48,6 +62,7 @@ These rules define behavior LogicN must not silently weaken.
 - Risky authority features require declared effects, capabilities, policy
   approval and audit records.
 - No hidden power, hidden mutation, hidden execution or hidden cost.
+- Assume everything is unsafe until declared safe.
 
 ## v1 Scope
 

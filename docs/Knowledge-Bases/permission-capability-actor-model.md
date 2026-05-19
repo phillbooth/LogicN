@@ -160,7 +160,16 @@ Sensitive action requires permission.
 Sensitive data exposure requires permission.
 Capabilities must be checked at secure flow, route, package, response and tool boundaries.
 Effects must be declared before privileged technical actions.
+Effects must not be treated as actor authorization.
 Missing actor authority must fail closed.
+```
+
+## Boundary Capability Rule
+
+```text
+Every secure flow, public route, response/view, package export, adapter,
+AI/tool boundary, MCP boundary and scoped vault access that touches protected
+data or protected action must declare the required capability or permission.
 ```
 
 ## Report Rules
@@ -171,6 +180,7 @@ LogicN should generate permission and capability evidence:
 permission-report.json
 permission-effective-report.json
 capability-report.json
+capability-boundary-report.json
 capability-grant-report.json
 effect-report.json
 security-report.json

@@ -36,6 +36,8 @@
 - [x] Add secure web runtime positioning
 - [x] Confirm `logicn serve` / secure web runtime as the main v1 milestone,
   with a simple portable build target as the secondary v1 milestone
+- [x] Document the current Node-hosted runtime position and standalone runtime
+  roadmap
 - [x] Add network and Ethernet I/O positioning plus `logicn-core-network` package
 - [x] Add language-core maturity roadmap for missing compiler/runtime work
 - [x] Add compliance and privacy framework docs plus `logicn-compliance-*`
@@ -60,10 +62,29 @@
 - [x] Add layered documentation structure for framework, contracts, reports and
   rules
 - [x] Add Knowledge Base concept note for the documentation layer model
+- [x] Document the LogicN Architecture Charter as the top-level identity for
+  security-first, auditable, governed execution
+- [x] Document priority categories for non-negotiable rules, core language
+  rules, core concepts, platform concepts, design rules and future research
 - [x] Document the core `data -> flow -> permission -> boundary -> report` model
+- [x] Document developer-friendly permissions as the simple surface over
+  capabilities, effects, policies, audit and reports
+- [x] Document first-class layered policy architecture and policy report
+  outputs
+- [x] Document model views and data blocks as the safe simplification for
+  model/request/response concepts
+- [x] Add a Hello World API pattern using data, flow, permission, route and
+  report concepts
+- [x] Document encapsulation as controlled data movement through secure flows,
+  classification, response contracts, capabilities, effects, scoped lifetimes,
+  package exports, safe mutation and reports
+- [x] Document models as classified internal security contracts with
+  relationships, mutation rules, storage separation and model report targets
 - [x] Document permissions, capabilities and actors as the developer-facing
   authority model
 - [x] Add dedicated capability concept and permission/capability report docs
+- [x] Clarify capabilities as boundary-wide actor authority separate from code
+  effects
 - [x] Document LogicN's software-as-declared-intent positioning
 - [x] Document benchmark success and result interpretation rules for
   compute-mix validation and timed throughput scoring
@@ -77,6 +98,7 @@
   adapters/connectors under the five-part model
 - [x] Document explicit polymorphism through contracts, adapters, variants and
   constrained generics while excluding hidden inheritance-style behaviour
+- [x] Document no-inheritance and explicit-security-by-default rules
 - [x] Document `_ => { ... }` match catch-all branches and safe fallback rules
 - [x] Document LogicN Securely Governed Runtime principles and trust zones
 - [x] Document AI compute plans as typed, governed runtime work
@@ -92,6 +114,11 @@
 - [x] Document photonic resolution rules for optical/photonic compute outputs
 - [x] Document local AI review as advisory tooling where compiler checks remain
   authoritative
+- [x] Document local low-bit AI review as advisory report explanation, not proof
+- [x] Document MCP as a controlled AI/tool boundary under the
+  `data -> flow -> permission -> boundary -> report` model
+- [x] Document quantum readiness as post-quantum security first and quantum
+  compute target planning later
 - [ ] Complete `docs/ARCHITECTURE.md`
 - [ ] Complete `docs/SECURITY.md`
 
@@ -131,12 +158,20 @@
 - [ ] Add agent contracts for AI-generated code quarantine
 - [ ] Add agent contracts for capability leases and attenuation
 - [ ] Add agent contracts for immutable AI audit logs
+- [ ] Define future MCP AI/tool boundary contract schemas after core
+  permission, effect, vault and report contracts stabilise
+- [ ] Define capability boundary and grant report schemas
+- [ ] Define policy definition, index, effective, conflict and AI-summary report
+  schemas
+- [ ] Define crypto inventory and post-quantum readiness report schemas
 - [x] Add TODO documents for `logicn-framework-api-server` and `logicn-framework-app-kernel`
 - [x] Add README and TODO documents for `packages-logicn/logicn-framework-example-app`
 - [ ] Add unit tests
 - [ ] Add integration tests
 - [ ] Add manual test checklist
 - [ ] Confirm error handling
+- [ ] Add beginner examples for explicit Hello World API and model-view response
+  projection
 
 ## Phase 5: Deployment
 
@@ -201,6 +236,8 @@
 - [x] Expand optical I/O planning with topology, secure transfer, fallback,
   benchmark and AI-cluster data-movement rules
 - [ ] Define `logicn-target-photonic` photonic backend target plans
+- [ ] Define future quantum target planning rules only after core compute and
+  target fallback reports are stable
 
 ## Phase 8: Core Infrastructure Packages
 
@@ -224,7 +261,11 @@
 - [ ] Define `logicn-core-compiler` compiler pipeline contracts
   - [x] Add an initial core syntax safety scan for unsafe Tri conversions,
     non-exhaustive Tri matches, raw secret literals and unsafe dynamic execution
+- [ ] Define LogicN IR as the target-independent handoff between parser/checker
+  and future VM/WASM/native outputs
 - [x] Define `logicn-core-runtime` execution contracts
+- [ ] Define Node-hosted runtime adapter contract and host-runtime overhead
+  reporting
 - [ ] Commit the v1 memory model as hybrid ownership, borrowing, moves,
   bounds-checking and explicit unsafe boundaries
 - [ ] Finalise `Bool`, `Tri`, `Decision`, `Option` and `Result` conversion and
@@ -243,6 +284,8 @@
 - [ ] Define polymorphism effective report contracts for selected
   implementations, contract implementations, generic constraints and variant
   exhaustiveness
+- [ ] Define model report schemas for model index, definitions, effective rules,
+  exposure, relationships, mutations and AI summaries
 - [ ] Define deterministic resource cleanup model for files, sockets, streams,
   handles, DB connections and secrets
 - [ ] Define FFI/trusted module model with ownership, nullability, layout and
@@ -251,6 +294,8 @@
   creating a dedicated ABI or systems package surface
 - [ ] Define package manager and registry design with lockfile, permissions and
   reproducible builds
+- [ ] Define simple `data { model request view }` syntax status and report
+  mapping after the v1 grammar freeze
 - [x] Define resilient flow controlled recovery and processing report direction
 - [x] Define LogicN Structured Await language, runtime, kernel and report direction
 - [x] Define conservative storage-aware performance and cache planning direction

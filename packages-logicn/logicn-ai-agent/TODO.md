@@ -14,6 +14,7 @@
 [ ] Define zero-trust agent manifest contracts
 [ ] Define typed message bus and data classification contracts
 [ ] Define tool gateway, secret guard, memory guard and cache guard contracts
+[ ] Define MCP AI/tool boundary gateway contracts and report schemas
 [ ] Define sandbox policy and human approval gate examples
 [ ] Define AI-generated code quarantine contracts
 [ ] Define capability lease and attenuation contracts

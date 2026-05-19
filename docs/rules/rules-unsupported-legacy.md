@@ -19,7 +19,9 @@ monkey patching
 heavy reflection
 reflection that bypasses policy
 inheritance-heavy object models
+inheritance
 multiple inheritance
+inherited permissions/effects/responses
 automatic global dependency injection
 implicit async behavior
 undeclared effects
@@ -47,6 +49,8 @@ explicit conversions
 adapters and pipelines
 compile-time metadata
 explicit composition
+contracts and adapters
+explicit views/responses
 declared capabilities and package manifests
 Structured Await, declared tasks and events
 effect declarations
@@ -67,6 +71,12 @@ No hidden cost.
 
 If a feature hides behaviour, hides authority or forces runtime guessing, keep
 it out of normal LogicN source.
+
+Inheritance is disallowed in normal LogicN source because it can hide behaviour,
+authority, effects and response exposure behind parent chains.
+
+This rule follows the Architecture Charter: controlled, explainable and
+governable computation is more important than unrestricted runtime flexibility.
 
 ## v1 Scope
 

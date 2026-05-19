@@ -36,17 +36,41 @@ Normal developers should usually use `permission` blocks. A permission compiles
 into actor capabilities, code effects, data exposure rules, audit requirements
 and reports.
 
+```text
+effects = can the code technically do it?
+capabilities = is the actor/package/flow/tool authorised to do it?
+policy = under what rules?
+report = proof it was checked
+```
+
+## Boundary Check Points
+
+Capabilities should be checked at:
+
+- secure flow boundaries
+- public routes
+- response/view exposure points
+- package exports and package manifests
+- adapter and connector boundaries
+- AI/tool and MCP tool boundaries
+- scoped vault reads and writes
+
 ## Security Rules
 
 - Capabilities must be explicit.
+- Sensitive actions require capabilities.
+- Sensitive data exposure requires capabilities.
 - Sensitive capabilities require audit-friendly reports.
 - Missing capabilities must fail closed.
 - Capability inheritance must be visible in effective policy reports.
+- Effects must not replace actor authorization.
 
 ## Generated Reports
 
 ```text
 capability-report.json
+capability-boundary-report.json
+capability-grant-report.json
 policy-effective-report.json
 security-report.json
 ```

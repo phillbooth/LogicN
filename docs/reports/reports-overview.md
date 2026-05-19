@@ -17,9 +17,11 @@ policy reports
 model reports
 contract reports
 security reports
+crypto inventory reports
 memory reports
 route reports
 AI context reports
+MCP reports
 runtime bridge reports
 ```
 
@@ -33,4 +35,20 @@ runtime bridge reports
 ## v1 Scope
 
 Define stable report names and safety rules for policies, contracts, models,
-security and AI context.
+security, crypto inventory, AI context and platform-level AI/tool boundaries
+such as MCP.
+
+## Model Report Family
+
+Model reports should include:
+
+```text
+model-index.json
+model-definitions.json
+model-effective.json
+model-exposure.json
+model-relationships.json
+model-mutation-report.json
+model-ai-summary.json
+model-human-summary.md
+```

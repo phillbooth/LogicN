@@ -4,6 +4,22 @@
 
 This workspace separates the LogicN language core from the bespoke app that uses it.
 
+The architecture charter is:
+
+```text
+Security first.
+Code second.
+Authority never implicit.
+```
+
+LogicN is a secure, auditable, AI-readable execution language and governed
+runtime architecture. It is not designed primarily around raw speed. It is
+designed around controlled authority, verifiable execution, explicit boundaries,
+architectural stability and future-capable compute models.
+
+The charter concept lives in
+`docs/Knowledge-Bases/architecture-charter.md`.
+
 
 Language documentation, compiler notes, examples and schemas live in
 `packages-logicn/logicn-core/`
@@ -121,6 +137,23 @@ safe JSON boundaries and deployment policy. Low-level systems targets, embedded
 targets and native executable output remain later output paths.
 
 The detailed direction lives in `docs/SECURE_WEB_RUNTIME_FIRST.md`.
+
+The current practical execution model is Node-hosted:
+
+```text
+HTTP request
+  -> Node.js server
+  -> LogicN framework/API server adapter
+  -> LogicN App Kernel
+  -> LogicN checked rules and flows
+  -> Node.js executes the runtime path
+  -> HTTP response
+```
+
+This must be described honestly as a Node-hosted secure LogicN layer, not a
+standalone native web server/runtime. The core language and reports should
+remain target-independent so future WASM, VM, native or other checked backends
+can be added without changing source meaning.
 
 
 The baseline trust model is practical zero trust: external input, dependency

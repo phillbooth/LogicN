@@ -11,6 +11,11 @@ expressing system intent in a way that humans, AI and tools can understand,
 check and safely execute.
 ```
 
+Modern software development is shifting from simply writing instructions for
+machines to clearly expressing the methods, policies, data flows and intentions
+behind a system so humans, AI tools and compilers can all understand, verify
+and improve it.
+
 ## LogicN Statement
 
 LogicN programs should clearly express:
@@ -28,6 +33,10 @@ reports
 
 The goal is for developers, AI systems, compilers and runtime tools to
 understand what the software is meant to do before it runs.
+
+A LogicN program should clearly express the methods, rules, policies, data flows
+and security boundaries it represents, so developers, AI systems and runtime
+tools can understand what the software is meant to do before it runs.
 
 ## How LogicN Expresses Intent
 

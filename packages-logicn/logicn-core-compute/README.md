@@ -31,6 +31,11 @@ compute reports
 not own target-specific binary output, AI model formats, CPU kernels or
 photonic mapping.
 
+Quantum compute, if supported later, is target planning rather than normal
+application runtime behaviour. Ordinary LogicN routes do not run on quantum
+computers. Future quantum compute blocks must use isolated quantum types,
+explicit measurement, declared fallback and reports.
+
 `optical_io` is a data-movement and interconnect target, not a compute device
 that runs application code by itself. LogicN uses it to estimate transfer cost,
 prefer data locality, choose efficient transfer formats and report fallback to
@@ -76,4 +81,5 @@ logicn-ai-lowbit describes low-bit AI backend inference.
 logicn-target-ai-accelerator describes passive accelerator backend profiles.
 logicn-target-native emits future native executable target plans.
 logicn-target-photonic emits photonic target plans and optical I/O reports.
+future quantum target support must remain explicit, measured and reportable.
 ```

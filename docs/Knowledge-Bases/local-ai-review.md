@@ -19,6 +19,10 @@ Local AI review can explain checked reports, highlight suspicious patterns and
 prepare audit narratives without sending code or sensitive project data to
 external services.
 
+Low-bit local models, including BitNet-style backends, may be useful for this
+work because they can make local CPU-friendly review more practical. They remain
+advisory backends, not sources of proof.
+
 ## Inputs
 
 The reviewer should read deterministic reports first:
@@ -96,3 +100,5 @@ Never expose secrets in AI prompts or outputs.
 
 Local AI review belongs under future tooling/platform concepts. It is not a
 non-negotiable correctness rule.
+
+See [Local Low-Bit AI Review](local-low-bit-ai-review.md).

@@ -9,6 +9,25 @@ runtime adapters.
 
 Policy contracts describe what may happen and under which authority.
 
+Policy is first-class source. It should be visible, reusable, close to the
+thing it protects and compiled into effective runtime checks and reports.
+
+## Policy Types
+
+```text
+policy app
+policy route
+policy flow
+policy data
+policy response
+policy memory
+policy package
+policy runtime
+policy compute
+policy interop
+policy audit
+```
+
 ## Security Rules
 
 - Policy must be source-visible.
@@ -19,10 +38,12 @@ Policy contracts describe what may happen and under which authority.
 ## Generated Reports
 
 ```text
-policy-index-report.json
-policy-definition-report.json
-policy-effective-report.json
-policy-conflict-report.json
+policy-index.json
+policy-definitions.json
+policy-effective.json
+policy-conflicts.json
+policy-ai-summary.json
+policy-human-summary.md
 ```
 
 ## v1 Scope

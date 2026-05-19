@@ -18,6 +18,8 @@ adding post-v1 targets or domain package syntax.
 [x] Define initial core syntax safety checker contract
 [ ] Define full checker pipeline contract
 [ ] Define IR contract
+[ ] Define IR handoff requirements for VM, WASM, native and Node-hosted runtime
+  paths
 [ ] Define target handoff contract
 [ ] Define diagnostic format
 [ ] Define source-map contract

@@ -21,11 +21,15 @@ SecureString model helpers
 Secret<T> / protected secret reference contracts
 redaction primitives
 permission model types
+policy definition and effective policy contracts
+capability grant and boundary report contracts
 security diagnostics
 security report contracts
 safe token/cookie/header handling helpers
 secret taint tracking and safe sink decisions
 cryptographic policy types
+post-quantum crypto policy planning
+crypto inventory report contracts
 network permission decision integration
 security report creation
 ```
@@ -85,10 +89,17 @@ redaction input over the configured maximum is fully redacted
 invalid redaction rules fully redact by default
 redaction replacements that can re-emit full matches or surrounding context are rejected
 permission models deny by default
+policy conflicts fail closed unless explicitly resolved
+effective policy must be reportable
+effects are not actor authorization
+protected actions and protected data exposure require capabilities or permissions
 explicit deny grants take precedence over allow grants
 default-allow and wildcard-allow permission models are diagnosed
 network.any, rawSocket, packetCapture and promiscuousMode are denied by default
 weak crypto algorithms must not appear in allowed algorithm lists
+cryptographic choices must be policy-driven and reportable
+Random must not be used for secrets, keys, tokens, salts or nonces
+post-quantum readiness must be reported through crypto inventory evidence
 raw SQL, shell execution and unsafe interop are production risks by default
 secret flows to logs, AI prompts, external APIs and errors are reported
 secret values are denied from logs, errors, cache, LLM input, build output and reports

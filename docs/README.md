@@ -12,8 +12,10 @@ documentation lives in `../packages-logicn/logicn-core/`.
 2. [Core Model](framework/framework-core-model.md)
 3. [Project Structure](framework/framework-project-structure.md)
 4. [Non-Negotiable Rules](rules/rules-non-negotiable.md)
-5. [Secure Runtime](framework/framework-secure-runtime.md)
-6. [Documentation Layer Model](Knowledge-Bases/documentation-layer-model.md)
+5. [Priority Categories](rules/rules-priority-categories.md)
+6. [Architecture Charter](Knowledge-Bases/architecture-charter.md)
+7. [Secure Runtime](framework/framework-secure-runtime.md)
+8. [Documentation Layer Model](Knowledge-Bases/documentation-layer-model.md)
 
 ## Core Framework Concepts
 
@@ -27,6 +29,7 @@ documentation lives in `../packages-logicn/logicn-core/`.
 - [Contracts](framework/framework-contracts.md)
 - [Effects](framework/framework-effects.md)
 - [Capabilities](framework/framework-capabilities.md)
+- [Encapsulation](framework/framework-encapsulation.md)
 - [Classification](framework/framework-classification.md)
 - [Context](framework/framework-context.md)
 - [Scopes And Lifetimes](framework/framework-scopes-lifetimes.md)
@@ -35,6 +38,7 @@ documentation lives in `../packages-logicn/logicn-core/`.
 - [Events](framework/framework-events.md)
 - [Repositories And Storage](framework/framework-repositories-storage.md)
 - [Adapters And Connectors](framework/framework-adapters-connectors.md)
+- [MCP AI Tool Boundaries](framework/framework-mcp-ai-tool-boundaries.md)
 - [Packages](framework/framework-packages.md)
 - [Scoped Vaults](framework/framework-scoped-vaults.md)
 - [Reports](framework/framework-reports.md)
@@ -59,26 +63,37 @@ documentation lives in `../packages-logicn/logicn-core/`.
 - [Contract Index Report](reports/reports-contract-index.md)
 - [AI Context Report](reports/reports-ai-context.md)
 - [Audit Evidence](reports/reports-audit-evidence.md)
+- [MCP Reports](reports/reports-mcp.md)
+- [Crypto Inventory Reports](reports/reports-crypto-inventory.md)
 - [Local AI Review](reports/reports-local-ai-review.md)
 
 ## Rules
 
 - [Non-Negotiable Rules](rules/rules-non-negotiable.md)
+- [Priority Categories](rules/rules-priority-categories.md)
 - [Boundary Safety](rules/rules-boundary-safety.md)
 - [Unsupported Legacy Patterns](rules/rules-unsupported-legacy.md)
+- [No Inheritance And Explicit Security](rules/rules-no-inheritance-explicit-security.md)
 - [Bool, Tri And Photonic Logic](rules/rules-bool-tri-photonic.md)
 - [Photonic Resolution](rules/rules-photonic-resolution.md)
+- [Quantum Readiness](rules/rules-quantum-readiness.md)
 
 ## Knowledge Base Concepts
 
 - [Core Application Model](Knowledge-Bases/core-application-model.md)
+- [Architecture Charter](Knowledge-Bases/architecture-charter.md)
 - [LogicN Concept Map](Knowledge-Bases/logicn-concept-map.md)
+- [Developer-Friendly Permission Model](Knowledge-Bases/developer-friendly-permission-model.md)
+- [Policy Architecture](Knowledge-Bases/policy-architecture.md)
+- [Model Views And Data Blocks](Knowledge-Bases/model-views-and-data-blocks.md)
+- [Hello World API Pattern](Knowledge-Bases/hello-world-api-pattern.md)
 - [Capabilities](Knowledge-Bases/capabilities.md)
 - [Permission, Capability And Actor Model](Knowledge-Bases/permission-capability-actor-model.md)
 - [Scoped Vaults](Knowledge-Bases/scoped-vaults.md)
 - [Boundary Safety Proof](Knowledge-Bases/boundary-safety-proof.md)
 - [Photonic Resolution Boundary](Knowledge-Bases/photonic-resolution-boundary.md)
 - [Local AI Review](Knowledge-Bases/local-ai-review.md)
+- [Local Low-Bit AI Review](Knowledge-Bases/local-low-bit-ai-review.md)
 - [Software As Declared Intent](Knowledge-Bases/software-as-declared-intent.md)
 - [Securely Governed Runtime](Knowledge-Bases/securely-governed-runtime.md)
 - [AI Compute Plan](Knowledge-Bases/ai-compute-plan.md)
@@ -91,6 +106,13 @@ documentation lives in `../packages-logicn/logicn-core/`.
 - [Fast Response And Keep-Alive](Knowledge-Bases/fast-response-and-keep-alive.md)
 - [Boundary Extension Concepts](Knowledge-Bases/boundary-extension-concepts.md)
 - [Polymorphism](Knowledge-Bases/polymorphism.md)
+- [Priority Categories](Knowledge-Bases/priority-categories.md)
+- [Encapsulation Model](Knowledge-Bases/encapsulation-model.md)
+- [Model Security Contracts](Knowledge-Bases/model-security-contracts.md)
+- [No Inheritance And Explicit Security](Knowledge-Bases/no-inheritance-explicit-security.md)
+- [MCP AI Tool Boundaries](Knowledge-Bases/mcp-ai-tool-boundaries.md)
+- [Quantum Readiness](Knowledge-Bases/quantum-readiness.md)
+- [Node-Hosted Runtime Roadmap](Knowledge-Bases/node-hosted-runtime-roadmap.md)
 
 ## Existing App And Workspace Docs
 
@@ -98,6 +120,7 @@ documentation lives in `../packages-logicn/logicn-core/`.
 - [Architecture](ARCHITECTURE.md)
 - [Security](SECURITY.md)
 - [Secure Web Runtime First](SECURE_WEB_RUNTIME_FIRST.md)
+- [Node-Hosted Runtime Roadmap](NODE_HOSTED_RUNTIME_ROADMAP.md)
 - [Startup And Boot Warmup](STARTUP_AND_BOOT_WARMUP.md)
 - [Fast Response And Keep-Alive](FAST_RESPONSE_AND_KEEPALIVE.md)
 - [API](API.md)

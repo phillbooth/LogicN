@@ -12,6 +12,9 @@ They must be measured, resolved or matched into classical LogicN values.
 
 Only `Bool` controls ordinary application flow.
 
+Every resolution from signal, `Tri`, confidence or uncertainty to `Bool` must
+be explicit, policy-based and reportable.
+
 ## Why This Exists
 
 Photonic and optical systems may produce:

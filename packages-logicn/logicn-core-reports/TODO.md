@@ -11,6 +11,7 @@
 [x] Define diagnostic summary contract
 [x] Define build report contract
 [x] Define security report contract
+[ ] Define policy index, definitions, effective, conflict and AI-summary report contracts
 [x] Define target report contract
 [x] Define runtime report contract
 [x] Define async/concurrency report contract

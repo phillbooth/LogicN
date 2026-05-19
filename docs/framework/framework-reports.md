@@ -23,8 +23,10 @@ model reports
 route reports
 effect reports
 security reports
+crypto inventory reports
 memory reports
 AI context reports
+MCP reports
 runtime bridge reports
 ```
 
@@ -34,6 +36,10 @@ runtime bridge reports
 - Reports must identify generated facts versus source-declared facts.
 - Reports must not become a source of authority unless policy allows it.
 - AI-safe reports must exclude private payloads and raw credentials.
+- MCP reports must show tool, resource, prompt, token-boundary and vault access
+  decisions without printing tokens or sensitive payloads.
+- Crypto inventory reports must show algorithm purpose, policy state and
+  post-quantum readiness without printing keys, seeds or tokens.
 
 ## v1 Scope
 

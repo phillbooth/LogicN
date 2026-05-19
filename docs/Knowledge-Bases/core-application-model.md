@@ -39,6 +39,9 @@ boundary   = package + storage + external + event + AI/tool + compute
 Internally, LogicN still preserves the detailed concepts so the compiler,
 runtime and reports can reason precisely.
 
+Beginner-facing docs should teach the five concepts first. Detailed concepts
+then sit underneath them.
+
 ## Data
 
 Data includes:
@@ -199,6 +202,8 @@ data User {
 
 The model is internal data. The view is safe output.
 
+See [Model Views And Data Blocks](model-views-and-data-blocks.md).
+
 ## Flow Rule
 
 A flow is reusable execution logic. It should not be merged with a route.
@@ -240,6 +245,8 @@ permission user_read_with_pii {
 
 Internally this compiles into capability checks, effect checks, policy decisions
 and report output.
+
+See [Developer-Friendly Permission Model](developer-friendly-permission-model.md).
 
 ## Boundary Rule
 
@@ -285,3 +292,6 @@ before it runs.
 
 LogicN code should communicate system intent, not only machine instructions.
 See [Software As Declared Intent](software-as-declared-intent.md).
+
+For a compact beginner example, see
+[Hello World API Pattern](hello-world-api-pattern.md).

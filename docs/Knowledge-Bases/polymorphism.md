@@ -28,13 +28,18 @@ Allowed forms:
 - constrained generic type polymorphism
 - explicit boot-time implementation selection
 
-Restricted or disallowed forms:
+Disallowed forms:
 
-- inheritance as the main model
+- inheritance
+- inherited permissions
+- inherited effects
+- inherited responses
 - hidden dynamic dispatch
 - implicit provider swapping
 - unreported plugin behaviour
 - runtime mutation of implementation behaviour
+
+See [No Inheritance And Explicit Security](no-inheritance-explicit-security.md).
 
 ## Fit With The Core Model
 
@@ -221,3 +226,6 @@ PaymentProvider is TestPaymentProvider in test.
 Different implementations are allowed only when they satisfy a declared contract
 and their permissions, effects, data exposure and boundaries remain visible in reports.
 ```
+
+Polymorphism must not use inherited authority. Each implementation must declare
+its effective permissions, effects, boundaries and report requirements.

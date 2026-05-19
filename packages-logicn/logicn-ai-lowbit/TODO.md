@@ -11,6 +11,7 @@
 [x] Define benchmark report format
 [x] Define safety diagnostics
 [x] Add BitNet as a backend id, not a syntax target
+[ ] Define local low-bit AI review adapter contract for report explanation
 [x] Add examples
 [x] Add tests
 ```

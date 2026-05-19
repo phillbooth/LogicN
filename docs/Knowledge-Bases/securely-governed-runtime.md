@@ -37,6 +37,9 @@ LogicN should establish governance before code is allowed to act. Packages,
 plugins, AI tools, storage, network access and compute targets do not receive
 authority automatically.
 
+This runtime philosophy is the execution-focused form of the broader
+[Architecture Charter](architecture-charter.md).
+
 ## Foundational Principles
 
 ### Nothing Has Authority Until Verified

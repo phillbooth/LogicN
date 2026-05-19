@@ -78,7 +78,7 @@ HTML or CSS badges may be added later by the documentation renderer.
 | Runtime mutation | forbidden in normal code; use adapters, interfaces, pipelines, test mocks or signed hotfix packages | Documented draft | High | Hidden mutation breaks type, effect, source-map and report guarantees. |
 | Imports/modules | `imports { use ... }` direction | Documented draft | Potential | Final module syntax remains open. |
 | Packages | package registry/lock/profile docs | TODO | High | Package resolution must be reproducible and permissioned. |
-| Classes/inheritance | not the initial core model | Not core | Potential | Use records, enums, flows, contracts and explicit composition instead. |
+| Classes/inheritance | disallowed in normal LogicN source | Not core | High | Use records, enums, flows, contracts and explicit composition instead; inherited authority is not allowed. |
 | Contract polymorphism | contracts plus explicit implementations/adapters | Documented draft | Managed | Allows different implementations without hiding authority. |
 | Variant polymorphism | sealed variants plus exhaustive `match` | TODO | Managed | Needed for safe domain variation without inheritance chains. |
 | Generics | `Array<T>`, `Result<T,E>`, typed contracts | Documented draft | Potential | Generic constraints/protocols remain production-readiness work. |
@@ -188,7 +188,7 @@ package boundaries are stable.
 | Data | class | Potential | Use records plus flows first; class syntax can wait. |
 | Data | method | Potential | Prefer namespaced flows until the object model is designed. |
 | Data | constructor | Potential | Prefer typed values and validation flows. |
-| Data | inheritance | Potential | Excluded as the main polymorphism model; use contracts, adapters, variants and generics. |
+| Data | inheritance | High | Disallowed in normal LogicN source; use contracts, adapters, variants and generics. |
 | Values | global variable | High | Conflicts with strict global registry and effect visibility. |
 | Values | static local | High | Hidden state should be explicit and reported. |
 | Operators | null coalescing | Potential | Prefer explicit `Option` matching. |

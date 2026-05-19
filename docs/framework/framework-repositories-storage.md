@@ -18,6 +18,9 @@ cross from governed application code into a persistence system.
 Models describe data. Repositories describe how data is fetched, saved or
 queried.
 
+Models must not own storage effects directly; this keeps model contracts
+security-focused and storage behaviour reportable.
+
 ## Avoid Hidden Active Record Behaviour
 
 Avoid:

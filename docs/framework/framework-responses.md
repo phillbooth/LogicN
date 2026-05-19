@@ -8,6 +8,9 @@ Response docs define what may leave a LogicN application.
 
 A response contract is a safe public output boundary.
 
+Response contracts are part of LogicN encapsulation because they define what may
+leave a model, flow or route boundary.
+
 ## Syntax Example
 
 ```logicn
@@ -23,6 +26,8 @@ type UserResponse {
 - Raw models must not be returned.
 - Secrets must never be included.
 - Sensitive fields require explicit capability and audit policy.
+- Response contracts should use include/deny rules or equivalent views to make
+  exposure explicit.
 
 ## Generated Reports
 

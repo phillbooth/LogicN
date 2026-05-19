@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-05-18T17:03:09.367Z",
+  "generatedAt": "2026-05-19T20:14:53.814Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -894,6 +894,15 @@
       ]
     },
     {
+      "id": "doc:docs/framework/framework-encapsulation.md",
+      "kind": "Document",
+      "label": "framework-encapsulation.md",
+      "sourcePath": "docs/framework/framework-encapsulation.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/framework/framework-errors.md",
       "kind": "Document",
       "label": "framework-errors.md",
@@ -907,6 +916,15 @@
       "kind": "Document",
       "label": "framework-events.md",
       "sourcePath": "docs/framework/framework-events.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/framework/framework-mcp-ai-tool-boundaries.md",
+      "kind": "Document",
+      "label": "framework-mcp-ai-tool-boundaries.md",
+      "sourcePath": "docs/framework/framework-mcp-ai-tool-boundaries.md",
       "tags": [
         "document"
       ]
@@ -1074,6 +1092,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/architecture-charter.md",
+      "kind": "Document",
+      "label": "architecture-charter.md",
+      "sourcePath": "docs/Knowledge-Bases/architecture-charter.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/benchmark-success-plan.md",
       "kind": "Document",
       "label": "benchmark-success-plan.md",
@@ -1128,10 +1155,28 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/developer-friendly-permission-model.md",
+      "kind": "Document",
+      "label": "developer-friendly-permission-model.md",
+      "sourcePath": "docs/Knowledge-Bases/developer-friendly-permission-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/documentation-layer-model.md",
       "kind": "Document",
       "label": "documentation-layer-model.md",
       "sourcePath": "docs/Knowledge-Bases/documentation-layer-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/encapsulation-model.md",
+      "kind": "Document",
+      "label": "encapsulation-model.md",
+      "sourcePath": "docs/Knowledge-Bases/encapsulation-model.md",
       "tags": [
         "document"
       ]
@@ -1146,10 +1191,28 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/hello-world-api-pattern.md",
+      "kind": "Document",
+      "label": "hello-world-api-pattern.md",
+      "sourcePath": "docs/Knowledge-Bases/hello-world-api-pattern.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/local-ai-review.md",
       "kind": "Document",
       "label": "local-ai-review.md",
       "sourcePath": "docs/Knowledge-Bases/local-ai-review.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/local-low-bit-ai-review.md",
+      "kind": "Document",
+      "label": "local-low-bit-ai-review.md",
+      "sourcePath": "docs/Knowledge-Bases/local-low-bit-ai-review.md",
       "tags": [
         "document"
       ]
@@ -1173,6 +1236,51 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/mcp-ai-tool-boundaries.md",
+      "kind": "Document",
+      "label": "mcp-ai-tool-boundaries.md",
+      "sourcePath": "docs/Knowledge-Bases/mcp-ai-tool-boundaries.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/model-security-contracts.md",
+      "kind": "Document",
+      "label": "model-security-contracts.md",
+      "sourcePath": "docs/Knowledge-Bases/model-security-contracts.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/model-views-and-data-blocks.md",
+      "kind": "Document",
+      "label": "model-views-and-data-blocks.md",
+      "sourcePath": "docs/Knowledge-Bases/model-views-and-data-blocks.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/no-inheritance-explicit-security.md",
+      "kind": "Document",
+      "label": "no-inheritance-explicit-security.md",
+      "sourcePath": "docs/Knowledge-Bases/no-inheritance-explicit-security.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/node-hosted-runtime-roadmap.md",
+      "kind": "Document",
+      "label": "node-hosted-runtime-roadmap.md",
+      "sourcePath": "docs/Knowledge-Bases/node-hosted-runtime-roadmap.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/permission-capability-actor-model.md",
       "kind": "Document",
       "label": "permission-capability-actor-model.md",
@@ -1191,10 +1299,37 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/policy-architecture.md",
+      "kind": "Document",
+      "label": "policy-architecture.md",
+      "sourcePath": "docs/Knowledge-Bases/policy-architecture.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/polymorphism.md",
       "kind": "Document",
       "label": "polymorphism.md",
       "sourcePath": "docs/Knowledge-Bases/polymorphism.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/priority-categories.md",
+      "kind": "Document",
+      "label": "priority-categories.md",
+      "sourcePath": "docs/Knowledge-Bases/priority-categories.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/quantum-readiness.md",
+      "kind": "Document",
+      "label": "quantum-readiness.md",
+      "sourcePath": "docs/Knowledge-Bases/quantum-readiness.md",
       "tags": [
         "document"
       ]
@@ -1335,6 +1470,15 @@
       ]
     },
     {
+      "id": "doc:docs/NODE_HOSTED_RUNTIME_ROADMAP.md",
+      "kind": "Document",
+      "label": "NODE_HOSTED_RUNTIME_ROADMAP.md",
+      "sourcePath": "docs/NODE_HOSTED_RUNTIME_ROADMAP.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/OBSERVABILITY.md",
       "kind": "Document",
       "label": "OBSERVABILITY.md",
@@ -1434,10 +1578,28 @@
       ]
     },
     {
+      "id": "doc:docs/reports/reports-crypto-inventory.md",
+      "kind": "Document",
+      "label": "reports-crypto-inventory.md",
+      "sourcePath": "docs/reports/reports-crypto-inventory.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/reports/reports-local-ai-review.md",
       "kind": "Document",
       "label": "reports-local-ai-review.md",
       "sourcePath": "docs/reports/reports-local-ai-review.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/reports/reports-mcp.md",
+      "kind": "Document",
+      "label": "reports-mcp.md",
+      "sourcePath": "docs/reports/reports-mcp.md",
       "tags": [
         "document"
       ]
@@ -1515,6 +1677,15 @@
       ]
     },
     {
+      "id": "doc:docs/rules/rules-no-inheritance-explicit-security.md",
+      "kind": "Document",
+      "label": "rules-no-inheritance-explicit-security.md",
+      "sourcePath": "docs/rules/rules-no-inheritance-explicit-security.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/rules/rules-non-negotiable.md",
       "kind": "Document",
       "label": "rules-non-negotiable.md",
@@ -1528,6 +1699,24 @@
       "kind": "Document",
       "label": "rules-photonic-resolution.md",
       "sourcePath": "docs/rules/rules-photonic-resolution.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/rules/rules-priority-categories.md",
+      "kind": "Document",
+      "label": "rules-priority-categories.md",
+      "sourcePath": "docs/rules/rules-priority-categories.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/rules/rules-quantum-readiness.md",
+      "kind": "Document",
+      "label": "rules-quantum-readiness.md",
+      "sourcePath": "docs/rules/rules-quantum-readiness.md",
       "tags": [
         "document"
       ]

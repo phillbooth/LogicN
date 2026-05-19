@@ -2,6 +2,15 @@
 
 `logicn-core-runtime` is the future execution engine for checked or compiled LogicN code.
 
+At the current prototype stage, practical web/API execution is Node-hosted. The
+runtime package should define target-independent execution contracts while
+allowing a Node host adapter to execute the current path.
+
+```text
+today: checked LogicN execution through Node.js
+future: LogicN VM, WASM, native or other checked runtime targets
+```
+
 It belongs in:
 
 ```text
@@ -33,6 +42,8 @@ safe startup warmup hooks
 governed execution planning
 verified fast path planning
 AI compute plan execution hooks
+Node-hosted runtime adapter contracts
+host-runtime overhead reports
 ```
 
 ## Securely Governed Runtime
@@ -65,6 +76,27 @@ request
 
 The runtime should treat policy, effects, capabilities and audit hooks as part
 of execution itself rather than external middleware.
+
+## Node-Hosted Runtime Position
+
+Current LogicN web/API execution should be documented as:
+
+```text
+HTTP request
+  -> Node.js server
+  -> LogicN framework/API server adapter
+  -> LogicN app kernel
+  -> LogicN checked rules and flows
+  -> Node.js executes the runtime path
+  -> HTTP response
+```
+
+Node hosting is an implementation stage, not a language semantic guarantee.
+Node/V8 behavior must not define LogicN source meaning, and benchmarks from
+this path must be labelled as prototype runner or host-runtime overhead rather
+than native LogicN compiler performance.
+
+See `../../docs/Knowledge-Bases/node-hosted-runtime-roadmap.md`.
 
 Core runtime zones:
 

@@ -12,6 +12,7 @@ tool boundary.
 permission-report.json
 permission-effective-report.json
 capability-report.json
+capability-boundary-report.json
 capability-grant-report.json
 effect-report.json
 security-report.json
@@ -29,6 +30,9 @@ data exposure rules
 audit requirements
 source locations
 related routes, flows, packages and tools
+boundary check points
+grant source
+lease or expiry when applicable
 ```
 
 ## Security Rules
@@ -36,6 +40,7 @@ related routes, flows, packages and tools
 - Missing required capability must fail closed.
 - Sensitive action requires capability.
 - Sensitive data exposure requires capability.
+- Effects must not be reported as actor authorization.
 - Reports must not include secret values.
 - Reports must distinguish declared permission from effective permission.
 

@@ -56,6 +56,7 @@ supervisor agent
 agent registry
 typed message bus
 tool gateway
+MCP boundary gateway
 secret guard
 memory guard
 cache guard
@@ -122,6 +123,28 @@ disable audit logs
 Agents should normally propose code patches, docs changes, tests, reports and
 deployment requests. Applying dangerous changes requires explicit policy and
 human approval.
+
+## MCP Tool Boundary Position
+
+MCP tools, resources and prompts must enter agent workflows through declared
+AI/tool boundaries. Agents must not treat an advertised MCP tool as permission
+to use it.
+
+MCP calls must remain:
+
+```text
+typed
+permissioned
+effect-checked
+token-boundary checked
+vault-limited
+audited
+reportable
+```
+
+Generic vault access through MCP is denied. Any future MCP runtime support
+should produce MCP tool, resource exposure, effective permission and token
+boundary reports before promotion into trusted agent workflows.
 
 ## AI Self-Modification Governance
 

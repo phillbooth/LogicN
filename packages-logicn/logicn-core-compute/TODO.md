@@ -5,6 +5,9 @@ WASM. GPU, AI accelerator, optical I/O, photonic, low-bit AI and other advanced
 targets are post-v1 planning unless needed to describe core type-system
 semantics.
 
+Quantum compute is future/research target planning. It must not be treated as an
+active v1 runtime target.
+
 ```text
 [x] Create /packages-logicn/logicn-core-compute
 [x] Document package boundary
@@ -15,6 +18,8 @@ semantics.
 [x] Define target selection rules
 [x] Add generic low-bit AI fallback target concept
 [x] Define offload planning reports
+[ ] Define future quantum target planning rules after core compute reports
+  stabilise
 [x] Add examples
 [x] Add tests
 ```

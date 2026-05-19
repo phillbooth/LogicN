@@ -6,6 +6,28 @@ All notable changes to this app should be documented here.
 
 ### Added
 
+- Added developer-friendly permission, model-view data block, Hello World API
+  pattern and local low-bit AI review Knowledge Base concepts, clarifying how
+  LogicN can simplify syntax without weakening internal safety checks.
+- Added Policy Architecture docs covering layered source-visible policies,
+  policy placement rules, compiled policy checks and policy index/definition/
+  effective/conflict/AI-summary report targets.
+- Added the LogicN Architecture Charter Knowledge Base concept as the top-level
+  identity statement for security-first, auditable, AI-readable and governed
+  execution.
+- Added Node-Hosted Runtime Roadmap documentation clarifying that current
+  practical LogicN web/API execution runs through Node.js while the core remains
+  target-independent for future VM, WASM and native runtime work.
+- Clarified the capability model as boundary-wide actor/package/flow/tool
+  authority separate from code effects, including capability boundary checks,
+  grant rules and report targets.
+- Added MCP AI Tool Boundaries documentation, including the Knowledge Base
+  concept, framework boundary guidance, MCP report targets, token-boundary
+  rules, no generic vault access and requirements that MCP tools, resources and
+  prompts go through typed, permissioned, audited LogicN boundaries.
+- Added Quantum Readiness documentation covering post-quantum crypto policy,
+  crypto inventory reports, `Random` versus `SecureRandom`, isolated quantum
+  types, measurement-before-flow rules and future quantum target planning.
 - Added typed contract implementations and tests for core package completion:
   `logicn-core-network` now has policy, TLS, endpoint, backend-selection and
   report contracts; `logicn-core-runtime` has context, result, effect-decision
@@ -64,6 +86,16 @@ All notable changes to this app should be documented here.
 - Added the layered docs structure under `docs/framework`, `docs/contracts`,
   `docs/reports` and `docs/rules`, plus a Knowledge Base concept note for the
   documentation layer model.
+- Added Priority Categories docs to classify LogicN ideas as non-negotiable
+  rules, core language rules, core concepts, platform concepts, recommended
+  design rules or future/research concepts before implementation.
+- Added Encapsulation Model docs defining LogicN encapsulation as controlled
+  data movement through secure flows, classification, response contracts,
+  capabilities, effects, scoped lifetimes, package exports, safe mutation and
+  reports instead of public/private visibility alone.
+- Added Model Security Contracts docs defining models as classified internal
+  data contracts with explicit relationships, mutation rules, storage
+  separation, model report targets and AI-readable summaries.
 - Added Knowledge Base concept docs for the core `data -> flow -> permission ->
   boundary -> report` model, permission/capability/actor semantics, scoped
   vaults, boundary safety proof, photonic resolution and local AI review.
@@ -89,6 +121,10 @@ All notable changes to this app should be documented here.
 - Added Polymorphism concept docs covering contract-based polymorphism,
   adapter-based polymorphism, union/match variants, constrained generics,
   permission-aware implementation selection and effective reports.
+- Added No Inheritance And Explicit Security docs making inheritance and
+  inherited authority disallowed in normal LogicN source, with composition,
+  contracts, adapters, explicit views, explicit permissions, secure flows and
+  effective reports as replacements.
 - Added a Match Catch-All Branch concept documenting `_ => { ... }` as the
   explicit fallback branch for `match`, including webhook and security-sensitive
   handling rules.

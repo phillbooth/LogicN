@@ -9,6 +9,8 @@ Secure flows define checked application execution boundaries.
 A secure flow is a typed function boundary with explicit return type, error
 model and effects.
 
+Secure flows are the main encapsulation boundary for LogicN execution.
+
 ## Syntax Example
 
 ```logicn
@@ -22,9 +24,13 @@ effects [database.write] {
 ## Security Rules
 
 - Effects must be declared.
+- Inputs and outputs must be explicit.
+- Required capabilities should be declared for sensitive data or actions.
 - Recoverable failures should use `Result<T, E>`.
 - Missing values should use `Option<T>`.
 - Branches over `Result`, `Option`, `Tri` and `Decision` should be explicit.
+- Callers should receive declared response/view values, not internal models or
+  hidden mutable state.
 
 ## Generated Reports
 

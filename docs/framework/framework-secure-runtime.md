@@ -15,6 +15,9 @@ Secure web applications need fast request handling without losing explicit
 security boundaries. LogicN should make these boundaries typed, reportable and
 AI-readable.
 
+The secure runtime implements the architecture charter at request execution
+time: security first, code second, authority never implicit.
+
 ## Runtime Path
 
 ```text

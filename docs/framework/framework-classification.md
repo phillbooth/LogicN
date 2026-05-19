@@ -25,6 +25,8 @@ model User {
 - Secret and credential fields must not appear in public output.
 - PII and financial data require declared permission before exposure.
 - Internal fields must not leave public route boundaries.
+- Classification is part of LogicN encapsulation: it controls where data may
+  flow, not only whether a field is visible.
 - Sensitive values must be redacted from logs, reports and AI-readable output
   unless a safe report format explicitly allows derived metadata.
 - Production models should not contain unclassified fields.
@@ -42,3 +44,7 @@ secret-usage-report.json
 
 Field-level classification and basic exposure checks for models, requests and
 responses/views.
+
+## Knowledge Base
+
+See [Encapsulation Model](../Knowledge-Bases/encapsulation-model.md).

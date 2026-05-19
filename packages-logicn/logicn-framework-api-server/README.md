@@ -2,6 +2,11 @@
 
 `logicn-framework-api-server` is the first concrete HTTP API-serving package for LogicN.
 
+In the current prototype/runtime phase, this package is expected to be
+Node-hosted for practical web/API serving. Future implementations may use
+native, WASM, serverless or other checked runtime adapters, but those are later
+targets.
+
 It belongs in:
 
 ```text
@@ -124,6 +129,24 @@ A simple LogicN API can run through `logicn-framework-api-server`.
 
 A larger framework can reuse the same safe kernel without being forced to use
 LogicN's built-in server.
+
+## Current Node-Hosted Position
+
+Current practical serving path:
+
+```text
+HTTP request
+  -> Node.js server
+  -> logicn-framework-api-server
+  -> logicn-framework-app-kernel
+  -> logicn-core-runtime
+  -> typed LogicN flow
+  -> HTTP response
+```
+
+This package should not claim to be a standalone native web server until a
+non-Node runtime, async/event loop and HTTP stack exist as implemented, tested
+and reportable components.
 
 ---
 

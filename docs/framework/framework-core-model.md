@@ -1,6 +1,3 @@
-this the content is also requied to be stored in the knowlagebase folder in one or mutiple documents as a concept not as a discussion, name the file after the concept for indexing in .md format C:\laragon\www\LO\docs\Knowledge-Bases
-
-analyse this document, update concepts, documents and todo's with in reason
 # Framework: Core Model
 
 ## Purpose
@@ -31,7 +28,7 @@ Detailed framework concepts sit under this model:
 routes, requests, responses/views, models, classification
 secure flows, context, scopes/lifetimes, errors
 policies, permissions, effects, capabilities
-contracts, packages, repositories/storage, adapters, events
+contracts, packages, repositories/storage, adapters, events, MCP AI/tool boundaries
 reports and tests
 ```
 
@@ -53,12 +50,26 @@ security policy checks
 
 The goal is fast response through known-safe paths, not hidden state.
 
+## Developer Surface
+
+The beginner-facing surface should stay small:
+
+```text
+data       = model + request + response/view
+flow       = controlled execution
+permission = policy + effects + capabilities + audit
+boundary   = package + storage + external + event + AI/tool + compute
+report     = generated proof
+```
+
+This simplifies what developers write without weakening the internal model.
+
 ## Internal Mapping
 
 ```text
 data       = model + request + response/view
 permission = policy + effects + capabilities + audit
-boundary   = package + storage + external + event + AI/tool + compute
+boundary   = package + storage + external + event + AI/tool + MCP + compute
 ```
 
 ## Polymorphism
@@ -78,6 +89,7 @@ Polymorphism uses the same model:
 - Do not merge internal models with public responses.
 - Use model views for safe output.
 - Do not merge routes with flows.
+- Do not merge permissions into flows when reusable authority blocks are clearer.
 - Do not merge storage with models.
 - Do not hide effects, permissions or boundary crossings.
 
@@ -88,6 +100,7 @@ data-report.json
 flow-report.json
 permission-report.json
 boundary-report.json
+mcp-tool-index.json
 vault-report.json
 security-report.json
 ```

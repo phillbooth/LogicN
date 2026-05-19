@@ -1,0 +1,130 @@
+# Developer-Friendly Permission Model
+
+## Purpose
+
+LogicN should keep effects, capabilities, policies, audit and reports precise
+internally, but expose a simpler developer-facing permission model.
+
+## Short Definition
+
+```text
+permission = declared authority for a flow to act
+```
+
+A permission declares:
+
+- who may run the flow
+- what the code may do
+- what data may move
+- what must be audited
+- what reports prove the decision
+
+## Internal Mapping
+
+```text
+permission = actor authority + code effects + data exposure + policy rules + audit/report proof
+```
+
+| Internal part | Meaning |
+| --- | --- |
+| `actor` | what the user, service, package or agent is allowed to do |
+| `code` | what side effects the flow may perform |
+| `data` | what classified data may be accessed or exposed |
+| `audit` | what must be recorded |
+| `report` | generated proof |
+
+## Simple Use
+
+```logicn
+secure flow updateUserEmail(
+  request: UpdateEmailRequest,
+  ctx: RequestContext
+) -> Result<UserResponse, ApiError>
+  permission use user_email_update
+{
+  let user = try UsersRepository.findRequired(request.userId)
+  let updated = try User.changeEmail(user, request.email)
+
+  return Ok(UserResponse.from(updated))
+}
+```
+
+## Permission Definition
+
+```logicn
+permission user_email_update {
+  actor {
+    require users.email.update
+    require users.pii.read
+  }
+
+  code {
+    allow db.read
+    allow db.write
+    allow audit.write
+    deny network.external
+    deny file.write
+  }
+
+  data {
+    allow expose classify: public_id
+    allow expose classify: pii with users.pii.read
+    deny expose classify: secret
+    deny expose classify: internal
+  }
+
+  audit {
+    required true
+    event "user.email.update"
+  }
+}
+```
+
+## Beginner And Advanced Forms
+
+Beginner form:
+
+```logicn
+secure flow getUser(...)
+  permission use read_user
+{
+  ...
+}
+```
+
+Advanced form:
+
+```logicn
+secure flow getUser(...)
+  capabilities {
+    require users.read
+    require users.pii.read
+  }
+  effects {
+    allow db.read
+    allow audit.write
+    deny network.external
+  }
+  policy use UserReadPolicy
+{
+  ...
+}
+```
+
+Both should compile to effective capability, effect, policy, data exposure and
+report facts.
+
+## Rules
+
+- Normal developers should usually start with `permission use`.
+- Effects are not actor authority.
+- Capabilities are not technical effects.
+- Advanced blocks may be supported where explicit detail is needed.
+- Reports must show the effective permission after expansion.
+
+## Best Short Statement
+
+```text
+Developers write permission.
+LogicN compiles it into capabilities, effects, policy and reports.
+```

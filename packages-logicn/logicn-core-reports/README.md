@@ -17,6 +17,7 @@ report severity
 diagnostic summary contracts
 build report contracts
 security report contracts
+policy index, definition, effective and conflict report contracts
 target report contracts
 runtime report contracts
 async/concurrency report contracts
@@ -55,6 +56,10 @@ ReportDiagnostic
 DiagnosticSummary
 BuildReport
 SecurityReport
+PolicyIndexReport
+PolicyDefinitionsReport
+PolicyEffectiveReport
+PolicyConflictReport
 TargetReport
 RuntimeReport
 TaskReport
@@ -110,6 +115,11 @@ inbound ports, outbound hosts, TLS policy, selected I/O backend, zero-copy
 availability, rate limits, firewall posture, packet-filter facts and network
 performance bottlenecks. `logicn-core-reports` owns the shared report shape;
 `logicn-core-network`, the API server and the app kernel produce the facts.
+
+Policy reports are for source-visible policy analysis. They record policy
+declarations, source locations, usage, canonical definitions, effective merged
+policy per target and conflict diagnostics. Security/compiler packages produce
+the facts; `logicn-core-reports` owns the shared shape.
 
 Final rule:
 

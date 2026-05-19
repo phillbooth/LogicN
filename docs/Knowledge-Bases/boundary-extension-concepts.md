@@ -26,6 +26,7 @@ system or execution boundaries.
 | `storage` | boundary | Databases, files, object stores or persistence systems |
 | `adapters` | boundary | Governed implementations for external contracts |
 | `connectors` | boundary | Integrations with external systems, services or tools |
+| `MCP` | boundary | AI tool, resource and prompt access through declared boundaries |
 
 ## Events
 
@@ -81,6 +82,16 @@ Examples include:
 Adapters must declare contracts, effects, permissions, timeout policy, retry
 policy, secret handling and reports.
 
+## MCP AI Tool Boundaries
+
+MCP tools, resources and prompts are AI/tool boundary concepts.
+
+MCP should not give AI systems direct authority over tools, files, databases or
+vaults. LogicN should map every MCP tool and resource to typed data, a declared
+flow, explicit permission, boundary rules and generated reports.
+
+MCP tool availability is not permission.
+
 ## V1 Split
 
 V1-critical concept work:
@@ -95,6 +106,7 @@ Later implementation work:
 - full event runtime
 - queue/job/schedule engines
 - large adapter/provider ecosystem
+- MCP package/runtime implementation
 - database migrations
 - advanced storage provider packages
 

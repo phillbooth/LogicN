@@ -20,6 +20,7 @@ CPU reference fallback contracts
 thread, timeout and memory limits
 low-bit AI inference reports
 low-bit AI safety diagnostics
+local AI review backend compatibility
 ```
 
 ## Backend Role
@@ -45,6 +46,10 @@ npu_kernel
 
 BitNet is useful as a current backend for compatible 1.58-bit / ternary models,
 but it must not become a language feature or target name.
+
+Low-bit AI may also support local advisory review over deterministic LogicN
+reports. This is useful for explanation and audit narratives, but it must not be
+treated as compiler proof or runtime authority.
 
 Reference sources:
 
@@ -72,6 +77,7 @@ Final rule:
 ```text
 logicn-ai-lowbit adapts low-bit AI inference.
 bitnet is one backend inside logicn-ai-lowbit.
+local low-bit AI review is advisory only.
 logicn-ai defines generic AI inference contracts.
 logicn-core-logic defines language-level ternary logic.
 ```

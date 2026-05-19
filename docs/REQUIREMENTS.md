@@ -51,6 +51,18 @@ must not be treated as implemented app functionality.
 - The v1 surface must freeze around core syntax, the core type system,
   `Result<T, E>`, `Option<T>`, the memory-safety model, `logicn serve`, secure
   web runtime policy and CPU-compatible checked execution.
+- LogicN's architecture charter must remain stable: security first, code
+  second, authority never implicit. Raw speed must not override controlled
+  authority, verifiable execution, auditability, memory safety, architectural
+  stability or governed execution.
+- LogicN ideas must be classified before they are treated as implementation
+  requirements. The priority order is: non-negotiable rules, core language
+  rules, core concepts, platform concepts, recommended design rules and
+  future/research concepts.
+- AI tools and contributors must not promote future/research concepts into v1
+  scope unless requirements, tasks and package boundaries explicitly support
+  them. Suggestions that violate non-negotiable rules must be rejected or
+  redesigned.
 - Everything beyond secure runtime execution and the simple portable build
   target must be labelled post-v1 or target planning unless it is necessary to
   define the core type system.
@@ -71,11 +83,39 @@ must not be treated as implemented app functionality.
   bounded pools, safe inbound connection reuse and safe outbound connection
   pooling. Keep-alive policy must never bypass auth, validation, TLS, rate
   limits, body limits, backpressure or secret-safe logging.
+- LogicN's current practical web/API execution model must be described as
+  Node-hosted. The language core must remain target-independent, Node/V8
+  behavior must not define source semantics, and Node-hosted benchmarks must
+  be labelled as prototype runner or host-runtime overhead rather than native
+  LogicN performance.
 - LogicN v1 concept documentation must keep the five-part model as the main
   teaching structure while indexing detailed concepts underneath it: routes,
   requests, responses/views, secure flows, models, contracts, policies,
   effects, capabilities, classification, context, scopes/lifetimes, errors,
   reports, packages and tests.
+- LogicN should expose `permission` as the main developer-facing authority
+  concept while preserving capabilities, effects, policies, audit and reports as
+  precise internal/effective concepts.
+- LogicN policies must be first-class source rules. Reusable policies should
+  live under `/policies`, local policy should be placed at the smallest useful
+  boundary, and policy reports must include index, definitions, effective
+  enforcement, conflicts and AI/human summaries.
+- LogicN encapsulation must be based on controlled data movement rather than
+  public/private field visibility alone. Secure flow boundaries, explicit
+  inputs and outputs, classification, response/view contracts, capabilities,
+  effects, scoped lifetimes, package exports, safe mutation rules and reports
+  must define what data can move and what can leave.
+- LogicN models must be treated as classified internal security contracts, not
+  public DTOs or active-record database objects. Production model fields must
+  be classified, raw models must not be returned by public routes, model
+  mutations and relationships must be explicit and storage access must remain in
+  repository/storage boundaries.
+- LogicN may use model views inside `data` blocks to simplify response
+  definitions, but model and response/view meanings must stay separate. Public
+  output must still use declared views or responses, never raw internal models.
+- LogicN model reports must include model index, model definitions, effective
+  model rules, model exposure, model relationships, model mutation reports and
+  AI-readable model summaries as report targets.
 - LogicN boundary concept documentation must index events, repositories/storage
   and adapters/connectors as boundary specializations. Events, queue/job
   engines, large provider ecosystems and database migration systems may remain
@@ -85,6 +125,13 @@ must not be treated as implemented app functionality.
   generics are allowed directions; inheritance-based behaviour, implicit
   provider swapping and unreported plugin dispatch must not become the main
   application model.
+- LogicN must disallow inheritance and inherited authority in normal application
+  source. Reuse must use composition, contracts, adapters, variants, generics,
+  secure flows, explicit views/responses, explicit permissions, explicit
+  effects and effective reports.
+- LogicN must assume everything is unsafe until declared safe. Data, effects,
+  package authority, response exposure, routes and AI-generated changes must
+  earn trust through declarations, checks, policies or reports.
 - Polymorphic implementations must keep permissions, effects, data exposure,
   boundaries, errors, audit requirements and selected implementation visible in
   effective reports.
@@ -97,6 +144,11 @@ must not be treated as implemented app functionality.
   audit hooks are part of execution itself; untrusted packages, plugins,
   AI-generated code, external services and hardware accelerators may execute
   only through declared boundaries.
+- LogicN capabilities must express actor, package, flow or tool authorization
+  separately from technical effects. Protected actions and protected data
+  exposure must declare required capabilities or permissions at secure flow,
+  route, package, response/view, adapter, AI/tool, MCP and scoped vault
+  boundaries.
 - LogicN may use verified fast paths only for workloads that match a known
   execution signature. Fast paths must expire, remain auditable and revalidate
   when policy, package versions, model versions, hardware, trust state or output
@@ -105,6 +157,19 @@ must not be treated as implemented app functionality.
   opaque model calls. Plans should declare input/output types, model class, data
   sensitivity, precision, latency, compute target, memory needs, allowed tools
   and audit needs.
+- LogicN local AI review, including BitNet-style low-bit CPU-friendly backends,
+  must remain advisory. Deterministic compiler, type, memory, policy, effect
+  and report checks remain authoritative.
+- LogicN MCP support, if added, must be implemented as a platform-level AI/tool
+  boundary. MCP tools, resources and prompts must be declared with typed data,
+  permissions, effects, auth/token-boundary rules, limits, audit and reports.
+  MCP tool availability must not be treated as permission, token passthrough
+  must be denied, and MCP clients must not receive direct generic vault access.
+- LogicN quantum readiness must prioritise post-quantum security before quantum
+  compute. Cryptography must be policy-driven and reportable, crypto inventory
+  reports must identify quantum-vulnerable algorithm use, `SecureRandom` must be
+  required for security randomness, and future quantum state must be measured
+  into explicit classical results before controlling application flow.
 - LogicN AI systems may generate code, propose policy and request capabilities,
   but they must not grant capabilities to themselves, approve their own policy
   changes, edit their own boundary or modify trust roots without external

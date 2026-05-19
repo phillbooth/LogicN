@@ -61,6 +61,10 @@ Phase 4: Concurrency safety
 Phase 5: Native/interop safety
 ```
 
+LogicN should start with boundary safety before attempting a Rust-style full
+memory proof. The first useful claim is that a checked program preserves
+declared application boundaries.
+
 ## Reports
 
 Boundary safety should be evidenced through:

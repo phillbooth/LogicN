@@ -9,6 +9,10 @@ Packages define code, dependency and authority boundaries.
 A package declares what it exports, what it keeps internal, what effects it may
 use and what permissions it requires.
 
+Package exports are an encapsulation boundary: other packages may use exported
+flows, types and contracts, but must not depend on internal repositories,
+internal models or internal helper flows.
+
 ## Syntax Example
 
 ```logicn
@@ -25,6 +29,7 @@ package users {
 
 - Package exports must be explicit.
 - Internal flows and repositories must not become public by accident.
+- Internal models should not leak through public package APIs.
 - Package effects and required capabilities must be declared.
 - Dependencies must be visible in package reports.
 - Production profiles must exclude development-only and benchmark packages
