@@ -11,6 +11,11 @@
 [x] Define permission model types
 [ ] Define policy definition, effective policy and conflict report schemas
 [ ] Define capability boundary and grant report schemas
+[ ] Define capability lease, attenuation and approver-chain diagnostics
+[ ] Define AI self-grant and trust-root modification diagnostics
+[ ] Define malicious data validation and taint-flow diagnostics
+[ ] Define OWASP/CWE baseline diagnostic mapping
+[ ] Define hardware-risk security report inputs
 [x] Define security diagnostic format
 [x] Define security report contract
 [x] Define safe token, cookie and header handling helpers

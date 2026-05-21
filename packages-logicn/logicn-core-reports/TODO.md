@@ -12,6 +12,8 @@
 [x] Define build report contract
 [x] Define security report contract
 [ ] Define policy index, definitions, effective, conflict and AI-summary report contracts
+[ ] Define malicious data, exploit-resistance, resource-budget, taint-flow and hardware-risk report contracts
+[ ] Define specialist hardware, AI accelerator capability, accelerator fallback, data-sensitivity and precision-compatibility report contracts
 [x] Define target report contract
 [x] Define runtime report contract
 [x] Define async/concurrency report contract

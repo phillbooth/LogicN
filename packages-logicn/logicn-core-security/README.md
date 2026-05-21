@@ -23,6 +23,13 @@ redaction primitives
 permission model types
 policy definition and effective policy contracts
 capability grant and boundary report contracts
+capability lease and attenuation contracts
+AI authority request decision contracts
+immutable trust-root protection diagnostics
+malicious data validation diagnostics
+exploit-resistance baseline mappings
+taint-flow and safe-sink diagnostics
+hardware risk security report inputs
 security diagnostics
 security report contracts
 safe token/cookie/header handling helpers
@@ -93,6 +100,12 @@ policy conflicts fail closed unless explicitly resolved
 effective policy must be reportable
 effects are not actor authorization
 protected actions and protected data exposure require capabilities or permissions
+AI actors may request capabilities but must not self-grant or self-approve them
+capability leases must be scoped, revocable, auditable and no broader than the approver chain
+trust roots must not be modified by runtime AI without external governance
+data cannot grant authority; input claims for role, ownership or permission must be verified
+untrusted input must pass through size, depth, schema, type, range, canonicalisation and ownership checks
+unsafe sinks such as SQL, shell, filesystem paths, URLs, HTML, logs, prompts, deserializers, native interop and hardware queues require typed safe operations
 explicit deny grants take precedence over allow grants
 default-allow and wildcard-allow permission models are diagnosed
 network.any, rawSocket, packetCapture and promiscuousMode are denied by default

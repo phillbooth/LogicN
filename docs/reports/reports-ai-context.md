@@ -32,3 +32,39 @@ redacted report links
 
 AI-safe summaries from project graph, route, contract, policy and security
 reports.
+
+## AI Authority Reports
+
+AI governance needs separate authority reports because AI context is not
+authority.
+
+Suggested report targets:
+
+```text
+ai-authority-request-report.json
+ai-code-quarantine-report.json
+ai-approval-report.json
+ai-audit-report.json
+capability-lease-report.json
+agent-security-report.json
+```
+
+These reports should record:
+
+```text
+actor id and actor type
+requested capabilities
+requested effects
+requested file/package/policy changes
+granted capabilities
+lease scope and expiry
+approver chain
+sandbox and test results
+quarantine promotion status
+denied self-grant attempts
+denied trust-root edits
+audit status
+```
+
+AI-readable summaries may explain these reports, but they must not authorize
+execution.

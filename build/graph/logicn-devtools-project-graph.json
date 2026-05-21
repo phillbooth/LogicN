@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-05-19T20:14:53.814Z",
+  "generatedAt": "2026-05-20T10:59:19.205Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -1227,6 +1227,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/malicious-data-and-exploit-resistance.md",
+      "kind": "Document",
+      "label": "malicious-data-and-exploit-resistance.md",
+      "sourcePath": "docs/Knowledge-Bases/malicious-data-and-exploit-resistance.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/match-catch-all-branch.md",
       "kind": "Document",
       "label": "match-catch-all-branch.md",
@@ -1357,6 +1366,15 @@
       "kind": "Document",
       "label": "software-as-declared-intent.md",
       "sourcePath": "docs/Knowledge-Bases/software-as-declared-intent.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/specialist-ai-hardware-compute-targets.md",
+      "kind": "Document",
+      "label": "specialist-ai-hardware-compute-targets.md",
+      "sourcePath": "docs/Knowledge-Bases/specialist-ai-hardware-compute-targets.md",
       "tags": [
         "document"
       ]

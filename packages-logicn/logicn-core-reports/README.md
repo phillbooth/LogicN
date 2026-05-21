@@ -18,6 +18,8 @@ diagnostic summary contracts
 build report contracts
 security report contracts
 policy index, definition, effective and conflict report contracts
+malicious data, exploit-resistance, resource-budget and hardware-risk report contracts
+specialist hardware and accelerator fallback report contracts
 target report contracts
 runtime report contracts
 async/concurrency report contracts
@@ -60,6 +62,16 @@ PolicyIndexReport
 PolicyDefinitionsReport
 PolicyEffectiveReport
 PolicyConflictReport
+MaliciousDataReport
+ExploitResistanceReport
+ResourceBudgetReport
+TaintFlowReport
+HardwareRiskReport
+SpecialistHardwareReport
+AiAcceleratorCapabilityReport
+AcceleratorFallbackReport
+AcceleratorDataSensitivityReport
+PrecisionCompatibilityReport
 TargetReport
 RuntimeReport
 TaskReport
@@ -120,6 +132,18 @@ Policy reports are for source-visible policy analysis. They record policy
 declarations, source locations, usage, canonical definitions, effective merged
 policy per target and conflict diagnostics. Security/compiler packages produce
 the facts; `logicn-core-reports` owns the shared shape.
+
+Malicious data and exploit-resistance reports are for evidence that untrusted
+input was bounded, validated, canonicalised, assigned to a boundary and denied
+from unsafe sinks unless a typed safe operation allowed it. Runtime, compiler,
+security and framework packages produce the facts; `logicn-core-reports` owns
+the shared shape.
+
+Specialist hardware reports are for governed compute target evidence. They
+record selected CPU/GPU/NPU/TPU/VPU/FPGA/ASIC targets, backend profile,
+precision compatibility, data sensitivity, isolation level, memory limits,
+fallback decisions and audit status. Compute and target packages produce the
+facts; `logicn-core-reports` owns the shared shape.
 
 Final rule:
 

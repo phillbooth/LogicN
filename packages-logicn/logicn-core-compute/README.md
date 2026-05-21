@@ -19,6 +19,7 @@ target selection
 offload planning
 fallback planning
 AI accelerator selection
+specialist AI hardware target planning
 low-bit AI fallback planning
 optical I/O data-movement planning
 topology-aware placement planning
@@ -47,10 +48,29 @@ as:
 ```text
 prefer gpu
 prefer ai_accelerator
+prefer tpu
 fallback npu
+fallback vpu
 fallback low_bit_ai
 fallback cpu.generic
 ```
+
+Specialist target terminology:
+
+```text
+cpu            general compute
+gpu            parallel graphics/general accelerator compute
+npu            neural processing unit
+tpu            tensor processing unit / AI ASIC
+vpu            vision processing unit
+fpga           field-programmable gate array
+asic           application-specific integrated circuit
+ai_accelerator generic governed AI accelerator
+```
+
+Every specialist target must declare hardware type, provider, runtime/driver,
+supported precision, supported model formats, memory limits, isolation level,
+data sensitivity allowed, fallback target and audit requirements.
 
 For distributed tensor or AI workloads, `logicn-core-compute` may express interconnect
 preference:

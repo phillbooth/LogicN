@@ -102,8 +102,12 @@
 - [x] Document `_ => { ... }` match catch-all branches and safe fallback rules
 - [x] Document LogicN Securely Governed Runtime principles and trust zones
 - [x] Document AI compute plans as typed, governed runtime work
+- [x] Document specialist AI hardware compute targets as governed CPU, GPU,
+  NPU, TPU, VPU, FPGA, ASIC and future optical/photonic target planning
 - [x] Document verified fast paths as leased, auditable execution signatures
 - [x] Document AI self-modification governance and capability attenuation
+- [x] Document malicious data and exploit resistance for authority, resource
+  exhaustion, OWASP/CWE classes and hardware/runtime risk boundaries
 - [x] Document deny-by-default risk features and complexity features to leave
   out of the core runtime
 - [x] Document scoped vaults as controlled runtime state instead of global
@@ -158,11 +162,19 @@
 - [ ] Add agent contracts for AI-generated code quarantine
 - [ ] Add agent contracts for capability leases and attenuation
 - [ ] Add agent contracts for immutable AI audit logs
+- [ ] Add authority-kernel contracts for AI capability requests, approver chains,
+  lease expiry and revocation
+- [ ] Add immutable trust-root protection diagnostics for compiler, policy,
+  permission, audit, capability checker, package signing and crypto roots
+- [ ] Add AI read/write/tool/package/deploy capability separation examples
 - [ ] Define future MCP AI/tool boundary contract schemas after core
   permission, effect, vault and report contracts stabilise
 - [ ] Define capability boundary and grant report schemas
 - [ ] Define policy definition, index, effective, conflict and AI-summary report
   schemas
+- [ ] Define malicious data, exploit resistance, resource budget, taint-flow and
+  hardware-risk report schemas
+- [ ] Define OWASP/CWE baseline mapping for LogicN diagnostics
 - [ ] Define crypto inventory and post-quantum readiness report schemas
 - [x] Add TODO documents for `logicn-framework-api-server` and `logicn-framework-app-kernel`
 - [x] Add README and TODO documents for `packages-logicn/logicn-framework-example-app`
@@ -238,6 +250,8 @@
 - [ ] Define `logicn-target-photonic` photonic backend target plans
 - [ ] Define future quantum target planning rules only after core compute and
   target fallback reports are stable
+- [ ] Define specialist AI hardware target planning reports for NPU, TPU, VPU,
+  FPGA, AI ASIC, data sensitivity, isolation and fallback
 
 ## Phase 8: Core Infrastructure Packages
 
@@ -263,6 +277,8 @@
     non-exhaustive Tri matches, raw secret literals and unsafe dynamic execution
 - [ ] Define LogicN IR as the target-independent handoff between parser/checker
   and future VM/WASM/native outputs
+- [ ] Define compute target taxonomy and capability names for CPU, GPU, NPU,
+  TPU, VPU, FPGA, ASIC and future optical/photonic targets
 - [x] Define `logicn-core-runtime` execution contracts
 - [ ] Define Node-hosted runtime adapter contract and host-runtime overhead
   reporting

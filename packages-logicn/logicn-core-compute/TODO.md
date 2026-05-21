@@ -16,6 +16,8 @@ active v1 runtime target.
 [x] Define compute capability model
 [x] Define compute budget model
 [x] Define target selection rules
+[ ] Define specialist AI hardware target taxonomy for CPU, GPU, NPU, TPU, VPU, FPGA and ASIC
+[ ] Define specialist compute capability, data-sensitivity and audit report fields
 [x] Add generic low-bit AI fallback target concept
 [x] Define offload planning reports
 [ ] Define future quantum target planning rules after core compute reports

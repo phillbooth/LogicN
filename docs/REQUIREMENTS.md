@@ -144,6 +144,30 @@ must not be treated as implemented app functionality.
   audit hooks are part of execution itself; untrusted packages, plugins,
   AI-generated code, external services and hardware accelerators may execute
   only through declared boundaries.
+- LogicN must treat malicious data as an active threat. External input, API
+  payloads, files, events, package metadata, AI/tool output, network data,
+  storage data and hardware results must not become authority, executable code,
+  infinite compute, hidden memory pressure, secret leakage or unsafe hardware
+  access.
+- LogicN must enforce that data cannot grant authority. Roles, permissions,
+  object ownership and capability claims from untrusted data must be verified
+  against runtime identity, ownership policy and granted capabilities.
+- LogicN must assign bounded execution budgets to requests, tasks, AI/tool
+  calls and compute plans. Budgets should cover CPU time, wall time, memory,
+  recursion, loop iterations where provable, spawned tasks, network calls,
+  file operations, AI/tool calls and hardware accelerator work.
+- LogicN malicious-data handling must include size limits, depth limits,
+  schema-first parsing, type/range/encoding validation, canonicalisation before
+  policy, ownership checks, safe sinks, output encoding and taint-flow reports.
+- LogicN exploit-resistance planning must use OWASP Top 10, OWASP API Security
+  Top 10, OWASP ASVS and MITRE CWE Top 25 as baseline inputs for access
+  control, object-level authorization, injection prevention, SSRF protection,
+  resource control, secure error handling and verification levels.
+- LogicN hardware/runtime risk handling must treat CPU side channels, GPU/NPU
+  side channels, accelerator memory residue, DMA-capable devices, unsafe
+  drivers and device plugins as governed boundaries. High-assurance deployments
+  may require OS/firmware mitigations, IOMMU or equivalent protection, dedicated
+  hardware for high-secret workloads and hardware-risk reports.
 - LogicN capabilities must express actor, package, flow or tool authorization
   separately from technical effects. Protected actions and protected data
   exposure must declare required capabilities or permissions at secure flow,
@@ -157,6 +181,16 @@ must not be treated as implemented app functionality.
   opaque model calls. Plans should declare input/output types, model class, data
   sensitivity, precision, latency, compute target, memory needs, allowed tools
   and audit needs.
+- LogicN specialist AI hardware must be represented as governed compute targets,
+  not unrestricted runtime access. CPU, GPU, NPU, TPU, VPU, FPGA, AI ASIC and
+  future optical/photonic hardware must declare hardware type, provider,
+  runtime/driver, supported precision, supported model formats, memory limits,
+  isolation level, data sensitivity allowed, audit requirements and fallback
+  target before use.
+- LogicN source should prefer generic compute target classes and backend
+  profiles rather than vendor-specific language syntax. Fast hardware is an
+  accelerator, not an authority; the verified execution plan must allow the
+  target before runtime selection.
 - LogicN local AI review, including BitNet-style low-bit CPU-friendly backends,
   must remain advisory. Deterministic compiler, type, memory, policy, effect
   and report checks remain authoritative.
@@ -180,6 +214,18 @@ must not be treated as implemented app functionality.
 - LogicN capability delegation must support attenuation: delegated authority may
   be equal or narrower than the delegator's authority, never broader. Authority
   should be issued as scoped, revocable, auditable leases where possible.
+- LogicN AI authority must separate AI intent from authority issuance. Reasoning,
+  planning, code generation, self-analysis and optimization proposals may
+  request authority, but an authority kernel must evaluate policy, risk,
+  approval, scope, expiry and audit before authority is leased.
+- LogicN must protect immutable trust roots from runtime AI self-modification:
+  compiler, policy engine, permission model, audit integrity, capability
+  validator, package signing and cryptographic trust roots require external
+  governance for change.
+- LogicN must separate AI read, write, tool-call, package-install, migration,
+  deploy and policy-edit capabilities. A permission to read context must not
+  imply permission to write files, run shell commands, install packages or
+  change policy.
 - LogicN must deny hidden authority features by default, including dynamic eval,
   unrestricted shell execution, hidden network access, raw filesystem access,
   global mutable state, unsafe native interop, raw pointers, monkey patching,

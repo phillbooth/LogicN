@@ -20,6 +20,9 @@ model. See [Priority Categories](rules-priority-categories.md).
 - Secrets redact by default.
 - Effects must be declared.
 - Runtime authority must be verified before execution.
+- Data cannot grant authority. Roles, permissions, ownership and capability
+  claims from input must be verified by runtime identity, policy and capability
+  checks.
 - Policy, capabilities, effects and audit boundaries are part of execution, not
   optional middleware.
 - Sensitive action requires permission.
@@ -45,8 +48,14 @@ model. See [Priority Categories](rules-priority-categories.md).
 - AI may request capabilities, but AI may not grant capabilities to itself.
 - AI-generated code must be quarantined, checked, tested, audited and approved
   before promotion to trusted code.
+- AI intent and authority issuance must remain separate. Reasoning, planning and
+  code generation do not grant runtime authority.
+- AI must not edit compiler, policy, permission, audit, capability-checker,
+  package-signing or cryptographic trust roots without external governance.
 - No process may grant itself broader authority than its approver chain
   possesses.
+- Capability leases must be scoped, revocable, auditable and no broader than the
+  approver chain permits.
 - Photonic and optical values must be resolved or matched before controlling
   ordinary application flow.
 - Quantum state must be measured into an explicit classical result before
@@ -55,6 +64,14 @@ model. See [Priority Categories](rules-priority-categories.md).
   secrets, keys, tokens, salts and nonces.
 - Cryptographic choices must be policy-driven and reportable.
 - Generated AI content starts untrusted.
+- Untrusted data must pass through size, depth, schema, type, range,
+  canonicalisation, ownership, policy and boundary checks before use.
+- No request, task, AI/tool call or hardware compute plan may consume unlimited
+  CPU, wall time, memory, recursion, loop iterations, spawned tasks, network
+  calls or accelerator work.
+- Hardware acceleration is not trust. CPU, GPU, NPU, DMA-capable device and
+  native interop use must remain permissioned, bounded, isolated where
+  possible and reportable.
 - Dynamic eval, unrestricted shell execution, hidden network access, raw
   filesystem access, unsafe native interop, raw pointers, monkey patching,
   policy-bypassing reflection and AI self-granted capabilities are denied by

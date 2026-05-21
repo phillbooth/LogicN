@@ -18,6 +18,9 @@
 [ ] Define sandbox policy and human approval gate examples
 [ ] Define AI-generated code quarantine contracts
 [ ] Define capability lease and attenuation contracts
+[ ] Define authority-kernel separation contracts for AI capability requests
+[ ] Define immutable trust-root protection examples
+[ ] Define read/write/tool/package/deploy capability separation examples
 [ ] Define self-modification governance report examples
 [ ] Define immutable AI audit log contract
 [ ] Define loop/crash protection report examples

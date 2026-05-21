@@ -36,12 +36,17 @@ checkpoint and resume hooks
 target fallback execution
 network backend dispatch contracts
 network timeout and backpressure enforcement hooks
+resource budget enforcement
+malicious-data intake pipeline hooks
+hardware risk boundary reporting
 runtime reports
 verified boot-profile loading
 safe startup warmup hooks
 governed execution planning
 verified fast path planning
 AI compute plan execution hooks
+AI authority-kernel execution hooks
+capability lease expiry and revocation hooks
 Node-hosted runtime adapter contracts
 host-runtime overhead reports
 ```
@@ -76,6 +81,31 @@ request
 
 The runtime should treat policy, effects, capabilities and audit hooks as part
 of execution itself rather than external middleware.
+
+Data cannot grant authority. The runtime must treat user input, API payloads,
+AI/tool output, package metadata, storage data and hardware results as
+untrusted until validated and assigned to a governed boundary.
+
+Every request, task, AI/tool call and compute plan should receive explicit CPU,
+wall-time, memory, recursion, loop, spawned-task, network, file, tool-call and
+accelerator budgets before execution.
+
+For AI actors, the runtime must separate intent from authority. AI agents may
+request capabilities and propose work, but runtime authority is issued only by a
+policy-controlled authority kernel as scoped, revocable and audited leases.
+
+AI authority execution should follow:
+
+```text
+request capability
+ -> declare reason and scope
+ -> evaluate policy and risk
+ -> sandbox or quarantine if code/package changes are involved
+ -> require approval when high risk
+ -> issue scoped lease
+ -> execute through declared boundary
+ -> audit and expire/revoke
+```
 
 ## Node-Hosted Runtime Position
 

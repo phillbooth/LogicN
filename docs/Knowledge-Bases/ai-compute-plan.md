@@ -43,7 +43,7 @@ AI request
  -> classify workload
  -> choose model/backend
  -> choose precision
- -> choose CPU/GPU/NPU/WASM
+ -> choose CPU/GPU/NPU/TPU/VPU/FPGA/ASIC/WASM when allowed
  -> allocate memory once
  -> batch if possible
  -> execute
@@ -58,7 +58,7 @@ LogicN should know:
 - the sensitivity of the data: public, internal, private, secret or regulated
 - the required precision: exact, approximate, low precision or quantised
 - the latency target: realtime, background or batch
-- the allowed hardware: CPU only, GPU allowed, NPU allowed or remote model allowed
+- the allowed hardware: CPU only, GPU/NPU/TPU/VPU/FPGA/ASIC allowed or remote model allowed
 - the output contract: text, JSON, score, decision, vector or action plan
 - the authority: infer only, read memory, write memory, call tool or edit code
 
@@ -165,6 +165,9 @@ work.
 `logicn-core-security` owns secret and privacy checks.
 
 `logicn-core-reports` owns shared report shapes.
+
+Specialist hardware targets such as NPU, TPU, VPU, FPGA and AI ASIC must remain
+governed compute targets. See [Specialist AI Hardware Compute Targets](specialist-ai-hardware-compute-targets.md).
 
 ## Reports
 

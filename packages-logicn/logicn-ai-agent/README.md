@@ -182,6 +182,16 @@ narrower authority than it already holds. No agent should have a `god mode`
 role, and no process may grant itself broader authority than its approver chain
 possesses.
 
+The AI core and authority kernel are separate responsibilities. Agents may
+reason, plan, generate code, analyse output and request authority. They must not
+issue their own authority, edit their own boundary, approve their own policy
+change or modify compiler, security, audit, capability-checker, package-signing
+or cryptographic trust roots.
+
+Read and write authority must be separate. File reads, file writes, package
+installs, shell/tool calls, tests, migrations, deployment and policy edits are
+different capabilities.
+
 Reports should include AI authority requests, code quarantine status, approval
 decisions, changed files, tests run, granted capabilities and lease expiry.
 

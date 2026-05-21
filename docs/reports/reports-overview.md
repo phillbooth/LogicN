@@ -19,6 +19,12 @@ contract reports
 security reports
 crypto inventory reports
 memory reports
+malicious data reports
+exploit resistance reports
+resource budget reports
+hardware risk reports
+specialist hardware reports
+accelerator fallback reports
 route reports
 AI context reports
 MCP reports
@@ -35,8 +41,9 @@ runtime bridge reports
 ## v1 Scope
 
 Define stable report names and safety rules for policies, contracts, models,
-security, crypto inventory, AI context and platform-level AI/tool boundaries
-such as MCP.
+security, malicious data handling, exploit resistance, resource budgets,
+hardware risk, specialist compute hardware, accelerator fallback, crypto
+inventory, AI context and platform-level AI/tool boundaries such as MCP.
 
 ## Model Report Family
 

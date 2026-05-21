@@ -12,6 +12,15 @@ All notable changes to this app should be documented here.
 - Added Policy Architecture docs covering layered source-visible policies,
   policy placement rules, compiled policy checks and policy index/definition/
   effective/conflict/AI-summary report targets.
+- Expanded AI Self-Modification Governance with the authority-kernel model,
+  capability leases, immutable trust-root protection, read/write capability
+  separation and AI authority report targets.
+- Added Malicious Data And Exploit Resistance docs covering data-not-authority,
+  bounded execution, OWASP/CWE baseline exploit classes, safe sinks,
+  taint-flow, resource-budget and hardware-risk report targets.
+- Added Specialist AI Hardware Compute Targets docs covering CPU, GPU, NPU,
+  TPU, VPU, FPGA, AI ASIC and future optical/photonic hardware as governed
+  compute targets with capability, data sensitivity, fallback and audit rules.
 - Added the LogicN Architecture Charter Knowledge Base concept as the top-level
   identity statement for security-first, auditable, AI-readable and governed
   execution.

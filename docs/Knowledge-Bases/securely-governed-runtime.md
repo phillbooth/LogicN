@@ -51,6 +51,7 @@ Nothing is trusted by default:
 - packages
 - AI-generated output
 - user input
+- malicious data
 - network data
 - storage data
 - runtime effects
@@ -58,6 +59,10 @@ Nothing is trusted by default:
 
 Authority must always be declared, visible, attributable, revocable and
 auditable.
+
+Data cannot carry authority. User input, API payloads, tool results, package
+metadata and AI output may claim roles, permissions or ownership, but only the
+runtime capability system may grant authority after policy evaluation.
 
 ### AI Authority Is Not Self-Granted
 
@@ -97,6 +102,17 @@ Effects include:
 - compute accelerators
 
 Undeclared effects fail by default.
+
+### Malicious Data And Resource Exhaustion
+
+Untrusted data may try to gain authority, trigger unsafe effects, exhaust CPU,
+exhaust memory, exploit parsers, escape sandboxes, leak secrets or abuse
+hardware accelerators.
+
+The runtime must assign validation, boundary and execution budgets before
+handling untrusted data.
+
+See [Malicious Data And Exploit Resistance](malicious-data-and-exploit-resistance.md).
 
 ### Auditable Computation
 
@@ -182,6 +198,10 @@ Audit always.
 The runtime should build a verified execution plan, determine effects and
 capabilities before execution, allocate memory predictably, minimise repeated
 checks and deny undeclared behaviour immediately.
+
+Every verified execution plan should also include CPU, wall-time, memory,
+recursion, loop, task, tool-call, network and hardware access budgets where
+relevant.
 
 ## Security-Positive Optimisation
 

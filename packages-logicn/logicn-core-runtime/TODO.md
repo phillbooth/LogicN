@@ -27,6 +27,8 @@ runtime work.
 [ ] Define AI compute plan runtime hook contract
 [x] Define runtime error format
 [ ] Define target fallback runtime contract
+[ ] Define runtime resource budget contract for CPU, wall time, memory, recursion, loops, tasks, network, tools and accelerator work
+[ ] Define malicious-data intake pipeline contract for size, depth, schema, canonicalisation, ownership and taint checks
 [x] Define runtime report format
 [x] Add examples
 [x] Add tests

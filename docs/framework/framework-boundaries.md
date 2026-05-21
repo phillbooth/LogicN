@@ -48,8 +48,16 @@ boundary external PaymentProvider {
 - Every boundary crossing must validate data.
 - Every boundary crossing must check permission.
 - Every boundary crossing must be reportable.
+- Every boundary crossing must prevent data from becoming authority. Claimed
+  roles, object ownership and permissions in input are not trusted facts.
+- Every untrusted boundary should assign resource budgets before execution.
 - Unknown trust must default to untrusted.
 - Native, AI/tool and external boundaries require stricter reports.
+- AI/tool boundaries must separate AI intent from authority issuance. AI may
+  request capabilities, but the runtime authority kernel must decide whether
+  scoped, revocable authority is leased.
+- AI-generated code must enter quarantine before it is promoted into trusted app
+  or package code.
 - MCP boundaries must declare tools, resources, prompts, token-boundary rules,
   typed input/output, limits, effects and audit requirements before use.
 - MCP tool availability is not permission; LogicN permission checks still
@@ -64,6 +72,12 @@ storage-boundary-report.json
 ai-tool-boundary-report.json
 mcp-boundary-report.json
 compute-boundary-report.json
+malicious-data-report.json
+resource-budget-report.json
+hardware-risk-report.json
+ai-authority-request-report.json
+ai-code-quarantine-report.json
+capability-lease-report.json
 ```
 
 ## Related Boundary Concepts
@@ -72,6 +86,8 @@ compute-boundary-report.json
 - [Repositories And Storage](framework-repositories-storage.md)
 - [Adapters And Connectors](framework-adapters-connectors.md)
 - [MCP AI Tool Boundaries](framework-mcp-ai-tool-boundaries.md)
+- [AI Self-Modification Governance](../Knowledge-Bases/ai-self-modification-governance.md)
+- [Malicious Data And Exploit Resistance](../Knowledge-Bases/malicious-data-and-exploit-resistance.md)
 
 ## Knowledge Base
 
