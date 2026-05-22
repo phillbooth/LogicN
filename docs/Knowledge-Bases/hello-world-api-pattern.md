@@ -21,7 +21,7 @@ data Hello {
   }
 
   view response {
-    message: String classify: public
+    message: String view: public
   }
 }
 
@@ -38,7 +38,7 @@ permission public_read {
   }
 
   data {
-    allow expose classify: public
+    allow expose view: public
   }
 
   audit optional event "hello.read"
@@ -88,7 +88,7 @@ LogicN may later support a shorter beginner form after safe defaults are stable:
 ```logicn
 data Hello {
   view response {
-    message: String classify: public
+    message: String view: public
   }
 }
 

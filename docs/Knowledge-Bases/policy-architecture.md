@@ -96,7 +96,7 @@ policy data DataClassificationRules {
 
   pii {
     deny logs
-    require capability users.pii.read
+    require capability users.private.read
     require audit when exposed
   }
 
@@ -118,10 +118,9 @@ policy data DataClassificationRules {
 
 ```logicn
 policy response PublicApiResponsePolicy {
-  deny classify: secret
-  deny classify: credential
-  deny classify: internal unless capability internal.response
-  require audit for classify: pii
+  deny view: secret
+  deny view: internal unless capability internal.response
+  require audit for view: private
   require explicit_deny_for_unmapped_fields
 }
 ```
@@ -150,7 +149,7 @@ policy route PublicUserRoutePolicy {
 policy flow UserReadFlowPolicy {
   capabilities {
     require users.read
-    require users.pii.read when exposing classify: pii
+    require users.private.read when exposing view: private
   }
 
   effects {

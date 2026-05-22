@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Model reports describe model declarations, classifications, relationships,
+Model reports describe model declarations, field views, relationships,
 mutations, exposure paths and AI-readable guidance.
 
 ## Contains
@@ -11,7 +11,7 @@ mutations, exposure paths and AI-readable guidance.
 model name
 source file
 fields
-field classifications
+field views
 memory rules
 mutation rules
 relationship rules
@@ -47,7 +47,7 @@ model-human-summary.md
 | Report | Purpose |
 | --- | --- |
 | `model-index.json` | Lists models, source files and usage by responses, flows, routes and policies |
-| `model-definitions.json` | Lists fields, types, classifications, validation and memory metadata |
+| `model-definitions.json` | Lists fields, types, views, validation and memory metadata |
 | `model-effective.json` | Shows final security meaning after model, response and policy rules apply |
 | `model-exposure.json` | Shows which fields leave through responses, routes or exports |
 | `model-relationships.json` | Shows declared model relationships and field compatibility |
@@ -57,7 +57,7 @@ model-human-summary.md
 
 ## v1 Scope
 
-Typed record indexing, field classification, model/response exposure
+Typed record indexing, field views, model/response exposure
 relationships and report names.
 
 ## Knowledge Base

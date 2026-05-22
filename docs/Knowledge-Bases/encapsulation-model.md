@@ -49,14 +49,14 @@ Can the value escape its scope?
 
 ## Preferred Classification Style
 
-Use first-class classification metadata:
+Use first-class view metadata for field exposure:
 
 ```logicn
 model User {
-  id: UUID classify: public_id
-  email: Email classify: pii
-  passwordHash: SecureString classify: secret
-  internalRiskScore: RiskScore classify: internal
+  id: UUID view: public
+  email: Email view: private
+  passwordHash: SecureString view: secret
+  internalRiskScore: RiskScore view: internal
 }
 ```
 
@@ -252,7 +252,7 @@ LogicN should reject:
 - public routes returning raw internal models
 - secret fields in public responses
 - PII fields without policy
-- classified internal fields leaving public boundaries
+- view-governed internal fields leaving public boundaries
 - undeclared effects
 - unsafe mutation of classified fields
 - secret values escaping scope
@@ -276,7 +276,7 @@ Suggested reports:
 
 ```text
 encapsulation-report.json
-data-classification-report.json
+data-view-report.json
 response-exposure-report.json
 effect-report.json
 capability-report.json

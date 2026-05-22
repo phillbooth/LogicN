@@ -9,7 +9,7 @@ The recommended model is:
 
 ```text
 model = internal data shape
-      + classification
+      + view metadata
       + memory rules
       + mutation rules
       + relationship rules
@@ -18,8 +18,8 @@ model = internal data shape
 
 ## Short Definition
 
-A LogicN model is a classified, reportable internal data contract used by secure
-flows and exposed only through declared response or view contracts.
+A LogicN model is a view-governed, reportable internal data contract used by
+secure flows and exposed only through declared response or view contracts.
 
 ## Core Rule
 
@@ -85,38 +85,33 @@ Placement rules:
 
 ## Model Syntax
 
-Use first-class classification metadata:
+Use first-class view metadata for field exposure:
 
 ```logicn
 model User {
-  id: UUID classify: public_id
-  email: Email classify: pii
-  passwordHash: SecureString classify: secret
-  internalRiskScore: RiskScore classify: internal
-  createdAt: DateTime classify: public
-  updatedAt: DateTime classify: internal
+  id: UUID view: public
+  email: Email view: private
+  passwordHash: SecureString view: secret
+  internalRiskScore: RiskScore view: internal
+  createdAt: DateTime view: public
+  updatedAt: DateTime view: internal
 }
 ```
 
-Production mode should require every model field to have a classification.
+Production mode should require every model field to have a view.
 
-## Classification Levels
+## View Levels
 
-Starting classifications:
+Starting view levels:
 
 ```text
-public_id
 public
 internal
+private
 confidential
-pii
 secret
-credential
-security_sensitive
-financial
-health
-audit_only
-never_expose
+restricted
+regulated
 ```
 
 ## Model And Response Separation
@@ -126,7 +121,7 @@ Models are internal contracts. Responses and views are safe output contracts.
 ```logicn
 response UserResponse from User {
   include id
-  include email requires capability users.pii.read
+  include email requires capability users.private.read
 
   deny passwordHash
   deny internalRiskScore
@@ -137,7 +132,7 @@ The compiler should be able to check:
 
 - `passwordHash` never leaves
 - `internalRiskScore` does not leave public boundaries
-- `email` requires `users.pii.read`
+- `email` requires `users.private.read`
 - `User` is not returned directly from public routes
 
 ## Relationships
@@ -275,7 +270,7 @@ Which responses, flows, routes and policies use them?
 ```text
 What does each model contain?
 What is each field type?
-What is each field classification?
+What is each field view?
 What validation or memory rules apply?
 ```
 
@@ -342,7 +337,7 @@ Model safety should be expensive at check/build time and cheap at runtime.
 
 LogicN should precompute:
 
-- field classification maps
+- field view maps
 - response projection functions
 - secret redaction maps
 - mutation permission checks
@@ -380,7 +375,7 @@ Non-negotiable rules:
 Core language rules:
 
 - models define internal data shape
-- model fields may include classification metadata
+- model fields may include view metadata
 - responses define safe output from models
 - relationships must be explicit
 - mutations must be declared or performed through secure flows
@@ -398,5 +393,5 @@ Recommended design rules:
 
 ```text
 LogicN models are not public DTOs and not database-active records.
-They are classified internal data contracts used by secure flows and exposed only through declared response contracts.
+They are view-governed internal data contracts used by secure flows and exposed only through declared response contracts.
 ```

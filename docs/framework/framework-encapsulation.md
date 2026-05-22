@@ -53,7 +53,7 @@ It should use:
 
 ```text
 encapsulation-report.json
-data-classification-report.json
+data-view-report.json
 response-exposure-report.json
 secret-scope-report.json
 package-authority-report.json

@@ -75,9 +75,9 @@ boundary ai_tool CustomerSupportMcp {
   }
 
   resources {
-    allow SupportArticles classify: public
-    allow CustomerTickets classify: pii requires permission support.pii.read
-    deny PaymentTokens classify: credential
+    allow SupportArticles view: public
+    allow CustomerTickets view: private requires permission support.private.read
+    deny PaymentTokens view: secret
   }
 
   permission use support_ai_tool_access

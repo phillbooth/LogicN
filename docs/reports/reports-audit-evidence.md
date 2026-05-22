@@ -25,7 +25,7 @@ Output:
 build/audit/
   audit-summary.md
   security-report.json
-  data-classification-report.json
+  data-view-report.json
   model-exposure.json
   policy-effective.json
   contract-effective.json

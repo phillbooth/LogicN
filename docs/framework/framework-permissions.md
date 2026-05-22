@@ -14,15 +14,15 @@ move and what audit/report proof is required.
 ```logicn
 permission user_email_update {
   actor require users.email.update
-  actor require users.pii.read
+  actor require users.private.read
 
   code allow db.read
   code allow db.write
   code allow audit.write
   code deny network.external
 
-  data allow expose classify: pii with users.pii.read
-  data deny expose classify: secret
+  data allow expose view: private with users.private.read
+  data deny expose view: secret
 
   audit required event "user.email.update"
 }
@@ -47,7 +47,7 @@ secure flow updateUserEmail(
 |---|---|
 | `actor` | what the user/service/package/agent is allowed to do |
 | `code` | what side effects the flow may perform |
-| `data` | what classified data may be accessed or exposed |
+| `data` | what viewed data may be accessed or exposed |
 | `audit` | what must be recorded |
 | `report` | generated proof |
 

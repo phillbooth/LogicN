@@ -155,6 +155,17 @@ LogicN MAY support safe compile-time metadata, attributes or hygienic transforms
 Metadata and transforms MUST NOT bypass source maps, effects, permissions,
 security reports or AI reports.
 
+Compile-time metadata MAY describe declared data, views, flows, permissions,
+capabilities, vaults, routes, events, packages, effects, response contracts and
+audit events for documentation, tests, schema generation, audit graphs,
+AI-readable indexes and Governed IR construction.
+
+LogicN MUST NOT treat reflection as runtime object inspection or behaviour
+modification in normal code. Runtime reflection patterns such as string-based
+method invocation, live object listing, dynamic private-field inspection,
+dynamic permission mutation and unknown module loading MUST remain denied or
+outside normal LogicN source.
+
 ---
 
 ### REQ-EVOLUTION-008: Native ABI and Foreign-Call Boundary

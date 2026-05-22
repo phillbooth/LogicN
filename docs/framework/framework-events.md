@@ -29,9 +29,9 @@ queue, webhook provider, package, job or runtime component.
 
 ```logicn
 event OrderCreated {
-  orderId: UUID classify: public_id
-  customerId: UUID classify: internal
-  total: Money classify: financial
+  orderId: UUID view: public
+  customerId: UUID view: internal
+  total: Money view: regulated
 }
 ```
 
@@ -41,7 +41,7 @@ contract event OrderCreatedContract {
   topic "orders.created"
   schemaVersion "1"
   idempotency required
-  deny classify: secret
+  deny view: secret
 }
 ```
 

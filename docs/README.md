@@ -1,7 +1,8 @@
 # LogicN Documentation
 
-LogicN is a memory-safe, security-first, AI-readable language/runtime direction
-for secure web apps, APIs, agents and governed data systems.
+LogicN is a governance-first programming language, runtime and execution
+architecture for secure, AI-native and hardware-neutral computation across
+heterogeneous compute systems.
 
 This folder contains framework and app/workspace documentation. Language-core
 documentation lives in `../packages-logicn/logicn-core/`.
@@ -16,6 +17,17 @@ documentation lives in `../packages-logicn/logicn-core/`.
 6. [Architecture Charter](Knowledge-Bases/architecture-charter.md)
 7. [Secure Runtime](framework/framework-secure-runtime.md)
 8. [Documentation Layer Model](Knowledge-Bases/documentation-layer-model.md)
+9. [Generative Runtime Mapper](Knowledge-Bases/generative-runtime-mapper.md)
+10. [AI As Untrusted Reasoning Worker](Knowledge-Bases/ai-as-untrusted-reasoning-worker.md)
+11. [Untrusted File And Asset Processing](Knowledge-Bases/untrusted-file-asset-processing.md)
+12. [Bit Width And Base64 Asset Policy](Knowledge-Bases/bit-width-and-base64-asset-policy.md)
+13. [Memory Pressure Security](Knowledge-Bases/memory-pressure-security.md)
+14. [Compile-Time Metadata Reflection](Knowledge-Bases/compile-time-metadata-reflection.md)
+15. [Governed Execution Director](Knowledge-Bases/governed-execution-director.md)
+16. [Runtime Terminology Evolution](Knowledge-Bases/runtime-terminology-evolution.md)
+17. [Terminology And Naming Philosophy](Knowledge-Bases/terminology-naming-philosophy.md)
+18. [Compute Balancer](Knowledge-Bases/compute-balancer.md)
+19. [Data Visibility View Terminology](Knowledge-Bases/data-visibility-view-terminology.md)
 
 ## Core Framework Concepts
 
@@ -30,7 +42,7 @@ documentation lives in `../packages-logicn/logicn-core/`.
 - [Effects](framework/framework-effects.md)
 - [Capabilities](framework/framework-capabilities.md)
 - [Encapsulation](framework/framework-encapsulation.md)
-- [Classification](framework/framework-classification.md)
+- [Data Visibility](framework/framework-classification.md)
 - [Context](framework/framework-context.md)
 - [Scopes And Lifetimes](framework/framework-scopes-lifetimes.md)
 - [Errors](framework/framework-errors.md)
@@ -115,6 +127,13 @@ documentation lives in `../packages-logicn/logicn-core/`.
 - [MCP AI Tool Boundaries](Knowledge-Bases/mcp-ai-tool-boundaries.md)
 - [Quantum Readiness](Knowledge-Bases/quantum-readiness.md)
 - [Node-Hosted Runtime Roadmap](Knowledge-Bases/node-hosted-runtime-roadmap.md)
+- [Memory Pressure Security](Knowledge-Bases/memory-pressure-security.md)
+- [Compile-Time Metadata Reflection](Knowledge-Bases/compile-time-metadata-reflection.md)
+- [Governed Execution Director](Knowledge-Bases/governed-execution-director.md)
+- [Runtime Terminology Evolution](Knowledge-Bases/runtime-terminology-evolution.md)
+- [Terminology And Naming Philosophy](Knowledge-Bases/terminology-naming-philosophy.md)
+- [Compute Balancer](Knowledge-Bases/compute-balancer.md)
+- [Data Visibility View Terminology](Knowledge-Bases/data-visibility-view-terminology.md)
 
 ## Existing App And Workspace Docs
 

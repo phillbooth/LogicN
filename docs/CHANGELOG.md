@@ -6,6 +6,52 @@ All notable changes to this app should be documented here.
 
 ### Added
 
+- Added the Data Visibility View Terminology Knowledge Base concept, defining
+  `view` as the preferred field-level data exposure term and documenting the
+  transition from `classify: public` to `view: public` for model fields and
+  permission exposure rules.
+- Added Runtime Terminology Evolution and Terminology And Naming Philosophy
+  Knowledge Base concepts, defining LogicN as a governed compute orchestration
+  platform and standardizing responsibility-based runtime terminology such as
+  Runtime Command, Authority Control, Runtime Logistics, Resource Deployment
+  Balancer, Execution Coordination Scheduler and Result Assembler.
+- Added the Compute Balancer Knowledge Base concept, defining approved-only
+  hardware target selection based on CPU/GPU/NPU/TPU/VPU/ASIC/FPGA
+  availability, memory/VRAM pressure, thermal pressure, queue depth, power
+  state, device trust and safe fallback.
+- Rewrote the root and `logicn-core` README introductions to describe LogicN
+  as a governance-first programming language, runtime and execution
+  architecture for secure heterogeneous compute orchestration, including the
+  development/use selling point of intent-driven governed execution plans and
+  audit proof.
+- Added the Governed Execution Director Knowledge Base concept and
+  requirements defining a runtime planning layer that identifies data, checks
+  contracts and policy, builds verified execution plans, selects compute and
+  memory paths, uses passive modules, supports justified execution and records
+  audit proof without becoming hidden authority.
+- Added the Compile-Time Metadata Reflection Knowledge Base concept and
+  requirements defining LogicN reflection as compile-time metadata for proof,
+  tooling, audit mapping, schema/test generation, AI indexing and Governed IR
+  creation, while denying runtime object inspection, string-based invocation
+  and dynamic behaviour or permission mutation.
+- Added the Memory Pressure Security Knowledge Base concept and requirements
+  for treating low memory as a security event, including explicit memory
+  budgets, fallible allocation, backpressure before out-of-memory,
+  request/worker isolation, priority-based load shedding, deterministic
+  cleanup and secret-safe OOM reports.
+- Added Untrusted File And Asset Processing and Bit Width And Base64 Asset
+  Policy Knowledge Base concepts, defining uploaded files, embedded assets and
+  base64 data as untrusted executable-adjacent content requiring quarantine,
+  isolated parsing, sanitisation, no active content by default, explicit
+  numeric boundary checks and reportable memory/security policy decisions.
+- Added the AI As Untrusted Reasoning Worker Knowledge Base concept and
+  requirements for typed AI tasks, evidence-backed claims, sandboxed ML
+  workers, explicit tool permissions, anti-hallucination reports and runtime
+  enforcement that prevents AI output from becoming authority by default.
+- Added the Generative Runtime Mapper Knowledge Base concept and planning
+  requirements for an observational, AI-readable runtime/code/security mapper
+  that can produce facts, heat maps, optimisation opportunities and reviewed
+  suggestions without silently mutating runtime state or source code.
 - Added developer-friendly permission, model-view data block, Hello World API
   pattern and local low-bit AI review Knowledge Base concepts, clarifying how
   LogicN can simplify syntax without weakening internal safety checks.

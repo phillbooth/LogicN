@@ -6,7 +6,7 @@ A model contract defines internal application data.
 
 ## Short Definition
 
-Model contracts describe classified internal data the application owns or
+Model contracts describe view-governed internal data the application owns or
 processes. They are security contracts, not public DTOs and not active-record
 database objects.
 
@@ -14,17 +14,17 @@ database objects.
 
 ```logicn
 model Order {
-  id: UUID classify: public_id
-  userId: UUID classify: internal
-  total: Money classify: financial
-  status: OrderStatus classify: public
+  id: UUID view: public
+  userId: UUID view: internal
+  total: Money view: regulated
+  status: OrderStatus view: public
 }
 ```
 
 ## Security Rules
 
 - Internal models are not public output contracts.
-- Production fields must be classified.
+- Production fields must declare a view.
 - Storage shape and API shape should be separate.
 - Models should not own hidden storage effects.
 - Model mutations should be explicit and policy-controlled.
@@ -45,7 +45,7 @@ model-ai-summary.json
 
 ## v1 Scope
 
-Typed records, field classification and exposure reports.
+Typed records, field views and exposure reports.
 
 ## Knowledge Base
 

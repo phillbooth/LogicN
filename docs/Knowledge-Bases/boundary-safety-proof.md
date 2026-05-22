@@ -70,7 +70,7 @@ declared application boundaries.
 Boundary safety should be evidenced through:
 
 ```text
-data-classification-report.json
+data-view-report.json
 model-exposure-report.json
 permission-effective-report.json
 effect-report.json

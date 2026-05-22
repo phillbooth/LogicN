@@ -53,10 +53,10 @@ before the flow can run safely.
 
 ```logicn
 model User {
-  id: UUID classify: public_id
-  email: Email classify: pii
-  passwordHash: SecureString classify: secret
-  internalRiskScore: RiskScore classify: internal
+  id: UUID view: public
+  email: Email view: private
+  passwordHash: SecureString view: secret
+  internalRiskScore: RiskScore view: internal
 }
 ```
 
@@ -73,8 +73,8 @@ response UserResponse from User {
 This means:
 
 ```text
-id can be returned because it is public_id
-email can only be returned when users.pii.read is present
+id can be returned because it is public
+email can only be returned when users.private.read is present
 passwordHash can never be returned
 internalRiskScore is denied in this response
 ```
@@ -168,8 +168,8 @@ permission user_email_update {
   code allow db.write
   code allow audit.write
 
-  data allow expose classify: pii with users.pii.read
-  data deny expose classify: secret
+  data allow expose view: private with users.private.read
+  data deny expose view: secret
 
   audit required event "user.email.update"
 }

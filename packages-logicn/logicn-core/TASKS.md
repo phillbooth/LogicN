@@ -127,7 +127,8 @@ package boundaries
 [ ] Specify explicit generic constraints, traits or protocols
 [ ] Specify structured concurrency, cancellation and typed streams
 [ ] Specify deterministic cleanup for files, sockets, locks and FFI handles
-[ ] Specify safe compile-time metadata and attributes
+[/] Specify safe compile-time metadata and attributes, including a denial of
+    runtime object inspection and behaviour mutation in normal LogicN code
 [ ] Specify native ABI and foreign-call boundaries
 [ ] Specify compiler-facing matrix/vector shape syntax and diagnostics
 [ ] Standardise diagnostics and AI report schemas

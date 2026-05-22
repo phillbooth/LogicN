@@ -55,7 +55,7 @@ secure flow updateUserEmail(
 permission user_email_update {
   actor {
     require users.email.update
-    require users.pii.read
+    require users.private.read
   }
 
   code {
@@ -67,10 +67,10 @@ permission user_email_update {
   }
 
   data {
-    allow expose classify: public_id
-    allow expose classify: pii with users.pii.read
-    deny expose classify: secret
-    deny expose classify: internal
+    allow expose view: public
+    allow expose view: private with users.private.read
+    deny expose view: secret
+    deny expose view: internal
   }
 
   audit {
@@ -98,7 +98,7 @@ Advanced form:
 secure flow getUser(...)
   capabilities {
     require users.read
-    require users.pii.read
+    require users.private.read
   }
   effects {
     allow db.read

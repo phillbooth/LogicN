@@ -1186,3 +1186,494 @@ npm.
 
 cmd --prefix packages-logicn/logicn-framework-app-kernel run test:hello
 ```
+
+## Generative Runtime Mapper
+
+The Generative Runtime Mapper is a future advisory layer that may consume
+LogicN runtime reports, project graph data, effect graphs, permission usage,
+AI/tool behaviour, memory pressure, performance paths, security denials and
+source-code structure to build an explainable runtime and code intelligence
+map.
+
+It should support maps such as:
+
+```text
+route -> handler -> database
+route -> AI worker -> tool
+API -> queue -> background worker
+actor -> permission -> effect decision
+module -> function -> effect usage
+```
+
+The mapper may generate:
+
+```text
+runtime graph
+code graph
+security graph
+memory heat map
+performance opportunities
+risk reports
+architecture suggestions
+patch proposals for review
+ML learning signals
+```
+
+The mapper is not an authority layer. It must not silently mutate runtime state,
+source code, permission declarations, policies or deployment configuration.
+It observes, explains and recommends. Any mutation remains gated by explicit
+policy and human approval.
+
+Mapper reports must separate facts from suggestions:
+
+```text
+FACT:
+Route /orders allocates 128 MB average.
+
+SUGGESTION:
+Streaming JSON decode may reduce memory pressure.
+```
+
+Security boundaries are mandatory. Mapper telemetry must redact secrets,
+tokens, cookies, authorization headers, raw credentials, private payloads,
+sensitive personal data and private AI prompts. Future ML exports must be
+structural and redacted rather than raw runtime payloads or private source.
+
+The concept is documented in
+`docs/Knowledge-Bases/generative-runtime-mapper.md`.
+
+## AI As Untrusted Reasoning Worker
+
+LogicN AI support should treat AI as an untrusted reasoning worker rather than
+trusted program logic.
+
+The core operating rule is:
+
+```text
+AI can suggest.
+LogicN must verify.
+Runtime must enforce.
+```
+
+Future AI concepts should be represented as typed contracts and reports rather
+than hidden framework behaviour:
+
+```text
+AiTask
+AiWorker
+AiModel
+AiContext
+AiEvidence
+AiClaim
+AiDecision
+AiToolCall
+AiReport
+```
+
+AI runtime execution should follow a controlled pipeline:
+
+```text
+security phase
+-> trusted policy
+-> untrusted context
+-> secret redaction
+-> AI worker execution
+-> structured output validation
+-> evidence verification
+-> permission enforcement
+-> human approval when required
+-> audit/report emission
+```
+
+AI output must not directly mutate state, change policy, deploy code, access
+secrets, send messages, write databases or call networks unless typed policy
+explicitly grants that ability and runtime enforcement allows it.
+
+Hallucination cannot be fully eliminated, so hallucination must be made
+non-authoritative. Claims without evidence remain unverified. Missing data
+should produce `Unknown`, not a guess. Contradictions should reject or escalate
+the decision.
+
+Future report families should include:
+
+```text
+ai-context-report.json
+ai-claim-report.json
+ai-evidence-report.json
+ai-tool-permission-report.json
+ai-hallucination-risk-report.json
+human-review-report.json
+```
+
+The concept is documented in
+`docs/Knowledge-Bases/ai-as-untrusted-reasoning-worker.md`.
+
+## Untrusted File, Asset And Base64 Boundaries
+
+LogicN should treat uploaded files, embedded assets and base64 data URIs as
+untrusted executable-adjacent content.
+
+The runtime intake shape should be:
+
+```text
+upload or embedded asset
+  -> quarantine
+  -> security classification
+  -> bounded inspection
+  -> isolated parsing
+  -> sanitisation/conversion
+  -> safe asset storage
+  -> optional safe AI extraction
+```
+
+The main runtime should not directly parse PDFs, Office documents, images,
+SVGs, archives or media in a privileged context. Parser workers should run with
+strict memory/time limits, no secrets, no ambient filesystem access and no
+network access unless a policy explicitly allows it.
+
+Safe reconstruction is preferred:
+
+```text
+image -> decode pixels -> strip metadata -> clean WebP/PNG
+PDF -> render/extract -> rebuild safe PDF or safe structured text
+SVG -> sanitise active content -> store safe asset
+```
+
+Active content is denied by default:
+
+```text
+PDF JavaScript
+Office macros
+SVG scripts
+embedded executables
+launch actions
+external resource references
+HTML in metadata
+```
+
+Base64 data should be handled as untrusted encoded asset data. Before decoding,
+the runtime should run the security phase, parse metadata only, validate policy
+and estimate decoded size. Large assets should generally be externalised after
+validation rather than retained inline.
+
+The concepts are documented in:
+
+```text
+docs/Knowledge-Bases/untrusted-file-asset-processing.md
+docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md
+```
+
+## Numeric Width And Boundary Representation
+
+Normal application code should use safe numeric concepts that avoid silent
+overflow, truncation and signedness confusion. Fixed-width and low-bit numeric
+types are boundary concepts for protocols, interop, images, media,
+cryptography, AI tensors, GPU kernels and hardware packages.
+
+The runtime/compiler may optimise representation automatically where safe, but
+must not silently:
+
+```text
+truncate
+wrap
+overflow
+reinterpret signedness
+```
+
+Unsafe conversion should return explicit errors rather than raw values.
+Boundary reports should make numeric-width, overflow, endianness, precision and
+low-bit representation decisions visible and audit-friendly.
+
+## Memory Pressure As Security Event
+
+LogicN should treat low memory as a runtime security condition. Memory pressure
+can be triggered accidentally, but it can also be caused deliberately through
+large payloads, deep nesting, expensive parsing, concurrent request floods,
+unbounded queries, file bombs and oversized AI contexts.
+
+The runtime shape should be:
+
+```text
+request/task/worker
+  -> memory budget assignment
+  -> bounded allocation
+  -> pressure monitoring
+  -> backpressure or load shedding
+  -> deterministic cleanup
+  -> secret-safe report
+```
+
+Memory budgets should exist at app, request, worker, parser, stream and AI
+context boundaries. Allocation should be fallible and report typed errors such
+as `OutOfMemory`, `MemoryLimitExceeded`, `AllocationDenied`,
+`FragmentationRisk` and `BufferTooLarge` where recovery is possible.
+
+Backpressure should happen before true out-of-memory:
+
+```text
+normal       accept requests
+warning      reduce concurrency
+critical     reject new risky requests
+emergency    cancel non-essential work
+```
+
+The runtime should cancel low-priority background, analytics, cache and AI
+summarisation work before security, authentication, audit and cleanup paths.
+Streaming, paging, chunking and bounded queues are preferred over full-memory
+reads and unbounded collections.
+
+Future report families should include:
+
+```text
+memory-pressure-report.json
+allocation-denied-report.json
+request-memory-report.json
+oom-near-miss-report.json
+cleanup-report.json
+```
+
+The concept is documented in
+`docs/Knowledge-Bases/memory-pressure-security.md`.
+
+## Compile-Time Metadata Reflection
+
+LogicN reflection should be a compiler and tooling feature, not a runtime
+object-inspection feature.
+
+The architecture rule is:
+
+```text
+Metadata may describe execution.
+Metadata must not control execution at runtime.
+```
+
+The safe pipeline is:
+
+```text
+source
+  -> parser
+  -> AST
+  -> metadata extraction
+  -> semantic checks
+  -> governance checks
+  -> Governed IR
+  -> verified execution
+  -> reports
+```
+
+Compile-time metadata may describe data models, views, flows, permissions,
+capabilities, vaults, routes, events, packages, effects, response contracts,
+audit events and storage boundaries. It can feed documentation, test matrices,
+schema generation, permission checks, route/flow/data link checks, audit
+graphs, project graphs, AI architecture indexes and Governed IR creation.
+
+Normal flow execution should not expose runtime reflection APIs that list live
+objects, inspect private fields dynamically, invoke methods by string, mutate
+permissions, load unknown modules or patch behaviour at runtime. Runtime gates
+may consume verified metadata generated before execution, but application code
+must not dynamically discover or grant authority from live objects.
+
+The concept is documented in
+`docs/Knowledge-Bases/compile-time-metadata-reflection.md`.
+
+## Governed Execution Director
+
+LogicN should include a Governed Execution Director as the runtime planning and
+coordination layer.
+
+The Director asks:
+
+```text
+what is this?
+what is allowed?
+what needs to happen?
+where should it run?
+has it already been verified?
+why is access requested?
+why is data being returned?
+what proof is needed?
+```
+
+The core execution shape is:
+
+```text
+data enters
+  -> Director identifies it
+  -> contracts and policy are checked
+  -> execution plan is built
+  -> compute target is selected
+  -> memory path is assigned
+  -> normal path or verified fast pipe is selected
+  -> passive modules execute approved work
+  -> audit/proof system records the result
+```
+
+The authority split is:
+
+```text
+The Director understands.
+The policy decides.
+The modules execute.
+The audit proves.
+```
+
+The Director must not become hidden authority. It prepares and coordinates a
+verified execution plan. Policy remains responsible for permission,
+capability, effect and boundary decisions.
+
+All modules should consume a shared understanding model containing data type,
+sensitivity, source, owner, requested action, required effects, required
+capabilities, compute shape, memory shape, output contract, audit requirement,
+validation state, processing state, trust state and expiry state.
+
+Compute, AI, storage, network and boundary modules are passive executors. They
+must operate inside the verified plan and must not widen permissions, change
+output contracts, select new targets or grant themselves authority.
+
+Verified Fast Pipes skip repeated work, not required security. They may reduce
+re-parsing, re-copying, re-shaping and re-planning, but must keep policy,
+capability, audit, expiry, trust, revocation and boundary checks intact.
+
+Sensitive access and output should support justified execution, where the
+reason for access, output, target selection, plugin use or AI tool use becomes
+part of the execution plan and audit proof.
+
+The concept is documented in
+`docs/Knowledge-Bases/governed-execution-director.md`.
+
+## Runtime Terminology And Platform Identity
+
+LogicN should be described as:
+
+```text
+a governance-first programming language, runtime and execution architecture
+designed to coordinate secure computation across CPUs, GPUs, AI accelerators,
+optical systems and future heterogeneous hardware.
+```
+
+Rather than focusing only on instruction execution, LogicN focuses on:
+
+```text
+understanding execution intent
+enforcing explicit authority
+planning compute economics
+coordinating hardware resources
+producing auditable governed execution
+```
+
+LogicN combines:
+
+```text
+governed execution
+capability-based security
+hardware-aware runtime orchestration
+AI-native compute planning
+future-neutral compute abstractions
+structured auditability
+operational runtime coordination
+```
+
+into a unified compute platform.
+
+The runtime terminology should therefore move away from traditional VM,
+thread-centric and CPU-centric names and toward operational responsibility
+names:
+
+| Previous Name | Updated Name |
+| --- | --- |
+| Director | Runtime Command |
+| Sheriff | Authority Control |
+| Steward | Runtime Logistics |
+| Balancer | Resource Deployment Balancer / Compute Balancer |
+| Scheduler | Execution Coordination Scheduler |
+| Assembler | Result Assembler |
+
+The architectural model is:
+
+```text
+intent
+  -> governed execution plan
+  -> coordinated compute
+  -> assembled result
+  -> audit proof
+```
+
+Names should describe the responsibility a component owns, not the temporary
+mechanism used to implement it. This keeps the architecture readable for
+humans, AI tools and future compute targets.
+
+The Compute Balancer is the focused hardware-pressure role inside the broader
+Resource Deployment Balancer responsibility. It observes CPU cores,
+performance/efficiency cores, GPU, NPU, TPU, VPU, ASIC, FPGA, memory, VRAM,
+temperature, power state, queue depth, device availability, trust level and
+fallback options.
+
+It may only choose from compute targets already approved by Authority Control:
+
+```text
+Approved hardware only.
+Best available target.
+Safe fallback always.
+```
+
+The concepts are documented in:
+
+```text
+docs/Knowledge-Bases/runtime-terminology-evolution.md
+docs/Knowledge-Bases/terminology-naming-philosophy.md
+docs/Knowledge-Bases/compute-balancer.md
+```
+
+## Data Visibility Views
+
+LogicN should use `view` for field-level data exposure metadata.
+
+The definition is:
+
+```text
+view = who or what may see or expose this data
+```
+
+Previous exposure examples used:
+
+```logicn
+message: String classify: public
+```
+
+New examples should use:
+
+```logicn
+message: String view: public
+```
+
+Permission rules should also use view terminology:
+
+```logicn
+data {
+  allow expose view: public
+  allow expose view: private owner: actor
+  deny expose view: secret
+}
+```
+
+Recommended view levels are:
+
+```text
+public
+internal
+private
+confidential
+secret
+restricted
+regulated
+```
+
+The runtime may use view metadata for response filtering, serialization
+filtering, audit filtering, AI context filtering, log filtering, API exposure
+checks, frontend exposure validation and model projection.
+
+This is separate from broader security/input/AI/compute classification. Those
+uses may still use `classification` where the meaning is not field exposure.
+
+The concept is documented in
+`docs/Knowledge-Bases/data-visibility-view-terminology.md`.

@@ -85,8 +85,8 @@ Use composition:
 
 ```logicn
 model AdminProfile {
-  userId: UUID classify: public_id
-  roles: List<Role> classify: security_sensitive
+  userId: UUID view: public
+  roles: List<Role> view: restricted
 }
 ```
 
@@ -120,7 +120,7 @@ Use explicit views:
 ```logicn
 response UserAdminResponse from User {
   include id
-  include email requires capability users.pii.read
+  include email requires capability users.private.read
   include internalRiskScore requires capability users.security.read
   deny passwordHash
 }

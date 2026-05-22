@@ -7,19 +7,19 @@ and domain logic.
 
 ## Short Definition
 
-A model is a classified internal data contract. It is not automatically safe for
+A model is a view-governed internal data contract. It is not automatically safe for
 public output and must not behave like an active-record database object.
 
 ## Syntax Example
 
 ```logicn
 model User {
-  id: UUID classify: public_id
-  email: Email classify: pii
-  passwordHash: SecureString classify: secret
-  internalRiskScore: RiskScore classify: internal
-  createdAt: DateTime classify: public
-  updatedAt: DateTime classify: internal
+  id: UUID view: public
+  email: Email view: private
+  passwordHash: SecureString view: secret
+  internalRiskScore: RiskScore view: internal
+  createdAt: DateTime view: public
+  updatedAt: DateTime view: internal
 }
 ```
 
@@ -31,7 +31,7 @@ request contract -> flow -> model -> response contract
 
 Models connect to:
 
-- classification rules
+- view rules
 - response/view contracts
 - secure flows
 - repositories/storage boundaries
@@ -42,7 +42,7 @@ Models connect to:
 ## Security Rules
 
 - Raw models must not be returned by public routes.
-- Production model fields must be classified.
+- Production model fields must declare a view.
 - Secret, internal, hidden and sensitive fields must follow exposure policy.
 - Public output must use response contracts.
 - Storage models and response models must stay separate.
@@ -74,7 +74,7 @@ Public routes should return a declared response contract, not a raw model.
 
 ## v1 Scope
 
-Typed records, field classification, model/response separation, basic exposure
+Typed records, field views, model/response separation, basic exposure
 reporting and report names. Relationship, mutation and storage-provider
 implementations may remain later work until the parser/checker is mature.
 

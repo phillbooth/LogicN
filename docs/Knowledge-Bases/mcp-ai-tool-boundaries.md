@@ -72,9 +72,9 @@ boundary ai_tool CustomerSupportMcp {
   }
 
   resources {
-    allow SupportArticles classify: public
-    allow CustomerTickets classify: pii requires permission support.pii.read
-    deny PaymentTokens classify: secret
+    allow SupportArticles view: public
+    allow CustomerTickets view: private requires permission support.private.read
+    deny PaymentTokens view: secret
   }
 
   auth {
@@ -96,19 +96,19 @@ contract ai_tool CustomerLookupTool {
   tool getCustomerById
 
   input {
-    customerId: UUID classify: public_id
+    customerId: UUID view: public
   }
 
   output CustomerToolResult {
-    id: UUID classify: public_id
-    name: String classify: pii
-    email: Email classify: pii
+    id: UUID view: public
+    name: String view: private
+    email: Email view: private
   }
 
   deny output {
-    passwordHash classify: secret
-    paymentToken classify: credential
-    internalRiskScore classify: internal
+    passwordHash view: secret
+    paymentToken view: secret
+    internalRiskScore view: internal
   }
 
   permission use customer_lookup_ai_tool

@@ -1,16 +1,49 @@
 # LogicN Core
-### LogicN, short for Logic&lt;N&gt;
+
+LogicN is a governance-first programming language, runtime and execution
+architecture designed to coordinate secure computation across CPUs, GPUs,
+AI accelerators, optical systems and future heterogeneous hardware.
+
+This package contains the LogicN core language design, prototype compiler,
+examples, schemas and detailed language documentation.
+
+LogicN core is responsible for the language surface: syntax, type checking,
+effects, memory safety, explicit errors, source maps, diagnostics and
+machine-readable reports. It defines the language and report contracts that
+allow higher runtime layers to build governed execution plans.
+
+## What LogicN Is Becoming
+
+LogicN is not only a traditional programming language or VM. The long-term
+architecture is closer to:
 
 ```text
+a governed compute orchestration platform
+```
 
-LogicN, short for Logic<N>, designed to be backwards compatible with binary while supporting photonic Tri logic represented as <N>.
+The core language provides the declared intent, types, effects, capabilities
+and reports that make this orchestration possible.
 
-A strict, memory-safe, security-first programming
-language concept for API-heavy, JSON-native, AI-readable and accelerator-aware
-software.
+Traditional systems often think:
 
-This package contains the LogicN core language design, prototype compiler, examples,
-schemas and detailed language documentation.
+```text
+code -> execution
+```
+
+LogicN increasingly thinks:
+
+```text
+intent -> governed execution plan -> coordinated compute -> audit proof
+```
+
+For developers, this means LogicN aims to make security and runtime behavior
+visible in source and reports. The selling point is explicit authority,
+machine-readable contracts, AI-readable context, controlled compute planning
+and auditable execution rather than hidden runtime magic.
+
+For runtime implementers, this means the core language should remain strict,
+small and reportable while sibling packages own compute, AI, network,
+photonic, accelerator and application-kernel behavior.
 
 ## Status
 
@@ -66,6 +99,26 @@ LogicN's stronger security claim is secure-runtime behavior:
 deny-by-default effects, typed API boundaries, memory-safe values, secret-safe
 reports, package permissions, controlled interop, production gates and AI-safe
 generated project context.
+
+The broader runtime architecture is evolving toward governed operational
+coordination:
+
+```text
+Runtime Command                  workload understanding and execution planning
+Authority Control                capability, effect and policy enforcement
+Runtime Logistics                resource, queue, cache and fast-path reuse
+Compute Balancer                 approved hardware selection under live pressure
+Execution Coordination Scheduler bounded parallelism and dependency timing
+Result Assembler                 ordered result reconstruction and integrity
+```
+
+These are architecture terms, not all implemented package names. They describe
+responsibility and keep the design hardware-neutral.
+
+The Compute Balancer chooses only from hardware targets already approved by
+Authority Control. It can respond to memory pressure, VRAM pressure, queue
+depth, thermal state, power state, device trust and fallback availability, but
+it cannot widen authority.
 
 LogicN should not claim direct control over CPU L1/L2/L3 cache or ECC memory.
 Cache-aware work should be framed as memory layout, access-pattern, batching,
@@ -246,13 +299,17 @@ explicit missing values
 explicit errors
 memory safety
 security-first defaults
+declared execution intent
+capability-based authority
 typed JSON decoding
 API and webhook contracts
 source maps
 machine-readable reports
 AI-readable project context
+governed execution planning
 multi-target planning
 CPU compatibility by default
+hardware-neutral compute abstractions
 post-v1 AI inference as an optional package layer
 post-v1 GPU planning
 post-v1 photonic planning

@@ -26,14 +26,14 @@ The model remains internal truth. A view or response defines what may leave.
 ```logicn
 data User {
   model {
-    id: UUID classify: public_id
-    email: Email classify: pii
-    passwordHash: SecureString classify: secret
-    internalRiskScore: RiskScore classify: internal
+    id: UUID view: public
+    email: Email view: private
+    passwordHash: SecureString view: secret
+    internalRiskScore: RiskScore view: internal
   }
 
   request get {
-    userId: UUID classify: public_id
+    userId: UUID view: public
   }
 
   view public {
@@ -45,7 +45,7 @@ data User {
 
   view authorised {
     include id
-    include email requires permission users.pii.read
+    include email requires permission users.private.read
     deny passwordHash
     deny internalRiskScore
   }
@@ -100,6 +100,7 @@ default
 - PII exposure must require permission.
 - Secret and credential fields must not be exposed.
 - Model views should generate fast projection and exposure reports.
+- Field exposure metadata should use `view`, not `classify`.
 
 ## Reports
 

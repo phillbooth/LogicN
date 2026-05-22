@@ -65,10 +65,10 @@ Data should be typed and classified:
 
 ```logicn
 data PaymentMethod {
-  id: PaymentMethodId classify: public_id
-  providerRef: Text classify: private
-  lastFourDigits: Text classify: masked
-  cardholderName: Text classify: private
+  id: PaymentMethodId view: public
+  providerRef: Text view: private
+  lastFourDigits: Text view: public
+  cardholderName: Text view: private
 }
 ```
 
@@ -177,13 +177,13 @@ Use model views where useful:
 ```logicn
 data User {
   model {
-    id: UUID classify: public_id
-    email: Email classify: pii
-    passwordHash: SecureString classify: secret
+    id: UUID view: public
+    email: Email view: private
+    passwordHash: SecureString view: secret
   }
 
   request get {
-    userId: UUID classify: public_id
+    userId: UUID view: public
   }
 
   view public {
@@ -194,7 +194,7 @@ data User {
 
   view authorised {
     include id
-    include email requires permission users.pii.read
+    include email requires permission users.private.read
     deny passwordHash
   }
 }
@@ -230,14 +230,14 @@ Permission is the developer-facing authority block.
 ```logicn
 permission user_read_with_pii {
   actor require users.read
-  actor require users.pii.read
+  actor require users.private.read
 
   code allow db.read
   code allow audit.write
   code deny network.external
 
-  data allow expose classify: pii with users.pii.read
-  data deny expose classify: secret
+  data allow expose view: private with users.private.read
+  data deny expose view: secret
 
   audit required event "user.read"
 }

@@ -1,25 +1,53 @@
-# LogicN App Template
+# LogicN
 
-### LogicN, short for Logic&lt;N&gt;
+LogicN is a governance-first programming language, runtime and execution
+architecture designed to coordinate secure computation across CPUs, GPUs,
+AI accelerators, optical systems and future heterogeneous hardware.
+
+Rather than focusing only on instruction execution, LogicN focuses on
+understanding execution intent, enforcing explicit authority, planning compute
+economics, coordinating hardware resources and producing auditable governed
+execution.
+
+LogicN combines:
 
 ```text
-Designed to be backwards compatible with binary while supporting photonic Tri logic represented as <N>.
-
-Easy to code and learn for Humans
-
-AI friendly syntax and mapping
+governed execution
+capability-based security
+hardware-aware runtime orchestration
+AI-native compute planning
+future-neutral compute abstractions
+structured auditability
+operational runtime coordination
 ```
 
-This repository is a starter workspace for building a bespoke application with
-LogicN.
+into a unified compute platform.
 
-A strict, memory-safe, 
-security-first programming
-language concept for API-heavy, JSON-native, 
-AI-readable and accelerator-aware
-software. This workspace keeps the LogicN language package, compiler/runtime
-contracts, secure application kernel, developer tooling and app source in clear
+This repository is the active LogicN workspace. It keeps the language core,
+compiler/runtime contracts, governed runtime package planning, secure
+application kernel, developer tooling, reports and example app source in clear
 package boundaries while the project is still being shaped.
+
+## What This Means
+
+Most platforms are language-first, framework-first or VM-first. LogicN is
+governance-first, execution-planning-first and hardware-awareness-first.
+
+The practical development goal is to let developers describe intent,
+capabilities, effects, data boundaries and compute needs in a way that the
+compiler, runtime, audit system and AI tools can understand before work runs.
+
+The selling point is not that LogicN magically makes hardware faster. The
+selling point is that LogicN can make execution more governable:
+
+```text
+intent -> governed execution plan -> coordinated compute -> audit proof
+```
+
+That creates a foundation for safer APIs, explicit authority, AI-readable
+projects, controlled accelerator use, memory-bounded execution, verified fast
+paths and future heterogeneous compute without making normal application code
+depend on a specific hardware generation.
 
 ## Status
 
@@ -59,13 +87,17 @@ explicit missing values
 explicit errors
 memory safety
 security-first defaults
+governed execution plans
+capability-based authority
 typed JSON and API contracts
 source maps and machine-readable reports
 AI-readable project context
 CPU compatibility by default
+hardware-neutral compute planning
 optical I/O and data-movement awareness
 optional accelerator planning
 optional AI inference packages
+structured audit proof
 ```
 
 In this repository, AI-readable means regular syntax, explicit effects,
@@ -73,10 +105,31 @@ explicit imports, typed errors, source maps, stable diagnostics and
 machine-readable reports. It does not mean vague natural-language friendliness.
 
 For v1, these are goals unless backed by implemented compiler checks and tests.
-LogicN's strongest position is secure web runtime behavior: deny-by-default
-permissions, typed API boundaries, memory-safe values, secret-safe reporting,
-controlled interop, production gates and AI-safe project context. See
+LogicN's strongest near-term position is secure web/runtime behavior:
+deny-by-default permissions, typed API boundaries, memory-safe values,
+secret-safe reporting, controlled interop, production gates and AI-safe
+project context. The longer-term architecture extends that same governance
+model into heterogeneous compute orchestration. See
 `docs/SECURE_WEB_RUNTIME_FIRST.md` for the runtime-first direction.
+
+The runtime architecture is now documented as operational coordination rather
+than a traditional VM model:
+
+```text
+Runtime Command                  workload understanding and execution planning
+Authority Control                capability, effect and policy enforcement
+Runtime Logistics                resource, queue, cache and fast-path reuse
+Compute Balancer                 approved hardware selection under live pressure
+Execution Coordination Scheduler bounded parallelism and dependency timing
+Result Assembler                 ordered result reconstruction and integrity
+```
+
+These names are responsibility-based. They describe what each subsystem owns
+without tying LogicN to threads, CPUs, GPUs or any single backend.
+
+The Compute Balancer does not grant authority. It chooses the best available
+approved target and falls back safely when hardware is unavailable, overloaded,
+too hot, power-constrained or not trusted enough.
 
 LogicN should not claim to make Ethernet hardware faster. Its network position
 is application-level I/O governance: typed network APIs, deny-by-default network
@@ -126,7 +179,7 @@ permanent LogicN syntax such as `target gaudi`.
 From the repository root:
 
 ```powershell
-cd C:\laragon\www\LogicN
+cd C:\laragon\www\LO
 ```
 
 Generate or refresh the project graph:

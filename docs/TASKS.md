@@ -78,7 +78,7 @@
 - [x] Document encapsulation as controlled data movement through secure flows,
   classification, response contracts, capabilities, effects, scoped lifetimes,
   package exports, safe mutation and reports
-- [x] Document models as classified internal security contracts with
+- [x] Document models as view-governed internal security contracts with
   relationships, mutation rules, storage separation and model report targets
 - [x] Document permissions, capabilities and actors as the developer-facing
   authority model
@@ -394,3 +394,179 @@
   `logicn-ot-mqtt` and `logicn-ot-scada` package boundaries
 - [ ] Keep certified protection replacement, PLC safety replacement,
   unsupervised switching and real-time grid control out of beta scope
+
+## Phase 12: Generative Runtime Mapper
+
+- [x] Add Generative Runtime Mapper Knowledge Base concept covering runtime
+  maps, code maps, security maps, AI worker maps, memory/performance maps and
+  advisory-only evolution suggestions
+- [x] Define requirements that mapper output separates facts from suggestions
+  and remains observational by default
+- [x] Define mapper security requirements for redaction, structural telemetry,
+  no payload retention and no silent runtime/source mutation
+- [ ] Define initial mapper report schemas for runtime topology, permission
+  usage, effect flow, memory pressure, AI worker behaviour and code structure
+- [ ] Decide which future packages should own mapper contracts, for example
+  runtime telemetry, runtime graph, runtime insight, code graph and refactor
+  planning packages
+- [ ] Define review workflow for mapper-generated patch proposals and
+  optimisation recommendations
+- [ ] Define safe ML export rules for structural, redacted runtime/code graph
+  learning signals
+
+## Phase 13: AI As Untrusted Reasoning Worker
+
+- [x] Add AI-as-untrusted-reasoning-worker Knowledge Base concept covering
+  typed AI tasks, sandboxed workers, evidence-backed claims, tool permissions
+  and hallucination containment
+- [x] Define requirements that AI may suggest, LogicN must verify and runtime
+  must enforce
+- [x] Define requirements that AI outputs declare claims, evidence, confidence,
+  missing information, tool use and human-review need
+- [x] Define future anti-hallucination report families for AI context, claims,
+  evidence, tool permissions, hallucination risk and human review
+- [ ] Define initial schemas for `AiTask`, `AiWorker`, `AiModel`,
+  `AiContext`, `AiEvidence`, `AiClaim`, `AiDecision`, `AiToolCall` and
+  `AiReport`
+- [ ] Define AI worker sandbox policy defaults for secrets, filesystem,
+  network, database writes, memory, runtime and typed tool permissions
+- [ ] Define claim-verification workflow and evidence conflict handling
+- [ ] Define human-review workflow for low-confidence, contradictory or
+  policy-sensitive AI decisions
+
+## Phase 14: Untrusted File And Asset Processing
+
+- [x] Add Untrusted File And Asset Processing Knowledge Base concept covering
+  quarantine, classification, isolated parsing, sanitisation, safe
+  reconstruction, active-content denial, streaming limits and AI-safe
+  extraction
+- [x] Add Bit Width And Base64 Asset Policy Knowledge Base concept covering
+  explicit numeric boundaries, fixed-width types, no silent conversion,
+  low-bit AI formats, base64 handling modes and embedded asset security
+- [x] Define requirements that uploaded files and embedded assets are
+  executable-adjacent untrusted content
+- [x] Define requirements that parser workers run isolated with bounded memory,
+  bounded runtime, no secrets, no ambient filesystem and no network by default
+- [x] Define requirements that base64/data URI content must pass security
+  classification, memory policy and audit logging before decode or pass-through
+- [ ] Define initial `QuarantinedAsset`, `SanitizedAsset`,
+  `ParserWorkerResult`, `UntrustedPdf`, `UntrustedImage`, `UnsafeSvg`,
+  `ArchiveFile` and `ExecutableContent` contract schemas
+- [ ] Define parser worker report schemas for file security, active content,
+  sanitisation, asset conversion and archive inspection
+- [ ] Define numeric-width and overflow-check report schemas
+- [ ] Define base64 policy report and externalised asset decision schemas
+- [ ] Define safe reconstruction profiles for image, PDF, SVG, Office and
+  archive inputs
+
+## Phase 15: Memory Pressure Security
+
+- [x] Add Memory Pressure Security Knowledge Base concept covering memory
+  budgets, fallible allocation, backpressure, request isolation,
+  priority-based load shedding, deterministic cleanup and OOM attack classes
+- [x] Define requirements that low memory and near-out-of-memory conditions are
+  security events requiring budgets, bounds, reports and fail-safe behaviour
+- [x] Define architecture direction for app/request/worker memory budgets,
+  pressure monitoring, backpressure, low-priority cancellation and
+  secret-safe reporting
+- [ ] Define memory budget contract schemas for apps, packages, requests,
+  parser workers, AI jobs, streams, uploads and database result paging
+- [ ] Define typed memory error schemas for `OutOfMemory`,
+  `MemoryLimitExceeded`, `AllocationDenied`, `FragmentationRisk` and
+  `BufferTooLarge`
+- [ ] Define backpressure and load-shedding policy schemas for normal,
+  warning, critical and emergency pressure states
+- [ ] Define report schemas for memory pressure, allocation denied,
+  request memory, OOM near miss and cleanup reports
+- [ ] Define deterministic cleanup contracts for files, buffers, transactions,
+  workers, audit logs and sensitive memory
+
+## Phase 16: Compile-Time Metadata Reflection
+
+- [x] Add Compile-Time Metadata Reflection Knowledge Base concept covering
+  metadata as compile-time proof/tooling support rather than runtime object
+  inspection or behaviour modification
+- [x] Define requirements that metadata may describe execution but must not
+  control execution at runtime
+- [x] Define architecture direction for metadata extraction before semantic
+  checks, governance checks, Governed IR creation, verified execution and
+  report generation
+- [ ] Specify formal metadata query syntax and report output shape after the
+  v1 grammar freeze
+- [ ] Define metadata index, route-flow-data link, permission metadata,
+  response metadata, audit graph and Governed IR metadata report schemas
+- [ ] Add diagnostics for denied runtime reflection patterns such as
+  string-based invocation, live object listing, dynamic permission mutation and
+  dynamic response exposure mutation
+- [ ] Define how verified metadata is consumed by response gates, permission
+  checks, audit generators, documentation generators and AI architecture
+  indexes without becoming runtime authority
+
+## Phase 17: Governed Execution Director
+
+- [x] Add Governed Execution Director Knowledge Base concept covering shared
+  understanding, execution planning, passive runtime modules, verified fast
+  pipes, justified execution and audit proof
+- [x] Define requirements that the Director plans and coordinates execution but
+  does not grant hidden authority
+- [x] Define architecture direction for Director, policy, passive modules and
+  audit/proof separation
+- [ ] Define shared understanding model contract fields for data, sensitivity,
+  source, owner, action, effects, capabilities, compute shape, memory shape,
+  output contract, audit requirement, validation state, trust state and expiry
+- [ ] Define execution plan schema and lifecycle from input classification to
+  passive module execution and audit proof
+- [ ] Define passive module contracts for CPU, GPU, NPU, TPU, VPU, ASIC, AI,
+  storage, network and boundary modules
+- [ ] Define justified execution schema for access requests, output return
+  reasons, hardware target reasons, plugin reasons and AI tool reasons
+- [ ] Define report schemas for execution plans, shared understanding,
+  compute-target decisions, memory paths, verified fast pipes,
+  justified access, boundary modules and audit proof
+
+## Phase 18: Runtime Terminology And Naming
+
+- [x] Add Runtime Terminology Evolution Knowledge Base concept covering the
+  shift from VM/thread/instruction terminology to governed operational
+  coordination terminology
+- [x] Add Terminology And Naming Philosophy Knowledge Base concept covering
+  responsibility-based names, AI readability, future-proof terminology and
+  implementation-independent naming rules
+- [x] Update root and core README positioning so LogicN is described as a
+  governance-first programming language, runtime and execution architecture
+  for heterogeneous compute orchestration
+- [x] Define runtime terminology requirements for Runtime Command, Authority
+  Control, Runtime Logistics, Resource Deployment Balancer, Execution
+  Coordination Scheduler and Result Assembler
+- [x] Add Compute Balancer Knowledge Base concept covering approved hardware
+  selection, hardware pressure, device trust, thermal state, queue depth,
+  fallback decisions and the rule that the Balancer cannot grant authority
+- [x] Define Compute Balancer requirements as the focused runtime role inside
+  Resource Deployment Balancer responsibility
+- [ ] Decide when explanatory terms such as Governed Execution Director should
+  become formal package/API/report names versus architecture documentation
+  names
+- [ ] Define Compute Balancer report schemas for compute target pressure,
+  hardware availability, hardware trust, fallback decisions, thermal pressure
+  and queue pressure
+- [ ] Define terminology review checklist for new runtime, compiler,
+  governance, AI, hardware and report names
+- [ ] Update future report/package names only after confirming package
+  ownership and migration impact
+
+## Phase 19: Data Visibility View Terminology
+
+- [x] Add Data Visibility View Terminology Knowledge Base concept defining
+  `view` as the field-level data exposure term
+- [x] Define requirements that new field exposure examples use `view` instead
+  of `classify`
+- [x] Update key model, permission, framework and Hello World examples to use
+  `view`
+- [x] Document separation between field exposure views and broader security,
+  input, AI, threat or compute classification
+- [ ] Define compatibility diagnostics for older `classify` field exposure
+  syntax
+- [ ] Define `data-view-report.json` and compatibility mapping from older
+  data-classification reports
+- [ ] Audit remaining documentation examples and migrate field exposure cases
+  while preserving non-exposure uses of classification
