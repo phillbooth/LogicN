@@ -50,6 +50,9 @@ Models connect to:
 - Model relationships must be explicit and must not trigger hidden lazy loading.
 - Model mutation must be explicit, policy-controlled and auditable.
 - Large model copies should require explicit clone or read-only handling.
+- Database field-read permissions should prefer explicit field allow lists.
+- Broad field-read permissions such as `fields: all except [...]` must be
+  visible, reportable and reviewed for future-field leakage.
 
 ## Generated Reports
 
@@ -81,3 +84,4 @@ implementations may remain later work until the parser/checker is mature.
 ## Knowledge Base
 
 See [Model Security Contracts](../Knowledge-Bases/model-security-contracts.md).
+See also [Field Read Rules](../Knowledge-Bases/field-read-rules.md).

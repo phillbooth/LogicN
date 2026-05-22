@@ -42,6 +42,22 @@ Client
 The goal is to reduce avoidable application overhead, not to claim that LogicN
 makes physical networks faster.
 
+## Known Safe Path
+
+LogicN should be fast to respond because it knows the safe path before the
+request arrives.
+
+This means:
+
+- route already known
+- schema already known
+- policy already known
+- effects already known
+- network limits already known
+- connection reusable where policy allows
+- bad requests rejected early
+- good requests enter typed flows quickly
+
 ## What LogicN Should Prewarm
 
 At boot, LogicN may warm:
@@ -210,6 +226,9 @@ Keep-alive must never bypass:
 - backpressure
 - secret-safe logging
 - audit/event policy
+
+HTTP/1.x keep-alive, HTTP/2 multiplexing and HTTP/3/QUIC are transport
+capabilities selected by deployment profile. They are not core language syntax.
 
 ## Design Statement
 

@@ -78,11 +78,20 @@ must not be treated as implemented app functionality.
   should happen at build/check time; boot should verify hashes, load the
   smallest safe runtime surface and defer optional packages until after
   readiness.
+- LogicN boot snapshots, where used, must start as verified bundles of
+  deterministic startup artefacts rather than raw runtime memory dumps. Startup
+  cache artefacts must be bounded, content-addressed where practical, safe to
+  delete, safe to bypass, non-secret and never required for correctness.
 - LogicN fast response planning must combine verified boot profiles,
   precompiled route dispatch, prebuilt validators, warmed policy tables,
   bounded pools, safe inbound connection reuse and safe outbound connection
   pooling. Keep-alive policy must never bypass auth, validation, TLS, rate
   limits, body limits, backpressure or secret-safe logging.
+- HTTP/1.x keep-alive, HTTP/2 multiplexing and HTTP/3/QUIC must be modeled as
+  deployment-profile transport capabilities, not as core language syntax.
+  Inbound and outbound connection pooling must emit network performance report
+  data and remain subject to timeout, rate-limit, body-limit, backpressure,
+  audit and TLS policy.
 - LogicN's current practical web/API execution model must be described as
   Node-hosted. The language core must remain target-independent, Node/V8
   behavior must not define source semantics, and Node-hosted benchmarks must
@@ -96,6 +105,48 @@ must not be treated as implemented app functionality.
 - LogicN should expose `permission` as the main developer-facing authority
   concept while preserving capabilities, effects, policies, audit and reports as
   precise internal/effective concepts.
+- LogicN syntax and logic principles must be secure by default, not only
+  runtime-checked. Insecure behaviour should be impossible by default, and
+  privileged behaviour must be visible in syntax through permissions, effects,
+  input contracts, output views, ownership checks, safe sinks, budgets and audit
+  declarations.
+- Permission blocks must deny by default. Missing allow rules must mean denied,
+  and risky action families such as database, file, network, secret, AI/tool,
+  compute, shell and external API access must require explicit authority.
+- Request/input contracts should declare shape, required fields, size/range
+  limits and allowed values before business logic, database access, AI/tool
+  calls or external service calls execute.
+- Output contracts must declare or inherit target context such as JSON, HTML,
+  log, AI prompt, shell, SQL, URL or CSV so encoding, escaping, redaction and
+  injection rules are target-aware.
+- Raw SQL must be denied by default. Typed query syntax should be preferred, and
+  raw SQL must require explicit high-risk authority such as `db.raw_sql`.
+- Database field reads should prefer explicit field allow lists, for example
+  `allow read Profiles fields: [id, owner, name]`. Broad-read forms such as
+  `fields: all except [...]` may be supported only as visible, reportable,
+  higher-risk syntax.
+- `fields: all except [...]` must resolve known fields, remove excluded fields,
+  check field `view` metadata, warn on sensitive tables and deny unknown future
+  fields unless broad future-field access is explicitly approved. A safer
+  `fields: all current except [...]` mode should freeze the current resolved
+  field set until review.
+- Security-sensitive flows should declare audit requirements and resource
+  budgets. Defaults must exist, and explicit budgets should cover CPU, wall
+  time, memory, body size, loops/recursion where provable, spawned tasks,
+  network calls, AI/tool calls and accelerator work.
+- Audit events must automatically inherit runtime execution identity. The
+  runtime, not application code, owns primary actor attribution, request ID,
+  route/flow, permission, active capabilities, timestamp, execution ID, result
+  and trust-zone metadata.
+- Application code may attach audit metadata, but it must not silently override
+  runtime-owned identity fields such as primary actor, permission, request ID or
+  execution ID. Attempts to override those fields should be denied or reported.
+- Multi-actor audit events should support explicit metadata roles such as
+  `affected_actor`, `delegated_actor`, `source_actor`, `system_actor` and
+  `ai_actor`. These roles must not replace the runtime-owned `primary_actor`.
+- System actors used in audit metadata, such as a payments system actor, must be
+  runtime-approved identities declared in trusted runtime policy, not arbitrary
+  application-created actor values.
 - LogicN policies must be first-class source rules. Reusable policies should
   live under `/policies`, local policy should be placed at the smallest useful
   boundary, and policy reports must include index, definitions, effective
@@ -1561,8 +1612,13 @@ the active v1 build graph.
   older `classify` examples.
 - Permission exposure rules should prefer `allow expose view: level` and
   `deny expose view: level`.
-- Recommended starting view levels are `public`, `internal`, `private`,
-  `confidential`, `secret`, `restricted` and `regulated`.
+- Built-in runtime/language view levels are `public`, `internal`, `private`,
+  `confidential`, `secret`, `restricted` and `regulated`, conceptually exposed
+  as `Runtime.View.public`, `Runtime.View.private` and the other standard
+  levels.
+- `public` means safe to expose under normal allowed response rules. `private`
+  means owned data that may be exposed only when ownership checks pass, such as
+  `owner == actor` or `owner: actor`.
 - Runtime systems may use view metadata for response filtering, serialization
   filtering, audit filtering, AI context filtering, log filtering, API exposure
   checks, frontend exposure validation and model projection.
@@ -1574,6 +1630,41 @@ the active v1 build graph.
 - Future report families should prefer data-view and exposure-report naming
   for field visibility, while preserving compatibility aliases for older
   data-classification reports where needed.
+
+## Variable Mutation And Vault Requirements
+
+- LogicN v0.1 should use a small state surface: `let`, explicit `mut`,
+  `readonly`, `vault`, `secure` and `Secret<T>`.
+- `let` should declare local flow/block-scoped variables that are not
+  accessible outside their scope and are not silently mutable.
+- Mutation must be explicit. Assignment-style mutation without `mut` should
+  fail in normal LogicN code. Increment and decrement mutation without `mut`,
+  such as `foo++`, should also fail checker validation.
+- `readonly` should define values that cannot be changed after creation, with
+  no unlock mechanism in v0.1.
+- `const` should not be used in v0.1 examples or core syntax direction.
+  `readonly` replaces `const` unless LogicN later needs compile-time constants
+  distinct from runtime readonly values.
+- Shared state must live in `vault` declarations, not ordinary globals.
+- Vault values must be protected, typed, permission-controlled, audit-aware and
+  runtime-managed. Vault values are not normal variables.
+- Protected shared state should be accessed through the `secure` path, for
+  example `secure.loginCount`.
+- Writes to vault values must require `mut`, for example
+  `mut secure.loginCount++`.
+- Vault record writes should prefer the visible source form
+  `mut secure.name[key] = value` instead of direct writer-call syntax such as
+  `SessionVault.write(context, key, value)`. Runtime lowering may use internal
+  vault write calls, but source code must keep the governed write visible.
+- Vault writes should inherit the active governed runtime context for actor,
+  route/flow, permission, audit correlation, policy profile and trust-zone
+  metadata rather than requiring generic `context` parameters in normal
+  application code.
+- Sensitive values should use `Secret<T>` or equivalent protected secret
+  references that deny logging, unsafe serialization, AI exposure and
+  accidental report disclosure.
+- Future report families should include variable-scope, mutation,
+  readonly-value, vault-access, vault-security and secret-flow reports.
 
 ## Out of Scope
 
@@ -1610,6 +1701,10 @@ the active v1 build graph.
   review.
 - Using `classify` as the preferred field-level data exposure syntax in new
   LogicN examples.
+- Using `const` in v0.1 as a separate concept from `readonly`.
+- Allowing implicit mutation, unprotected shared state, generic global
+  variables or direct vault access that bypasses `secure`, permission checks or
+  audit.
 
 ## Success Criteria
 

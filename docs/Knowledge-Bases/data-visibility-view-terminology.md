@@ -90,9 +90,48 @@ data {
 }
 ```
 
-## Recommended View Levels
+## Built-In View Levels
 
-Recommended starting view levels:
+LogicN should define the standard view levels as built-in runtime/language
+levels:
+
+```logicn
+runtime view public
+runtime view internal
+runtime view private
+runtime view confidential
+runtime view secret
+runtime view restricted
+runtime view regulated
+```
+
+Conceptual runtime model:
+
+```logicn
+Runtime.View {
+  public
+  internal
+  private
+  confidential
+  secret
+  restricted
+  regulated
+}
+```
+
+The field syntax:
+
+```logicn
+email: String view: private
+```
+
+links to:
+
+```text
+Runtime.View.private
+```
+
+Built-in levels:
 
 ```text
 public
@@ -108,9 +147,9 @@ regulated
 
 | View | Meaning |
 | --- | --- |
-| public | Safe for public exposure |
+| public | Safe to expose under normal allowed response rules |
 | internal | Internal system or organization use |
-| private | Owner-specific visibility |
+| private | Owned data, only exposed when owner checks pass |
 | confidential | Controlled business or customer visibility |
 | secret | Highly protected data |
 | restricted | Tightly governed operational data |
@@ -141,6 +180,13 @@ permission profile_read {
 
   audit required event "profile.read"
 }
+```
+
+This means:
+
+```text
+allow expose fields marked Runtime.View.public
+allow expose fields marked Runtime.View.private only when the owner is the actor
 ```
 
 ## Runtime Meaning
@@ -193,6 +239,9 @@ Existing documents may still use `classification` for broader security
 classification, input classification, AI classification, threat classification
 or compute classification. Those uses are separate from field exposure
 metadata.
+
+See [Built-In View Levels](builtin-view-levels.md) for the formal runtime view
+level model.
 
 For field-level data exposure and permission exposure rules, prefer:
 

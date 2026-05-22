@@ -6,6 +6,41 @@ All notable changes to this app should be documented here.
 
 ### Added
 
+- Added the Built-In View Levels Knowledge Base concept, defining `public`,
+  `internal`, `private`, `confidential`, `secret`, `restricted` and
+  `regulated` as standard runtime/language view levels under `Runtime.View`.
+- Added the Multi-Actor Audit Events Knowledge Base concept, defining how audit
+  events should represent affected, delegated, source, system and AI actors
+  while preserving runtime-owned `primary_actor` attribution.
+- Added the Audit Actor Model Knowledge Base concept, defining automatic runtime
+  actor attribution for audit events, permission-based audit emission,
+  runtime-owned primary actor identity, multiple actor roles, manual metadata
+  limits and spoofing warnings.
+- Added the Field Read Rules Knowledge Base concept, documenting explicit field
+  allow lists as the safest database read syntax and defining
+  `fields: all except [...]` plus safer `fields: all current except [...]` as
+  visible broad-read modes requiring warnings, resolved field reports and
+  future-field leakage controls.
+- Added the Secure By Default Syntax Principles Knowledge Base concept,
+  documenting deny-by-default permissions, explicit risky-action authority,
+  input contracts, output views, ownership checks, typed database access,
+  target-aware encoding, secret-safe syntax, resource budgets, audit
+  declarations, governed context and denied unsafe defaults as syntax/logic
+  principles rather than only runtime checks.
+- Added the Explicit Mutation And Vault Writes Knowledge Base concept,
+  clarifying that local and vault state changes must be visibly marked with
+  `mut`, that `mut foo++` is preferred over `foo++`, and that
+  `mut secure.session[key] = value` is the preferred v0.1 source form over
+  direct `SessionVault.write(context, ...)` calls.
+- Added the Preplanned Startup And Fast Response Knowledge Base concept,
+  connecting verified boot profiles, deterministic boot snapshot bundles,
+  phased warmup, safe startup caches, precompiled app-kernel decisions,
+  keep-alive transport policy, outbound connection pooling and network
+  performance reports.
+- Added the Variable Mutation Vault Design Knowledge Base concept, defining
+  `let`, explicit `mut`, `readonly`, `vault`, `secure` and `Secret<T>` as the
+  v0.1 direction while deferring `const` until a distinct compile-time constant
+  need exists.
 - Added the Data Visibility View Terminology Knowledge Base concept, defining
   `view` as the preferred field-level data exposure term and documenting the
   transition from `classify: public` to `view: public` for model fields and

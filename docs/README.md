@@ -28,6 +28,14 @@ documentation lives in `../packages-logicn/logicn-core/`.
 17. [Terminology And Naming Philosophy](Knowledge-Bases/terminology-naming-philosophy.md)
 18. [Compute Balancer](Knowledge-Bases/compute-balancer.md)
 19. [Data Visibility View Terminology](Knowledge-Bases/data-visibility-view-terminology.md)
+20. [Variable Mutation Vault Design](Knowledge-Bases/variable-mutation-vault-design.md)
+21. [Explicit Mutation And Vault Writes](Knowledge-Bases/explicit-mutation-and-vault-writes.md)
+22. [Secure By Default Syntax Principles](Knowledge-Bases/secure-by-default-syntax-principles.md)
+23. [Field Read Rules](Knowledge-Bases/field-read-rules.md)
+24. [Audit Actor Model](Knowledge-Bases/audit-actor-model.md)
+25. [Multi-Actor Audit Events](Knowledge-Bases/multi-actor-audit-events.md)
+26. [Built-In View Levels](Knowledge-Bases/builtin-view-levels.md)
+27. [Preplanned Startup And Fast Response](Knowledge-Bases/preplanned-startup-and-fast-response.md)
 
 ## Core Framework Concepts
 
@@ -118,6 +126,7 @@ documentation lives in `../packages-logicn/logicn-core/`.
 - [Match Catch-All Branch](Knowledge-Bases/match-catch-all-branch.md)
 - [Startup And Boot Warmup](Knowledge-Bases/startup-and-boot-warmup.md)
 - [Fast Response And Keep-Alive](Knowledge-Bases/fast-response-and-keep-alive.md)
+- [Preplanned Startup And Fast Response](Knowledge-Bases/preplanned-startup-and-fast-response.md)
 - [Boundary Extension Concepts](Knowledge-Bases/boundary-extension-concepts.md)
 - [Polymorphism](Knowledge-Bases/polymorphism.md)
 - [Priority Categories](Knowledge-Bases/priority-categories.md)
@@ -134,6 +143,13 @@ documentation lives in `../packages-logicn/logicn-core/`.
 - [Terminology And Naming Philosophy](Knowledge-Bases/terminology-naming-philosophy.md)
 - [Compute Balancer](Knowledge-Bases/compute-balancer.md)
 - [Data Visibility View Terminology](Knowledge-Bases/data-visibility-view-terminology.md)
+- [Variable Mutation Vault Design](Knowledge-Bases/variable-mutation-vault-design.md)
+- [Explicit Mutation And Vault Writes](Knowledge-Bases/explicit-mutation-and-vault-writes.md)
+- [Secure By Default Syntax Principles](Knowledge-Bases/secure-by-default-syntax-principles.md)
+- [Field Read Rules](Knowledge-Bases/field-read-rules.md)
+- [Audit Actor Model](Knowledge-Bases/audit-actor-model.md)
+- [Multi-Actor Audit Events](Knowledge-Bases/multi-actor-audit-events.md)
+- [Built-In View Levels](Knowledge-Bases/builtin-view-levels.md)
 
 ## Existing App And Workspace Docs
 

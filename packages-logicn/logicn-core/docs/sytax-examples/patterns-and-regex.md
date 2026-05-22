@@ -19,7 +19,7 @@ docs/safe-pattern-matching-and-regex.md
 ## Good: Compile Once
 
 ```LogicN
-const postcodePattern: Pattern = pattern.compile("^[A-Z]{1,2}[0-9][0-9A-Z]?\\s?[0-9][A-Z]{2}$")
+readonly postcodePattern: Pattern = pattern.compile("^[A-Z]{1,2}[0-9][0-9A-Z]?\\s?[0-9][A-Z]{2}$")
 
 pure flow isUkPostcode(value: String) -> Bool {
   return pattern.matches(postcodePattern, value)
@@ -207,7 +207,7 @@ Compile once outside the loop or use a PatternCache.
 ## Bad: Unsafe Feature in Safe Pattern
 
 ```LogicN
-const repeatedWord: Pattern = pattern.compile("\\b(\\w+)\\s+\\1\\b")
+readonly repeatedWord: Pattern = pattern.compile("\\b(\\w+)\\s+\\1\\b")
 ```
 
 Why not:

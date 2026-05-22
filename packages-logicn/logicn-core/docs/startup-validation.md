@@ -60,8 +60,8 @@ startup {
 }
 
 globals {
-  const APP_NAME: String = "VatApi"
-  const VAT_RATE: Decimal = 0.20
+  readonly APP_NAME: String = "VatApi"
+  readonly VAT_RATE: Decimal = 0.20
 
   config APP_PORT: Int = env.int("APP_PORT", default: 8080)
   secret API_KEY: SecureString = env.secret("API_KEY")

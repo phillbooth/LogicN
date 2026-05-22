@@ -34,12 +34,17 @@ HTML or CSS badges may be added later by the documentation renderer.
 | Function | `flow name(...) -> Type` | Implemented prototype | Managed | Flows may carry effects, reports and target planning. |
 | Syntax governance | every syntax feature starts untrusted until typed, effect-checked, permissioned and reportable | Documented draft | Managed | Prevents parser acceptance from becoming implicit trust. |
 | Secure function | `secure flow` | Implemented prototype | Managed | Security-sensitive work is visible in the signature. |
+| Deny-by-default permissions | missing allow means deny | Documented draft | Managed | Security policy should be source-visible and fail closed. |
+| Explicit authority | risky actions require `allow` entries | Documented draft | Managed | Database, file, network, secret, AI/tool, compute, shell and external APIs must not be implicit. |
+| Built-in view levels | `Runtime.View { public internal private confidential secret restricted regulated }` | Documented draft | Managed | Field `view:` labels should map to standard runtime exposure levels. |
+| Input contracts | `request Name { field: Type required }` plus future limits | Documented draft | Managed | Input shape, required fields and ranges should be known before execution. |
+| Output target | `response Name target: json` direction | Documented draft | Managed | Encoding, escaping and redaction depend on the sink target. |
 | Pure function | `pure flow` | Documented draft | Potential | Pure flows need effect checking before production claims. |
 | Async function | `async flow` | Documented draft | Potential | Runtime and cancellation semantics are still pending. |
 | Vector function | vector flow direction plus package contracts | Documented draft/package-owned | Potential | Vector execution needs fallback and target reports. |
 | Return type | `-> Type` | Implemented prototype | OK | Return types are mandatory for clarity and checking. |
 | Variables | `let name: Type = value` | Implemented prototype | Managed | Explicit types avoid hidden coercion and missing-value ambiguity. |
-| Mutable variables | explicit mutable syntax still pending | TODO | Potential | Mutability must fit the ownership and borrowing model. |
+| Mutable variables | `mut name = ...` / `mut name++` direction | TODO | Potential | Mutation must be explicit and fit the ownership and borrowing model. |
 | `if` | `if condition { ... }` | Documented draft | Potential | Requires strict condition typing. |
 | Loops | `for`, `while`, `wait until` | Documented draft | Potential | Needs bounds, termination and resource diagnostics. |
 | For-each | typed collection iteration | Documented draft | Potential | Element types and mutation rules must be checked. |
@@ -63,11 +68,18 @@ HTML or CSS badges may be added later by the documentation renderer.
 | Printing simple text | `print("text")` | Implemented prototype | Potential | Production output needs redaction policy. |
 | Raw object dump | no native raw dump; use future safe debug/report output | TODO / Not core | High | Dumps must respect redaction, size limits and secret-safe values. |
 | Logging | planned `console.*` / reports | TODO | High | Production logging needs redaction and policy checks. |
+| Secret-safe output | `view: secret` denied from normal returns/logs/AI/cache | Documented draft | Managed | Secret exposure must require a narrow safe sink and audit trail. |
 | JSON decode | `json.decode<T>(input)` | Implemented prototype | Managed | JSON must decode into a declared type. |
 | JSON encode | `json.encode` | Documented draft | Potential | Planned as typed JSON support. |
 | API route | `api Name { POST "/path" { ... } }` | Implemented prototype | Managed | API boundaries are typed contracts. |
+| Resource budget | `budget { cpu: small memory: small time: 100ms }` direction | Documented draft | Managed | Budgets limit resource exhaustion and expensive abuse paths. |
+| Audit declaration | `audit required event "..."` | Documented draft | Managed | Security-relevant flows should produce explicit audit evidence. |
+| Audit actor attribution | runtime-owned actor/request/permission context | Documented draft | Managed | Audit identity should inherit governed runtime context and not be spoofed by app code. |
+| Multi-actor audit metadata | `affected_actor`, `delegated_actor`, `source_actor`, `system_actor`, `ai_actor` | Documented draft | Managed | Extra actors may be metadata, but primary actor remains runtime-owned. |
 | Webhook | `webhook` syntax/docs | Implemented prototype/draft | High | Deeper verification remains package/kernel work. |
 | Effects | `effects [network.inbound]` | Implemented prototype/draft | Managed | Effects are visible for security and target planning. |
+| Raw SQL | gated by `allow db.raw_sql` | Documented draft | High | Typed queries are preferred; raw SQL is high-risk authority. |
+| Field read rules | `fields: [id, owner]`, `fields: all except [...]`, `fields: all current except [...]` | Documented draft | Managed | Explicit allow lists are safest; broad reads need warnings and future-field controls. |
 | Parallel work | `parallel`, workers, channels | Implemented prototype/draft | High | Production scheduler and safety checks are future work. |
 | Memory ownership | hybrid ownership/borrowing model | TODO | High | Required before production safety claims. |
 | Manual pointer-like access | not core LogicN syntax | Not core | High | Unsafe memory access must go through audited interop/trusted modules. |
@@ -129,9 +141,10 @@ invented as core syntax later.
 | Data | protocol/interface | TODO | Needed later for generic packages. |
 | Data | explicit polymorphism | Documented draft | Use contracts, adapters, constrained generics and variant matches; selected implementations must be reportable. |
 | Values | immutable binding | Implemented prototype | Immutable-by-default direction. |
-| Values | mutable binding | TODO | Must align with ownership/borrowing rules. |
-| Values | constant | Documented draft | Needs module and initialization rules. |
-| Values | assignment | TODO | Needs mutability and borrow checks. |
+| Values | explicit mutation | TODO | Use `mut` for mutation operations; assignment, increment and decrement without `mut` should fail. |
+| Values | readonly value | Documented draft | `readonly` replaces `const` for v0.1 values that cannot change after creation. |
+| Values | constant | Not core for v0.1 | Add `const` later only if compile-time constants need semantics distinct from `readonly`. |
+| Values | assignment | TODO | Needs explicit `mut`, ownership and borrow checks. |
 | Values | destructuring | TODO | Useful later, but can obscure ownership/moves. |
 | Values | type inference | Documented draft | Public boundaries should remain explicit. |
 | Operators | arithmetic/comparison/boolean | Documented draft | Needs overflow and strict compatibility rules. |
@@ -190,6 +203,7 @@ package boundaries are stable.
 | Data | constructor | Potential | Prefer typed values and validation flows. |
 | Data | inheritance | High | Disallowed in normal LogicN source; use contracts, adapters, variants and generics. |
 | Values | global variable | High | Conflicts with strict global registry and effect visibility. |
+| Values | `const` as separate v0.1 syntax | Potential | `readonly` is enough for now; compile-time constants can be reconsidered later. |
 | Values | static local | High | Hidden state should be explicit and reported. |
 | Operators | null coalescing | Potential | Prefer explicit `Option` matching. |
 | Operators | operator overloading | Potential | Can hide work/effects; reconsider after protocols. |

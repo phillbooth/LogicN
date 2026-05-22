@@ -147,7 +147,7 @@ LogicN may validate policy shape, report risky settings and apply compiler/runti
 `Pattern` is the safe default type.
 
 ```LogicN
-const postcodePattern: Pattern = pattern.compile("^[A-Z]{1,2}[0-9][0-9A-Z]?\\s?[0-9][A-Z]{2}$")
+readonly postcodePattern: Pattern = pattern.compile("^[A-Z]{1,2}[0-9][0-9A-Z]?\\s?[0-9][A-Z]{2}$")
 ```
 
 Usage:
@@ -277,7 +277,7 @@ This supports LogicN's low-memory goals.
 LogicN should compile constant patterns once.
 
 ```LogicN
-const postcodePattern: Pattern = pattern.compile("^[A-Z]{1,2}[0-9][0-9A-Z]?\\s?[0-9][A-Z]{2}$")
+readonly postcodePattern: Pattern = pattern.compile("^[A-Z]{1,2}[0-9][0-9A-Z]?\\s?[0-9][A-Z]{2}$")
 ```
 
 Repeated calls reuse the compiled pattern:

@@ -121,6 +121,9 @@ report facts.
 - Capabilities are not technical effects.
 - Advanced blocks may be supported where explicit detail is needed.
 - Reports must show the effective permission after expansion.
+- Audit identity should be inherited from governed runtime context. Developers
+  should not manually attach or override the primary actor in ordinary audit
+  events.
 
 ## Best Short Statement
 
@@ -128,3 +131,5 @@ report facts.
 Developers write permission.
 LogicN compiles it into capabilities, effects, policy and reports.
 ```
+
+See [Audit Actor Model](audit-actor-model.md).

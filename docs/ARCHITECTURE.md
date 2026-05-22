@@ -218,6 +218,148 @@ equal or narrower than the delegator's authority, never broader. No runtime
 process, including an AI agent, may grant itself broader authority than its
 approver chain possesses.
 
+## Secure By Default Syntax Principles
+
+LogicN security should be visible in syntax and logic, not only enforced as late
+runtime checks.
+
+The core principle is:
+
+```text
+Make insecure behaviour impossible by default,
+and privileged behaviour visible in syntax.
+```
+
+Syntax-level security means:
+
+- permission blocks deny by default
+- risky actions require explicit authority
+- request contracts define shape, limits and allowed values
+- output fields use `view`
+- owner-scoped data requires ownership checks such as `owner: actor`
+- database field reads prefer explicit allow lists
+- `fields: all except [...]` is visible broad-read syntax and requires warnings
+- typed database queries are preferred over raw SQL
+- raw SQL requires explicit authority such as `db.raw_sql`
+- output declares or inherits target context such as JSON, HTML, log or AI prompt
+- secrets cannot be returned, logged, sent to AI or cached by default
+- flows have default budgets and may declare explicit budgets
+- security-relevant flows declare audit events
+- audit events inherit runtime actor, request, route, flow, permission and
+  capability identity automatically
+- authority-sensitive work has explicit or inherited governed context
+- eval, raw shell, monkey patching, globals, inheritance, unsafe reflection, raw
+  pointers and silent network access are denied or gated
+
+Example permission:
+
+```logicn
+permission profile_read {
+  code {
+    allow db.read
+    allow audit.write
+  }
+
+  data {
+    allow expose view: public
+    allow expose view: private owner: actor
+  }
+
+  audit required event "profile.read"
+}
+```
+
+Example input contract:
+
+```logicn
+request getProfile {
+  user_id: UserId required
+}
+```
+
+Example target-aware response:
+
+```logicn
+response Profile.response target: json
+```
+
+Example field-read rule:
+
+```logicn
+allow read Profiles fields: [
+  id,
+  owner,
+  name
+]
+```
+
+Convenient but riskier broad-read rule:
+
+```logicn
+allow read Profiles fields: all except [
+  email
+]
+```
+
+The compiler/runtime should resolve known fields, remove excluded fields, check
+field `view` metadata, warn on sensitive tables and deny unknown future fields
+unless broad future-field access is explicitly approved. A safer broad-read
+mode may use `fields: all current except [...]` to freeze the current field set.
+
+The detailed concept is documented in
+`docs/Knowledge-Bases/secure-by-default-syntax-principles.md`.
+Field-read modes are documented in
+`docs/Knowledge-Bases/field-read-rules.md`.
+Audit actor attribution is documented in
+`docs/Knowledge-Bases/audit-actor-model.md`.
+
+## Audit Actor Attribution
+
+LogicN audit identity should come from governed runtime context, not from
+developer-supplied values.
+
+When a flow declares:
+
+```logicn
+audit required event "profile.read"
+```
+
+or writes:
+
+```logicn
+audit.write(context, "profile.read")
+```
+
+the runtime should automatically attach:
+
+- primary actor
+- request ID
+- route and flow
+- permission used
+- active capabilities
+- timestamp
+- execution ID
+- result
+- trust zone
+
+Application code may add metadata, but it must not silently replace the primary
+actor or other runtime-owned audit identity fields.
+
+Multi-actor audit events may include explicit non-primary actor metadata:
+
+```logicn
+audit.write("refund.approve.completed", {
+  affected_actor: customer_actor,
+  system_actor: Runtime.system_actor("payments"),
+  refund_id: refund.id
+})
+```
+
+The runtime still injects `primary_actor` from the governed execution context.
+Application code should not normally pass `primary_actor` in audit metadata.
+System actors must be runtime-approved identities declared in trusted runtime
+policy.
+
 
 
 Environment secret handling is a typed security boundary.
@@ -813,6 +955,24 @@ should verify artefact hashes, load the smallest safe production surface and
 defer optional AI, search, report, graph and benchmark packages until after
 readiness.
 
+Preplanned startup should use a verified artefact flow:
+
+```text
+build/check
+  -> boot profile
+  -> route, policy, schema, effects and runtime-plan artefacts
+  -> verified boot snapshot bundle
+  -> minimal cold boot
+  -> safe warmup
+  -> deferred optional warmup
+```
+
+The initial LogicN boot snapshot should be a deterministic bundle, not a raw
+runtime memory dump. It may contain route tables, policy tables, validators,
+package graph data, target plans and startup reports. It must not contain
+secrets, raw request bodies, authorization decisions or non-deterministic
+external data by default.
+
 Fast response should be treated as a request-path architecture concern.
 
 The API server and app kernel should combine precompiled route dispatch,
@@ -821,6 +981,19 @@ inbound transport policy, outbound connection pools and network performance
 reports. Keep-alive and pooling must remain policy-controlled and must not
 bypass auth, validation, TLS, rate limits, body limits, timeout policy,
 backpressure, secret-safe logging or audit requirements.
+
+The fast response path should be:
+
+```text
+reusable transport connection
+  -> precompiled route lookup
+  -> prevalidated schema and policy
+  -> warmed typed flow
+  -> audited response
+```
+
+HTTP/1.x keep-alive, HTTP/2 multiplexing and HTTP/3/QUIC are deployment
+transport capabilities. They are not core language syntax.
 
 
 
@@ -1656,7 +1829,33 @@ data {
 }
 ```
 
-Recommended view levels are:
+Built-in runtime/language view levels are:
+
+```logicn
+Runtime.View {
+  public
+  internal
+  private
+  confidential
+  secret
+  restricted
+  regulated
+}
+```
+
+Equivalent declaration form:
+
+```logicn
+runtime view public
+runtime view internal
+runtime view private
+runtime view confidential
+runtime view secret
+runtime view restricted
+runtime view regulated
+```
+
+Meaning:
 
 ```text
 public
@@ -1668,6 +1867,10 @@ restricted
 regulated
 ```
 
+`view: private` maps to `Runtime.View.private`. `allow expose view: private
+owner: actor` means fields marked `Runtime.View.private` may be exposed only
+when the data owner is the current actor.
+
 The runtime may use view metadata for response filtering, serialization
 filtering, audit filtering, AI context filtering, log filtering, API exposure
 checks, frontend exposure validation and model projection.
@@ -1677,3 +1880,95 @@ uses may still use `classification` where the meaning is not field exposure.
 
 The concept is documented in
 `docs/Knowledge-Bases/data-visibility-view-terminology.md`.
+Built-in levels are documented in
+`docs/Knowledge-Bases/builtin-view-levels.md`.
+
+## Variable Mutation And Vault Model
+
+LogicN v0.1 should keep variable and shared-state syntax small:
+
+```text
+let       normal local variable inside a flow
+mut       explicit mutation action
+readonly  cannot be changed after creation
+vault     protected shared state
+secure    access to vault state
+Secret<T> protected secret value
+```
+
+`const` is deferred. `readonly` replaces `const` for now unless LogicN later
+needs compile-time constants separate from runtime readonly values.
+
+The core rule is:
+
+```text
+Variables are local by default.
+Mutation must always be explicit.
+Shared state must be protected.
+Secrets and shared state must never be implicit.
+```
+
+Local values remain inside flow/block scope. Mutation must be visible:
+
+```logicn
+let counter: Int = 1
+mut counter++
+```
+
+Unmarked mutation is not allowed:
+
+```logicn
+counter++
+counter = counter + 1
+```
+
+`mut counter++` is preferred over `counter++` because the mutation marker makes
+state changes visible to developers, AI tools, checker diagnostics and mutation
+reports.
+
+Readonly symbolic values replace v0.1 constants:
+
+```logicn
+readonly PI: Decimal = 3.14159
+readonly MatrixSize: Int = 4
+```
+
+Shared state belongs in vaults and should be accessed through `secure`:
+
+```logicn
+vault {
+  loginCount: Int {
+    allow incrementLogin write
+    allow getLoginCount read
+    audit required
+  }
+}
+
+let count = secure.loginCount
+mut secure.loginCount++
+```
+
+Vault record writes should use the same visible mutation rule:
+
+```logicn
+mut secure.session[session_uuid] = {
+  actor_uuid: user.uuid,
+  created_at: Runtime.now(),
+  expires_at: Runtime.now() + Duration.hours(12),
+  revoked: false
+}
+```
+
+Older source-level writer calls such as
+`SessionVault.write(context, session_uuid, session)` should not be the preferred
+v0.1 surface. The runtime may lower `mut secure.*` operations into internal
+vault write calls, but source code should keep protected writes visible and
+should inherit governed runtime context instead of passing generic `context`
+parameters everywhere.
+
+Secret values should use `Secret<T>` so logging, rendering, AI exposure,
+unsafe serialization and reports can apply redaction and flow tracking.
+
+The concept is documented in
+`docs/Knowledge-Bases/variable-mutation-vault-design.md` and
+`docs/Knowledge-Bases/explicit-mutation-and-vault-writes.md`.

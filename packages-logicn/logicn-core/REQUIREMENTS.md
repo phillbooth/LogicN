@@ -148,6 +148,92 @@ Cleanup behaviour MUST be source-mapped and must not hide errors.
 
 ---
 
+### REQ-EVOLUTION-006A: Variables, Explicit Mutation and Vault State
+
+LogicN v0.1 SHOULD use `let` for local flow/block-scoped variables, `mut` for
+explicit mutation, `readonly` for values that cannot change after creation,
+`vault` for protected shared state, `secure` for protected vault access and
+`Secret<T>` for protected secret values.
+
+Mutation MUST be visible. Assignment-style mutation without `mut` SHOULD be
+diagnosed in normal LogicN code. Increment and decrement mutation without
+`mut`, such as `foo++`, SHOULD also be diagnosed.
+
+`readonly` SHOULD replace `const` in v0.1. LogicN SHOULD add `const` later only
+if it needs compile-time constants that are meaningfully distinct from runtime
+readonly values.
+
+Shared state MUST NOT be ordinary global state. Shared state belongs in typed,
+permission-controlled, audit-aware vault declarations and should be accessed
+through protected paths such as `secure.valueName`.
+
+Vault record writes SHOULD prefer the visible source form
+`mut secure.name[key] = value` instead of direct writer-call syntax such as
+`SessionVault.write(context, key, value)`. Runtime lowering MAY use internal
+vault write calls, but source code should keep the governed write visible and
+inherit active runtime context for actor, flow, permission, audit and trust-zone
+metadata.
+
+---
+
+### REQ-EVOLUTION-006B: Secure By Default Syntax Principles
+
+LogicN syntax SHOULD make security decisions visible before runtime execution.
+
+Permission blocks MUST deny by default. Missing allow rules MUST mean denied,
+and risky actions such as database, file, network, secret, AI/tool, compute,
+shell and external API access SHOULD require explicit authority.
+
+Request/input contracts SHOULD declare shape, required fields, size/range
+limits and allowed values. Output contracts SHOULD declare or inherit target
+context such as JSON, HTML, log, AI prompt, shell, SQL, URL or CSV so encoding
+and escaping are target-aware.
+
+Field exposure SHOULD use `view`, owner-scoped exposure SHOULD require explicit
+ownership checks such as `owner: actor`, and secrets SHOULD be denied from
+return values, logs, AI context, ordinary serialization, normal reports and
+caches by default.
+
+LogicN SHOULD define built-in runtime/language view levels: `public`,
+`internal`, `private`, `confidential`, `secret`, `restricted` and `regulated`.
+These SHOULD map conceptually to `Runtime.View.public`,
+`Runtime.View.private` and the other standard view levels. `public` means safe
+to expose under normal allowed response rules. `private` means owned data that
+requires ownership checks such as `owner == actor` or `owner: actor`.
+
+Raw SQL SHOULD be denied by default. Typed query syntax SHOULD be preferred,
+and raw SQL SHOULD require explicit high-risk authority such as `db.raw_sql`.
+
+Database field reads SHOULD prefer explicit field allow lists. Broad-read
+syntax such as `fields: all except [...]` MAY be supported only as visible,
+reportable, higher-risk syntax. `fields: all current except [...]` SHOULD be
+preferred where broad current access is needed without automatically granting
+future fields.
+
+For broad-read field rules, the compiler/runtime SHOULD resolve known fields,
+remove excluded fields, check `view` metadata, warn on sensitive tables and deny
+unknown future fields unless broad future-field access is explicitly approved.
+
+Flows SHOULD have default resource budgets and MAY declare explicit budgets for
+CPU, wall time, memory, request body size, loop/recursion limits where
+provable, spawned tasks, network calls, AI/tool calls and accelerator work.
+
+Security-relevant flows SHOULD support audit declarations such as
+`audit required event "profile.read"`.
+
+Audit events SHOULD automatically inherit governed runtime identity, including
+primary actor, request ID, route, flow, permission, active capabilities,
+timestamp, execution ID, result and trust zone. Application code MAY attach
+metadata but SHOULD NOT silently override runtime-owned audit identity fields.
+
+Multi-actor audit events SHOULD support metadata roles such as
+`affected_actor`, `delegated_actor`, `source_actor`, `system_actor` and
+`ai_actor`. These roles MUST NOT replace runtime-owned `primary_actor`
+attribution. System actors SHOULD be runtime-approved identities declared in
+trusted runtime policy.
+
+---
+
 ### REQ-EVOLUTION-007: Safe Metadata and Compile-Time Transforms
 
 LogicN MAY support safe compile-time metadata, attributes or hygienic transforms.
@@ -308,15 +394,15 @@ declared in a strict global registry.
 The registry SHOULD support:
 
 ```text
-const
+readonly
 config
 secret
-state
+vault
 ```
 
 Global values MUST have explicit types. Secret globals MUST use `SecureString`
 and MUST be redacted in reports, generated documentation, source maps and AI
-context. Mutable shared state MUST be declared as controlled `state`.
+context. Mutable shared state MUST be declared as controlled `vault` state.
 
 LogicN SHOULD generate:
 

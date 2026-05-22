@@ -564,9 +564,112 @@
   `view`
 - [x] Document separation between field exposure views and broader security,
   input, AI, threat or compute classification
+- [x] Add Built-In View Levels Knowledge Base concept defining `public`,
+  `internal`, `private`, `confidential`, `secret`, `restricted` and
+  `regulated` as built-in runtime/language view levels under `Runtime.View`
+- [x] Define `public` as safe to expose under normal allowed response rules and
+  `private` as owned data exposed only when ownership checks pass
 - [ ] Define compatibility diagnostics for older `classify` field exposure
   syntax
+- [ ] Define formal `Runtime.View` grammar/schema and generated
+  `view-level-report.json`
 - [ ] Define `data-view-report.json` and compatibility mapping from older
   data-classification reports
 - [ ] Audit remaining documentation examples and migrate field exposure cases
   while preserving non-exposure uses of classification
+
+## Phase 20: Variable Mutation And Vault Design
+
+- [x] Add Variable Mutation Vault Design Knowledge Base concept covering
+  local `let`, explicit `mut`, `readonly`, protected `vault`, `secure` access
+  and `Secret<T>`
+- [x] Define v0.1 direction that `readonly` replaces `const` unless a distinct
+  compile-time constant need appears later
+- [x] Define requirements that mutation must be explicit and shared state must
+  live in protected vaults
+- [x] Add Explicit Mutation And Vault Writes Knowledge Base concept clarifying
+  that `mut foo++` and `mut secure.*` writes are preferred while unmarked
+  `foo++`, plain assignment mutation and direct source-level
+  `SessionVault.write(context, ...)` calls are not the v0.1 surface
+- [ ] Update parser/checker status so assignment without `mut` is diagnosed
+- [ ] Update parser/checker status so increment and decrement operations
+  without `mut` are diagnosed
+- [ ] Define `readonly` grammar and diagnostics
+- [ ] Define vault declaration grammar, `secure` access checks and generated
+  read/write permission contracts
+- [ ] Define variable-scope, mutation, readonly-value, vault-access,
+  vault-security and secret-flow report schemas
+
+## Phase 21: Preplanned Startup And Fast Response
+
+- [x] Add Preplanned Startup And Fast Response Knowledge Base concept covering
+  verified boot profiles, deterministic boot snapshots, phased warmup,
+  precompiled app-kernel decisions, safe startup caches, keep-alive transport
+  policy and outbound connection pooling
+- [x] Update startup and fast response docs with boot snapshot, generation
+  commands, known-safe request path and transport-profile wording
+- [x] Define requirements that startup cache artefacts are deterministic,
+  non-secret, bounded, content-addressed where practical, safe to delete, safe
+  to bypass and never required for correctness
+- [x] Define requirements that keep-alive, HTTP/2 multiplexing and HTTP/3/QUIC
+  remain deployment-profile transport capabilities rather than core language
+  syntax
+- [ ] Define `logicn.boot-profile.v1` schema for routes, policies, validators,
+  effects, package graphs, runtime plan, target plan, cache metadata and report
+  references
+- [ ] Define boot snapshot bundle manifest and validation rules for
+  route-table, policy-table, validator, package-graph, target-plan and startup
+  report artefacts
+- [ ] Define `startup-report.json` and `app.network-performance-report.json`
+  schemas for boot readiness, warmup state, inbound transport, outbound pools,
+  cache decisions and warnings
+- [ ] Define future CLI command contracts for `LogicN startup:plan`,
+  `LogicN startup:warm`, `LogicN startup:report` and
+  `LogicN serve --use-boot-profile`
+
+## Phase 22: Secure By Default Syntax Principles
+
+- [x] Add Secure By Default Syntax Principles Knowledge Base concept covering
+  deny-by-default permissions, explicit authority, input contracts, output view
+  rules, ownership checks, safe database syntax, target-aware encoding,
+  secret-safe syntax, resource budgets, audit declarations, governed context and
+  denied unsafe defaults
+- [x] Define requirements that these are syntax/logic principles rather than
+  only runtime checks
+- [ ] Define formal permission deny-by-default diagnostics and effective
+  permission reports
+- [ ] Define request/input contract grammar for required fields, string length,
+  numeric ranges, allowed values and body-size limits
+- [ ] Define response target grammar for `json`, `html`, `log`, `ai_prompt`,
+  `shell`, `sql`, `url` and `csv` encoding policy
+- [ ] Define typed database query grammar and gated `db.raw_sql` authority
+  diagnostics
+- [ ] Define field-read permission grammar for explicit allow lists,
+  `fields: all except [...]`, `fields: all current except [...]`, `fields: all`
+  and related sensitivity/future-field diagnostics
+- [ ] Define default and explicit `budget` grammar for CPU, memory, time,
+  body-size, loop, recursion, task, network, AI/tool and accelerator limits
+- [ ] Define audit declaration grammar and report schemas for security-relevant
+  flows
+
+## Phase 23: Audit Actor Model
+
+- [x] Add Audit Actor Model Knowledge Base concept covering automatic runtime
+  actor attribution, permission-based audit events, multiple actor roles,
+  manual metadata limits and no silent actor spoofing
+- [x] Define requirements that audit identity inherits governed runtime context
+  and cannot be silently overridden by application code
+- [x] Add Multi-Actor Audit Events Knowledge Base concept covering affected,
+  delegated, source, system and AI actor metadata while preserving
+  runtime-owned primary actor attribution
+- [ ] Define audit event schema fields for actor, delegated actor, source actor,
+  request ID, route, flow, permission, capabilities, timestamp, execution ID,
+  result, trust zone and redaction decisions
+- [ ] Define multi-actor audit schema roles for `primary_actor`,
+  `affected_actor`, `delegated_actor`, `source_actor`, `system_actor` and
+  `ai_actor`, including runtime-approved system actor validation
+- [ ] Define diagnostics for attempts to override runtime-owned audit identity
+  fields such as primary actor, request ID, permission or execution ID
+- [ ] Define report schemas for `audit-actor-report.json`,
+  `audit-event-report.json`, `audit-context-report.json` and
+  `audit-spoofing-warning-report.json`

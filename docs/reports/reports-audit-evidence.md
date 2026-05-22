@@ -30,6 +30,8 @@ build/audit/
   policy-effective.json
   contract-effective.json
   permission-effective.json
+  audit-actor-report.json
+  audit-event-report.json
   secret-usage-report.json
   storage-boundary-report.json
   external-boundary-report.json
@@ -46,6 +48,8 @@ which routes expose which fields
 which flows can access external APIs
 which flows can write to storage
 which permissions are required
+which actor, route, flow, permission and capabilities were attached to audit events
+which audit events attempted to override runtime-owned identity fields
 which fields are denied from public output
 which policies apply in production
 ```
@@ -66,3 +70,8 @@ the organisation follows incident process
 LogicN is designed to support audit-ready secure software by making data
 classification, permissions, flows, contracts, boundaries and exposure rules
 explicit, compiler-checked and reportable.
+
+Audit actor attribution should come from governed runtime context. Application
+code may add event metadata, but runtime-owned identity fields such as primary
+actor, request ID, route, flow, permission, capabilities, timestamp and
+execution ID must be consistent and protected from silent override.

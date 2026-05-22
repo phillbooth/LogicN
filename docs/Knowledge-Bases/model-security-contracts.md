@@ -135,6 +135,32 @@ The compiler should be able to check:
 - `email` requires `users.private.read`
 - `User` is not returned directly from public routes
 
+## Field Read Permissions
+
+Database field reads should prefer explicit field allow lists:
+
+```logicn
+allow read Profiles fields: [
+  id,
+  owner,
+  name
+]
+```
+
+Broad read rules are possible but riskier:
+
+```logicn
+allow read Profiles fields: all except [
+  email
+]
+```
+
+`all except` must remain visible and reportable because new fields may be added
+later. Sensitive tables should prefer explicit allow lists or the safer
+`all current except` mode.
+
+See [Field Read Rules](field-read-rules.md).
+
 ## Relationships
 
 Model relationships should be explicit and reportable.

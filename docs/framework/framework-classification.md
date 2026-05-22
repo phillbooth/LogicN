@@ -8,6 +8,10 @@ View metadata marks the exposure and handling rules for data.
 
 A view tells LogicN who or what may see or expose data.
 
+`public`, `private`, `internal`, `confidential`, `secret`, `restricted` and
+`regulated` are built-in view levels in the LogicN runtime/language standard.
+For example, `view: private` maps to `Runtime.View.private`.
+
 Older documents may use `classification` for field exposure. New field
 exposure syntax should use `view`.
 
@@ -24,6 +28,9 @@ model User {
 
 ## Security Rules
 
+- `public` means safe to expose under normal allowed response rules.
+- `private` means owned data exposed only when ownership checks pass, such as
+  `owner == actor`.
 - Secret fields must not appear in public output.
 - Private and regulated data require declared permission before exposure.
 - Internal fields must not leave public route boundaries.
@@ -50,3 +57,4 @@ responses/views.
 ## Knowledge Base
 
 See [Data Visibility View Terminology](../Knowledge-Bases/data-visibility-view-terminology.md).
+See [Built-In View Levels](../Knowledge-Bases/builtin-view-levels.md).

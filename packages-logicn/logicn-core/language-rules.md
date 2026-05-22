@@ -563,7 +563,7 @@ Global Registry.
 
 ```LogicN
 globals {
-  const APP_NAME: String = "OrderRiskDemo"
+  readonly APP_NAME: String = "OrderRiskDemo"
   config APP_PORT: Int = env.int("APP_PORT", default: 8080)
   secret PAYMENT_WEBHOOK_SECRET: SecureString = env.secret("PAYMENT_WEBHOOK_SECRET")
 }
@@ -573,13 +573,13 @@ Global values must be typed, source-mapped and auditable. Secret globals must
 use `SecureString` and must be redacted in reports, generated documentation and
 AI context.
 
-Mutable shared state must be declared as controlled `state`; accidental global
+Mutable shared state must be declared as controlled `vault` state; accidental global
 mutation should be denied.
 
 ```text
 Local by default.
-Global by declaration.
-Mutable only by controlled state.
+Shared by vault declaration.
+Mutable only by controlled vault state.
 Secrets always protected.
 ```
 

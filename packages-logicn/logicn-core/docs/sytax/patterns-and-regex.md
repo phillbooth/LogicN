@@ -34,7 +34,7 @@ UnsafeRegex = explicit audited escape hatch
 ## Safe Pattern Type
 
 ```LogicN
-const emailPattern: Pattern = pattern.compile("^[^@]+@[^@]+\\.[^@]+$")
+readonly emailPattern: Pattern = pattern.compile("^[^@]+@[^@]+\\.[^@]+$")
 ```
 
 ```LogicN

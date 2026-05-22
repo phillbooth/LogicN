@@ -4,13 +4,13 @@ This document describes the proposed Strict Global Registry feature for LogicN /
 LogicN.
 
 The registry provides one safe, typed and auditable place to define project-wide
-constants, runtime configuration, secrets and controlled shared state.
+readonly values, runtime configuration, secrets and controlled shared state.
 
 ## Summary
 
 ```text
 Local state by default.
-Registered global configuration when needed.
+Registered runtime configuration when needed.
 Mutable global state restricted.
 Secrets protected through SecureString.
 ```
@@ -19,7 +19,7 @@ Secrets protected through SecureString.
 
 ```text
 Local variables belong to flows.
-Global values belong to the registry.
+Shared values belong to vaults or approved registry declarations.
 Mutable global state should be explicit, controlled and rare.
 ```
 
@@ -48,8 +48,8 @@ Project-wide values should be declared in `boot.lln`.
 
 ```LogicN
 globals {
-  const APP_NAME: String = "OrderRiskDemo"
-  const APP_VERSION: String = "0.1.0"
+  readonly APP_NAME: String = "OrderRiskDemo"
+  readonly APP_VERSION: String = "0.1.0"
 
   config APP_PORT: Int = env.int("APP_PORT", default: 8080)
   config API_TIMEOUT: Duration = 5s
@@ -60,19 +60,22 @@ globals {
 }
 ```
 
-Recommended categories:
+Recommended v0.1 categories:
 
 ```text
-const
+readonly
 config
 secret
-state
+vault
 ```
 
-## Constants
+## Readonly Values
 
-Use `const` for values that do not change, such as application names,
-versions, fixed limits and known identifiers.
+Use `readonly` for values that do not change after creation, such as
+application names, versions, fixed limits and known identifiers.
+
+`const` is deferred for v0.1. Add it later only if LogicN needs compile-time
+constants distinct from runtime readonly values.
 
 ## Runtime Config
 
@@ -102,11 +105,11 @@ included in source maps as values
 
 ## Controlled State
 
-Use `state` only for controlled shared runtime state.
+Use `vault` for controlled shared runtime state.
 
 ```LogicN
-globals {
-  state OrderCache: Shared<Map<OrderId, Order>> {
+vault {
+  OrderCache: Shared<Map<OrderId, Order>> {
     access "locked"
     max_size 10000
     ttl 10m
@@ -150,8 +153,8 @@ missing global types
 secret values assigned to String
 SecureString printed or logged
 duplicate global names
-unsafe mutation of global config or const values
-state without access control
+unsafe mutation of global config or readonly values
+vault/state without access control
 ```
 
 ## Build Manifest Integration
@@ -170,7 +173,7 @@ deployment docs, the map manifest and AI context.
 
 ```text
 Local by default.
-Global by declaration.
-Mutable only by controlled state.
+Shared by vault declaration.
+Mutable only by controlled vault state.
 Secrets always protected.
 ```

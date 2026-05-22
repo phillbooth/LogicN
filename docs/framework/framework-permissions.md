@@ -59,6 +59,9 @@ secure flow updateUserEmail(
 - Effects show technical powers; capabilities show actor authority.
 - Missing permission fails closed.
 - Permission must compile into effective capability, effect, policy and report data.
+- Audit identity must inherit runtime actor, request, route, flow, permission
+  and capability context. Application code must not silently override the
+  primary audit actor.
 
 ## Generated Reports
 
@@ -68,8 +71,10 @@ permission-effective-report.json
 capability-report.json
 effect-report.json
 security-report.json
+audit-actor-report.json
 ```
 
 ## Knowledge Base
 
 See [Permission, Capability And Actor Model](../Knowledge-Bases/permission-capability-actor-model.md).
+See [Audit Actor Model](../Knowledge-Bases/audit-actor-model.md).

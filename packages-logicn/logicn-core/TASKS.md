@@ -127,6 +127,21 @@ package boundaries
 [ ] Specify explicit generic constraints, traits or protocols
 [ ] Specify structured concurrency, cancellation and typed streams
 [ ] Specify deterministic cleanup for files, sockets, locks and FFI handles
+[ ] Specify `let`, explicit `mut`, `readonly`, vault state, `secure` access and
+    `Secret<T>` diagnostics; keep `const` deferred for v0.1; diagnose
+    increment/decrement and assignment mutation without `mut`
+[ ] Specify secure-by-default syntax diagnostics for deny-by-default
+    permissions, explicit risky-action authority, request contracts, output
+    targets, ownership checks, `view` exposure, secret-safe sinks, resource
+    budgets, audit declarations, field-read rules and gated raw SQL
+[ ] Specify built-in `Runtime.View` levels for public, internal, private,
+    confidential, secret, restricted and regulated field exposure metadata
+[ ] Specify audit actor attribution rules so runtime context owns primary actor,
+    request, route, flow, permission, capabilities, execution ID and result
+    fields in audit events
+[ ] Specify multi-actor audit metadata roles for affected, delegated, source,
+    system and AI actors without allowing source code to override primary actor
+    attribution
 [/] Specify safe compile-time metadata and attributes, including a denial of
     runtime object inspection and behaviour mutation in normal LogicN code
 [ ] Specify native ABI and foreign-call boundaries

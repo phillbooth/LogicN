@@ -22,6 +22,10 @@ LogicN's role is to reduce avoidable application overhead, reuse safe
 connections, reject invalid work early and generate reports explaining runtime
 behaviour.
 
+This builds on verified boot profiles: route tables, schema validators, policy
+tables, effects maps and package plans should already be known before the first
+request arrives.
+
 Keep-alive must be policy-controlled. Production profiles should define idle
 timeouts, maximum requests per connection, maximum sockets, maximum free sockets
 and shutdown behaviour. Keep-alive must never bypass authentication,
@@ -32,4 +36,5 @@ HTTP/1.x keep-alive, HTTP/2 multiplexing and HTTP/3/QUIC should be treated as
 transport capabilities selected by deployment profile, not as core language
 syntax.
 
-See [Fast Response And Keep-Alive](Knowledge-Bases/fast-response-and-keep-alive.md).
+See [Fast Response And Keep-Alive](Knowledge-Bases/fast-response-and-keep-alive.md) and
+[Preplanned Startup And Fast Response](Knowledge-Bases/preplanned-startup-and-fast-response.md).

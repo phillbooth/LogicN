@@ -12,6 +12,11 @@ At runtime, LogicN should load the smallest safe production surface first,
 verify build artefact hashes, start the application boundary, and then warm
 optional packages after readiness.
 
+LogicN may later support a boot snapshot. The first design should be a verified
+bundle of deterministic artefacts such as `boot-profile.json`, route tables,
+policy tables, validators, package graphs, target plans and startup reports,
+not a raw runtime memory dump.
+
 LogicN must not cache secrets, raw sensitive payloads, authorization decisions
 or non-deterministic results by default. Any cache used for startup must be
 bounded, content-addressed where practical, safe to delete, safe to bypass and
@@ -21,4 +26,5 @@ The goal is not to claim that LogicN is automatically faster than mature
 runtimes. The goal is to make safe startup behaviour predictable, explainable,
 measurable and reportable.
 
-See [Startup And Boot Warmup](Knowledge-Bases/startup-and-boot-warmup.md).
+See [Startup And Boot Warmup](Knowledge-Bases/startup-and-boot-warmup.md) and
+[Preplanned Startup And Fast Response](Knowledge-Bases/preplanned-startup-and-fast-response.md).

@@ -611,8 +611,8 @@ Example:
 
 ```LogicN
 globals {
-  const APP_NAME: String = "OrderRiskDemo"
-  const APP_VERSION: String = "0.1.0"
+  readonly APP_NAME: String = "OrderRiskDemo"
+  readonly APP_VERSION: String = "0.1.0"
 
   config APP_PORT: Int = env.int("APP_PORT", default: 8080)
   config API_TIMEOUT: Duration = 5s

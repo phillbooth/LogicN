@@ -41,6 +41,10 @@ ctx.actor.capabilities
 ctx.actor.tenantId
 ```
 
+For audit events, the primary actor should be inherited automatically from the
+governed runtime context. Application code may add audit metadata, but it should
+not manually supply or override the primary audit actor.
+
 ## Capabilities
 
 Capabilities describe what the actor, service, package, flow or tool is
@@ -184,6 +188,7 @@ capability-boundary-report.json
 capability-grant-report.json
 effect-report.json
 security-report.json
+audit-actor-report.json
 ```
 
 ## Performance Rule
@@ -206,3 +211,6 @@ At runtime the secure runtime can precheck against `ctx.actor.capabilities`.
 AI tools should treat a permission block as the authoritative explanation of who
 may do what, which effects may happen, what data may move and what audit event
 is required.
+
+See [Audit Actor Model](audit-actor-model.md) for automatic runtime actor
+attribution in audit events.
