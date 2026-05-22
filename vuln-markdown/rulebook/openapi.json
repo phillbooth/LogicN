@@ -1,0 +1,182 @@
+{
+  "components": {
+    "schemas": {
+      "CurateRequest": {
+        "properties": {
+          "base_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "max_ai_rules": {
+            "default": 5,
+            "type": "integer"
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "provider": {
+            "default": "none",
+            "enum": [
+              "none",
+              "ollama",
+              "openai-compatible"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "CurateResponse": {
+        "properties": {
+          "review_queue_count": {
+            "type": "integer"
+          },
+          "rule_count": {
+            "type": "integer"
+          },
+          "rulebook_path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "rulebook_path",
+          "rule_count",
+          "review_queue_count"
+        ],
+        "type": "object"
+      },
+      "ReviewQueueItem": {
+        "properties": {
+          "confidence_score": {
+            "type": "number"
+          },
+          "evidence_count": {
+            "type": "integer"
+          },
+          "evidence_score": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "recommended_action": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Rulebook": {
+        "properties": {
+          "generated_at": {
+            "type": "string"
+          },
+          "review_queue": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewQueueItem"
+            },
+            "type": "array"
+          },
+          "rulebook_name": {
+            "type": "string"
+          },
+          "rules": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "rulebook_name",
+          "generated_at",
+          "rules",
+          "review_queue"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Stage 4 API surface for building and reviewing defensive runtime/language rulebooks.",
+    "title": "Rulebook Curator API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/rulebook": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rulebook"
+                }
+              }
+            },
+            "description": "Latest rulebook."
+          }
+        },
+        "summary": "Return the latest rulebook JSON."
+      }
+    },
+    "/rulebook/curate": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CurateRequest"
+              }
+            }
+          },
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurateResponse"
+                }
+              }
+            },
+            "description": "Rulebook build result."
+          }
+        },
+        "summary": "Build a rulebook from Stage 3 proposed rules."
+      }
+    },
+    "/rulebook/review-queue": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReviewQueueItem"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Review queue."
+          }
+        },
+        "summary": "Return the latest rulebook review queue."
+      }
+    }
+  }
+}
