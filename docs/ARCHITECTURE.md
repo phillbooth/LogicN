@@ -17,8 +17,28 @@ runtime architecture. It is not designed primarily around raw speed. It is
 designed around controlled authority, verifiable execution, explicit boundaries,
 architectural stability and future-capable compute models.
 
+AI-readable architecture means AI tools should read the architecture, not infer
+it. The workspace should function as a knowledge map with stable concept names,
+one-concept Knowledge Base files, explicit definitions, package ownership,
+component responsibility metadata, generated project graph outputs and
+canonical examples where practical.
+
 The charter concept lives in
 `docs/Knowledge-Bases/architecture-charter.md`.
+
+The AI architecture policy lives in
+`docs/Knowledge-Bases/ai-understandable-architecture-policy.md`.
+
+LogicN security architecture should be invariant-led rather than feature-led.
+The core design question is what architectural rule makes a policy violation
+impossible or contained. Declared security policy is part of program meaning,
+so compiler IR, execution plans and reports should carry permissions,
+capabilities, classifications, exposure levels, ownership, actor identity,
+trust boundaries, effects, audit requirements, package authority and isolation
+requirements.
+
+The concept lives in
+`docs/Knowledge-Bases/security-invariants-and-policy-proof.md`.
 
 
 Language documentation, compiler notes, examples and schemas live in
@@ -165,6 +185,19 @@ provenance-checked or explicitly policy-reviewed.
  Trust transitions must be
 visible in types, policies or reports.
 
+LogicN's value-level trust model uses `safe` and `unsafe`. `unsafe` means
+untrusted, not memory-unsafe. Unsafe values are inert: they cannot enter normal
+runtime expressions, arithmetic, string helpers, array helpers, business logic,
+query interpolation, shell execution, workers, `GlobalVault` access or runtime
+APIs until trust conversion or explicit safe declaration occurs.
+
+The approved unsafe-value conversion operations are `validate`, `guard` and
+`sanitize`. `encode.*` is later contextual output handling: it requires a safe
+input and returns a context-specific safe value such as `safe Html`,
+`safe UrlPart`, `safe JavaScript`, `safe Css`, `safe Xml` or `safe ShellArg`.
+The detailed concept lives in
+`docs/Knowledge-Bases/trust-conversion-and-data-safety.md`.
+
 
 
 Application crash handling is also policy-first.
@@ -193,6 +226,22 @@ The runtime should separate a small trusted core, a governed runtime zone and an
 untrusted zone for plugins, third-party packages, external services,
 AI-generated code, unsafe interop and hardware accelerators.
 
+Package and module loading belongs to a governed Package Resolver, not an
+autoloading mechanism. Imports are not trust. The resolver finds requested
+packages/modules, checks identity, lockfile, hash/signature, registry,
+capabilities, effects, licence/policy, trust status, dependencies and conflicts,
+then links only approved modules into Governed IR with provenance reports.
+Runtime dynamic loading, where allowed, still goes through Authority Control and
+resolver policy.
+
+The Certified Package Registry sits before the resolver. It is a governed
+package source where packages are published, verified, signed, versioned,
+capability-declared and policy-rated. Registry certification is evidence for
+resolution and governance checks, not unrestricted authority.
+
+The concepts live in `docs/Knowledge-Bases/certified-package-registry.md` and
+`docs/Knowledge-Bases/package-resolver.md`.
+
 Execution should follow:
 
 ```text
@@ -202,6 +251,17 @@ request -> planning -> verification -> capability locking -> execution -> audit 
 The runtime may use verified fast paths only when a workload matches a known
 execution signature and the fast path lease remains valid. Fast paths must not
 bypass policy, capability checks, effect boundaries, data contracts or audit.
+
+Verified fast paths should be backed by a context-tagged verified execution
+cache. Reuse is valid only when the current context matches the cached
+verification tags: source and Governed IR hashes, permission and policy
+versions, actor scope, view scope, runtime zone, compute target, hardware trust,
+vault version, package version and audit level. Caches remember verified
+results; Authority Control decides whether reuse is allowed and can invalidate
+parser, IR, policy, view, vault, compute, schedule, audit and whole-plan caches.
+
+The concept lives in
+`docs/Knowledge-Bases/context-tagged-verified-execution-cache.md`.
 
 AI workloads should be described as typed AI compute plans rather than opaque
 model calls. The runtime can then enforce policy, minimise data, reduce copying,
@@ -1648,6 +1708,34 @@ must not dynamically discover or grant authority from live objects.
 
 The concept is documented in
 `docs/Knowledge-Bases/compile-time-metadata-reflection.md`.
+
+## Security Invariants And Policy Proof
+
+LogicN should compile toward policy proof, not only executable output.
+
+The compiler and runtime should be able to prove or deny questions such as:
+
+```text
+Can this flow expose restricted data?
+Can this actor use this effect?
+Can this package reach the network?
+Can this unsafe block run in the selected profile?
+```
+
+Security-aware IR should preserve permissions, capabilities, classifications,
+exposure levels, ownership, actor identity, trust boundaries, effects, audit
+requirements, package authority and isolation requirements. After checking,
+runtime execution plans should be immutable; normal code must not monkey patch,
+inject hidden behaviour, mutate metadata to gain authority, rewrite types at
+runtime or use reflection as execution authority.
+
+High-assurance deployments should support hardened profiles that disable
+runtime reflection, unsafe blocks, shell execution, unsigned packages/plugins,
+raw SQL and nondeterministic execution where policy requires it, while making
+audit mandatory.
+
+The concept is documented in
+`docs/Knowledge-Bases/security-invariants-and-policy-proof.md`.
 
 ## Governed Execution Director
 

@@ -22,6 +22,12 @@ language-core-maturity-roadmap.md
 generated-output-and-runtime-ergonomics.md
 memory-safety-and-developer-experience.md
 language-positioning-principles.md
+ai-understandable-architecture-policy.md
+security-invariants-and-policy-proof.md
+trust-conversion-and-data-safety.md
+context-tagged-verified-execution-cache.md
+package-resolver.md
+certified-package-registry.md
 machine-profile-bridge.md
 compliance-and-privacy.md
 data-processing.md
@@ -116,6 +122,8 @@ disk-memory-and-cache-warnings.md
 error-codes.md
 auth-token-verification-boundaries.md
 security-model.md
+security-invariants-and-policy-proof.md
+trust-conversion-and-data-safety.md
 ransomware-resistant-design.md
 strict-global-registry.md
 dependencies.md

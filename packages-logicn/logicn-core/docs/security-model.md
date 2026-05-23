@@ -57,6 +57,19 @@ make that form trusted. Every syntax surface starts untrusted and must earn use
 through explicit types, effects, permissions, policies, diagnostics, source maps,
 tests and generated reports.
 
+LogicN security should be invariant-led. Declared security policy is part of
+program meaning, so the compiler and runtime should prove or deny whether a
+flow can expose classified data, use an effect, call a package, cross a
+boundary or execute unsafe behaviour.
+
+Security-aware IR should carry permissions, capabilities, classifications,
+exposure levels, ownership, actor identity, trust boundaries, side effects,
+audit requirements, package authority and runtime isolation requirements.
+Checked execution plans should become immutable; normal code must not use
+monkey patching, hidden behaviour injection, arbitrary runtime reflection,
+dynamic property injection, runtime type rewriting or metadata mutation to gain
+authority.
+
 This means new syntax is automatically managed as:
 
 ```text
@@ -67,6 +80,22 @@ untrusted until bounded
 untrusted until source-mapped
 untrusted until reportable
 ```
+
+At the value level, LogicN uses `safe` and `unsafe` trust states. `unsafe`
+means untrusted or boundary-derived, not memory-unsafe. Unsafe values are
+inert: they cannot participate in arithmetic, concatenation, ordinary string or
+array helpers, business logic, query interpolation, shell execution, worker
+handoff, `GlobalVault` access or runtime APIs.
+
+The only normal operations allowed on an unsafe value are `validate`, `guard`
+and `sanitize`, or an explicit safe declaration such as `safe foo` where policy
+allows and reports it. `encode.*` is not an unsafe-to-safe conversion. Encoding
+requires an already-safe input and returns a context-specific safe output.
+
+Detailed rules live in `docs/trust-conversion-and-data-safety.md`.
+
+Security invariant and proof rules live in
+`docs/security-invariants-and-policy-proof.md`.
 
 ---
 

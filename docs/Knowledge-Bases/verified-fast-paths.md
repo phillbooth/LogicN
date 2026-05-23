@@ -75,6 +75,22 @@ hash(
 If the signature matches and the lease is still valid, the runtime may reuse the
 verified path.
 
+Verified fast paths should be backed by a context-tagged verified execution
+cache. A cached plan is reusable only when the current execution context matches
+the context it was verified for, including policy version, permission version,
+actor scope, view scope, runtime zone, compute target, hardware trust and audit
+level.
+
+Core cache rule:
+
+```text
+Cache execution plans, not trust.
+Reuse certainty, not authority.
+```
+
+The detailed cache model is documented in
+[Context Tagged Verified Execution Cache](context-tagged-verified-execution-cache.md).
+
 ## Valid Fast Path Candidates
 
 ### Typed Internal Data
@@ -115,6 +131,10 @@ Fast paths must:
 - never bypass capability checks
 
 Fast path authority is leased and contextual, never permanent.
+
+Caches must not own authority. Authority Control decides whether a cached plan
+may be reused, and it must be able to invalidate relevant parser, IR, policy,
+view, vault, compute, schedule, audit and verified execution caches.
 
 ## Runtime Reports
 

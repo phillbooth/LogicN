@@ -29,8 +29,17 @@ direction.
 - Log enough detail for debugging without logging sensitive data.
 - Deny file, network, database, shell, AI, GPU and interop effects unless they
   are explicitly declared by package and application policy.
+- Deny silent package/module loading. Imports and package references are not
+  trust. Packages must be resolved, verified, permissioned, effect-checked and
+  linked into Governed IR before use.
+- Treat package registry certification as evidence, not unrestricted authority.
+  Installed does not mean trusted, and certified does not mean unrestricted.
 - Treat raw SQL, raw shell execution, unsafe interop and untrusted
   deserialization as denied-by-default production risks.
+- Treat cached execution plans as contextual verified results, not authority.
+  A cached plan may be reused only when policy, permission, actor scope, view
+  scope, runtime zone, hardware trust, package, vault and audit tags still
+  match.
 - Treat network access as a security-sensitive capability. Inbound ports,
   outbound hosts, raw sockets, packet capture, promiscuous mode and shell
   network tools must be denied unless declared and reported.
@@ -56,6 +65,10 @@ direction.
   for production networked apps.
 - Generate security reports that show risky permissions, secret flows, package
   effects, route policy gaps and production overrides.
+- Design around security invariants, not isolated exploit patches. Declared
+  policy must be part of program meaning, and compiler/runtime reports should
+  prove or deny whether flows can expose classified data, use effects, call
+  packages, cross boundaries or run unsafe behaviour.
 
 ## Default Trust Model
 
@@ -73,6 +86,14 @@ untrusted until reports can explain it
 This does not mean every internal value needs expensive runtime checks forever.
 It means trust should be earned at clear boundaries and then represented in
 types, policies and reports.
+
+At value level, `unsafe` means untrusted rather than memory-unsafe. Unsafe
+values must be inert until converted or explicitly declared safe. They must not
+be used in arithmetic, string helpers, array helpers, business logic, query
+interpolation, shell execution, worker handoff, `GlobalVault` access or runtime
+APIs. The approved conversion operations are `validate`, `guard` and
+`sanitize`; `encode.*` requires an already-safe input and returns a
+context-specific safe output.
 
 Syntax follows the same rule. A syntax form is not trusted merely because it
 parses. New syntax must be governed by type contracts, effect declarations,
@@ -103,6 +124,45 @@ Examples:
 Trusted boundaries should be narrow, explicit and reviewable. If a module or
 adapter is allowed to produce trusted values, it must declare why, what it
 validated, what it redacted and what report proves it.
+
+## Security Invariants
+
+LogicN should compile through security-aware IR that carries permissions,
+capabilities, classifications, exposure levels, ownership, actor identity,
+trust boundaries, side effects, audit requirements, package authority and
+isolation requirements.
+
+The following should be denied or gated by default:
+
+- ambient authority
+- runtime monkey patching
+- hidden behaviour injection
+- arbitrary runtime reflection
+- dynamic property injection
+- runtime type rewriting
+- unsafe blocks without explicit capability and audit
+- unsigned external plugins or packages in hardened mode
+- raw string database queries
+- shell execution in hardened mode
+
+Sensitive flows should produce mandatory audit semantics, not optional logs.
+Enterprise hardened mode should be able to disable runtime reflection, unsafe
+blocks, shell execution, unsigned plugins/packages and nondeterministic server
+execution.
+
+## Cache Security
+
+LogicN caches must remember work, not grant trust. Authority Control decides
+whether a cached parser result, Governed IR, policy decision, view rule, vault
+read, compute plan, schedule lane, audit buffer or verified execution plan can
+be reused.
+
+Context-tagged cache entries should miss and reverify when policy, permission,
+actor scope, view scope, runtime zone, hardware trust, vault version, package
+version, audit level, expiry or revocation state changes.
+
+Secrets, raw private data, authorization decisions, admin decisions, AI outputs,
+cross-user responses and hardware trust decisions must not be cached freely.
 
 ## Environment Variables
 
@@ -216,6 +276,19 @@ selection, runtime profiles, compiler target policy and production package
 overrides must not be hidden inside host manifests. Use the future
 `package-logicn.json`/`LogicN.lock.json` boundary for LogicN packages once those schemas are
 implemented.
+
+The governed Package Resolver should check identity, version, lockfile,
+hash/signature, source registry, declared capabilities, declared effects,
+licence/policy, trusted status, dependency graph and conflicts before loading or
+linking a package. Dynamic package loading should be denied by default in
+production and routed through Authority Control when a profile explicitly
+allows it.
+
+The Certified Package Registry should publish package evidence including
+publisher, signature, approved version, capabilities requested, effects used,
+runtime targets, audit requirements, risk rating, security review status and
+certification level. Production policy may deny uncertified packages and require
+verified/certified/enterprise/regulated levels where appropriate.
 
 ## AI Inference
 

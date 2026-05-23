@@ -134,6 +134,21 @@ package boundaries
     permissions, explicit risky-action authority, request contracts, output
     targets, ownership checks, `view` exposure, secret-safe sinks, resource
     budgets, audit declarations, field-read rules and gated raw SQL
+[ ] Specify security-invariant and policy-proof diagnostics for
+    security-aware IR, mandatory classification, immutable execution plans, no
+    ambient authority, hardened mode and proof/report output
+[ ] Specify context-tagged verified execution cache diagnostics for verified
+    plan reuse, cache tags, expiry, invalidation, specialist runtime caches and
+    authority-neutral cache behaviour
+[ ] Specify Package Resolver diagnostics for package/module identity,
+    version/lockfile, hash/signature, registry, capabilities, effects,
+    dependency conflicts, Governed IR linking and provenance reports
+[ ] Specify Certified Package Registry diagnostics for publisher, signature,
+    certification level, risk rating, security review status, capabilities,
+    effects and lockfile evidence
+[ ] Specify trust-conversion diagnostics for `safe`/`unsafe`, inert unsafe
+    values, `validate`/`guard`/`sanitize`, safe-only `encode.*` and query
+    interpolation denial
 [ ] Specify built-in `Runtime.View` levels for public, internal, private,
     confidential, secret, restricted and regulated field exposure metadata
 [ ] Specify standard view behaviour inheritance so permissions can reference
@@ -148,6 +163,8 @@ package boundaries
     runtime object inspection and behaviour mutation in normal LogicN code
 [ ] Specify native ABI and foreign-call boundaries
 [ ] Specify compiler-facing matrix/vector shape syntax and diagnostics
+[ ] Specify AI-understandable architecture indexes for concepts, definitions,
+    permissions, effects, contexts, package ownership and component metadata
 [ ] Standardise diagnostics and AI report schemas
 ```
 

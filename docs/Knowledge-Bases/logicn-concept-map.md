@@ -12,6 +12,10 @@ data -> flow -> permission -> boundary -> report
 The older detailed concept list still matters, but it should sit underneath the
 five-concept model instead of replacing it.
 
+The concept map is part of the AI-understandable architecture policy: AI tools
+should read stable concept definitions, indexes and project graph output rather
+than infer architecture from folder names alone.
+
 ## Core Model
 
 | Core concept | Detailed concepts |
@@ -44,6 +48,8 @@ The first serious LogicN version should define these early:
 - tests
 - explicit polymorphism through contracts, adapters, variants and constrained
   generics
+- AI-understandable architecture indexes for concepts, definitions,
+  permissions, effects, contexts and component responsibilities
 
 These concepts support secure web/API runtime work without pulling in later
 platform features too early.

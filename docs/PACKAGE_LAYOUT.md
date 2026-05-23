@@ -77,6 +77,10 @@ be active v1 package profiles.
 profiles and dependency graph metadata. It should be deterministic and safe to
 commit when it contains no secrets.
 
+When packages come from a Certified Package Registry, the lockfile should also
+record publisher, source registry, signature, capabilities, effects,
+certification level, selected profile and approved runtime targets.
+
 `packages/` should be for normal app/vendor packages used by the host
 ecosystem.
 
@@ -100,6 +104,17 @@ Project-type installer presets are defined in `docs/PROFILE_INSTALLERS.md`.
 Those presets may provide friendly commands for web apps, servers, agents and
 systems services, but they must all use the same LogicN package resolver,
 profile checker and lockfile rules.
+
+The LogicN package resolver is governed, not an autoloader. Imports and package
+references do not create trust. The resolver must verify package identity,
+version, lockfile, hash/signature, registry, capabilities, effects, licence,
+trusted status, dependency graph and conflicts before a package is linked into
+Governed IR.
+
+The Certified Package Registry sits before the resolver. It verifies, signs,
+versions, capability-declares and policy-rates packages before projects lock and
+resolve them. Certified does not mean unrestricted; project permissions still
+decide what an installed package may do.
 
 Development and staging packages should be excluded unless explicitly selected.
 

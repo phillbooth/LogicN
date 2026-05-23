@@ -11,6 +11,17 @@ and secure third-party packages before they are used by application code.
 
 Status: Draft. This syntax is not parsed or enforced by the v0.1 prototype yet.
 
+The Package Use Registry is backed by the governed Package Resolver. The
+registry describes approved package use; the resolver finds, verifies, loads and
+links approved packages/modules before execution. The resolver is not an
+autoloader and must not silently load files because source references them.
+
+For external package sources, the Certified Package Registry sits before the
+Package Resolver. It publishes package evidence such as publisher, signature,
+approved version, capabilities, effects, risk rating, security review status and
+certification level. The Package Use Registry still controls whether a project
+uses that package, and the resolver still verifies and links it.
+
 ---
 
 ## Summary
@@ -55,6 +66,13 @@ the compiler owns dependency checking and reporting.
 
 This keeps developer code readable while still giving LogicN strong security and
 memory control.
+
+Resolver rule:
+
+```text
+Imports are not trust.
+Packages must be resolved, verified and governed before use.
+```
 
 ## LogicN Workspace Packages
 
@@ -114,6 +132,20 @@ build repeatability
 ```
 
 A central package registry helps LogicN avoid uncontrolled dependency use.
+
+The registry question is not only:
+
+```text
+Can this dependency be downloaded?
+```
+
+It is also:
+
+```text
+Should this dependency be allowed authority in this runtime context?
+```
+
+Installed does not mean trusted. Certified does not mean unrestricted.
 
 ---
 

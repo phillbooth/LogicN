@@ -50,11 +50,87 @@ secure runtime configuration
 The build folder should also include `app.memory-report.json` and
 `docs/memory-pressure-guide.md` when runtime memory policy is enabled.
 
+LogicN architecture SHOULD be AI-understandable by design. AI tools SHOULD read
+stable architecture maps, concept definitions, package ownership, generated
+project graph data, report metadata and canonical examples instead of guessing
+from folder names or vague component names.
+
+LogicN documentation and generated reports SHOULD preserve stable concept
+names, one-concept indexed docs where appropriate, explicit definitions,
+canonical examples, indexed permissions/effects/contexts and component
+responsibility metadata for compiler, runtime, security and tooling
+components.
+
+Runtime, compiler, security and tooling components SHOULD expose or document
+metadata such as component name, purpose, authority-granting status,
+trusted-core status, runtime stage, package owner, inputs, outputs and emitted
+reports.
+
 LogicN core defines language safety. Runtime enforcement for request handling,
 auth, rate limits, idempotency, jobs and workload control belongs in the
 optional LogicN Secure App Kernel. Built-in HTTP API serving belongs in
 `packages-logicn/logicn-framework-api-server/`, which should load route manifests and delegate to the
 kernel. Full frameworks should build above or beside that kernel.
+
+LogicN SHOULD be designed around security invariants rather than isolated
+exploit patches. Declared security policy SHOULD be part of program meaning, so
+the compiler/runtime can prove or deny whether a flow may expose data, use an
+effect, call a package, cross a boundary or execute unsafe behaviour.
+
+LogicN compiler IR SHOULD be security-aware. It SHOULD carry permissions,
+capabilities, data classification, exposure level, ownership, actor identity,
+trust boundaries, side effects, audit requirements, package authority and
+runtime isolation requirements into semantic checking, Governed IR, execution
+planning and reports.
+
+Checked execution plans SHOULD become immutable. Normal LogicN code MUST NOT
+use runtime monkey patching, hidden behaviour injection, reflective execution,
+dynamic property injection, runtime type rewriting or metadata mutation to
+change authority after checking.
+
+High-assurance profiles SHOULD support hardened mode rules such as disabled
+runtime reflection, denied unsafe blocks, denied shell execution, signed-only
+external plugins/packages, deterministic execution enforcement, raw SQL denial
+and mandatory audit.
+
+LogicN verified fast paths SHOULD be backed by a context-tagged verified
+execution cache. Cached execution plans MUST be reusable only when the current
+verification context matches the cached context, including source hash,
+Governed IR hash, permission hash, policy version, actor scope, view scope,
+runtime zone, compute target, hardware trust, vault version, package version
+and audit level.
+
+LogicN caches MUST NOT own authority. Authority Control SHOULD decide whether a
+cached parser result, IR, policy decision, view rule, vault read, compute plan,
+schedule lane, audit buffer or full verified execution plan may be reused, and
+SHOULD be able to invalidate caches on policy, permission, view, vault,
+package, zone, trust, hardware, audit, expiry or revocation changes.
+
+LogicN SHOULD use a governed Package Resolver rather than an autoloader model.
+Imports and package references MUST NOT grant trust or hidden authority. The
+resolver SHOULD find, verify, authorize, load and link packages/modules before
+execution.
+
+LogicN SHOULD define a Certified Package Registry as a governed package source
+where packages are published, verified, signed, versioned, capability-declared
+and policy-rated before use. Registry certification SHOULD be evidence for
+Package Resolver and Governance Checks, not unrestricted authority.
+
+The Package Resolver SHOULD check package identity, version, lockfile state,
+hash/signature, source registry, declared capabilities, declared effects,
+licence/policy, trusted status, dependency graph, conflicts, profile
+compatibility and target compatibility before linking approved modules into
+Governed IR.
+
+Dynamic package or module loading SHOULD be denied by default in production. If
+allowed by a development or extension profile, it MUST go through Authority
+Control, resolver policy, signature/hash checks, capability/effect checks,
+audit and provenance reporting.
+
+`logicn.lock.json` SHOULD record registry-derived package evidence where
+applicable: exact version, hash, signature, publisher, source registry,
+requested capabilities, effects used, certification level, dependency graph,
+selected profile and approved runtime targets.
 
 Specialised LogicN concepts belong in sibling packages. `logicn-core` may define syntax,
 compiler checks and report contracts for them, but detailed package semantics
@@ -210,6 +286,23 @@ policy, review, audit and report output.
 
 Raw SQL SHOULD be denied by default. Typed query syntax SHOULD be preferred,
 and raw SQL SHOULD require explicit high-risk authority such as `db.raw_sql`.
+
+LogicN SHOULD use `safe` and `unsafe` as value trust states. `unsafe` means
+untrusted or boundary-derived, not memory-unsafe. Unsafe values MUST be inert
+until trust conversion or explicit safe declaration. They MUST NOT participate
+in arithmetic, concatenation, ordinary string helpers such as `trim`, ordinary
+array helpers such as map/filter/reduce/event counts, query interpolation,
+shell execution, worker handoff, `GlobalVault` access or business logic.
+
+The only normal operations allowed on an unsafe value SHOULD be `validate`,
+`guard` and `sanitize`. Explicit safe declaration such as `safe foo` MUST be
+policy-visible and reportable. `encode.*` MUST require an already-safe input
+and produce a context-specific safe output such as `safe Html`, `safe UrlPart`,
+`safe JavaScript`, `safe Css`, `safe Xml` or `safe ShellArg`.
+
+Unsafe interpolation into `Query` MUST be rejected. `Query` SHOULD be treated as
+an immutable executable boundary artifact requiring safe parameters, runtime
+authority and audit output.
 
 Database field reads SHOULD prefer explicit field allow lists. Broad-read
 syntax such as `fields: all except [...]` MAY be supported only as visible,

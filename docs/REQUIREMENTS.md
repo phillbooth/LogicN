@@ -55,6 +55,22 @@ must not be treated as implemented app functionality.
   second, authority never implicit. Raw speed must not override controlled
   authority, verifiable execution, auditability, memory safety, architectural
   stability or governed execution.
+- LogicN must be designed around security invariants rather than isolated
+  exploit patches. Declared security policy must be part of program meaning, so
+  the compiler/runtime can prove or deny whether a flow may expose data, use an
+  effect, call a package, cross a boundary or execute unsafe behaviour.
+- LogicN's compiler IR should be security-aware. It should carry permissions,
+  capabilities, data classification, exposure level, ownership, actor identity,
+  trust boundaries, side effects, audit requirements, package authority and
+  runtime isolation requirements into checking, execution planning and reports.
+- LogicN execution plans should become immutable after checking. Runtime monkey
+  patching, hidden behaviour injection, reflective execution, dynamic property
+  injection, runtime type rewriting and metadata mutation that changes
+  authority must be denied in normal code.
+- LogicN high-assurance profiles should support hardened mode rules such as
+  disabled runtime reflection, denied unsafe blocks, denied shell execution,
+  signed-only external plugins/packages, deterministic execution enforcement,
+  raw SQL denial and mandatory audit.
 - LogicN ideas must be classified before they are treated as implementation
   requirements. The priority order is: non-negotiable rules, core language
   rules, core concepts, platform concepts, recommended design rules and
@@ -113,6 +129,27 @@ must not be treated as implemented app functionality.
 - Permission blocks must deny by default. Missing allow rules must mean denied,
   and risky action families such as database, file, network, secret, AI/tool,
   compute, shell and external API access must require explicit authority.
+- LogicN must use a governed Package Resolver rather than an autoloader model.
+  Imports and package references must not grant trust or hidden authority. The
+  resolver must find, verify, authorize, load and link packages/modules before
+  execution.
+- LogicN should define a Certified Package Registry as a governed package source
+  where packages are published, verified, signed, versioned,
+  capability-declared and policy-rated before use.
+- The Certified Package Registry must treat packages as governed authority
+  requests, not passive dependencies. Registry metadata should answer package
+  identity, publisher, approved version, capabilities requested, effects used,
+  runtime targets, audit requirements, risk rating, security review status and
+  certification level.
+- The Package Resolver must check package identity, version, lockfile state,
+  hash/signature, source registry, declared capabilities, declared effects,
+  licence/policy, trusted status, dependency graph, conflicts, profile
+  compatibility and target compatibility before linking approved modules into
+  Governed IR.
+- Dynamic package or module loading must be denied by default in production. If
+  allowed by a development or extension profile, it must go through Authority
+  Control, resolver policy, signature/hash checks, capability/effect checks,
+  audit and provenance reporting.
 - Request/input contracts should declare shape, required fields, size/range
   limits and allowed values before business logic, database access, AI/tool
   calls or external service calls execute.
@@ -195,6 +232,11 @@ must not be treated as implemented app functionality.
   audit hooks are part of execution itself; untrusted packages, plugins,
   AI-generated code, external services and hardware accelerators may execute
   only through declared boundaries.
+- LogicN must support policy proof as a first-class design target. The compiler
+  and reports should be able to answer security questions such as whether a
+  flow can expose restricted data, whether an actor can perform an effect,
+  whether an unsafe block is allowed by profile and whether a package can reach
+  network, filesystem, shell or database effects.
 - LogicN must treat malicious data as an active threat. External input, API
   payloads, files, events, package metadata, AI/tool output, network data,
   storage data and hardware results must not become authority, executable code,
@@ -228,6 +270,21 @@ must not be treated as implemented app functionality.
   execution signature. Fast paths must expire, remain auditable and revalidate
   when policy, package versions, model versions, hardware, trust state or output
   contracts change.
+- LogicN verified fast paths should be backed by a context-tagged verified
+  execution cache. Cached execution plans must be reusable only when the
+  current verification context matches the cached context, including source
+  hash, Governed IR hash, permission hash, policy version, actor scope, view
+  scope, runtime zone, compute target, hardware trust, vault version,
+  package version and audit level.
+- LogicN caches must not own authority. Authority Control must decide whether a
+  cached parser result, IR, policy decision, view rule, vault read, compute
+  plan, schedule lane, audit buffer or full verified execution plan may be
+  reused, and must be able to invalidate caches on policy, permission, view,
+  vault, package, zone, trust, hardware, audit, expiry or revocation changes.
+- Secrets, private data, authorization decisions, admin decisions, AI outputs,
+  cross-user responses, hardware trust decisions and raw sensitive payloads must
+  not be cached freely. They require strict context tags, expiry, isolation and
+  explicit policy, and some categories should remain denied by default.
 - LogicN AI workloads must be declared as typed AI compute plans rather than
   opaque model calls. Plans should declare input/output types, model class, data
   sensitivity, precision, latency, compute target, memory needs, allowed tools
@@ -327,6 +384,20 @@ must not be treated as implemented app functionality.
 - Trust transitions must be represented in types, policies or reports. A value
   must not silently move from untrusted to trusted because it crossed an
   internal function boundary.
+- LogicN must treat `unsafe` values as inert until trust conversion or explicit
+  safe declaration. An unsafe variable must not participate in arithmetic,
+  concatenation, ordinary string helpers such as `trim`, ordinary array helpers
+  such as map/filter/reduce/event counts, query interpolation, shell execution,
+  worker handoff, `GlobalVault` access or business logic.
+- The only normal operations allowed on an `unsafe` value are `validate`,
+  `guard` and `sanitize`. Explicit safe declaration, such as `safe foo`, must be
+  policy-visible and reportable. `encode.*` must require an already-safe input
+  and must produce a context-specific safe output such as `safe Html`,
+  `safe UrlPart`, `safe JavaScript`, `safe Css`, `safe Xml` or
+  `safe ShellArg`.
+- LogicN query handling must reject unsafe interpolation. `Query` must be
+  treated as an immutable executable boundary artifact requiring safe
+  parameters, runtime authority and audit output, not as ordinary text.
 - LogicN must not claim to make Ethernet hardware faster. Network positioning
   must be framed as improving application network I/O through typed APIs,
   deny-by-default network permissions, TLS policy, backpressure, timeout policy,
@@ -398,6 +469,19 @@ must not be treated as implemented app functionality.
   explicit effects, explicit imports, typed errors, source maps, stable
   diagnostics and machine-readable reports. It must not be a vague marketing
   label.
+- LogicN architecture must be AI-understandable by design. AI tools should read
+  stable architecture maps, concept definitions, package ownership, generated
+  project graph data, report metadata and canonical examples instead of
+  guessing from folder names or vague component names.
+- LogicN documentation should maintain one-concept-per-file Knowledge Base
+  entries for important concepts, stable names, explicit definitions,
+  canonical examples where practical, indexed permissions/effects/contexts and
+  component responsibility metadata for compiler, runtime, security and
+  tooling components.
+- Runtime, compiler, security and tooling components should expose or document
+  metadata such as component name, purpose, authority-granting status,
+  trusted-core status, runtime stage, package owner, inputs, outputs and
+  emitted reports.
 - LogicN must not claim legal, privacy, security, accessibility, AI governance
   or deployment compliance automatically. Compliance packages may define
   policy, evidence, review and report contracts, but compliance depends on
@@ -467,6 +551,14 @@ must not be treated as implemented app functionality.
   current JavaScript/TypeScript prototype checks and package generated JS/TS
   interop, but they must not define LogicN package graph resolution, LogicN runtime
   profiles, LogicN compiler target policy or LogicN production package overrides.
+- The LogicN Package Resolver must use `package-logicn.json`, `logicn.lock.json`
+  and resolver policy as the governed source for package/module approval. It
+  must produce package resolution, package provenance, package permission,
+  dependency graph and Governed IR package-map reports.
+- `logicn.lock.json` must record registry-derived package evidence where
+  applicable: exact version, hash, signature, publisher, source registry,
+  requested capabilities, effects used, certification level, dependency graph,
+  selected profile and approved runtime targets.
 - Generated documents and AI-suggested structures are advisory. Repository
   package boundaries, `AGENTS.md`, `logicn.workspace.json`, package READMEs/TODOs
   and maintained docs take precedence when suggestions conflict.
@@ -1090,6 +1182,14 @@ the active v1 build graph.
   and LogicN package manifests. LogicN package graph keys must not be accepted from
   `package.json`; they belong in `package-logicn.json`, `logicn.lock.json` or explicit
   LogicN config once those schemas exist.
+- `logicn-core-config`, `logicn-core-security`, `logicn-core-reports` and future
+  package tooling must support Package Resolver policy, including allowed
+  registries, denied registries, lockfile requirement, signature/hash
+  requirement, dynamic loading denial, package provenance and package permission
+  reports.
+- Package report contracts should include package certification, package
+  provenance, package risk, package permission, dependency graph and lockfile
+  reports.
 - `logicn-core-reports` must own shared report schemas and report-writing contracts.
 - Shared report contracts must include common metadata, generator metadata,
   diagnostic summaries and typed build, security, target, runtime, task and AI

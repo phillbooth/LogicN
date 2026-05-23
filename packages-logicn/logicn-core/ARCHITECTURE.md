@@ -8,6 +8,12 @@ The architecture is designed around one main goal:
 
 > One `.lln` source project should be able to produce multiple checked, secure and traceable outputs.
 
+LogicN architecture should be AI-understandable. AI tools should read stable
+concept definitions, package ownership, generated project graph data, report
+metadata and canonical examples rather than infer architecture from folder
+names. The detailed policy lives in
+`docs/ai-understandable-architecture-policy.md`.
+
 ---
 
 ## Architecture Summary
@@ -41,6 +47,13 @@ build outputs and reports
 ```
 
 The compiler should support normal CPU execution first, while planning for GPU, WebAssembly, photonic and ternary targets.
+
+The compiler should also be security-invariant aware. LogicN should preserve
+declared policy as program meaning through a security-aware IR that carries
+permissions, capabilities, classifications, exposure levels, ownership, actor
+identity, trust boundaries, effects, audit requirements, package authority and
+runtime isolation requirements. The detailed language note lives in
+`docs/security-invariants-and-policy-proof.md`.
 
 ---
 
@@ -101,6 +114,45 @@ LogicN Full Frameworks
 LogicN core may describe safe API and webhook contracts. The Secure App Kernel is
 the layer that receives requests, validates input, applies security policy,
 checks auth, controls workload, queues heavy work and routes to typed flows.
+
+The core value trust model uses `safe` and `unsafe`. `unsafe` values are
+memory-safe but untrusted. They are inert until trust conversion through
+`validate`, `guard` or `sanitize`, or until an explicit safe declaration is
+allowed and reported. Unsafe values cannot be used in ordinary runtime
+expressions, string/array helpers, query interpolation, shell execution,
+workers, `GlobalVault` access or business logic.
+
+`encode.*` belongs after trust conversion. It requires safe input and returns a
+context-specific safe output such as `safe Html`, `safe UrlPart`,
+`safe JavaScript`, `safe Css`, `safe Xml` or `safe ShellArg`. The detailed
+language note lives in `docs/trust-conversion-and-data-safety.md`.
+
+Checked execution plans should become immutable before runtime execution.
+Normal source must not monkey patch runtime behaviour, inject hidden behaviour,
+rewrite types, mutate metadata to gain authority or use reflection as execution
+authority. Hardened profiles may deny unsafe blocks, runtime reflection, shell
+execution, raw SQL and unsigned packages/plugins entirely.
+
+Verified fast paths should use a context-tagged verified execution cache.
+Parser, IR, policy, view, vault, compute, schedule, audit and whole-plan caches
+may remember verified work, but they must not grant authority. Authority
+Control decides reuse and can invalidate caches when source, Governed IR,
+policy, permission, actor scope, view scope, runtime zone, hardware trust,
+vault, package, audit, expiry or revocation context changes. The detailed
+language note lives in `docs/context-tagged-verified-execution-cache.md`.
+
+Package and module loading belongs to a governed Package Resolver rather than
+an autoloader. Imports are not trust. The resolver checks package identity,
+version/lockfile state, hash/signature, registry, capabilities, effects,
+licence/policy, trust status, dependency graph and conflicts before linking
+approved modules into Governed IR. Runtime dynamic loading, where a profile
+allows it, still goes through Authority Control. The detailed language note
+lives in `docs/package-resolver.md`.
+
+The Certified Package Registry sits before the resolver as a governed package
+source for verified, signed, versioned, capability-declared and policy-rated
+packages. Certification is resolver evidence, not ambient authority. The
+detailed language note lives in `docs/certified-package-registry.md`.
 
 The kernel is a partial framework layer, not a full application framework.
 

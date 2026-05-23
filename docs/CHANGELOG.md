@@ -6,6 +6,32 @@ All notable changes to this app should be documented here.
 
 ### Added
 
+- Added the Certified Package Registry Knowledge Base concept, defining a
+  governed package source for signed, versioned, capability-declared,
+  policy-rated packages; registry certification levels; lockfile evidence; and
+  the rule that installed/certified packages are not unrestricted authority.
+- Added the Package Resolver Knowledge Base concept, defining governed package
+  and module resolution before execution, with identity/version/lockfile/hash
+  /signature/registry/capability/effect checks, Governed IR linking, Authority
+  Control for dynamic loading and provenance reports.
+- Added the Context Tagged Verified Execution Cache Knowledge Base concept,
+  defining context-tagged verified plan reuse, specialist parser/IR/policy/view
+  /vault/compute/schedule/audit caches, strict invalidation and the rule that
+  caches remember verified work but never grant authority.
+- Added the AI Understandable Architecture Policy Knowledge Base concept,
+  defining LogicN docs as a knowledge map with stable concept names,
+  machine-readable indexes, component responsibility metadata, ADR/decision
+  expectations and canonical examples so AI tools can read architecture without
+  guessing.
+- Added the Security Invariants And Policy Proof Knowledge Base concept,
+  defining security-aware IR, mandatory classification, immutable execution
+  plans, no ambient authority, policy/business-logic separation, capability
+  tokens, visible unsafe blocks, mandatory audit, signed packages, hardened mode
+  and policy-proof reporting.
+- Added the Trust Conversion And Data Safety Knowledge Base concept, defining
+  `safe`/`unsafe` value trust, inert unsafe values, approved
+  `validate`/`guard`/`sanitize` conversion, safe-only contextual `encode.*`
+  output and typed query interpolation denial.
 - Added the Standard View Behaviour Knowledge Base concept, defining that common
   view exposure rules such as private owner-only exposure should be declared
   once in the runtime standard and inherited by permission references, with

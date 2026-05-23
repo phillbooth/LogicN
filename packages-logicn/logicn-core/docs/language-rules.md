@@ -26,6 +26,9 @@ No compiled output without explainable maps and reports.
 No JSON looseness by default.
 No webhook without security checks.
 No photonic-only requirement.
+No unsafe value in runtime logic before trust conversion.
+No ambient authority.
+No runtime mutation of checked execution plans.
 ```
 
 ---
@@ -237,6 +240,42 @@ match email {
   None => return Review("Customer email missing")
 }
 ```
+
+---
+
+## Rule 7A: Unsafe Values Are Inert Before Trust Conversion
+
+LogicN should treat `unsafe` as a trust state, not a memory-safety state.
+
+An unsafe value cannot be used in normal runtime expressions until it is
+converted or explicitly declared safe.
+
+Invalid:
+
+```LogicN
+let raw_price: unsafe Decimal = request.price
+let total = raw_price + 1
+```
+
+Invalid:
+
+```LogicN
+let raw_name: unsafe String = request.name
+let name = raw_name.trim()
+```
+
+Allowed:
+
+```LogicN
+let raw_price: unsafe Decimal = request.price
+let price: safe Decimal = validate.decimal(raw_price)
+let total: safe Decimal = price + 1
+```
+
+The only normal operations allowed on unsafe values are `validate`, `guard` and
+`sanitize`. Explicit safe declaration such as `safe foo` must be policy-visible
+and reportable. `encode.*` requires an already-safe input and produces a
+context-specific safe output.
 
 ---
 

@@ -152,3 +152,21 @@ Future Scope
 ```
 
 This structure helps human readers and AI tools compare concepts consistently.
+
+## AI Understandable Architecture Policy
+
+LogicN documentation should form a knowledge map, not only a folder tree.
+
+Architecture, definitions, package ownership, generated project graphs and
+AI-readable context should use stable names and explicit links so tools can
+read the architecture without guessing.
+
+Core policy:
+
+```text
+AI should not infer the architecture.
+AI should read the architecture.
+```
+
+Detailed policy lives in
+[AI Understandable Architecture Policy](ai-understandable-architecture-policy.md).

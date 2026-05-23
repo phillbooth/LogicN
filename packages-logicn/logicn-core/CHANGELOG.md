@@ -10,6 +10,24 @@ This changelog should track major decisions, design changes, documentation updat
 
 ## Unreleased
 
+- Added `docs/certified-package-registry.md` to define governed package
+  publication, signatures, versioning, capability/effect declarations,
+  certification levels, lockfile evidence and policy-rated package use.
+- Added `docs/package-resolver.md` to define governed package/module
+  resolution, verification, capability/effect checks, Governed IR linking,
+  dynamic-loading gates and provenance reporting.
+- Added `docs/context-tagged-verified-execution-cache.md` to define
+  context-tagged verified plan reuse, specialist runtime caches, invalidation
+  tags and authority-neutral cache behavior.
+- Added `docs/ai-understandable-architecture-policy.md` to define stable
+  architecture maps, machine-readable concept indexes, component metadata and
+  canonical documentation rules for AI-readable architecture.
+- Added `docs/security-invariants-and-policy-proof.md` to define
+  security-aware IR, immutable execution plans, no ambient authority,
+  hardened profiles and compiler/report policy-proof targets.
+- Added `docs/trust-conversion-and-data-safety.md` to define `safe`/`unsafe`
+  trust states, inert unsafe values, approved trust conversion,
+  safe-only contextual encoding and query interpolation denial.
 - Added `docs/language-core-maturity-roadmap.md` to document missing LogicN
   language-core maturity work.
 

@@ -8,6 +8,11 @@
   document suggestions
 - [x] Document the proposed `package-logicn.json`, `logicn.lock.json` and
   `packages-logicn/` package split
+- [x] Document the governed Package Resolver concept for package/module
+  resolution, verification, capability/effect checks, Governed IR linking and
+  provenance reporting
+- [x] Document the Certified Package Registry concept for signed, versioned,
+  capability-declared, policy-rated package publication before resolver use
 - [x] Add grouped `packages-logicn/logicn-finance-core` beta package scaffold
 - [x] Add F# comparison and LogicN positioning guidance
 - [x] Split partial framework guidance into `packages-logicn/logicn-framework-app-kernel/`
@@ -62,11 +67,20 @@
 - [x] Add layered documentation structure for framework, contracts, reports and
   rules
 - [x] Add Knowledge Base concept note for the documentation layer model
+- [x] Add AI Understandable Architecture Policy concept covering knowledge-map
+  docs, machine-readable indexes, component metadata, stable names and
+  canonical examples
 - [x] Document the LogicN Architecture Charter as the top-level identity for
   security-first, auditable, governed execution
+- [x] Document Security Invariants And Policy Proof as the compiler/runtime
+  direction for security-aware IR, immutable execution plans, no ambient
+  authority, hardened mode and policy-proof reports
 - [x] Document priority categories for non-negotiable rules, core language
   rules, core concepts, platform concepts, design rules and future research
 - [x] Document the core `data -> flow -> permission -> boundary -> report` model
+- [x] Document Trust Conversion And Data Safety, including inert unsafe values,
+  `validate`/`guard`/`sanitize` conversion, safe-only contextual encoding and
+  query interpolation denial
 - [x] Document developer-friendly permissions as the simple surface over
   capabilities, effects, policies, audit and reports
 - [x] Document first-class layered policy architecture and policy report
@@ -105,6 +119,9 @@
 - [x] Document specialist AI hardware compute targets as governed CPU, GPU,
   NPU, TPU, VPU, FPGA, ASIC and future optical/photonic target planning
 - [x] Document verified fast paths as leased, auditable execution signatures
+- [x] Document Context Tagged Verified Execution Cache for verified plan reuse,
+  specialist runtime caches, context tags, invalidation and the rule that
+  caches must not own authority
 - [x] Document AI self-modification governance and capability attenuation
 - [x] Document malicious data and exploit resistance for authority, resource
   exhaustion, OWASP/CWE classes and hardware/runtime risk boundaries
@@ -310,6 +327,10 @@
   creating a dedicated ABI or systems package surface
 - [ ] Define package manager and registry design with lockfile, permissions and
   reproducible builds
+- [ ] Define Certified Package Registry certification levels, package evidence
+  schema, risk ratings, security review status and registry policy checks
+- [ ] Define Package Resolver report schemas for package resolution,
+  provenance, package permissions, dependency graph and Governed IR package map
 - [ ] Define simple `data { model request view }` syntax status and report
   mapping after the v1 grammar freeze
 - [x] Define resilient flow controlled recovery and processing report direction
@@ -340,6 +361,8 @@
   folders after preserving the canonical `logicn-core-*` package data
 - [ ] Define production versus development package resolution rules so
   production apps do not download staging packages by default
+- [ ] Define resolver policy syntax for allowed registries, denied registries,
+  lockfile requirements, signature/hash requirements and dynamic loading denial
 - [x] Add host package manifest boundary validation so `package.json` remains
   NPM/host tooling and LogicN package graph fields stay out of host manifests
 - [x] Define production boot/profile defaults that disable benchmark and
