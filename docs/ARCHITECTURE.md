@@ -1871,6 +1871,39 @@ regulated
 owner: actor` means fields marked `Runtime.View.private` may be exposed only
 when the data owner is the current actor.
 
+Common view behaviour should be defined once:
+
+```logicn
+runtime view private {
+  expose when owner == actor
+}
+```
+
+Then permissions can reference the standard behaviour:
+
+```logicn
+data {
+  allow expose view: public
+  allow expose view: private
+}
+```
+
+Meaning:
+
+```text
+public  = expose normally
+private = expose only when owner == actor
+```
+
+Permission-level conditions should normally narrow standard view behaviour:
+
+```logicn
+allow expose view: private when owner == actor and purpose == "support"
+```
+
+Widening standard view behaviour requires explicit policy review, audit and
+report output.
+
 The runtime may use view metadata for response filtering, serialization
 filtering, audit filtering, AI context filtering, log filtering, API exposure
 checks, frontend exposure validation and model projection.
@@ -1882,6 +1915,8 @@ The concept is documented in
 `docs/Knowledge-Bases/data-visibility-view-terminology.md`.
 Built-in levels are documented in
 `docs/Knowledge-Bases/builtin-view-levels.md`.
+Standard behaviour inheritance is documented in
+`docs/Knowledge-Bases/standard-view-behaviour.md`.
 
 ## Variable Mutation And Vault Model
 

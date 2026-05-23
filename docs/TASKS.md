@@ -569,10 +569,16 @@
   `regulated` as built-in runtime/language view levels under `Runtime.View`
 - [x] Define `public` as safe to expose under normal allowed response rules and
   `private` as owned data exposed only when ownership checks pass
+- [x] Add Standard View Behaviour Knowledge Base concept defining that common
+  view behaviour is declared once and inherited by permission references
+- [x] Define that permission-level view conditions should normally narrow
+  built-in view behaviour and widening requires explicit policy review/reporting
 - [ ] Define compatibility diagnostics for older `classify` field exposure
   syntax
 - [ ] Define formal `Runtime.View` grammar/schema and generated
   `view-level-report.json`
+- [ ] Define view-behaviour inheritance and override diagnostics, including
+  `view-behaviour-report.json` and `view-override-report.json`
 - [ ] Define `data-view-report.json` and compatibility mapping from older
   data-classification reports
 - [ ] Audit remaining documentation examples and migrate field exposure cases

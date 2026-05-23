@@ -6,6 +6,10 @@ All notable changes to this app should be documented here.
 
 ### Added
 
+- Added the Standard View Behaviour Knowledge Base concept, defining that common
+  view exposure rules such as private owner-only exposure should be declared
+  once in the runtime standard and inherited by permission references, with
+  widening requiring explicit policy review and reports.
 - Added the Built-In View Levels Knowledge Base concept, defining `public`,
   `internal`, `private`, `confidential`, `secret`, `restricted` and
   `regulated` as standard runtime/language view levels under `Runtime.View`.

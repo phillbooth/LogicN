@@ -136,6 +136,8 @@ package boundaries
     budgets, audit declarations, field-read rules and gated raw SQL
 [ ] Specify built-in `Runtime.View` levels for public, internal, private,
     confidential, secret, restricted and regulated field exposure metadata
+[ ] Specify standard view behaviour inheritance so permissions can reference
+    built-in view rules, narrow them safely and report any explicit widening
 [ ] Specify audit actor attribution rules so runtime context owns primary actor,
     request, route, flow, permission, capabilities, execution ID and result
     fields in audit events

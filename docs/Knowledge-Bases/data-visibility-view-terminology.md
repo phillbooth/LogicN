@@ -189,6 +189,26 @@ allow expose fields marked Runtime.View.public
 allow expose fields marked Runtime.View.private only when the owner is the actor
 ```
 
+Because built-in view levels carry standard behaviour, permissions may reference
+private directly:
+
+```logicn
+data {
+  allow expose view: private
+}
+```
+
+and inherit the runtime rule:
+
+```logicn
+runtime view private {
+  expose when owner == actor
+}
+```
+
+Additional permission conditions should normally narrow the built-in rule.
+Widening built-in view behaviour requires explicit policy review and reporting.
+
 ## Runtime Meaning
 
 The runtime may use `view` for:
@@ -241,7 +261,8 @@ or compute classification. Those uses are separate from field exposure
 metadata.
 
 See [Built-In View Levels](builtin-view-levels.md) for the formal runtime view
-level model.
+level model. See [Standard View Behaviour](standard-view-behaviour.md) for the
+rule inheritance model.
 
 For field-level data exposure and permission exposure rules, prefer:
 

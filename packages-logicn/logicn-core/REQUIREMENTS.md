@@ -201,6 +201,13 @@ These SHOULD map conceptually to `Runtime.View.public`,
 to expose under normal allowed response rules. `private` means owned data that
 requires ownership checks such as `owner == actor` or `owner: actor`.
 
+Common built-in view behaviour SHOULD be defined once in the runtime standard,
+core policy or boot/main setup. Permission references such as
+`allow expose view: private` SHOULD inherit the standard `Runtime.View.private`
+owner-only rule. Permission-level conditions SHOULD normally narrow standard
+view behaviour. Widening built-in view behaviour SHOULD require explicit named
+policy, review, audit and report output.
+
 Raw SQL SHOULD be denied by default. Typed query syntax SHOULD be preferred,
 and raw SQL SHOULD require explicit high-risk authority such as `db.raw_sql`.
 

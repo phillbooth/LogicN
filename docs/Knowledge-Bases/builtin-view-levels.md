@@ -60,6 +60,34 @@ Runtime.View.private
 | `restricted` | Tightly governed operational data |
 | `regulated` | Compliance-controlled data |
 
+## Standard View Behaviour
+
+Built-in view behaviour should be defined once in the runtime standard, core
+policy or boot/main runtime setup.
+
+Example:
+
+```logicn
+runtime view private {
+  expose when owner == actor
+}
+```
+
+Then permissions can reference the built-in level:
+
+```logicn
+data {
+  allow expose view: private
+}
+```
+
+and inherit the standard private exposure rule.
+
+Permissions should only add conditions when narrowing the built-in behaviour or
+when an explicitly reviewed policy allows widening.
+
+See [Standard View Behaviour](standard-view-behaviour.md).
+
 ## Public View
 
 `public` means:
@@ -85,6 +113,14 @@ data {
 This allows fields marked `Runtime.View.public` to be exposed where the response
 contract and permission allow exposure.
 
+Standard behaviour:
+
+```logicn
+runtime view public {
+  expose normally
+}
+```
+
 ## Private View
 
 `private` means:
@@ -99,11 +135,19 @@ Example:
 email: String view: private
 ```
 
-Permission:
+Standard behaviour:
+
+```logicn
+runtime view private {
+  expose when owner == actor
+}
+```
+
+Slim permission:
 
 ```logicn
 data {
-  allow expose view: private when owner == actor
+  allow expose view: private
 }
 ```
 
@@ -111,14 +155,14 @@ Meaning:
 
 ```text
 allow expose fields marked Runtime.View.private,
-but only when the data owner is the current actor
+inheriting owner == actor from the runtime view definition
 ```
 
-The shorter ownership form may also be supported:
+Permissions may narrow the built-in rule:
 
 ```logicn
 data {
-  allow expose view: private owner: actor
+  allow expose view: private when owner == actor and purpose == "support"
 }
 ```
 
@@ -201,6 +245,7 @@ Reports should show:
 This concept refines:
 
 - [Data Visibility View Terminology](data-visibility-view-terminology.md)
+- [Standard View Behaviour](standard-view-behaviour.md)
 - [Secure By Default Syntax Principles](secure-by-default-syntax-principles.md)
 - [Field Read Rules](field-read-rules.md)
 - [Model Security Contracts](model-security-contracts.md)

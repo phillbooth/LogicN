@@ -35,7 +35,8 @@ documentation lives in `../packages-logicn/logicn-core/`.
 24. [Audit Actor Model](Knowledge-Bases/audit-actor-model.md)
 25. [Multi-Actor Audit Events](Knowledge-Bases/multi-actor-audit-events.md)
 26. [Built-In View Levels](Knowledge-Bases/builtin-view-levels.md)
-27. [Preplanned Startup And Fast Response](Knowledge-Bases/preplanned-startup-and-fast-response.md)
+27. [Standard View Behaviour](Knowledge-Bases/standard-view-behaviour.md)
+28. [Preplanned Startup And Fast Response](Knowledge-Bases/preplanned-startup-and-fast-response.md)
 
 ## Core Framework Concepts
 
@@ -150,6 +151,7 @@ documentation lives in `../packages-logicn/logicn-core/`.
 - [Audit Actor Model](Knowledge-Bases/audit-actor-model.md)
 - [Multi-Actor Audit Events](Knowledge-Bases/multi-actor-audit-events.md)
 - [Built-In View Levels](Knowledge-Bases/builtin-view-levels.md)
+- [Standard View Behaviour](Knowledge-Bases/standard-view-behaviour.md)
 
 ## Existing App And Workspace Docs
 

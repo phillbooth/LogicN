@@ -37,6 +37,7 @@ HTML or CSS badges may be added later by the documentation renderer.
 | Deny-by-default permissions | missing allow means deny | Documented draft | Managed | Security policy should be source-visible and fail closed. |
 | Explicit authority | risky actions require `allow` entries | Documented draft | Managed | Database, file, network, secret, AI/tool, compute, shell and external APIs must not be implicit. |
 | Built-in view levels | `Runtime.View { public internal private confidential secret restricted regulated }` | Documented draft | Managed | Field `view:` labels should map to standard runtime exposure levels. |
+| Standard view behaviour | `runtime view private { expose when owner == actor }` | Documented draft | Managed | Common view rules should be defined once and inherited by permission references. |
 | Input contracts | `request Name { field: Type required }` plus future limits | Documented draft | Managed | Input shape, required fields and ranges should be known before execution. |
 | Output target | `response Name target: json` direction | Documented draft | Managed | Encoding, escaping and redaction depend on the sink target. |
 | Pure function | `pure flow` | Documented draft | Potential | Pure flows need effect checking before production claims. |

@@ -1619,6 +1619,13 @@ the active v1 build graph.
 - `public` means safe to expose under normal allowed response rules. `private`
   means owned data that may be exposed only when ownership checks pass, such as
   `owner == actor` or `owner: actor`.
+- Common view behaviour must be defined once in the runtime standard, core
+  policy or boot/main setup. Permissions should reference built-in view levels
+  and inherit their standard exposure rules, for example `allow expose view:
+  private` should inherit the `Runtime.View.private` owner-only rule.
+- Permission-level view conditions should normally narrow built-in view
+  behaviour. Widening standard view behaviour must require explicit named
+  policy, review, audit and report output.
 - Runtime systems may use view metadata for response filtering, serialization
   filtering, audit filtering, AI context filtering, log filtering, API exposure
   checks, frontend exposure validation and model projection.
