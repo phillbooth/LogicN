@@ -217,6 +217,44 @@ response-exposure-report.json
 
 Reports should not rely on parent-chain inference to explain what happened.
 
+## Structural Hierarchy Is Allowed
+
+LogicN does allow **containment hierarchy** — hierarchy used for organisation, not authority transfer.
+
+Allowed:
+
+```text
+Package -> Module -> Data -> View -> Field
+Permission -> Capability -> Effect -> Audit rule
+```
+
+Example:
+
+```logicn
+package Auth {
+  module Login {
+    flow login(...)
+  }
+}
+```
+
+Dot-path access is also fine as organisation:
+
+```logicn
+Runtime.Hardware.USB
+Runtime.Context.Auth
+SessionVault.write(...)
+```
+
+This is containment — a naming and scoping structure — not inheritance.
+
+**The rule:**
+
+```text
+Hierarchy may organise.
+Hierarchy must not transfer authority.
+```
+
 ## Core Principle
 
 ```text

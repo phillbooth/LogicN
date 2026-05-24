@@ -6,6 +6,11 @@ All notable changes to this app should be documented here.
 
 ### Added
 
+- Added the Runtime Context (Not Superglobals) Knowledge Base concept, defining
+  `Runtime.Context` as the runtime-owned, read-controlled execution context that
+  replaces PHP-style superglobals, with session and shared mutable state in
+  governed vaults rather than global bags.
+
 - Added the Runtime Policy Config Knowledge Base concept and requirements,
   defining a system-level configuration loaded early in the request/boot lifecycle
   (`boot/main -> Runtime Policy Config -> Package Resolver -> Governance Checks -> Governed IR -> Runtime Execution`)

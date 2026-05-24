@@ -469,6 +469,39 @@ flow loadOrder(id: OrderId) -> Result<Order, OrderError> {
 
 ---
 
+## Error Definition Syntax
+
+Define custom fallible error blocks using the `error` keyword. Each variant defines metadata for public exposure, status codes, and auditing requirements.
+
+Example:
+
+```LogicN
+error AuthError {
+  invalid_credentials {
+    status: 401
+    message: "Invalid email or password"
+    view: public
+  }
+
+  account_disabled {
+    status: 403
+    message: "Account disabled"
+    view: public
+    audit: required
+  }
+
+  system_failure {
+    status: 500
+    message: "Login failed"
+    view: public
+    hide_internal: true
+    audit: required
+  }
+}
+```
+
+---
+
 ## Match Syntax
 
 Use `match` for state handling.

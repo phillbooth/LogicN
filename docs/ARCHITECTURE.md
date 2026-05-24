@@ -239,6 +239,18 @@ The runtime should separate a small trusted core, a governed runtime zone and an
 untrusted zone for plugins, third-party packages, external services,
 AI-generated code, unsafe interop and hardware accelerators.
 
+LogicN uses a zero trust plugin model for domain extension packages. Every
+plugin starts with no permissions and must explicitly declare: `safe`, `read`,
+`write`, `network`, `execute`, `physical`, or `regulated`. The application must
+explicitly grant capability tokens. Plugins execute inside isolated sandboxes
+(WASM, container, or capability-based VMs). Audit logging is required for all
+sensitive plugin actions. Plugin risk levels — low (pure computation), medium
+(engineering/chemistry), high (AI/Medical/Finance/Robotics) — determine the
+required sandbox strength and human approval requirements.
+
+The full plugin security architecture is documented in
+`docs/Knowledge-Bases/plugin-security-architecture.md`.
+
 Package and module loading belongs to a governed Package Resolver, not an
 autoloading mechanism. Imports are not trust. The resolver finds requested
 packages/modules, checks identity, lockfile, hash/signature, registry,
@@ -433,6 +445,60 @@ Application code should not normally pass `primary_actor` in audit metadata.
 System actors must be runtime-approved identities declared in trusted runtime
 policy.
 
+
+
+## Runtime.Context (No Superglobals)
+
+LogicN does not use PHP-style superglobals. `Runtime.Context` is the
+runtime-owned, read-controlled execution context for the current flow.
+
+```text
+Superglobals     = globally available mutable data (rejected)
+Runtime.Context  = governed runtime-provided execution facts
+Vaults           = governed shared/global state
+```
+
+`Runtime.Context` may contain:
+
+```text
+actor
+request_id
+route
+method
+headers allowed by policy
+client info allowed by policy
+permission used
+capabilities granted
+audit context
+budget context
+event source
+compute context
+```
+
+The runtime creates `Runtime.Context` at the intake boundary and injects it
+into flows only when the flow signature declares it:
+
+```logicn
+flow login(
+  request: Login.post,
+  context: Runtime.AuthContext
+)
+```
+
+Simple flows may omit context:
+
+```logicn
+flow hello(
+  request: Hello.get
+)
+```
+
+`Runtime.Context` must not become mutable global state, hidden session storage,
+an unrestricted request bag, unfiltered headers/cookies/files or a way to bypass
+permissions. Session and shared mutable state belong in governed vaults.
+
+The concept lives in
+`docs/Knowledge-Bases/runtime-context-not-superglobals.md`.
 
 
 Environment secret handling is a typed security boundary.
@@ -1749,6 +1815,20 @@ audit mandatory.
 
 The concept is documented in
 `docs/Knowledge-Bases/security-invariants-and-policy-proof.md`.
+
+## Excluded Features
+
+LogicN deliberately excludes features that create hidden behaviour, unsafe
+authority, performance unpredictability, or runtime paths that are hard to
+govern and audit. These include: classes and inheritance, dynamic eval, runtime
+code generation, monkey patching, global mutable variables, direct environment
+variable access, raw pointers, unchecked casts, unsafe promotion, exceptions as
+control flow, unbounded loops and recursion, direct thread control, shared
+mutable concurrency, and implicit network/file/database access.
+
+The full excluded features reference table with reasons and recommended
+LogicN alternatives is documented in
+`docs/Knowledge-Bases/excluded-features.md`.
 
 ## Governed Execution Director
 

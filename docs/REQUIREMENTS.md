@@ -200,6 +200,13 @@ must not be treated as implemented app functionality.
 - The Runtime Policy Config must remain separated from `boot/main` startup wiring:
   the policy config defines the rules of the environment, while `boot/main` declares
   the entry point wiring and module loading.
+- LogicN must not use PHP-style superglobals. `Runtime.Context` is the
+  runtime-owned, read-controlled execution context for the current flow. It
+  contains actor, request, route, permission, capability, audit, budget and
+  compute facts but is not a global variable and is not freely writable.
+  `Runtime.Context` must be injected into flows only when needed; simple flows
+  may omit it. Session and shared mutable state must use governed vaults, not
+  global bags or hidden writable context.
 - LogicN encapsulation must be based on controlled data movement rather than
   public/private field visibility alone. Secure flow boundaries, explicit
   inputs and outputs, classification, response/view contracts, capabilities,
@@ -456,6 +463,17 @@ must not be treated as implemented app functionality.
 - Recoverable errors must be explicit in syntax and types through
   `Result<T, E>` or an equivalent typed result form. Hidden exceptions must not
   be the default application error model.
+- LogicN must support a first-class Typed Error Model where fallible flows declare
+  their return type as `Result<SuccessType, ErrorType>`. The compiler and runtime
+  must restrict flows to only return declared success and error types, preventing
+  the propagation of untyped failures, raw stack traces and unmapped exceptions.
+- Custom error blocks must be definable using the `error` keyword, allowing variants
+  to explicitly declare their public-facing message, HTTP status code, visibility
+  (`view: public`), and whether auditing is required (`audit: required`).
+- The runtime and response gates must map typed errors safely: external users must
+  receive only public/safe error outputs, while the audit system receives full
+  internal context. Unexpected or internal system failures must hide internal
+  details by default.
 - Expected application errors, external failures and unexpected runtime crashes
   must be distinguishable in types, policies or reports.
 - Public routes, webhooks, scheduled tasks and workers must have a crash
@@ -1241,18 +1259,22 @@ the active v1 build graph.
   recommended conservative cache mode, cache use, cache bypass and invalidation
   reasons.
 
-## Structured Await Requirements
+## Structured Task/Wait Requirements
 
-- LogicN must support `await` for effect-declared waits, but must not expose
-  futures, promises, pinning, executors or manual polling as the normal
-  application model.
-- LogicN must support grouped waits through `await all`, race waits through
-  `await race`, bounded stream processing through `await stream`, queue handoff
+- LogicN uses `task` to start governed async work and `wait` to collect the
+  result. `async`/`await` are not used — they imply uncontrolled async models
+  that conflict with runtime governance.
+- LogicN must not expose futures, promises, pinning, executors or manual polling
+  as the normal application model.
+- LogicN must support grouped waits through `wait all`, race waits through
+  `wait race`, bounded stream processing through `wait stream`, queue handoff
   through declared queue/job contracts and retry through explicit retry policy.
 - Every task must belong to a scope. When a scope ends, unfinished child work
   must be cancelled, completed or handed off according to explicit policy.
-- Pure functions must not use `await`.
-- Awaiting external network or database work must require timeout policy in
+- `fn` (pure helper functions) must not use `task` or `wait`. Only `flow` may
+  start tasks and collect results.
+- A `flow` must not return until all required `wait` calls complete.
+- Waiting on external network or database work must require timeout policy in
   production profiles.
 - Cancellation must be a normal declared policy, with modes such as
   `cancelOnError`, `waitForAll`, `firstSuccess`, `firstResult`,
@@ -1261,10 +1283,11 @@ the active v1 build graph.
   request must use a typed, reportable queue/job contract.
 - Streams must declare bounded concurrency, backpressure policy and maximum
   in-flight work.
-- Compiler diagnostics should warn when independent sequential awaits could use
-  `await all`.
-- Build and runtime reports should expose async behavior through deterministic
-  async, await, concurrency, timeout and queue report entries.
+- Compiler diagnostics should warn when independent sequential waits could use
+  `wait all`.
+- Build and runtime reports should expose async behaviour through deterministic
+  task, wait, concurrency, timeout and queue report entries.
+- The concept is documented in `docs/Knowledge-Bases/async-task-model.md`.
 
 ## Resilient Flow Requirements
 
@@ -1784,6 +1807,37 @@ the active v1 build graph.
   accidental report disclosure.
 - Future report families should include variable-scope, mutation,
   readonly-value, vault-access, vault-security and secret-flow reports.
+
+## Plugin Security Requirements
+
+- Every extension package must start with no permissions. Permissions must be
+  explicitly declared by the plugin and explicitly granted by the application.
+- Plugin risk levels must be recognised: low risk (pure computation: CPU/memory
+  limits only), medium risk (engineering/chemistry: validation and simulation
+  isolation), high risk (AI/Medical/Finance/Robotics: strict sandboxing, audit
+  logging, human approval gates, tool allowlists).
+- Permission categories that plugins may request: `safe` (pure computation),
+  `read`, `write`, `network` (domain allowlist + TLS required), `execute` (tool
+  allowlist + sandbox required), `physical` (emergency stop + simulation mode
+  required), `regulated` (encryption + consent tracking + immutable audit log
+  required).
+- Plugins must execute inside isolated sandboxes: WASM sandboxing, container
+  runtimes, or capability-based VMs. Memory, filesystem, network, and GPU
+  isolation must be enforced per plugin.
+- Capability tokens must be temporary and scoped. Applications grant tokens per
+  use, not globally. Tokens must not be transferable between plugins.
+- All sensitive plugin actions must be audited automatically: vault access,
+  network calls, medical data access, financial operations, hardware control,
+  tool execution.
+- AI plugins must enforce tool allowlists, execution step limits, max runtime,
+  context isolation (vault data must not enter prompts), and human approval for
+  high-risk autonomous actions.
+- Robotics/physical plugins must include simulation-first workflows, emergency
+  stop support, speed limits, geofencing, and manual override capabilities.
+- Third-party plugins must be signed, version-pinned, permission-manifest
+  declared, dependency-scanned, and security-scored.
+- The full plugin security specification is in
+  `docs/Knowledge-Bases/plugin-security-architecture.md`.
 
 ## Out of Scope
 

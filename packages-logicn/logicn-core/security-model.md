@@ -959,6 +959,31 @@ target compatibility
 
 ---
 
+## Plugin Security Architecture
+
+LogicN uses a zero trust plugin model. Every extension package starts with no
+permissions and must explicitly declare what it needs. Applications must
+explicitly grant those permissions.
+
+Plugin risk levels:
+
+```text
+Low risk    — pure computation (LogicN.Math, LogicN.Science): CPU/memory limits
+Medium risk — engineering/chemistry: validation rules, simulation isolation
+High risk   — AI/Medical/Finance/Robotics: strict sandboxing, audit, human approval gates
+```
+
+Permission categories that plugins may request: `safe`, `read`, `write`,
+`network`, `execute`, `physical`, `regulated`.
+
+Runtime sandbox layers: compiler validation, runtime sandbox (WASM), capability
+tokens, audit logging.
+
+The full plugin security specification is documented in
+`docs/Knowledge-Bases/plugin-security-architecture.md`.
+
+---
+
 ## Native Binding Security
 
 Native bindings should be denied by default.

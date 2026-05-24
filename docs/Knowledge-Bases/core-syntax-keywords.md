@@ -1,0 +1,223 @@
+# Core Syntax Keywords
+
+## Definition
+
+LogicN uses a small, deliberate keyword set for control flow and execution. This
+document records the canonical keyword decisions and what is intentionally
+excluded.
+
+## Keywords in Use
+
+### `flow`
+
+Primary executable unit with runtime authority.
+
+```logicn
+flow checkout(order: Order) -> Receipt
+  uses vault.payments.write
+{
+  let total = calculate_total(order)
+  return charge_order(order, total)
+}
+```
+
+A `flow` can: request permissions, use runtime authority, call GlobalVault,
+call backend services, spawn workers, be audited, cross trust boundaries.
+
+### `fn`
+
+Pure helper function. Cannot cross trust boundaries.
+
+```logicn
+fn calculate_total(order: Order) -> Decimal {
+  return order.items.sum(item -> item.price * item.qty)
+}
+```
+
+A `fn` cannot: use `uses`, call GlobalVault, access backend services directly,
+spawn workers, perform network/database/file/payment/secret access, use `task`
+or `wait`, or create background work.
+
+```text
+flow can cross trust boundaries.
+fn cannot cross trust boundaries.
+fn is always synchronous.
+```
+
+### `let`
+
+Local variable declaration:
+
+```logicn
+let message: String = "hello"    // typed
+let total = calculate_total(order)  // inferred
+```
+
+### `if`
+
+Simple true/false decision:
+
+```logicn
+if user.is_active {
+  allow()
+}
+else {
+  deny()
+}
+```
+
+Use `if` for simple conditions only.
+
+### `map`
+
+Multi-branch logic and value matching. Replaces `switch`, `case`, and `elseif`:
+
+```logicn
+let message: String = map(status) {
+  "paid"    => "Payment complete"
+  "failed"  => "Payment failed"
+  "pending" => "Waiting for payment"
+}
+else {
+  "Unknown status"
+}
+```
+
+Range matching:
+
+```logicn
+let grade = map(score) {
+  >= 90 => "excellent"
+  >= 70 => "good"
+  >= 50 => "pass"
+}
+else {
+  "fail"
+}
+```
+
+### `else`
+
+Fallback block after `if` or `map`. Appears after the closing `}`.
+
+### `uses`
+
+Permission declaration. Only valid on `flow`, not `fn`:
+
+```logicn
+flow load_secret(user_id: Id) -> Secret
+  uses vault.secrets.read
+{
+  return GlobalVault.secrets.get(user_id)
+}
+```
+
+### `each`
+
+Iteration over collections. Preferred over `for`:
+
+```logicn
+each item in items {
+  process(item)
+}
+```
+
+`each` feels more LogicN-native. `for` is not used.
+
+### `attempt`
+
+Recoverable operation with explicit error handling. Preferred over `try/catch`:
+
+```logicn
+let result = attempt charge_payment()
+else error {
+  return PaymentFailed(error.message)
+}
+```
+
+### `none`
+
+Empty/absent value. Preferred over `null`:
+
+```logicn
+let user = find_user(id)
+else {
+  none
+}
+```
+
+### `run worker`
+
+Worker execution:
+
+```logicn
+let result = run worker image_resize(file)
+```
+
+### `task`
+
+Start governed async work inside a `flow`:
+
+```logicn
+let user_task = task database.users.get(user_id)
+let stats_task = task database.analytics.get(user_id)
+```
+
+`task` is only valid in `flow`. Not valid in `fn`.
+
+### `wait`
+
+Collect the result of a `task`. The flow does not return until all required waits complete:
+
+```logicn
+let user: safe User = wait user_task
+let stats: safe Stats = wait stats_task
+```
+
+`wait` is only valid in `flow`. Not valid in `fn`.
+
+## Keywords Not Used
+
+| Excluded | Use Instead |
+| --- | --- |
+| `switch` | `map` |
+| `case` | `map` block entries |
+| `elseif` | `map` or separate `if` blocks |
+| `function` | `fn` or `flow` |
+| `def` | `fn` or `flow` |
+| `for` | `each` |
+| `try/catch` | `attempt ... else error` |
+| `null` | `none` |
+| `async` | `task` |
+| `await` | `wait` |
+
+## Decision Summary
+
+```text
+if     = simple true/false condition
+map    = multiple branch logic and value matching
+flow   = authorised execution unit (may use task/wait)
+fn     = pure synchronous helper logic (no task/wait)
+each   = iteration
+attempt = recoverable operation
+none   = absent value
+task   = start governed async work (flow only)
+wait   = collect async result (flow only)
+```
+
+## Types
+
+Current core types:
+
+```logicn
+String
+Int
+Decimal    // use for money and precise values
+Float      // use for approximate maths
+Bool
+None
+Array<T>
+Map<K, V>
+```
+
+Avoid `Any` unless required. Use `Decimal` for money.
