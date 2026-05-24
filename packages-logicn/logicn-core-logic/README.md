@@ -80,6 +80,29 @@ match signal {
 `unknown_as_error` or `unknown_as_false`; they must not allow unknown values to
 become access grants by default.
 
+## Omni Logic (Future)
+
+Omni Logic extends binary reasoning to multi-valued states for AI orchestration,
+distributed systems, and uncertainty modelling. It is advisory only and must
+never override deterministic runtime governance.
+
+Eight Omni states: `TRUE`, `FALSE`, `UNKNOWN`, `PENDING`, `CONFLICT`,
+`PROBABLE`, `IMPROBABLE`, `DEFERRED`.
+
+Binary safety rule: memory safety, runtime policy, capability enforcement,
+cryptography, and compiler correctness remain deterministic regardless of Omni
+Logic. Final execution approval is always binary (yes/no — never "probably approved").
+
+Omni Logic requires explicit opt-in: `feature omni_logic`.
+
+Diagnostic codes: `LN-OMNI-001` through `LN-OMNI-005`.
+
+v0.1 implementation: none — concept and safety boundaries documented only.
+
+See `docs/Knowledge-Bases/logicn-core-logic-omni-logic.md` for the full
+specification including all state examples, unsafe vs safe patterns, audit
+requirements, and phased implementation plan.
+
 ## Boundary
 
 `Tri` is a language-level logic model. `Omni` is a wider logic model. Photonic

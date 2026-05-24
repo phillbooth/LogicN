@@ -259,10 +259,13 @@ Execution, scheduling, trust verification, identity, memory, hardware targets.
 | Deployment model (build-once, deploy-many) | ✅ | `build-system-and-cli.md` |
 | Good-taste architecture principles | ✅ | `architecture-good-taste-principles.md` |
 | CI/CD integration (OIDC, SLSA provenance, attestation) | ✅ | `cicd-integration-and-provenance.md` |
-| Runtime audit log format | ✅ | `runtime-audit-log-format.md` |
-| Effect checker and boundary checker | ✅ | `effect-checker-and-boundary-checker.md` |
+| Runtime audit log format | ✅ | `runtime-audit-log-format.md` (extended — JSONL, execution proof, 5-hash strategy, LN-AUDIT-001–007, secret safety rules) |
+| Effect checker and boundary checker | ✅ | `effect-checker-and-boundary-checker.md` (extended — 12-effect table, `effect network, storage` syntax, algorithm, LN-EFFECT/LN-BOUNDARY codes, 16-item checklist) |
 | Compile-time vs runtime authority boundary | ✅ | `compile-time-vs-runtime-authority.md` |
 | Package completion status and implementation order | ✅ | `package-completion-status.md` |
+| CLI deploy / explain / plan (governance commands) | ✅ | `logicn-core-cli-deploy-explain-plan.md` (new — exit codes, output modes, all flags, all examples, report files) |
+| GPU and photonic compute backends | ✅ | `logicn-core-compute-gpu-and-photonic-backends.md` (new — architecture layers, compute effects/capabilities, GPU/accelerator/optical planning, LN-COMPUTE-001–007) |
+| Omni logic (multi-valued reasoning) | ✅ | `logicn-core-logic-omni-logic.md` (new — 8 states, binary safety rule, advisory model, LN-OMNI-001–005, v0.1 scope: none) |
 
 ---
 
@@ -358,39 +361,42 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented |
-| TODO.md | ✅ | Work tracking |
+| README.md | ✅ | Scope documented — exit codes, flag lists, KB reference added |
+| TODO.md | ✅ | Work tracking — sub-items for deploy/explain/plan added |
 | dist/ | ⚠️ | Compiled output present |
 | logicn check | ✅ | Prototype implemented |
 | logicn build | ⚠️ | Partial — artefact generation not complete |
 | logicn fmt | ✅ | Prototype implemented |
 | logicn verify | ⚠️ | Partial — hash checks only |
-| logicn deploy | ❌ | Not yet implemented — specified in `build-system-and-cli.md` |
-| logicn explain | ❌ | Not yet implemented — specified in `build-system-and-cli.md` |
-| logicn plan | ❌ | Not yet implemented — specified in `build-system-and-cli.md` |
+| logicn deploy | ⚠️ | Not yet implemented — fully specified in `logicn-core-cli-deploy-explain-plan.md` (exit codes 0–7, all flags, deployment report schema) |
+| logicn explain | ⚠️ | Not yet implemented — fully specified in `logicn-core-cli-deploy-explain-plan.md` (--tree, --trace, all flags) |
+| logicn plan | ⚠️ | Not yet implemented — fully specified in `logicn-core-cli-deploy-explain-plan.md` (--graph, all flags, compute-plan.json) |
 
 ### logicn-core-logic
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented |
-| TODO.md | ✅ | Work tracking |
+| README.md | ✅ | Scope documented — Omni Logic safety boundaries and 8 states added |
+| TODO.md | ✅ | Work tracking — Omni phases, safety rules, LN-OMNI codes added |
 | src/ | ⚠️ | Implementation stubs |
 | Tri logic operations | ⚠️ | Defined in KB; implementation stubs |
 | Decision logic | ⚠️ | Defined in KB; implementation stubs |
 | Bool boundary rules | ⚠️ | Defined in KB; implementation stubs |
-| Omni logic | ⚠️ | Concept specified in `package-completion-status.md`; not yet implemented |
+| Omni logic | ⚠️ | Fully specified in `logicn-core-logic-omni-logic.md`; v0.1 implementation = none |
 
 ### logicn-core-compute
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented |
-| TODO.md | ✅ | Work tracking |
+| README.md | ✅ | Scope documented — compute layers, effects, capabilities, GPU/photonic status added |
+| TODO.md | ✅ | Work tracking — GPU, optical, scheduler, planner, audit items added |
 | src/ | ⚠️ | Implementation stubs |
 | Compute block model | ✅ | Documented in logicn-core docs |
-| GPU plan output | ⚠️ | Report format defined; backend not implemented |
-| Photonic plan output | ⚠️ | Report format defined; backend not implemented |
+| Compute effects and capabilities | ✅ | Specified in `logicn-core-compute-gpu-and-photonic-backends.md` |
+| GPU plan output | ⚠️ | Fully specified in `logicn-core-compute-gpu-and-photonic-backends.md`; backend not implemented |
+| Photonic / optical plan output | ⚠️ | Fully specified in `logicn-core-compute-gpu-and-photonic-backends.md`; backend not implemented |
+| GPU fallback rules | ✅ | Specified — all fallback paths documented with audit events |
+| Scheduler and planner | ✅ | Specified — responsibilities, inputs, and audit events documented |
 | WASM target | ❌ | Not yet implemented |
 | Target compatibility report | ⚠️ | Partial implementation |
 
@@ -421,14 +427,16 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented |
-| TODO.md | ✅ | Work tracking |
+| README.md | ✅ | Scope documented — JSONL rationale, audit files, secret safety, LN-AUDIT codes added |
+| TODO.md | ✅ | Work tracking — execution proof, effect/denial/capability report items added |
 | src/ | ⚠️ | Implementation stubs |
 | Security report contracts | ✅ | Defined in logicn-core-security scope |
 | AI context report | ✅ | Documented in logicn-core (app.ai-context.json) |
 | Build / deployment reports | ✅ | Documented in `build-system-and-cli.md` |
-| Runtime audit log format | ⚠️ | Specified in KB (`runtime-audit-log-format.md`, `package-completion-status.md`); schema not yet finalised in package |
-| Execution proof format | ⚠️ | Concept specified in `package-completion-status.md`; not yet implemented |
+| Runtime audit log format (JSONL) | ⚠️ | Fully specified in `runtime-audit-log-format.md` (JSONL, status values, all event types); not yet finalised in package |
+| Execution proof format | ⚠️ | Fully specified in `runtime-audit-log-format.md` (5-hash strategy); not yet implemented |
+| Denial report | ⚠️ | Schema specified; not yet implemented |
+| Capability / effect reports | ⚠️ | Evidence shapes specified; not yet implemented |
 
 ### logicn-core-tasks
 
@@ -491,11 +499,25 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 ### Priority 4 — Package Implementation (key gaps remaining)
 
 ```text
-⚠️ logicn-core-compiler: effect checker and boundary checker — KB specified, implementation pending
-❌ logicn-core-cli: logicn deploy, logicn explain, logicn plan — specified in KB, not yet implemented
-⚠️ logicn-core-reports: runtime audit log schema / execution proof — KB specified, not yet finalised
-❌ logicn-core-compute: GPU and photonic backends — planning only (docs/Knowledge-Bases/package-completion-status.md)
-⚠️ logicn-core-logic: Omni logic — concept specified in KB, not yet implemented
+⚠️ logicn-core-compiler: effect checker and boundary checker
+     KB: effect-checker-and-boundary-checker.md (16-item checklist, LN-EFFECT/LN-BOUNDARY codes)
+     Status: fully specified, implementation pending
+
+⚠️ logicn-core-cli: logicn deploy, logicn explain, logicn plan
+     KB: logicn-core-cli-deploy-explain-plan.md (all flags, exit codes, report files, examples)
+     Status: fully specified, not yet implemented
+
+⚠️ logicn-core-reports: runtime audit log schema / execution proof
+     KB: runtime-audit-log-format.md (JSONL, 5-hash execution proof, LN-AUDIT codes)
+     Status: fully specified, not yet finalised in package
+
+⚠️ logicn-core-compute: GPU and photonic backends
+     KB: logicn-core-compute-gpu-and-photonic-backends.md (full architecture, LN-COMPUTE codes)
+     Status: fully specified, planning only (v0.1 = CPU + compute planner only)
+
+⚠️ logicn-core-logic: Omni logic
+     KB: logicn-core-logic-omni-logic.md (8 states, safety rules, LN-OMNI codes)
+     Status: fully specified, v0.1 implementation = none
 ```
 
 See `package-completion-status.md` for the full implementation order (Phase 1–4).
@@ -504,24 +526,27 @@ See `package-completion-status.md` for the full implementation order (Phase 1–
 
 ## Knowledge Base File Count
 
-Total KB files: ~163
+Total KB files: ~168
 
 | Area | Files | Coverage |
 | --- | --- | --- |
 | Syntax | ~30 core files | Strong — module/visibility fully specified including declaration, type-only, capability imports |
-| Logic | ~34 core files | Strong — error propagation covered |
-| Runtime | ~62 core files | Strong — CI/CD, audit log, effects, boundaries, execution proof covered |
-| AI/Compute | ~15 files | Strong |
-| Cross-cutting | ~22 files | Strong — package status and implementation order added |
+| Logic | ~35 core files | Strong — error propagation covered; Omni logic fully specified |
+| Runtime | ~62 core files | Strong — CI/CD, audit log (JSONL + execution proof), effects, boundaries covered |
+| AI/Compute | ~17 files | Strong — GPU/photonic architecture and compute effects fully specified |
+| Cross-cutting | ~22 files | Strong — CLI governance commands fully specified |
 | Architecture | ~4 files | Strong |
 
 New files added (this and prior session):
 ```text
-module-system-and-visibility.md    (extended — module declaration, type/capability imports, runtime loading)
+module-system-and-visibility.md           (extended — module declaration, type/capability imports, runtime loading)
 error-propagation-chains.md
 cicd-integration-and-provenance.md
-runtime-audit-log-format.md
-effect-checker-and-boundary-checker.md
+runtime-audit-log-format.md               (extended — JSONL, execution proof, LN-AUDIT-001–007)
+effect-checker-and-boundary-checker.md    (extended — 12-effect table, LN-EFFECT/LN-BOUNDARY codes, 16-item checklist)
 compile-time-vs-runtime-authority.md
-package-completion-status.md       (new — package gaps, compiler pipeline, CLI plan, implementation order)
+package-completion-status.md              (new — package gaps, compiler pipeline, implementation order)
+logicn-core-cli-deploy-explain-plan.md    (new — deploy/explain/plan commands, all flags, exit codes, report files)
+logicn-core-compute-gpu-and-photonic-backends.md  (new — GPU/photonic architecture, compute effects/capabilities, LN-COMPUTE codes)
+logicn-core-logic-omni-logic.md           (new — 8 Omni states, binary safety rule, LN-OMNI codes, advisory model)
 ```

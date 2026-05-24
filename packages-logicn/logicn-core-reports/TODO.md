@@ -14,9 +14,20 @@
 [ ] Define policy index, definitions, effective, conflict and AI-summary report contracts
 [ ] Define malicious data, exploit-resistance, resource-budget, taint-flow and hardware-risk report contracts
 [ ] Define specialist hardware, AI accelerator capability, accelerator fallback, data-sensitivity and precision-compatibility report contracts
-[ ] Define runtime audit log format (structured JSON schema, event categories, trace correlation)
+[ ] Define runtime audit log format (JSONL, event categories, trace correlation, LN-AUDIT codes)
+[ ]   - runtime-audit.jsonl schema with all required fields
+[ ]   - status values: success/failure/denied/fallback/cancelled/timeout/degraded
+[ ]   - capability and effect evidence event shapes
+[ ]   - scheduler evidence event shape
+[ ]   - runtime health schema
+[ ] Define execution proof contract (execution-proof.json)
+[ ]   - five-hash strategy: manifestHash, moduleHash, policyHash, executionHash, resultHash
+[ ]   - hash input definition: SHA256(runtime + module + manifest + policy + target + traceId)
+[ ]   - secret safety enforcement in result hash
 [ ] Define audit report contract (audit-report.json) fed from runtime audit log
 [ ] Define capability report contract (capability-report.json)
+[ ] Define effect report contract (effect-report.json)
+[ ] Define denial report contract (denial-report.json)
 [x] Define target report contract
 [x] Define runtime report contract
 [x] Define async/concurrency report contract

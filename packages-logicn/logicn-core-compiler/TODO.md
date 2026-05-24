@@ -25,12 +25,21 @@ adding post-v1 targets or domain package syntax.
 [ ] Define source-map contract
 [ ] Define compiler report output
 [ ] Define effect checker contract (what effects each function performs)
-[ ] Implement effect declaration validation (LLN-E4001, LLN-E4002)
-[ ] Implement compile-time effect restrictions (LLN-E4003)
+[ ] Implement effect declaration validation (LN-EFFECT-001, LLN-E4001)
+[ ] Implement effect propagation validation (LN-EFFECT-002, LLN-E4002)
+[ ] Implement compile-time effect restrictions (LN-EFFECT-003, LLN-E4003)
 [ ] Define boundary checker contract (module/package/trust/runtime boundaries)
-[ ] Implement visibility boundary enforcement (LLN-E3004)
-[ ] Implement compile-time/runtime boundary enforcement (LLN-E4004)
-[ ] Implement package trust boundary enforcement (LLN-E4006)
+[ ] Implement module visibility boundary enforcement (LN-BOUNDARY-004, LLN-E3004)
+[ ] Implement package contract boundary enforcement (LN-BOUNDARY-002)
+[ ] Implement compile-time/runtime boundary enforcement (LN-BOUNDARY-003, LLN-E4004)
+[ ] Implement package trust boundary enforcement (LN-BOUNDARY-005, LLN-E4006)
+[ ] Implement secret/data leakage boundary detection (LN-BOUNDARY-006)
+[ ] Implement network boundary checks — host allowlist (LN-BOUNDARY-008)
+[ ] Implement filesystem boundary checks — path allowlist (LN-BOUNDARY-009)
+[ ] Implement capability boundary enforcement (LN-BOUNDARY-007, LLN-E4005)
+[ ] Add effect checker diagnostics with suggested fixes
+[ ] Add boundary checker diagnostics with suggested fixes
+[ ] Generate runtime manifest including effect and boundary metadata
 [ ] Parse at least 20 v1 .lln examples
 [ ] Reject post-v1 syntax with clear diagnostics
 [ ] Add examples

@@ -147,13 +147,34 @@ facts; `logicn-core-reports` owns the shared shape.
 
 ## Runtime Audit Log Format (Planned)
 
-The runtime audit log schema has not yet been finalised. When finalised it will
-define the structured JSON format for all security-sensitive runtime events,
-including capability events, policy events, deployment events, and provenance
-events. The schema will be versioned and promoted once stable.
+The runtime audit log uses JSONL (JSON Lines) for the primary append-only event
+stream. Each event is one JSON object per line. The format is structured,
+immutable, machine-readable, and AI-readable.
 
-See `docs/Knowledge-Bases/runtime-audit-log-format.md` for the planned schema
-and event categories.
+Key audit files:
+
+```text
+runtime-audit.jsonl   — append-only runtime events
+execution-proof.json  — execution integrity with 5 hashes (manifest, module,
+                        policy, execution, result)
+capability-report.json
+effect-report.json
+denial-report.json
+runtime-health.json
+runtime-trace.json
+```
+
+Status values: `success`, `failure`, `denied`, `fallback`, `cancelled`,
+`timeout`, `degraded`.
+
+Secret safety rule: audit logs must never store API keys, passwords, tokens,
+or private certificates — only hashes, status flags, presence checks, and
+capability names.
+
+Diagnostic codes: `LN-AUDIT-001` through `LN-AUDIT-007`.
+
+See `docs/Knowledge-Bases/runtime-audit-log-format.md` for the full schema,
+execution proof design, JSONL format rationale, and v0.1 scope.
 
 Final rule:
 

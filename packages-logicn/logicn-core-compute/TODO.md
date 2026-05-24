@@ -20,8 +20,16 @@ active v1 runtime target.
 [ ] Define specialist compute capability, data-sensitivity and audit report fields
 [x] Add generic low-bit AI fallback target concept
 [x] Define offload planning reports
-[ ] Define future quantum target planning rules after core compute reports
-  stabilise
+[ ] Define compute effects model (accelerator, optical_io, distributed_compute, high_memory, parallel_compute)
+[ ] Define compute capabilities model (ComputeRuntime, GpuRuntime, AcceleratorRuntime, OpticalTransport, DistributedScheduler)
+[ ] Define GPU planning metadata and fallback rules (LN-COMPUTE-001 through LN-COMPUTE-007)
+[ ] Define GPU runtime architecture: compute planner → GPU scheduler → buffer manager → kernel adapter → GPU backend
+[ ] Define vendor-neutral adapter model (CUDA/ROCm/Metal/Vulkan as runtime plugins, not language syntax)
+[ ] Define optical/photonic transport planning (optical_io effect, OpticalTransport capability)
+[ ] Define scheduler responsibilities (thermal balancing, queue depth, fairness, fallback)
+[ ] Define planner responsibilities (parallelism, memory, energy cost, backend suitability)
+[ ] Define compute audit event shapes for planner, scheduler, fallback, and distributed execution
+[ ] Define future quantum target planning rules after core compute reports stabilise
 [x] Add examples
 [x] Add tests
 ```

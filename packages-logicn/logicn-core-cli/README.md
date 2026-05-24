@@ -58,16 +58,27 @@ logicn promote           — promote artifact from one environment to another
 logicn rollback          — rollback to previous deployment
 ```
 
-`logicn deploy` consumes a verified build manifest. It does not recompile
-source. See `build-system-and-cli.md` in the knowledge base for the full
-deploy model, including build-once deploy-many, deployment profiles, secrets
-checks, and rollback.
+`logicn deploy` validates the runtime manifest, effects, capabilities, policy,
+target compatibility, and module hashes before deploying. Exit codes: `0`
+success, `2` policy denial, `3` runtime incompatibility, `4` deployment
+validation failure, `5` capability resolution failure, `7` manifest integrity
+failure. Flags: `--dry-run`, `--json`, `--report`, `--audit`, `--strict`,
+`--profile`, `--policy`, `--target`. Produces `deployment-report.json`.
 
-`logicn explain` is intended to explain compiler decisions, runtime authority,
-effect declarations, and boundary violations in human-readable form.
+`logicn explain` explains compiler decisions, runtime authority, effect
+declarations, boundary violations, and why deployment was denied.
+Flags: `--tree` (dependency graph), `--trace` (execution reasoning chain),
+`--effects`, `--capabilities`, `--runtime`, `--policy`, `--audit`, `--json`.
 
-`logicn plan` is a dry-run command that previews what `logicn deploy` would do
-without changing any infrastructure.
+`logicn plan` estimates how execution will be coordinated — CPU/GPU suitability,
+memory pressure, parallelism, and fallback options. The planner recommends;
+the runtime decides final execution.
+Flags: `--json`, `--runtime`, `--memory`, `--parallelism`, `--energy`,
+`--target`, `--graph`. Produces `compute-plan.json`.
+
+See `docs/Knowledge-Bases/logicn-core-cli-deploy-explain-plan.md` for the
+full specification including all examples, exit codes, output modes, and
+report file definitions.
 
 `LogicN benchmark` is currently a placeholder command. The benchmark contracts,
 recommended modes and report shape live in `packages-logicn/logicn-tools-benchmark/README.md`.

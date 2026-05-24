@@ -80,22 +80,27 @@ Effect error codes: `LN-EFFECT-001` (undeclared effect), `LLN-E4001` (undeclared
 effect), `LLN-E4002` (undeclared propagated effect), `LLN-E4003` (forbidden
 compile-time effect).
 
+Effect error codes: `LN-EFFECT-001` through `LN-EFFECT-005`, `LLN-E4001`
+through `LLN-E4003`.
+
 See `docs/Knowledge-Bases/effect-checker-and-boundary-checker.md` for the full
-specification.
+specification including the 12-effect table, algorithm, and checker output schema.
 
 ## Boundary Checker (Planned)
 
 The boundary checker is not yet implemented. When implemented it will validate
 that code does not cross module/package/trust/runtime boundaries incorrectly.
-It includes visibility checking, capability boundary checking, and secret
-leakage prevention.
+It includes visibility checking, capability boundary checking, secret leakage
+prevention, and filesystem/network path allowlists.
 
-Boundary error codes: `LN-BOUNDARY-001` (import crosses restricted boundary),
-`LN-BOUNDARY-002` (public API exposes private type), `LN-VIS-001` through
-`LN-VIS-005` (visibility violations), `LLN-E4004` through `LLN-E4006`.
+Seven boundary types: module visibility, package contract, compile-time/runtime,
+secret/data, filesystem, network/API, and capability.
 
-See `docs/Knowledge-Bases/effect-checker-and-boundary-checker.md` and
-`docs/Knowledge-Bases/package-completion-status.md` for full specifications.
+Boundary error codes: `LN-BOUNDARY-001` through `LN-BOUNDARY-009`,
+`LLN-E4004` through `LLN-E4006`.
+
+See `docs/Knowledge-Bases/effect-checker-and-boundary-checker.md` for the
+full 16-item implementation checklist and all boundary violation examples.
 
 ## Boundary
 

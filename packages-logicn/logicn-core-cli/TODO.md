@@ -18,9 +18,20 @@
 [x] Add LogicN security:check command integration
 [x] Add LogicN routes command integration
 [x] Add LogicN task command integration with logicn-core-tasks
-[ ] Add LogicN deploy command integration (consumes build manifest, verifies artifact, deploys to target)
-[ ] Add LogicN explain command integration (explain build decisions, authority, effects)
-[ ] Add LogicN plan command integration (preview deployment actions without applying)
+[ ] Add LogicN deploy command integration
+[ ]   - load workspace manifest, runtime profile, deployment policy
+[ ]   - validate effects, capabilities, runtime targets, module hashes
+[ ]   - produce deployment-report.json
+[ ]   - support --dry-run, --json, --report, --audit, --strict flags
+[ ]   - return exit codes 0–7
+[ ] Add LogicN explain command integration
+[ ]   - explain imports, effects, capabilities, dependency tree
+[ ]   - explain denial reasoning from deployment-denial.json
+[ ]   - support --tree, --trace, --effects, --capabilities, --runtime, --policy, --audit, --json flags
+[ ] Add LogicN plan command integration
+[ ]   - estimate CPU/GPU/accelerator suitability and memory pressure
+[ ]   - produce compute-plan.json
+[ ]   - support --json, --runtime, --memory, --parallelism, --energy, --target, --graph flags
 [ ] Add LogicN verify deploy command integration (verify running version against build manifest)
 [ ] Add LogicN promote command integration (promote artifact across environments)
 [ ] Add environment mode config loading

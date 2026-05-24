@@ -92,6 +92,55 @@ The package includes typed contracts for compute capabilities, budgets, target
 selection, compute-auto fallback reports, offload stages, data movement totals
 and aggregate compute reports.
 
+## Compute Architecture Layers
+
+```text
+LogicN source
+    ↓ compiler
+    ↓ execution graph
+    ↓ compute planner
+    ↓ runtime scheduler
+    ↓ backend adapter layer
+    ↓ CPU / GPU / accelerator / optical transport
+```
+
+The compute layer is hardware-neutral. Application code declares intent
+(`target gpu`, `effect accelerator`); the runtime resolves actual backend.
+
+## Compute Effects
+
+| Effect | Meaning |
+| --- | --- |
+| `accelerator` | GPU or AI accelerator execution |
+| `optical_io` | optical transport planning |
+| `distributed_compute` | distributed execution |
+| `high_memory` | elevated memory pressure |
+| `parallel_compute` | high parallel execution |
+
+## Compute Capabilities
+
+| Capability | Meaning |
+| --- | --- |
+| `ComputeRuntime` | runtime compute coordination |
+| `GpuRuntime` | GPU execution access |
+| `AcceleratorRuntime` | AI accelerator access |
+| `OpticalTransport` | optical data movement |
+| `DistributedScheduler` | distributed execution planning |
+
+## GPU and Photonic Status
+
+GPU and photonic support are planning-only for v0.1. The CPU runtime is the
+primary stable target. GPU planning metadata and fallback design are specified;
+real kernel execution and optical transport are deferred.
+
+Fallback rules: GPU unavailable / overheating / policy denied / memory exhausted
+→ all fall back to CPU and record an audit event.
+
+Diagnostic codes: `LN-COMPUTE-001` through `LN-COMPUTE-007`.
+
+See `docs/Knowledge-Bases/logicn-core-compute-gpu-and-photonic-backends.md`
+for the full architecture specification.
+
 Final rule:
 
 ```text
