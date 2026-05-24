@@ -74,8 +74,8 @@ Core language constructs, keywords, type system, declaration blocks.
 | Extension point declaration | ✅ | `runtime-extension-points.md` |
 | Plugin declaration | ✅ | `plugin-security-architecture.md` |
 | Boot / main / runtime / compile / security blocks | ✅ | `boot-main-startup-defaults.md` |
-| Import / module system | ✅ | `module-system-and-visibility.md` |
-| Visibility (public/private) | ✅ | `module-system-and-visibility.md` |
+| Import / module system | ✅ | `module-system-and-visibility.md` (incl. module declaration, type-only imports, capability imports, namespace imports, wildcard rule, runtime loading) |
+| Visibility (public/private/package/runtime) | ✅ | `module-system-and-visibility.md` |
 | Package declaration syntax | ✅ | `package-declaration-syntax.md` |
 
 ### Trust Conversion Syntax
@@ -262,6 +262,7 @@ Execution, scheduling, trust verification, identity, memory, hardware targets.
 | Runtime audit log format | ✅ | `runtime-audit-log-format.md` |
 | Effect checker and boundary checker | ✅ | `effect-checker-and-boundary-checker.md` |
 | Compile-time vs runtime authority boundary | ✅ | `compile-time-vs-runtime-authority.md` |
+| Package completion status and implementation order | ✅ | `package-completion-status.md` |
 
 ---
 
@@ -348,8 +349,9 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | Type checker | ✅ | Implemented prototype in logicn-core/compiler/ |
 | Formatter | ✅ | Implemented prototype in logicn-core/compiler/ |
 | AST / source map | ✅ | Implemented prototype in logicn-core/compiler/ |
-| Effect checker | ⚠️ | Specified in KB (`effect-checker-and-boundary-checker.md`); not yet implemented |
-| Boundary checker | ⚠️ | Specified in KB (`effect-checker-and-boundary-checker.md`); not yet implemented |
+| Effect checker | ⚠️ | Specified in KB (`effect-checker-and-boundary-checker.md`, `package-completion-status.md`); not yet implemented |
+| Boundary checker | ⚠️ | Specified in KB (`effect-checker-and-boundary-checker.md`, `package-completion-status.md`); not yet implemented |
+| Compiler pass pipeline | ✅ | 13-pass pipeline documented in `package-completion-status.md` and README |
 | Manifest generation | ⚠️ | JSON schema output exists; full manifest not yet |
 
 ### logicn-core-cli
@@ -377,7 +379,7 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | Tri logic operations | ⚠️ | Defined in KB; implementation stubs |
 | Decision logic | ⚠️ | Defined in KB; implementation stubs |
 | Bool boundary rules | ⚠️ | Defined in KB; implementation stubs |
-| Omni logic | ❌ | Planned; not yet implemented |
+| Omni logic | ⚠️ | Concept specified in `package-completion-status.md`; not yet implemented |
 
 ### logicn-core-compute
 
@@ -425,7 +427,8 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | Security report contracts | ✅ | Defined in logicn-core-security scope |
 | AI context report | ✅ | Documented in logicn-core (app.ai-context.json) |
 | Build / deployment reports | ✅ | Documented in `build-system-and-cli.md` |
-| Runtime audit log format | ⚠️ | Specified in KB (`runtime-audit-log-format.md`); schema not yet finalised in package |
+| Runtime audit log format | ⚠️ | Specified in KB (`runtime-audit-log-format.md`, `package-completion-status.md`); schema not yet finalised in package |
+| Execution proof format | ⚠️ | Concept specified in `package-completion-status.md`; not yet implemented |
 
 ### logicn-core-tasks
 
@@ -490,32 +493,35 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 ```text
 ⚠️ logicn-core-compiler: effect checker and boundary checker — KB specified, implementation pending
 ❌ logicn-core-cli: logicn deploy, logicn explain, logicn plan — specified in KB, not yet implemented
-⚠️ logicn-core-reports: runtime audit log schema not yet finalised in package
-❌ logicn-core-compute: GPU and photonic backends not yet implemented (planning only)
-❌ logicn-core-logic: Omni logic not yet implemented
+⚠️ logicn-core-reports: runtime audit log schema / execution proof — KB specified, not yet finalised
+❌ logicn-core-compute: GPU and photonic backends — planning only (docs/Knowledge-Bases/package-completion-status.md)
+⚠️ logicn-core-logic: Omni logic — concept specified in KB, not yet implemented
 ```
+
+See `package-completion-status.md` for the full implementation order (Phase 1–4).
 
 ---
 
 ## Knowledge Base File Count
 
-Total KB files: ~161
+Total KB files: ~163
 
 | Area | Files | Coverage |
 | --- | --- | --- |
-| Syntax | ~30 core files | Strong — module/visibility now covered |
-| Logic | ~34 core files | Strong — error propagation now covered |
-| Runtime | ~62 core files | Strong — CI/CD, audit log, effects, boundaries now covered |
+| Syntax | ~30 core files | Strong — module/visibility fully specified including declaration, type-only, capability imports |
+| Logic | ~34 core files | Strong — error propagation covered |
+| Runtime | ~62 core files | Strong — CI/CD, audit log, effects, boundaries, execution proof covered |
 | AI/Compute | ~15 files | Strong |
-| Cross-cutting | ~21 files | Strong |
+| Cross-cutting | ~22 files | Strong — package status and implementation order added |
 | Architecture | ~4 files | Strong |
 
-New files added (this session):
+New files added (this and prior session):
 ```text
-module-system-and-visibility.md
+module-system-and-visibility.md    (extended — module declaration, type/capability imports, runtime loading)
 error-propagation-chains.md
 cicd-integration-and-provenance.md
 runtime-audit-log-format.md
 effect-checker-and-boundary-checker.md
 compile-time-vs-runtime-authority.md
+package-completion-status.md       (new — package gaps, compiler pipeline, CLI plan, implementation order)
 ```

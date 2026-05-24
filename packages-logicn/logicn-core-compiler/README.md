@@ -49,6 +49,26 @@ unsafe dynamic code execution calls
 The scan is intentionally fail-safe. It emits diagnostics for suspicious source
 instead of trying to infer intent from ambiguous syntax.
 
+## Compiler Pass Pipeline
+
+Recommended 13-pass pipeline:
+
+```text
+ 1. Lexer
+ 2. Parser
+ 3. AST builder
+ 4. Type checker
+ 5. Visibility checker
+ 6. Effect checker
+ 7. Boundary checker
+ 8. Capability resolver
+ 9. Package graph validator
+10. Runtime graph generator
+11. Optimisation planner
+12. Backend emitter
+13. Audit metadata emitter
+```
+
 ## Effect Checker (Planned)
 
 The effect checker is not yet implemented. When implemented it will validate that
@@ -56,8 +76,9 @@ functions declare all side effects they perform, that effects propagate through
 the call graph correctly, and that compile-time code does not attempt runtime-only
 effects.
 
-Effect error codes: LLN-E4001 (undeclared effect), LLN-E4002 (undeclared
-propagated effect), LLN-E4003 (forbidden compile-time effect).
+Effect error codes: `LN-EFFECT-001` (undeclared effect), `LLN-E4001` (undeclared
+effect), `LLN-E4002` (undeclared propagated effect), `LLN-E4003` (forbidden
+compile-time effect).
 
 See `docs/Knowledge-Bases/effect-checker-and-boundary-checker.md` for the full
 specification.
@@ -66,13 +87,15 @@ specification.
 
 The boundary checker is not yet implemented. When implemented it will validate
 that code does not cross module/package/trust/runtime boundaries incorrectly.
+It includes visibility checking, capability boundary checking, and secret
+leakage prevention.
 
-Boundary error codes: LLN-E4004 (compile-time/runtime boundary violation),
-LLN-E4005 (capability boundary violation), LLN-E4006 (package trust boundary
-violation).
+Boundary error codes: `LN-BOUNDARY-001` (import crosses restricted boundary),
+`LN-BOUNDARY-002` (public API exposes private type), `LN-VIS-001` through
+`LN-VIS-005` (visibility violations), `LLN-E4004` through `LLN-E4006`.
 
-See `docs/Knowledge-Bases/effect-checker-and-boundary-checker.md` for the full
-specification.
+See `docs/Knowledge-Bases/effect-checker-and-boundary-checker.md` and
+`docs/Knowledge-Bases/package-completion-status.md` for full specifications.
 
 ## Boundary
 

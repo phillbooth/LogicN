@@ -277,11 +277,345 @@ Prefer explicit re-exports
 Separate trusted/internal APIs from public APIs
 ```
 
+---
+
+## Module Declaration
+
+A file may declare its module name explicitly.
+
+```logicn
+module app/users/service
+```
+
+The declared name must match the package manifest and source location.
+
+```text
+File path:    app/src/users/service.lln
+Module path:  app/users/service
+```
+
+If the declaration and path disagree, the compiler emits:
+
+```text
+LN-MODULE-001: module declaration does not match source location
+file: app/src/users/service.lln
+found: app/payments/service
+expected: app/users/service
+```
+
+---
+
+## Import Syntax Variants
+
+The module system supports multiple import forms depending on scope.
+
+### Named Imports (Preferred)
+
+```logicn
+import { UserId, UserProfile } from "app/users/types"
+import { find_user } from "app/users/repository"
+```
+
+Named imports make every dependency explicit and are the easiest to audit.
+
+### Type-Only Imports
+
+```logicn
+import type { UserRecord } from "app/users/types"
+```
+
+Type-only imports signal that no executable code is required at runtime from
+that import — only type information. This improves runtime planning.
+
+### Capability Imports
+
+```logicn
+import capability { Database } from "logicn-core-data/database"
+import capability { HttpClient } from "logicn-core-network/http"
+```
+
+Capability imports make the capability type visible for use in function
+signatures. They do not grant capability authority — the runtime still decides
+whether an instance is issued.
+
+```logicn
+flow get_profile(
+    db: Database,
+    id: UserId
+) -> Result<UserProfile, UserError> effects [storage] {
+    find_user(db, id)
+}
+```
+
+### Namespace Imports
+
+```logicn
+import * as Users from "app/users/service"
+
+flow run(id: Users.UserId) -> Result<Users.UserProfile, Users.UserError> {
+    Users.get_profile(id)
+}
+```
+
+Namespace imports are allowed for cohesive modules but named imports are
+preferred for clarity and auditability.
+
+### Wildcard Symbol Imports — Disallowed
+
+```logicn
+import * from "app/users/service"   // NOT ALLOWED
+```
+
+Wildcard symbol imports dump every exported symbol into local scope. They are
+disallowed because they:
+
+```text
+Hide where names come from
+Increase AI misunderstanding risk
+Weaken audit reports
+Create accidental symbol collisions
+Make refactoring less safe
+```
+
+---
+
+## Extended Visibility Model
+
+### Visibility Levels
+
+| Keyword | Scope | Importable externally | Typical use |
+| ------- | ----- | --------------------- | ----------- |
+| `private` (default) | Current module only | No | helpers, internal records |
+| no keyword | Same as `private` | No | default for safety |
+| `package` | Same package only | Within package | package internals |
+| `public` / `pub` | Public module API | Yes | stable types, contracts |
+| `runtime` | Runtime-owned | Only if authorised | runtime hooks, descriptors |
+
+`pub` is a shorthand for `public`. Both are valid:
+
+```logicn
+pub fn add(a: Int, b: Int) -> Int { a + b }
+public fn add(a: Int, b: Int) -> Int { a + b }
+```
+
+### Runtime Visibility
+
+`runtime` is reserved for compiler-generated or runtime-privileged code:
+
+```logicn
+runtime fn __runtime_register_module() -> ModuleDescriptor {
+    module_descriptor()
+}
+```
+
+Application code should not normally define `runtime` symbols unless the
+package manifest explicitly permits it.
+
+### Public API Safety
+
+A public function must not expose private or package-only types in its
+return type or parameters:
+
+```logicn
+private type SecretToken = String
+
+pub fn export_token() -> SecretToken { ... }
+// LN-VIS-003: public function exposes private return type
+```
+
+Correct approach — expose a safe wrapper type:
+
+```logicn
+public enum TokenStatus { Present, Missing }
+
+pub fn token_status() -> TokenStatus { ... }
+```
+
+---
+
+## Export Rules
+
+Visibility is declared directly on the symbol, not in a separate export block.
+
+Preferred:
+
+```logicn
+public fn parse() {}
+fn tokenize() {}         // private by default
+```
+
+Avoid:
+
+```logicn
+export { parse }         // not the LogicN model
+```
+
+The compiler generates an export map for tooling:
+
+```json
+{
+  "module": "app/users/service",
+  "public": ["get_profile"],
+  "package": [],
+  "private": ["to_profile"],
+  "runtime": []
+}
+```
+
+---
+
+## Runtime Loading Rules
+
+The runtime loads modules using a compiler-produced module graph, not by
+scanning the filesystem. Each module is represented as a descriptor:
+
+```json
+{
+  "module": "app/users/service",
+  "package": "app-users",
+  "hash": "sha256:example",
+  "visibility": {
+    "public": ["get_profile"],
+    "package": [],
+    "private": ["to_profile"]
+  },
+  "imports": [
+    "app/users/types",
+    "app/users/repository",
+    "logicn-core-data/database"
+  ],
+  "effects": ["storage"],
+  "capabilities": ["Database"]
+}
+```
+
+The runtime rejects a module when:
+
+```text
+the module hash does not match the compiled graph
+the module requests undeclared capabilities
+the module imports a denied package
+the module exposes symbols not listed by the compiler
+the module requires effects not approved by policy
+```
+
+---
+
+## Package Manifest Integration
+
+Each package declares its module roots, public entrypoints, and allowed imports:
+
+```json
+{
+  "name": "app-users",
+  "moduleRoot": "app/src/users",
+  "modulePrefix": "app/users",
+  "publicModules": [
+    "app/users/types",
+    "app/users/service",
+    "app/users/routes"
+  ],
+  "privateModules": [
+    "app/users/repository"
+  ],
+  "allowedImports": [
+    "logicn-core/result",
+    "logicn-core-data/database",
+    "logicn-core-network/http"
+  ]
+}
+```
+
+The compiler validates:
+
+```text
+module path exists
+module declaration matches file location
+imports are inside allowed package graph
+private modules are not imported from outside the package
+public modules do not expose private types
+```
+
+---
+
+## Import Ordering Convention
+
+Recommended order within a file:
+
+```text
+1. Standard LogicN core imports
+2. Capability imports
+3. External package imports
+4. Application package imports
+5. Type-only imports (if kept separate by formatter)
+```
+
+Example:
+
+```logicn
+import { Result } from "logicn-core/result"
+import capability { Database } from "logicn-core-data/database"
+import capability { HttpClient } from "logicn-core-network/http"
+import { UserId, UserProfile } from "app/users/types"
+import type { UserRecord } from "app/users/types"
+```
+
+The formatter may group and sort imports automatically.
+
+---
+
+## Extended Compiler Error Codes
+
+Module system diagnostics:
+
+```text
+LN-MODULE-001  module declaration does not match source location
+LN-MODULE-002  import path escapes package boundary
+LN-MODULE-003  circular import detected
+LN-MODULE-004  imported module not found
+LN-MODULE-005  import not listed in package policy
+LN-MODULE-006  wildcard symbol import not allowed
+LN-VIS-001     cannot import private symbol
+LN-VIS-002     cannot import package-visible symbol from outside package
+LN-VIS-003     public function exposes private return type
+LN-VIS-004     public module exports non-public dependency type
+LN-VIS-005     runtime-only symbol used by application code
+LN-CAP-001     imported function requires ungranted capability
+LN-CAP-002     imported module declares denied effect
+```
+
+See also the `LLN-E3xxx` series in the compiler diagnostics for earlier
+prototype codes.
+
+---
+
+## Imports and Authority
+
+Importing a module makes its symbols visible. It does not grant authority.
+
+```logicn
+import { read_config } from "app/config/reader"
+
+flow boot() -> Result<AppConfig, ConfigError> {
+    read_config()
+}
+```
+
+The import only brings `read_config` into scope. It does not grant filesystem
+access. The compiler and runtime still verify the capability requirements
+declared by the imported function.
+
+```text
+Visibility  → controlled by import / public / private / package
+Authority   → controlled by capability declarations and runtime policy
+```
+
+---
+
 ## Future Extensions
 
 ```text
 Version-scoped imports
-Capability-aware imports
 Lazy module loading
 Optional dependencies
 Feature-gated imports
