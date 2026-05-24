@@ -269,6 +269,8 @@ Secrets should use:
 SecureString
 ```
 
+`SecureString` is a migration alias for `String secure`. Both forms are accepted. New code should prefer the postfix state form (see below).
+
 Example:
 
 ```LogicN
@@ -296,6 +298,67 @@ Valid:
 ```LogicN
 log.info("API key loaded", { key: redact(apiKey) })
 ```
+
+---
+
+## Postfix Type State Syntax
+
+LogicN uses postfix type state to express security and validation status directly on values, without requiring separate wrapper types.
+
+The syntax is: base type first, governance state second.
+
+```LogicN
+String unsafe          // untrusted external input
+String safe            // confirmed trusted
+Email safe validated   // validated and safe
+Json unsafe            // raw boundary data, not yet checked
+```
+
+This replaces the older prefix qualifier style (`unsafe String`, `safe Email`).
+
+### v1 State Set
+
+| State | Meaning |
+| --- | --- |
+| `safe` | Confirmed trusted within this context |
+| `unsafe` | Untrusted — requires validation before use |
+| `validated` | Has passed a validation gate |
+| `unvalidated` | Has not yet passed a validation gate |
+
+States compose:
+
+```LogicN
+Email safe validated   // safe AND validated
+Json unsafe unvalidated // unsafe AND not yet validated
+```
+
+### Security Relevance
+
+Postfix state makes trust boundaries visible at the type level:
+
+```LogicN
+flow handleRequest(body: Json unsafe) -> Result<Order, ValidationError> {
+  let parsed: CreateOrderRequest safe validated =
+    attempt validate.json<CreateOrderRequest>(body)
+    else error ValidationError.InvalidBody
+
+  return processOrder(parsed)
+}
+```
+
+The compiler enforces that `unsafe` values cannot pass into flows that require `safe` or `validated` state without a gate call.
+
+### Relation to SecureString
+
+`String secure` is the postfix form of `SecureString`. The compiler treats both identically. `SecureString` remains supported as a convenience alias.
+
+```LogicN
+let apiKey: String secure = env.secret("API_KEY")   // preferred
+let apiKey: SecureString = env.secret("API_KEY")     // alias, also valid
+```
+
+The full postfix type state specification is documented in
+`docs/Knowledge-Bases/postfix-type-state-syntax.md`.
 
 ---
 

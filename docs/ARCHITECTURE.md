@@ -2099,6 +2099,83 @@ Built-in levels are documented in
 Standard behaviour inheritance is documented in
 `docs/Knowledge-Bases/standard-view-behaviour.md`.
 
+## Postfix Type State Model
+
+LogicN uses postfix state syntax to attach governance state to values. The base
+type is written first; the state qualifier follows:
+
+```logicn
+let input:  String  unsafe             = request.body("name")
+let secret: String  secure             = env.secret("APP_SECRET")
+let email:  Email   safe   validated   = validate.email(rawEmail)
+let raw:    Json    unsafe unvalidated = boundary.api.body(req)
+```
+
+This avoids creating many wrapper types (`SecureString`, `UnsafeJson`, etc.).
+The base type stays reusable; the state describes how the value may flow.
+
+v1 state set: `safe`, `unsafe`, `validated`, `unvalidated`.
+
+State cannot change through assignment — only through approved transition
+operations (validators, sanitizers, declassification). The compiler rejects
+state weakening without an explicit operation.
+
+The concept is documented in
+`docs/Knowledge-Bases/postfix-type-state-syntax.md`.
+
+## Branded Types
+
+Branded types give a plain representation a distinct compile-time domain identity:
+
+```logicn
+type CustomerId  = Brand<String, "CustomerId">
+type OrderId     = Brand<String, "OrderId">
+type SessionToken = Brand<String secure, "SessionToken">
+```
+
+`CustomerId` and `OrderId` share the same runtime representation but are
+compile-time distinct. This prevents ID mixing errors at API, payment, auth,
+storage and routing boundaries.
+
+Brands compose with postfix state qualifiers. A brand alone does not validate
+format — external values must be validated before being branded.
+
+The concept is documented in
+`docs/Knowledge-Bases/generic-types.md`.
+
+## Build System Architecture
+
+The LogicN build system produces an **execution contract**, not only an
+executable. The pipeline is:
+
+```text
+source -> checked project -> manifests -> runtime plan -> artefacts -> reports
+```
+
+`logicn build` proves the package. `logicn deploy` proves the environment
+accepts the package.
+
+Build produces:
+```text
+app.type-manifest.json     — type contracts for runtime planning
+app.effect-manifest.json   — declared effects
+app.authority-manifest.json — authority declarations
+app.route-table.json       — route bindings
+app.runtime-plan.json      — decoder plans, startup order, fallback rules
+app.build-manifest.json    — root evidence file required by deploy
+```
+
+Deploy consumes a verified build manifest. It does not rebuild. Deploy produces
+a deployment report and requires rollback evidence.
+
+The type manifest is a runtime governance asset — it bridges compile-time proof
+to runtime authority and feeds: schema precompilation, decoder setup, redaction
+maps, hot reload invalidation, and AI-readable context.
+
+The concept is documented in
+`docs/Knowledge-Bases/build-system-and-cli.md`.
+The type manifest is documented in `docs/Knowledge-Bases/type-manifest.md`.
+
 ## Variable Mutation And Vault Model
 
 LogicN v0.1 should keep variable and shared-state syntax small:

@@ -12,7 +12,7 @@ minimum acceptance bar is:
 ```text
 20 real .lln example programs
 a grammar that can parse those examples
-documented function, type, match, Result, Option, effect and import syntax
+documented function, type, map (pattern matching), Result, Option, effect and import syntax
 diagnostics for unsupported or post-v1 syntax
 ```
 
@@ -384,12 +384,12 @@ Example:
 
 ```LogicN
 secure flow paymentDecision(status: PaymentStatus) -> Decision {
-  match status {
-    Paid => ALOw
-    Failed => Deny
-    Pending => Review
-    Unknown => Review
-    Unpaid => Review
+  map(status) {
+    Paid     => ALOw
+    Failed   => Deny
+    Pending  => Review
+    Unknown  => Review
+    Unpaid   => Review
     Refunded => Review
   }
 }
@@ -413,10 +413,12 @@ Example:
 
 ```LogicN
 pure flow signalState(score: Float) -> Tri {
-  match score {
-    score > 0.1 => Positive
+  map(score) {
+    score > 0.1  => Positive
     score < -0.1 => Negative
-    _ => Neutral
+  }
+  else {
+    Neutral
   }
 }
 ```
@@ -435,12 +437,12 @@ Example:
 let customer: Option<Customer> = findCustomer(customerId)
 ```
 
-Handle with `match`:
+Handle with `map`:
 
 ```LogicN
-match customer {
+map(customer) {
   Some(c) => processCustomer(c)
-  None => return Review("Customer missing")
+  None    => return Review("Customer missing")
 }
 ```
 
@@ -460,9 +462,9 @@ Example:
 flow loadOrder(id: OrderId) -> Result<Order, OrderError> {
   let order: Option<Order> = database.findOrder(id)
 
-  match order {
+  map(order) {
     Some(o) => return Ok(o)
-    None => return Err(OrderError.NotFound)
+    None    => return Err(OrderError.NotFound)
   }
 }
 ```
@@ -502,29 +504,58 @@ error AuthError {
 
 ---
 
-## Match Syntax
+## Pattern Matching (map)
 
-Use `match` for state handling.
+LogicN uses `map(value) { ... }` for all multi-branch matching. The `else`
+branch is the catch-all and is always written outside the closing `}`.
 
-Example:
+`map` replaces `switch`, `case`, `elseif`, and `match` from other languages.
+
+Basic enum matching:
 
 ```LogicN
-match order.payment.status {
-  Paid => shipOrder(order)
+map(order.payment.status) {
+  Paid    => shipOrder(order)
   Pending => holdForReview(order)
-  Failed => cancelOrder(order)
+  Failed  => cancelOrder(order)
   Unknown => holdForReview(order)
 }
 ```
 
-LogicN should prefer exhaustive matches.
+Enum matching must be exhaustive. The compiler reports any missing cases.
+
+### map as Expression
+
+```LogicN
+let fee: Decimal = map(order.currency) {
+  GBP => Decimal(0.02)
+  USD => Decimal(0.03)
+  EUR => Decimal(0.025)
+}
+else {
+  Decimal(0.03)
+}
+```
+
+### Catch-All (else)
+
+The `else` block is required when:
+
+```text
+the matched type has variants not listed in the map block
+the matching is over a non-enum type (String, Int, range, etc.)
+```
+
+It is optional when the `map` covers all known enum variants exhaustively.
 
 ---
 
-## Match with Blocks
+## Pattern Matching with Blocks
+
+Use block bodies `{ ... }` when a branch needs multiple statements:
 
 ```LogicN
-match order.payment.status {
+map(order.payment.status) {
   Paid => {
     shipOrder(order)
     return Ok(ALOw)
@@ -546,6 +577,218 @@ match order.payment.status {
   }
 }
 ```
+
+---
+
+## Pattern Matching — Result<T, E>
+
+Match typed error variants for explicit error handling:
+
+```LogicN
+map(createOrder(input)) {
+  Ok(order)          => completeCheckout(order)
+  Err(PaymentDeclined) => showDeclinedMessage()
+  Err(FraudBlocked)    => escalateReview()
+  Err(NetworkFailure)  => queueRetry()
+}
+```
+
+This is clearer than exception-driven logic and fully auditable.
+
+---
+
+## Pattern Matching — Validation Workflow
+
+Pattern matching is the primary mechanism for enforcing trust state transitions
+at boundaries. `unsafe unvalidated` values become `safe validated` only through
+an explicit gate:
+
+```LogicN
+let rawEmail: String unsafe unvalidated = form.email
+
+map(validate.email(rawEmail)) {
+  Ok(email) => {
+    let safeEmail: Email safe validated = email
+    saveCustomer(safeEmail)
+  }
+  Err(InvalidEmail) => return Api.badRequest("Invalid email")
+}
+```
+
+State pipeline:
+
+```text
+String unsafe unvalidated
+  -> validate.email()
+  -> Email safe validated
+```
+
+---
+
+## Pattern Matching — API Boundary
+
+Boundary matching makes all validation and persistence decisions visible:
+
+```LogicN
+secure flow createCustomer(req: Request) -> ApiResponse {
+  let body: Json unsafe unvalidated = boundary.api.body(req)
+
+  map(validate.customer(body)) {
+    Ok(customerInput) => {
+      map(saveCustomer(customerInput)) {
+        Ok(customer)         => Api.created(customer)
+        Err(DatabaseFailure) => Api.retryLater()
+      }
+    }
+    Err(ValidationError) => Api.badRequest()
+  }
+}
+```
+
+Nested `map` is acceptable when each level represents a distinct boundary
+decision. Max nesting depth 2 — extract to a named `flow` if deeper.
+
+---
+
+## Pattern Matching — Decision and Auth
+
+Three-state governance decisions are more expressive than `Bool`:
+
+```LogicN
+// Fraud decision
+map(fraudDecision(order)) {
+  Allow  => capturePayment(order)
+  Deny   => cancelOrder(order)
+  Review => queueManualReview(order)
+}
+
+// Auth decision
+enum AuthDecision { Allow, Deny, RequireMFA }
+
+map(authorize(user, action)) {
+  Allow      => executeAction()
+  Deny       => Api.forbidden()
+  RequireMFA => Api.mfaRequired()
+}
+```
+
+`Bool` cannot express the difference between deny, review, unknown, and not
+applicable. Use typed decision enums instead.
+
+---
+
+## Pattern Matching — Workflow State Machine
+
+Workflow states benefit from exhaustive matching — every state must be handled:
+
+```LogicN
+enum OrderWorkflow {
+  Draft
+  AwaitingPayment
+  Paid
+  Packed
+  Shipped
+  Cancelled
+}
+
+map(order.workflow) {
+  Draft           => allowEdits(order)
+  AwaitingPayment => sendReminder(order)
+  Paid            => queuePacking(order)
+  Packed          => notifyCourier(order)
+  Shipped         => archive(order)
+  Cancelled       => stopWorkflow(order)
+}
+```
+
+---
+
+## Pattern Matching — Validation Errors
+
+Structured validation errors make error handling explicit and auditable:
+
+```LogicN
+enum ValidationError {
+  MissingField
+  InvalidEmail
+  InvalidPhone
+  WeakPassword
+}
+
+map(validate.registration(input)) {
+  Ok(data)           => createAccount(data)
+  Err(MissingField)  => Api.badRequest("Missing field")
+  Err(InvalidEmail)  => Api.badRequest("Invalid email")
+  Err(InvalidPhone)  => Api.badRequest("Invalid phone")
+  Err(WeakPassword)  => Api.badRequest("Weak password")
+}
+```
+
+---
+
+## Pattern Matching — Branded Types
+
+Branded type validation uses the same map pattern:
+
+```LogicN
+map(validate.customerId(rawInput)) {
+  Ok(customerId) => loadCustomer(customerId)
+  Err(InvalidCustomerId) => Api.badRequest()
+}
+```
+
+---
+
+## Pattern Matching — v1 Rules
+
+```text
+1. map works with enums, Option<T>, and Result<T, E>
+2. Enum matching must be exhaustive — compiler enforces missing cases
+3. Result matching should explicitly handle success and each error variant
+4. Validation workflows use map to enforce state transitions
+5. Nested map is acceptable (max depth 2) — extract to named flow if deeper
+6. Avoid wildcard-heavy matching until exhaustiveness analysis is mature
+7. Keep v1 patterns simple — no guards, tuple matching or deep destructuring
+8. Pattern matching should improve auditability and governance visibility
+9. Compiler diagnostics for missing cases must be extremely clear
+10. map syntax prioritises readability over compact cleverness
+```
+
+---
+
+## Pattern Matching — Future (Not v1)
+
+These patterns are planned but not part of v1:
+
+```LogicN
+// Tuple / multi-value — future
+map(paymentStatus, shipmentStatus) {
+  (Paid, Queued)    => startPacking()
+  (Paid, Delivered) => completeOrder()
+  (Pending, _)      => holdOrder()
+  (Failed, _)       => cancelOrder()
+}
+
+// Destructuring — future
+map(apiResponse) {
+  Ok(Customer { email }) => sendReceipt(email)
+  Err(error)             => log(error)
+}
+
+// Guards — future
+map(order) {
+  Order { total } if total > 1000 => requireManagerApproval()
+  Order { total }                 => autoApprove()
+}
+
+// Wildcard — future (must still support exhaustiveness proof)
+map(status) {
+  Paid => complete()
+  _    => hold()
+}
+```
+
+v1 stance: prefer simple direct matching. Exhaustiveness must be compiler-provable.
 
 ---
 
@@ -571,12 +814,12 @@ if customer {
 }
 ```
 
-Use `match` for `Option<T>`:
+Use `map` for `Option<T>`:
 
 ```LogicN
-match customer {
+map(customer) {
   Some(c) => process(c)
-  None => return Review("Customer missing")
+  None    => return Review("Customer missing")
 }
 ```
 
@@ -780,8 +1023,8 @@ A possible syntax for explicit fallible operations:
 ```LogicN
 let result = attempt shipOrder(order)
 
-match result {
-  Ok(o) => return Ok(o)
+map(result) {
+  Ok(o)      => return Ok(o)
   Err(error) => return Err(error)
 }
 ```
@@ -1013,10 +1256,12 @@ secure flow handlePaymentWebhook(req: Request) -> Result<Response, WebhookError>
 effects [network.inbound] {
   let event: PaymentEvent = json.decode<PaymentEvent>(req.body)
 
-  match event.type {
+  map(event.type) {
     "payment.succeeded" => handlePaymentSucceeded(event)
-    "payment.failed" => handlePaymentFailed(event)
-    _ => return JsonResponse({ "ignored": true })
+    "payment.failed"    => handlePaymentFailed(event)
+  }
+  else {
+    return JsonResponse({ "ignored": true })
   }
 
   return JsonResponse({ "received": true })
@@ -1049,9 +1294,9 @@ Usage:
 ```LogicN
 let result = await PaymentsApi.capturePayment(paymentId)
 
-match result {
+map(result) {
   Ok(payment) => return Ok(payment)
-  Err(error) => return Err(error)
+  Err(error)  => return Err(error)
 }
 ```
 
@@ -1430,7 +1675,7 @@ General style:
 ```text
 two-space indentation or consistent project standard
 opening brace on same line
-blank line between major match cases
+blank line between major map branches
 explicit return types
 clear block structure
 ```
@@ -1459,6 +1704,103 @@ untracked global mutation
 magic target fallback
 untyped production JSON by default
 ```
+
+---
+
+## Postfix Type State Syntax
+
+LogicN attaches governance state to values using postfix state syntax.
+The base type is first; the state qualifier follows.
+
+```LogicN
+let input:  String  unsafe             = request.body("name")
+let secret: String  secure             = env.secret("APP_SECRET")
+let email:  Email   safe   validated   = validate.email(rawEmail)
+let raw:    Json    unsafe unvalidated = boundary.api.body(req)
+```
+
+v1 state set:
+
+```text
+safe          ordinary trusted value
+unsafe        untrusted, unchecked, external input
+validated     has passed a declared validator
+unvalidated   has not yet been proven acceptable
+```
+
+State cannot change through assignment. Approved transitions require explicit
+validator or sanitizer calls:
+
+```LogicN
+let rawEmail: String unsafe unvalidated = form.email
+let email:    Email  safe   validated   = validate.email(rawEmail)
+```
+
+State composes with generic types:
+
+```LogicN
+Option<String secure>    // contained String is secure when present
+Array<String unsafe>     // array of untrusted strings
+```
+
+Full specification: `docs/Knowledge-Bases/postfix-type-state-syntax.md`.
+
+---
+
+## Branded Types
+
+Branded types give a plain representation a distinct compile-time domain identity:
+
+```LogicN
+type CustomerId  = Brand<String, "CustomerId">
+type OrderId     = Brand<String, "OrderId">
+type SessionToken = Brand<String secure, "SessionToken">
+```
+
+`CustomerId` and `OrderId` are the same at runtime (`String`) but distinct at
+compile time. The compiler rejects passing one where the other is expected.
+
+Brand construction from external input requires validation:
+
+```LogicN
+// Correct
+let id: Result<CustomerId, ValidationError> = parseCustomerId(input)
+
+// Compile error — cannot assign String directly to branded type
+let id: CustomerId = input
+```
+
+Explicit unbranding:
+```LogicN
+let raw: String = customerId.value()
+```
+
+Full specification: `docs/Knowledge-Bases/generic-types.md`.
+
+---
+
+## Enum Syntax
+
+Canonical form:
+
+```LogicN
+enum PaymentStatus {
+  Paid
+  Pending
+  Failed
+  Refunded
+}
+```
+
+The parser also accepts comma-separated and single-line forms. The formatter
+always outputs the newline-separated canonical form.
+
+Enum names and cases: PascalCase.
+
+Enums are closed by default. Unknown external values fail closed at governed
+boundaries. `map` over enums must be exhaustive.
+
+Full specification: `docs/Knowledge-Bases/type-and-enum-declarations.md`.
 
 ---
 

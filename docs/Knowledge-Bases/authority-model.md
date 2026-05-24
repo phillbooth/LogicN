@@ -169,6 +169,154 @@ High risk (writes financial data, external inputs) → blocked until human appro
 Risk scoring uses the compiled authority map to determine what authority AI-generated
 code would gain.
 
+## Unified Authority Pipeline
+
+LogicN models authority as a pipeline from source to observable execution:
+
+```text
+source code
+  -> compiler proof
+  -> execution plan
+  -> runtime authority checks
+  -> governed effects
+  -> observable audit trail
+```
+
+Compile time and runtime authority cooperate — they are not in conflict:
+
+```text
+Compile time proves intent.
+Runtime governs effects.
+```
+
+## Boundary Authority
+
+Boundaries are where compile-time certainty weakens. External inputs from HTTP,
+queues, files, AI responses, and plugins cannot be trusted automatically:
+
+```logicn
+let body: Json unsafe unvalidated = boundary.api.body(req)
+```
+
+Compile time knows: this value came from outside authority.
+
+Validation restores trust:
+
+```logicn
+let customer: Customer safe validated = validate.customer(body)
+```
+
+```text
+Boundaries degrade authority.
+Validation restores authority.
+```
+
+## Compile-Time Proof vs Runtime Truth
+
+Compile-time proof does not guarantee runtime truth.
+
+```logicn
+flow fetchOrders() -> Result<Array<Order>, ApiError>
+effects [network.outbound] {
+  ...
+}
+```
+
+Compile time proves:
+- The flow declared outbound network usage
+- The return type is `Result<Array<Order>, ApiError>`
+
+Runtime still determines:
+- DNS resolution, TLS success, rate limits, credential validity, API availability
+
+**Runtime denial is not a failure of the type system.** It is correct layered authority.
+
+Example:
+```text
+Compiler says: Flow declaration is valid.
+Runtime says:  Outbound export denied by policy.
+```
+
+That is the correct outcome — compile-time approval does not imply runtime permission.
+
+## Authority as Contracts
+
+LogicN declarations are authority contracts:
+
+```logicn
+secure flow createCustomer(input: CustomerInput)
+  -> Result<Customer, ApiError>
+  effects [database.write, audit.log]
+{
+  ...
+}
+```
+
+This tells the **compiler**:
+- Required input shape
+- Required effects
+- Possible outcomes
+- Security-sensitive execution
+
+This tells the **runtime**:
+- This flow needs database write access
+- This flow writes audit events
+- This flow may contain sensitive handling
+
+The runtime can prepare execution policy before running the flow.
+
+## Runtime Authority is Observable
+
+```text
+Flow: createCustomer
+Declared effects:
+  database.write
+  audit.log
+
+Granted at runtime:
+  database.write = allowed
+  audit.log      = allowed
+  network.outbound = denied
+```
+
+This is useful for security review, AI planning, compliance, sandboxing,
+and runtime debugging.
+
+## Type Manifest Connection
+
+The generated type manifest bridges compile-time and runtime authority:
+
+```json
+{
+  "types":       ["Customer", "Order", "PaymentStatus"],
+  "effects":     ["database.write", "audit.log"],
+  "boundaries":  ["CreateOrderRequest"],
+  "runtimeModes": ["Checked"]
+}
+```
+
+Runtime uses it to:
+- Prepare validation and decoders
+- Prepare effect policies
+- Prepare execution plans
+- Prepare observability
+
+The manifest is a runtime governance asset, not just metadata.
+
+## LogicN vs Traditional Languages
+
+Traditional languages:
+```text
+compiler checks syntax and types
+runtime executes instructions
+```
+
+LogicN:
+```text
+compiler proves governance contracts
+runtime coordinates governed execution
+```
+
 ## Core Principle
 
 ```text
@@ -178,4 +326,9 @@ Runtime authority verifies the actor and environment before execution.
 Authority never propagates implicitly.
 fn has no authority.
 Each flow declares its own authority explicitly.
+
+Compile time proves intent.
+Runtime governs effects.
+Boundaries degrade authority.
+Validation restores authority.
 ```

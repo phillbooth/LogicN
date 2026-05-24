@@ -522,12 +522,12 @@ Example:
 
 ```LogicN
 secure flow paymentDecision(status: PaymentStatus) -> Decision {
-  match status {
-    Paid => ALOw
-    Failed => Deny
-    Pending => Review
-    Unknown => Review
-    Unpaid => Review
+  map(status) {
+    Paid     => ALOw
+    Failed   => Deny
+    Pending  => Review
+    Unknown  => Review
+    Unpaid   => Review
     Refunded => Review
   }
 }
@@ -551,10 +551,12 @@ Example:
 
 ```LogicN
 pure flow signalState(score: Float) -> Tri {
-  match score {
-    score > 0.1 => Positive
+  map(score) {
+    score > 0.1  => Positive
     score < -0.1 => Negative
-    _ => Neutral
+  }
+  else {
+    Neutral
   }
 }
 ```
@@ -573,12 +575,12 @@ Example:
 let customer: Option<Customer> = findCustomer(customerId)
 ```
 
-Handle with `match`:
+Handle with `map`:
 
 ```LogicN
-match customer {
+map(customer) {
   Some(c) => processCustomer(c)
-  None => return Review("Customer missing")
+  None    => return Review("Customer missing")
 }
 ```
 
@@ -598,38 +600,41 @@ Example:
 flow loadOrder(id: OrderId) -> Result<Order, OrderError> {
   let order: Option<Order> = database.findOrder(id)
 
-  match order {
+  map(order) {
     Some(o) => return Ok(o)
-    None => return Err(OrderError.NotFound)
+    None    => return Err(OrderError.NotFound)
   }
 }
 ```
 
 ---
 
-## Match Syntax
+## Pattern Matching (map)
 
-Use `match` for state handling.
+LogicN uses `map(value) { ... }` for all multi-branch matching. The `else`
+branch is the catch-all and is always written outside the closing `}`.
 
-Example:
+`map` replaces `switch`, `case`, `elseif`, and `match` from other languages.
+
+Basic enum matching:
 
 ```LogicN
-match order.payment.status {
-  Paid => shipOrder(order)
+map(order.payment.status) {
+  Paid    => shipOrder(order)
   Pending => holdForReview(order)
-  Failed => cancelOrder(order)
+  Failed  => cancelOrder(order)
   Unknown => holdForReview(order)
 }
 ```
 
-LogicN should prefer exhaustive matches.
+Enum matching must be exhaustive. The compiler reports any missing cases.
 
 ---
 
-## Match with Blocks
+## Pattern Matching with Blocks
 
 ```LogicN
-match order.payment.status {
+map(order.payment.status) {
   Paid => {
     shipOrder(order)
     return Ok(ALOw)
@@ -676,12 +681,12 @@ if customer {
 }
 ```
 
-Use `match` for `Option<T>`:
+Use `map` for `Option<T>`:
 
 ```LogicN
-match customer {
+map(customer) {
   Some(c) => process(c)
-  None => return Review("Customer missing")
+  None    => return Review("Customer missing")
 }
 ```
 
@@ -905,8 +910,8 @@ A possible syntax for explicit fallible operations:
 ```LogicN
 let result = attempt shipOrder(order)
 
-match result {
-  Ok(o) => return Ok(o)
+map(result) {
+  Ok(o)      => return Ok(o)
   Err(error) => return Err(error)
 }
 ```
@@ -1138,10 +1143,12 @@ secure flow handlePaymentWebhook(req: Request) -> Result<Response, WebhookError>
 effects [network.inbound] {
   let event: PaymentEvent = json.decode<PaymentEvent>(req.body)
 
-  match event.type {
+  map(event.type) {
     "payment.succeeded" => handlePaymentSucceeded(event)
-    "payment.failed" => handlePaymentFailed(event)
-    _ => return JsonResponse({ "ignored": true })
+    "payment.failed"    => handlePaymentFailed(event)
+  }
+  else {
+    return JsonResponse({ "ignored": true })
   }
 
   return JsonResponse({ "received": true })
@@ -1174,9 +1181,9 @@ Usage:
 ```LogicN
 let result = await PaymentsApi.capturePayment(paymentId)
 
-match result {
+map(result) {
   Ok(payment) => return Ok(payment)
-  Err(error) => return Err(error)
+  Err(error)  => return Err(error)
 }
 ```
 
@@ -1630,7 +1637,7 @@ General style:
 ```text
 two-space indentation or consistent project standard
 opening brace on same line
-blank line between major match cases
+blank line between major map branches
 explicit return types
 clear block structure
 ```

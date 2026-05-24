@@ -6,75 +6,236 @@ LogicN uses `type` to define structured data shapes and `enum` to define fixed
 named states. Both produce named, strongly-typed values that the compiler
 enforces throughout the codebase.
 
+---
+
 ## type Declaration
+
+### Closed Object Contract
 
 ```logicn
 type Customer {
-  id: CustomerId
-  name: String
+  id:    CustomerId
+  name:  String
   email: Option<Email>
 }
 ```
 
+A `type Name { ... }` declaration defines a **closed object shape** by default.
+Unknown fields are rejected at governed boundaries (equivalent to JSON Schema's
+`additionalProperties: false`).
+
 Fields are immutable by default. All types are strictly typed — no silent null,
 no implicit coercion.
 
-### Optional Fields
+### Naming Rules
 
-Use `Option<T>` for fields that may be absent:
+```text
+Type names:  PascalCase
+Field names: camelCase
+```
 
+Good:
 ```logicn
-type Order {
-  id: OrderId
-  customer_id: CustomerId
-  total: Decimal
-  notes: Option<String>
-  shipped_at: Option<Timestamp>
+type CustomerProfile {
+  customerId:  CustomerId
+  displayName: String
 }
 ```
+
+Avoid:
+```logicn
+type customer_profile {
+  CustomerID: string    // wrong case for both name and field
+}
+```
+
+Stable naming makes generated schemas, API docs, diagnostics, source maps, and
+AI context easier to consume.
+
+### Required and Optional Fields
+
+All fields are required unless wrapped in `Option<T>`.
+
+```logicn
+type Customer {
+  id:    CustomerId
+  email: Email
+  phone: Option<String>    // explicitly optional
+}
+```
+
+`Option<T>` is the only normal way to express a missing-capable field.
+There is no `?` marker, no default values, no silent null.
 
 ### Nested Types
 
 ```logicn
 type Address {
-  line1: String
-  city: String
+  line1:    String
+  city:     String
   postcode: String
-  country: String
+  country:  String
 }
 
 type Customer {
-  id: CustomerId
-  name: String
+  id:      CustomerId
+  name:    String
   address: Address
-  email: Option<Email>
+  email:   Option<Email>
 }
 ```
 
 ### Type Aliases
 
 ```logicn
-type CustomerId = String
-type OrderId = String
-type Email = String
+type CustomerId  = String
+type OrderId     = String
+type RetryCount  = Int
 ```
 
-Type aliases let code be self-documenting without full structural types.
+Type aliases are separate from object type blocks. They let code be
+self-documenting without inventing a full object shape.
 
-### Branded Types (future)
+Prefer:
+```logicn
+type CustomerId = String
 
-Branded types prevent accidentally passing an `OrderId` where a `CustomerId` is expected:
+type Customer {
+  id:   CustomerId
+  name: String
+}
+```
+
+Over:
+```logicn
+type Customer {
+  id:   String      // weaker domain signal
+  name: String
+}
+```
+
+### Branded Types
+
+Branded types prevent accidentally passing an `OrderId` where a `CustomerId`
+is expected:
 
 ```logicn
-brand CustomerId: String
-brand OrderId: String
+type CustomerId = Brand<String, "CustomerId">
+type OrderId    = Brand<String, "OrderId">
+type PaymentId  = Brand<String, "PaymentId">
+type PositiveInt = Brand<Int, "PositiveInt">
 ```
 
-The compiler rejects mixing branded types even when the underlying base type is the same.
+`CustomerId` and `OrderId` share the same runtime representation but are
+compile-time distinct. The compiler rejects mixing them.
+
+**Brand vs alias:**
+
+| Form | Meaning | Use for |
+| --- | --- | --- |
+| `type CustomerId = String` | Alias — same as String | Readability |
+| `type CustomerId = Brand<String, "CustomerId">` | Compile-time distinct | Safety |
+
+```text
+Use aliases for readability. Use brands for safety.
+```
+
+Brand construction from external input:
+
+```logicn
+// Correct — validated before branding
+let id: Result<CustomerId, ValidationError> = parseCustomerId(input)
+
+// Avoid — direct assignment from plain String
+let id: CustomerId = input    // compile error
+```
+
+Brand erasure: at runtime, `CustomerId` erases to `String`. At compile time
+they remain distinct.
+
+Brands compose with state qualifiers:
+
+```logicn
+type SessionToken = Brand<String secure, "SessionToken">
+type RawHtml      = Brand<String unsafe, "RawHtml">
+```
+
+### Security-Sensitive Fields
+
+Use `SecureString` (or the postfix state qualifier `String secure`) for
+fields that must not be logged or exposed:
+
+```logicn
+type LoginRequest {
+  email:    Email
+  password: SecureString
+}
+```
+
+With state qualifier (preferred long-term):
+
+```logicn
+type WebhookConfig {
+  endpoint:      String
+  signingSecret: String secure
+}
+```
+
+`SecureString` is treated as a migration alias for `secure String`.
+
+### AI-Readable Comments
+
+```logicn
+/// @purpose Public request body for creating an order.
+/// @risk User-controlled input reaches pricing and payment checks.
+type CreateOrderRequest {
+  customerId: CustomerId
+  items:      Array<OrderLine>
+  couponCode: Option<String>
+}
+```
+
+### Grammar Sketch
+
+```text
+TypeDeclaration
+  = "type" TypeName TypeBody
+  | "type" TypeName "=" TypeRef
+
+TypeBody
+  = "{" FieldDeclaration* "}"
+
+FieldDeclaration
+  = FieldName ":" TypeRef
+
+TypeRef
+  = TypeName
+  | TypeName "<" TypeRefList ">"
+  | IntegerDimension
+
+TypeRefList
+  = TypeRef ("," TypeRef)*
+```
+
+### What is NOT in v1 Core
+
+```logicn
+type User extends Person { ... }    // no inheritance
+type User { ...Address }            // no spreads
+type User { name?: String }         // no optional marker
+type User { name: String = "Anon" } // no default values
+type User { private password: ... } // no private fields
+type User { get displayName() -> ... }  // no methods
+type User { validate email is Email }   // no inline validators
+```
+
+These may become package-owned features or validation policies later.
+
+---
 
 ## enum Declaration
 
-Enums define a closed set of named states:
+Enums define a **closed set of named states**:
 
 ```logicn
 enum PaymentStatus {
@@ -83,13 +244,78 @@ enum PaymentStatus {
   Pending
   Failed
   Refunded
-  Unknown
 }
 ```
 
+### Naming Rules
+
+```text
+Enum names:  PascalCase
+Enum cases:  PascalCase
+```
+
+Good:
+```logicn
+enum PaymentStatus {
+  Paid
+  Pending
+  Failed
+}
+```
+
+Avoid:
+```logicn
+enum payment_status {
+  paid
+  pending_payment
+  FAILED
+}
+```
+
+### Accepted Syntax Forms
+
+The parser accepts:
+
+```logicn
+// Newline-separated (canonical)
+enum Status {
+  Paid
+  Failed
+}
+
+// Comma-separated
+enum Status {
+  Paid,
+  Failed,
+}
+
+// Single-line compact
+enum Status { Paid, Failed }
+```
+
+The formatter always outputs the **newline-separated canonical form**:
+```logicn
+enum Status {
+  Paid
+  Failed
+}
+```
+
+### Closed-Set Semantics
+
+An enum may only be one of its declared cases. Unknown states from external
+sources produce decode errors rather than silently passing through.
+
+```logicn
+enum PaymentStatus { Paid, Pending, Failed }
+```
+
+External JSON with `"status": "Refunded"` (if Refunded is not declared) should
+fail closed with a typed error unless a boundary policy allows a fallback.
+
 ### Exhaustive Matching
 
-The `map` expression must cover all enum variants. The compiler reports missing cases:
+The `map` expression must cover all enum variants:
 
 ```logicn
 let decision: Decision = map(status) {
@@ -105,38 +331,120 @@ else {
 }
 ```
 
-If `Unknown` is not listed, the compiler produces:
+Missing a variant produces:
 
 ```text
 LNN-ERR-TYPE-003: Non-exhaustive map — missing case: Unknown
 ```
 
-### Enum With Data (future)
+### Case Qualification
 
-Enums may carry associated data:
+Allow unqualified enum cases when the expected type is known:
 
 ```logicn
-enum OrderError {
-  NotFound
-  InvalidStatus
-  PaymentFailed
-  StockUnavailable(item: String)
+let status: PaymentStatus = Paid
+```
+
+Require qualified cases when ambiguous (two enums share the same case name):
+
+```logicn
+let payStatus: PaymentStatus = PaymentStatus.Failed
+let jobStatus: JobStatus     = JobStatus.Failed
+```
+
+### JSON and API Encoding
+
+Enum cases encode as strings by default:
+
+```json
+{ "type": "string", "enum": ["Paid", "Pending", "Failed"] }
+```
+
+Custom wire values (`Paid = "paid"`) are a future feature handled by API/JSON
+policy, not core enum syntax.
+
+### Decision Enums
+
+Use dedicated decision enums for business and security outcomes instead of
+`Bool`:
+
+```logicn
+enum Decision {
+  Allow
+  Deny
+  Review
+}
+
+secure flow paymentDecision(status: PaymentStatus) -> Decision {
+  map(status) {
+    Paid    => Allow
+    Failed  => Deny
+    Pending => Review
+  }
 }
 ```
+
+`Bool` loses the difference between deny, review, unknown, blocked and not
+applicable.
+
+### Grammar Sketch
+
+```text
+EnumDeclaration
+  = "enum" EnumName EnumBody
+
+EnumBody
+  = "{" EnumCaseList? "}"
+
+EnumCaseList
+  = EnumCase (EnumSeparator EnumCase)* EnumSeparator?
+
+EnumSeparator
+  = Newline | ","
+
+EnumCase
+  = CaseName
+```
+
+Future grammar extension:
+```text
+EnumCase
+  = CaseName
+  | CaseName "(" TypeRefList ")"   // payload variants
+  | CaseName "=" StringLiteral      // explicit wire values
+```
+
+### Future: Payload Variants
+
+```logicn
+// Future — not v1
+enum PaymentResult {
+  Paid(PaymentId)
+  Failed(PaymentError)
+  RequiresReview(ReviewReason)
+}
+```
+
+Payload variants are a documented future direction. v1 enums are simple named
+cases only.
+
+---
 
 ## Standard Discriminated Types
 
 LogicN provides built-in discriminated types:
 
 ```logicn
-Option<T>          // Some(value) or None
-Result<T, E>       // Ok(value) or Err(error)
-Decision           // Allow | Deny | Review
-Tri                // Positive | Neutral | Negative
+Option<T>    // Some(value) or None
+Result<T, E> // Ok(value) or Err(error)
+Decision     // Allow | Deny | Review
+Tri          // Positive | Neutral | Negative
 ```
 
 See `generic-types.md` for Option and Result, and `mathematics-and-tri-logic.md`
 for Decision and Tri.
+
+---
 
 ## Type Safety Rules
 
@@ -147,6 +455,8 @@ No undefined — not a concept in LogicN.
 Conversions must be explicit.
 enum matching must be exhaustive.
 Type aliases are not branded types — they do not block mixing.
+Branded types must be constructed through validated/explicit paths.
+Object schemas are closed by default.
 ```
 
 ## Compiler Errors
@@ -158,6 +468,49 @@ LNN-ERR-TYPE-003: Non-exhaustive map — missing enum case
 LNN-ERR-NULL-001: Null is not a valid value — use Option<T>
 LNN-ERR-NULL-002: None used where a value is required
 ```
+
+---
+
+## Example: Complete Small Model
+
+```logicn
+type CustomerId = String
+type OrderId    = String
+
+enum PaymentStatus {
+  Paid
+  Pending
+  Failed
+}
+
+type OrderLine {
+  sku:       String
+  quantity:  Int
+  unitPrice: Money<GBP>
+}
+
+/// @purpose Request body accepted by the public order creation endpoint.
+/// @risk User-controlled input affects stock, pricing and payment flow.
+type CreateOrderRequest {
+  customerId: CustomerId
+  items:      Array<OrderLine>
+  couponCode: Option<String>
+}
+
+type CreateOrderResponse {
+  orderId: OrderId
+  status:  PaymentStatus
+}
+
+secure flow createOrder(input: CreateOrderRequest)
+  -> Result<CreateOrderResponse, ApiError>
+  effects [database.write]
+{
+  ...
+}
+```
+
+---
 
 ## Core Principle
 

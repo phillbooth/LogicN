@@ -138,7 +138,7 @@ if customer {
 }
 ```
 
-Use `Option<T>` and `match` for missing values.
+Use `Option<T>` and `map` for missing values.
 
 ---
 
@@ -346,12 +346,12 @@ Example:
 let customer: Option<Customer> = findCustomer(customerId)
 ```
 
-Handle with `match`:
+Handle with `map`:
 
 ```LogicN
-match customer {
+map(customer) {
   Some(c) => processCustomer(c)
-  None => return Review("Customer missing")
+  None    => return Review("Customer missing")
 }
 ```
 
@@ -378,9 +378,9 @@ Example:
 flow loadOrder(id: OrderId) -> Result<Order, OrderError> {
   let order: Option<Order> = database.findOrder(id)
 
-  match order {
+  map(order) {
     Some(o) => return Ok(o)
-    None => return Err(OrderError.NotFound)
+    None    => return Err(OrderError.NotFound)
   }
 }
 ```
@@ -419,9 +419,9 @@ Example:
 
 ```LogicN
 secure flow checkPayment(status: PaymentStatus) -> Decision {
-  match status {
-    Paid => ALOw
-    Failed => Deny
+  map(status) {
+    Paid    => ALOw
+    Failed  => Deny
     Pending => Review
     Unknown => Review
   }
@@ -450,10 +450,12 @@ Example:
 
 ```LogicN
 pure flow signalState(score: Float) -> Tri {
-  match score {
-    score > 0.1 => Positive
+  map(score) {
+    score > 0.1  => Positive
     score < -0.1 => Negative
-    _ => Neutral
+  }
+  else {
+    Neutral
   }
 }
 ```
@@ -511,9 +513,9 @@ Example:
 
 ```LogicN
 secure flow riskToDecision(signal: Tri) -> Decision {
-  match signal {
+  map(signal) {
     Positive => Deny
-    Neutral => Review
+    Neutral  => Review
     Negative => ALOw
   }
 }
@@ -540,18 +542,19 @@ enum PaymentStatus {
 }
 ```
 
-Enums should be handled exhaustively with `match`.
+Enums should be handled exhaustively with `map`. The compiler enforces that
+every variant is covered.
 
 Example:
 
 ```LogicN
-match status {
-  Paid => ALOw
-  Unpaid => Review
-  Pending => Review
-  Failed => Deny
+map(status) {
+  Paid     => ALOw
+  Unpaid   => Review
+  Pending  => Review
+  Failed   => Deny
   Refunded => Review
-  Unknown => Review
+  Unknown  => Review
 }
 ```
 
@@ -1080,8 +1083,8 @@ enum PaymentStatus {
 This is incomplete:
 
 ```LogicN
-match status {
-  Paid => ALOw
+map(status) {
+  Paid   => ALOw
   Failed => Deny
 }
 ```
@@ -1100,9 +1103,9 @@ Unknown
 Example:
 
 ```LogicN
-match customer {
+map(customer) {
   Some(c) => process(c)
-  None => return Review("Customer missing")
+  None    => return Review("Customer missing")
 }
 ```
 
@@ -1110,12 +1113,23 @@ match customer {
 
 ## Pattern Matching Result
 
-Example:
+Match typed error variants explicitly:
 
 ```LogicN
-match result {
-  Ok(order) => return Ok(order)
+map(result) {
+  Ok(order)  => return Ok(order)
   Err(error) => return Err(error)
+}
+```
+
+With multiple error variants:
+
+```LogicN
+map(createOrder(input)) {
+  Ok(order)            => completeCheckout(order)
+  Err(PaymentDeclined) => showDeclinedMessage()
+  Err(FraudBlocked)    => escalateReview()
+  Err(NetworkFailure)  => queueRetry()
 }
 ```
 

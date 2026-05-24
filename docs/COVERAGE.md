@@ -47,7 +47,9 @@ Core language constructs, keywords, type system, declaration blocks.
 | Type definitions (type Foo { field: Type }) | ✅ | `type-and-enum-declarations.md` |
 | Enum syntax (enum Status { Paid, Failed }) | ✅ | `type-and-enum-declarations.md` |
 | Generic types (Option<T>, Result<T,E>, Array<T>, Map<K,V>) | ✅ | `generic-types.md` |
-| Branded/opaque types (brand OrderId: String) | ⚠️ | Noted in `type-and-enum-declarations.md` as future feature |
+| Branded/opaque types (Brand<T,"Name">) | ✅ | `type-and-enum-declarations.md`, `generic-types.md` |
+| Postfix type state syntax (String unsafe, Email safe validated) | ✅ | `postfix-type-state-syntax.md` |
+| Type manifest (app.type-manifest.json) | ✅ | `type-manifest.md` |
 | Money<Currency> and Decimal precision | ✅ | `numeric-and-compute-types.md` |
 | Matrix<R,C,T>, Vector<N,T>, Tensor<Shape,T> | ✅ | `numeric-and-compute-types.md` |
 | SecureString | ✅ | `numeric-and-compute-types.md` |
@@ -250,8 +252,8 @@ Execution, scheduling, trust verification, identity, memory, hardware targets.
 | Bootstrap plan stages (Node → IR → Rust/WASM → self-hosting) | ✅ | `bootstrap-runtime-roadmap.md` |
 | Compiler diagnostics and error codes | ✅ | `compiler-diagnostics.md` |
 | Observability and monitoring | ✅ | `observability-and-monitoring.md` |
-| Build system and logicn build CLI | ❌ | Not yet documented in KB |
-| Deployment model (build-once, deploy-many) | ❌ | Not yet documented in KB |
+| Build system and logicn build / logicn deploy CLI | ✅ | `build-system-and-cli.md` |
+| Deployment model (build-once, deploy-many) | ✅ | `build-system-and-cli.md` |
 | CI/CD integration (OIDC, SLSA provenance, attestation) | ❌ | Not yet documented in KB |
 | Runtime audit log format | ❌ | Not yet documented in KB |
 
@@ -272,31 +274,23 @@ Execution, scheduling, trust verification, identity, memory, hardware targets.
 ❌ Error propagation through call chains — how Result<T,E> propagates, attempt chaining
 ```
 
-### Priority 3 — Runtime (4 items)
+### Priority 3 — Runtime (2 items)
 
 ```text
-❌ Build system and logicn build / logicn deploy CLI — full command reference
-❌ Deployment model (build-once, deploy-many) — artifact lifecycle
 ❌ CI/CD integration (OIDC, SLSA provenance, attestation workflow)
 ❌ Runtime audit log format — structured log schema
-```
-
-### Deferred (future language features)
-
-```text
-⚠️ Branded/opaque types (brand OrderId: String) — noted in type-and-enum-declarations.md
 ```
 
 ---
 
 ## Knowledge Base File Count
 
-Total KB files: ~145
+Total KB files: ~150
 
 | Area | Files | Coverage |
 | --- | --- | --- |
-| Syntax | ~25 core files | Strong — gaps: import/module system, visibility |
-| Logic | ~32 core files | Strong — gap: error propagation patterns |
-| Runtime | ~55 core files | Strong — gaps: build CLI, deploy model, CI/CD, audit log format |
+| Syntax | ~28 core files | Strong — gaps: import/module system, visibility |
+| Logic | ~33 core files | Strong — gap: error propagation patterns |
+| Runtime | ~57 core files | Strong — gaps: CI/CD, audit log format |
 | AI/Compute | ~15 files | Strong |
-| Cross-cutting | ~18 files | Strong |
+| Cross-cutting | ~17 files | Strong |

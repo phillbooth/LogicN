@@ -138,7 +138,7 @@ if customer {
 }
 ```
 
-Use `Option<T>` and `match` for missing values.
+Use `Option<T>` and `map` for missing values.
 
 ---
 
@@ -251,12 +251,14 @@ for secret values.
 
 ## SecureString
 
-`SecureString` represents secret text.
+`SecureString` represents secret text. It is a migration alias for `String secure`.
 
 Example:
 
 ```LogicN
 let apiKey: SecureString = env.secret("API_KEY")
+// Equivalent long-term preferred form:
+let apiKey: String secure = env.secret("API_KEY")
 ```
 
 Rules:
@@ -280,6 +282,32 @@ Valid:
 ```LogicN
 log.info("API key loaded", { key: redact(apiKey) })
 ```
+
+## Postfix Type State Syntax
+
+LogicN uses postfix state syntax — the base type first, governance state second:
+
+```LogicN
+let input:  String  unsafe             = request.body("name")
+let secret: String  secure             = env.secret("APP_SECRET")
+let email:  Email   safe   validated   = validate.email(rawEmail)
+let raw:    Json    unsafe unvalidated = boundary.api.body(req)
+```
+
+v1 state set:
+
+| State | Meaning |
+| --- | --- |
+| `safe` | Trusted; may participate in normal logic |
+| `unsafe` | Untrusted, must be validated before use |
+| `validated` | Has passed a declared validator |
+| `unvalidated` | Has not yet been proven acceptable |
+
+Unmarked values are ordinary safe values unless they originate from an unsafe source.
+
+State cannot change by assignment — only through approved transition operations
+(validators, sanitizers, declassification methods). See `postfix-type-state-syntax.md`
+in the Knowledge Base for the full specification.
 
 ---
 
@@ -367,12 +395,12 @@ Example:
 let customer: Option<Customer> = findCustomer(customerId)
 ```
 
-Handle with `match`:
+Handle with `map`:
 
 ```LogicN
-match customer {
+map(customer) {
   Some(c) => processCustomer(c)
-  None => return Review("Customer missing")
+  None    => return Review("Customer missing")
 }
 ```
 
@@ -399,9 +427,9 @@ Example:
 flow loadOrder(id: OrderId) -> Result<Order, OrderError> {
   let order: Option<Order> = database.findOrder(id)
 
-  match order {
+  map(order) {
     Some(o) => return Ok(o)
-    None => return Err(OrderError.NotFound)
+    None    => return Err(OrderError.NotFound)
   }
 }
 ```
@@ -440,9 +468,9 @@ Example:
 
 ```LogicN
 secure flow checkPayment(status: PaymentStatus) -> Decision {
-  match status {
-    Paid => ALOw
-    Failed => Deny
+  map(status) {
+    Paid    => ALOw
+    Failed  => Deny
     Pending => Review
     Unknown => Review
   }
@@ -471,10 +499,12 @@ Example:
 
 ```LogicN
 pure flow signalState(score: Float) -> Tri {
-  match score {
-    score > 0.1 => Positive
+  map(score) {
+    score > 0.1  => Positive
     score < -0.1 => Negative
-    _ => Neutral
+  }
+  else {
+    Neutral
   }
 }
 ```
@@ -532,9 +562,9 @@ Example:
 
 ```LogicN
 secure flow riskToDecision(signal: Tri) -> Decision {
-  match signal {
+  map(signal) {
     Positive => Deny
-    Neutral => Review
+    Neutral  => Review
     Negative => ALOw
   }
 }
@@ -561,18 +591,19 @@ enum PaymentStatus {
 }
 ```
 
-Enums should be handled exhaustively with `match`.
+Enums should be handled exhaustively with `map`. The compiler enforces that
+every variant is covered.
 
 Example:
 
 ```LogicN
-match status {
-  Paid => ALOw
-  Unpaid => Review
-  Pending => Review
-  Failed => Deny
+map(status) {
+  Paid     => ALOw
+  Unpaid   => Review
+  Pending  => Review
+  Failed   => Deny
   Refunded => Review
-  Unknown => Review
+  Unknown  => Review
 }
 ```
 
@@ -596,26 +627,43 @@ Types should be clear and explicit.
 
 ## Type Aliases
 
-LogicN may support type aliases.
-
-Example:
+LogicN supports type aliases:
 
 ```LogicN
 type CustomerId = String
-type OrderId = String
-type Email = String
+type OrderId    = String
+type Email      = String
 ```
 
-Later versions may support stronger branded types to avoid mixing IDs.
+## Branded Types
 
-Example:
+Branded types give a plain representation a distinct compile-time domain identity:
 
 ```LogicN
-brand CustomerId: String
-brand OrderId: String
+type CustomerId  = Brand<String, "CustomerId">
+type OrderId     = Brand<String, "OrderId">
+type SessionToken = Brand<String secure, "SessionToken">
 ```
 
-This would prevent accidentally passing an `OrderId` where a `CustomerId` is expected.
+`CustomerId` and `OrderId` share the same runtime representation (`String`) but are
+compile-time distinct — the compiler rejects mixing them.
+
+Construction from external input requires an explicit validated path:
+
+```LogicN
+// Correct
+let id: Result<CustomerId, ValidationError> = parseCustomerId(input)
+
+// Compile error — direct assignment from String not allowed
+let id: CustomerId = input
+```
+
+Brand erasure: at runtime `CustomerId` erases to `String`. At compile time they remain
+distinct. Explicit unbranding: `let raw: String = customerId.value()`.
+
+Alias vs brand:
+- `type CustomerId = String` — alias, same as String, for readability
+- `type CustomerId = Brand<String, "CustomerId">` — compile-time distinct, for safety
 
 ---
 
@@ -1101,8 +1149,8 @@ enum PaymentStatus {
 This is incomplete:
 
 ```LogicN
-match status {
-  Paid => ALOw
+map(status) {
+  Paid   => ALOw
   Failed => Deny
 }
 ```
@@ -1121,9 +1169,9 @@ Unknown
 Example:
 
 ```LogicN
-match customer {
+map(customer) {
   Some(c) => process(c)
-  None => return Review("Customer missing")
+  None    => return Review("Customer missing")
 }
 ```
 
@@ -1134,8 +1182,8 @@ match customer {
 Example:
 
 ```LogicN
-match result {
-  Ok(order) => return Ok(order)
+map(result) {
+  Ok(order)  => return Ok(order)
   Err(error) => return Err(error)
 }
 ```

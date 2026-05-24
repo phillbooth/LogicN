@@ -120,3 +120,104 @@ Do not repeat common safety rules.
 Do not hide authority.
 Do not let runtime behaviour be guessed.
 ```
+
+---
+
+## Good-Taste Architecture Rules
+
+Good design makes edge cases disappear rather than handling them specially.
+
+```text
+Good taste = design the model so edge cases disappear.
+```
+
+For LogicN:
+```text
+boundary input -> unsafe unvalidated
+validated input -> safe validated
+effects -> declared once
+authority -> checked by plan
+runtime -> follows simple manifests
+```
+
+### Rule 1: No Special-Case Paths
+
+Avoid separate handling for API, webhook, CLI, and queue input. Model them all as:
+
+```logicn
+Boundary<T> -> T unsafe unvalidated
+```
+
+One model covers all boundary types.
+
+### Rule 2: Keep Authority Flat
+
+Avoid nested permission logic inside flows. Use a prepared authority plan:
+
+```text
+flow -> effects -> runtime authority plan -> allow/deny
+```
+
+### Rule 3: Avoid Deep Nesting
+
+Prefer early exits and pattern matching:
+
+```logicn
+map(validate.email(rawEmail)) {
+  Err(error) => return Api.badRequest(error)
+  Ok(email)  => save(email)
+}
+```
+
+### Rule 4: Small Focused Flows
+
+Instead of one large flow that does everything:
+
+```logicn
+// Avoid: one flow doing validation, pricing, payment, stock, email, audit
+secure flow handleCheckout(...) { ... }
+```
+
+Prefer small composed flows:
+
+```text
+validateCheckout
+priceOrder
+reserveStock
+capturePayment
+writeAudit
+```
+
+### Rule 5: Simple Data Structures
+
+Use manifests and tables rather than runtime discovery:
+
+```text
+route table
+type manifest
+effect graph
+authority plan
+decoder plan
+```
+
+Prefer a plan that is computed once and followed, over conditional branches that
+re-discover state at runtime.
+
+### Rule 6: Make Edge Cases Impossible
+
+The type system should remove entire categories of errors:
+
+```text
+Option<T>                       — removes null reference errors
+Result<T, E>                    — removes hidden exceptions
+Enum exhaustive match           — removes missing-branch errors
+String unsafe unvalidated       — removes untrusted-input ambiguity
+Email safe validated            — removes mixing validated/unvalidated values
+Brand<String, "CustomerId">     — removes ID mixing errors
+```
+
+```text
+Design the type/runtime model so the boring path is also the safe path.
+```
+
+This is the "good taste" version of LogicN architecture.

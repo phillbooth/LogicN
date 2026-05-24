@@ -435,6 +435,84 @@ must not be treated as implemented app functionality.
   while types, missing values, errors, effects, package authority, dynamic
   execution, imports, JSON decoding, native interop and secret output remain
   explicit, checked and reportable.
+
+## Postfix Type State Requirements
+
+- LogicN must use postfix state syntax: base type first, governance state second
+  (`String unsafe`, `Email safe validated`). The base type is the primary
+  mental anchor; state qualifiers describe how the value may flow.
+- v1 state set must be: `safe`, `unsafe`, `validated`, `unvalidated`. `secure`
+  is reserved for declarations (`secure flow`), not variable state in v1.
+- Unmarked values must be treated as ordinary safe values unless they originate
+  from an unsafe, secure or untrusted source. Requiring state annotations on
+  all values would be too noisy.
+- State must not change through assignment. A value with a restrictive or risky
+  state cannot flow into an ordinary value without an approved transition
+  (validator, sanitizer, declassification method).
+- The compiler must reject `let safe: Email safe validated = rawEmail` where
+  `rawEmail` is `String unsafe unvalidated` without a validator call.
+- `sanitized` must not be added as a core v1 state. Redaction and sanitization
+  are context-dependent; a value may be safe for HTML but unsafe for SQL.
+
+## Branded Type Requirements
+
+- LogicN must support branded types using `Brand<T, "Name">` syntax:
+  `type CustomerId = Brand<String, "CustomerId">`.
+- Branded types must be compile-time distinct but runtime-erased to their base
+  type. The compiler rejects mixing `CustomerId` and `OrderId` even though both
+  are `String` at runtime.
+- External values must be validated before becoming branded domain types. Direct
+  assignment from an unbranded `String` to a branded type must be a compile error.
+- Brands must compose with postfix state qualifiers:
+  `type SessionToken = Brand<String secure, "SessionToken">`.
+- A brand alone does not validate format. Format validation must be done through
+  a separate constructor or validator flow.
+- The type manifest must include brand entries so runtime and schema tools can
+  understand the domain identity of values.
+
+## Enum Syntax Requirements
+
+- Enum declarations must use PascalCase names and PascalCase cases.
+- The parser must accept both newline-separated and comma-separated cases.
+  The formatter must output the canonical newline-separated form.
+- Enums must be closed by default. Unknown external values must fail closed at
+  governed boundaries unless a boundary policy explicitly allows a fallback.
+- JSON/API encoding must use case names as strings by default.
+- Exhaustive `map` matching over enums must be compiler-enforced.
+- Payload variants (`Paid(PaymentId)`) and explicit wire values (`Paid = "paid"`)
+  are deferred future features.
+
+## Build System Requirements
+
+- `logicn build` must produce an execution contract, not only an executable. The
+  contract includes: type manifest, effect manifest, authority manifest, route
+  table, runtime plan, source maps, and structured reports.
+- `logicn deploy` must consume a verified build manifest. It must not rebuild by
+  default. The deploy step proves the environment accepts the package.
+- Every build must produce a `build-manifest.json` with source hash, artefact
+  hashes, and links to all generated manifests.
+- Deploy must support `--plan` dry-run mode that shows what would be deployed
+  without changing infrastructure.
+- Deploy must verify required secrets exist without printing them. Secrets must
+  never be embedded in compiled artefacts unless an explicit policy permits it.
+- Build phases must produce plain data and remain independently verifiable.
+- Incremental build outputs must be equivalent to clean builds. Correctness
+  overrides caching speed.
+- Runtime policy may deny deployment even if the build succeeds. Compile-time
+  approval does not imply runtime permission.
+
+## Unified Authority Requirements
+
+- LogicN must treat authority as layered: compile time proves intent, runtime
+  governs effects.
+- Boundaries must degrade authority: all external input (HTTP, queue, file, AI,
+  plugin) must start as `unsafe unvalidated`. Validation must restore trust.
+- Runtime denial is not a failure of the type system. It is correct layered
+  authority. Compiler approval does not imply runtime permission.
+- The type manifest must function as a runtime governance asset, not merely
+  metadata. The runtime must use it to pre-plan type contracts before execution.
+- Authority must be observable. The runtime must be able to report which effects
+  a flow declared, which were granted, and which were denied.
 - Future cache-aware memory work should support contiguous arrays, fixed-size
   buffers, read-only views, copy-on-write for large values, explicit clone
   warnings, hot/cold data separation, structure-of-arrays layouts,

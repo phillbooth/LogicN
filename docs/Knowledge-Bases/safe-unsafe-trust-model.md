@@ -103,14 +103,39 @@ unsafe -> validate/sanitise -> safe -> usable
 
 Not: `unsafe -> use while still marked unsafe`
 
+## Postfix State Syntax
+
+LogicN uses postfix state syntax: the base type is written first, the state
+qualifier second. This keeps the base type as the developer's primary mental anchor.
+
+```logicn
+let input:  String  unsafe             = request.body("name")
+let secret: String  secure             = env.secret("APP_SECRET")
+let email:  Email   safe   validated   = validate.email(rawEmail)
+let raw:    Json    unsafe unvalidated = boundary.api.body(req)
+```
+
+This avoids wrapper type proliferation:
+
+```text
+// Without postfix state — need many wrapper types:
+SecureString, UnsafeString, ValidatedString, UnsafeJson, ValidatedJson
+
+// With postfix state — base type stays reusable:
+String secure, String unsafe, String validated, Json unsafe, Json validated
+```
+
+v1 state set: `safe`, `unsafe`, `validated`, `unvalidated`.
+See `postfix-type-state-syntax.md` for the full specification.
+
 ## Code Examples
 
 Invalid — unsafe participating in arithmetic:
 
 ```logicn
-let price: unsafe Decimal = request.price
-let tax: safe Decimal = 20
-let total = price + tax
+let price: Decimal unsafe = request.price
+let tax:   Decimal safe   = 20
+let total = price + tax    // compile error
 ```
 
 Compiler error:
@@ -124,25 +149,25 @@ Validate or sanitise before use.
 Correct:
 
 ```logicn
-let raw_price: unsafe Decimal = request.price
-let price: safe Decimal = validate.decimal(raw_price)
-let tax: safe Decimal = 20
-let total: safe Decimal = price + tax
+let raw_price: Decimal unsafe = request.price
+let price:     Decimal safe   = validate.decimal(raw_price)
+let tax:       Decimal safe   = 20
+let total:     Decimal safe   = price + tax
 ```
 
 String example — correct:
 
 ```logicn
-let raw_name: unsafe String = request.name
-let name: safe String = sanitise.text(raw_name)
-let greeting: safe String = "Hello " + name
+let raw_name: String unsafe = request.name
+let name:     String safe   = sanitise.text(raw_name)
+let greeting: String safe   = "Hello " + name
 ```
 
 Database example — correct:
 
 ```logicn
-let raw_query: unsafe String = request.query
-let query: safe DatabaseString = database.escape(raw_query)
+let raw_query: String         unsafe = request.query
+let query:     DatabaseString safe   = database.escape(raw_query)
 database.run(query)
 ```
 

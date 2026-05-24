@@ -169,10 +169,213 @@ It is optional when:
 the map covers all known variants of an enum exhaustively
 ```
 
+## Governance and Validation Patterns
+
+### Validation Workflow
+
+```logicn
+let rawEmail: String unsafe unvalidated = form.email
+
+map(validate.email(rawEmail)) {
+  Ok(email) => {
+    let safeEmail: Email safe validated = email
+    saveCustomer(safeEmail)
+  }
+  Err(InvalidEmail) => return Api.badRequest("Invalid email")
+}
+```
+
+State pipeline: `unsafe unvalidated -> safe validated`
+
+### API Boundary Matching
+
+```logicn
+secure flow createCustomer(req: Request) -> ApiResponse {
+  let body: Json unsafe unvalidated = boundary.api.body(req)
+
+  map(validate.customer(body)) {
+    Ok(customerInput) => {
+      map(saveCustomer(customerInput)) {
+        Ok(customer)        => Api.created(customer)
+        Err(DatabaseFailure) => Api.retryLater()
+      }
+    }
+    Err(ValidationError) => Api.badRequest()
+  }
+}
+```
+
+### Decision Matching
+
+```logicn
+enum Decision { Allow, Deny, Review }
+
+map(fraudDecision(order)) {
+  Allow  => capturePayment(order)
+  Deny   => cancelOrder(order)
+  Review => queueManualReview(order)
+}
+```
+
+`Bool` cannot express the difference between deny, review, unknown, blocked,
+and not applicable. Use `Decision` instead.
+
+### Permission Matching
+
+```logicn
+enum AuthDecision { Allow, Deny, RequireMFA }
+
+map(authorize(user, action)) {
+  Allow      => executeAction()
+  Deny       => Api.forbidden()
+  RequireMFA => Api.mfaRequired()
+}
+```
+
+### Workflow State Machine
+
+```logicn
+enum OrderWorkflow {
+  Draft
+  AwaitingPayment
+  Paid
+  Packed
+  Shipped
+  Cancelled
+}
+
+map(order.workflow) {
+  Draft          => allowEdits(order)
+  AwaitingPayment => sendReminder(order)
+  Paid           => queuePacking(order)
+  Packed         => notifyCourier(order)
+  Shipped        => archive(order)
+  Cancelled      => stopWorkflow(order)
+}
+```
+
+### Validation Error Matching
+
+```logicn
+enum ValidationError {
+  MissingField
+  InvalidEmail
+  InvalidPhone
+  WeakPassword
+}
+
+map(validate.registration(input)) {
+  Ok(data)                => createAccount(data)
+  Err(MissingField)       => Api.badRequest("Missing field")
+  Err(InvalidEmail)       => Api.badRequest("Invalid email")
+  Err(InvalidPhone)       => Api.badRequest("Invalid phone")
+  Err(WeakPassword)       => Api.badRequest("Weak password")
+}
+```
+
+### Runtime Mode Matching
+
+```logicn
+enum RuntimeMode { Checked, Compiled, Development }
+
+map(runtime.mode()) {
+  Checked     => enableAuditTracing()
+  Compiled    => enableOptimizedExecution()
+  Development => enableDebugTools()
+}
+```
+
+## Future Patterns
+
+### Wildcard
+
+```logicn
+// Future — not v1
+map(status) {
+  Paid => complete()
+  _    => hold()
+}
+```
+
+Wildcards must still support exhaustiveness analysis. v1 avoids wildcards unless
+the compiler can prove exhaustiveness.
+
+### Tuple / Multi-Value
+
+```logicn
+// Future — not v1
+map(paymentStatus, shipmentStatus) {
+  (Paid, Queued)    => startPacking()
+  (Paid, Delivered) => completeOrder()
+  (Pending, _)      => holdOrder()
+  (Failed, _)       => cancelOrder()
+}
+```
+
+### Destructuring
+
+```logicn
+// Future — not v1
+map(apiResponse) {
+  Ok(Customer { email }) => sendReceipt(email)
+  Err(error)             => log(error)
+}
+```
+
+### Guards
+
+```logicn
+// Future — not v1
+map(order) {
+  Order { total } if total > 1000 => requireManagerApproval()
+  Order { total }                 => autoApprove()
+}
+```
+
+## Grammar Sketch
+
+```text
+MatchExpression
+  = "map" "(" Expression ")" MatchBody ElseBranch?
+
+MatchBody
+  = "{" MatchArm+ "}"
+
+MatchArm
+  = Pattern "=>" ExpressionOrBlock
+
+Pattern
+  = Identifier
+  | VariantPattern
+
+VariantPattern
+  = VariantName
+  | VariantName "(" Identifier ")"
+```
+
+Future expansion:
+```text
+TuplePattern
+ObjectPattern
+WildcardPattern
+GuardPattern
+```
+
+## Compiler Diagnostics
+
+```text
+LNN-ERR-TYPE-003: Non-exhaustive map — missing cases: Pending, Refunded
+LNN-WARN-DEAD:    Unreachable match arm
+LNN-ERR-DUP:      Duplicate match arm
+LNN-ERR-VARIANT:  Invalid variant name for enum PaymentStatus
+```
+
 ## Core Principle
 
 ```text
 map replaces switch, case, and elseif.
 The else block is the explicit catch-all — never implicit.
 Exhaustive enum matching is compiler-enforced.
+Pattern matching supports governance — it makes state transitions,
+validation workflows, and security decisions explicit and auditable.
 ```
