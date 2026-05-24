@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-05-20T10:59:19.205Z",
+  "generatedAt": "2026-05-24T09:54:45.413Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -1074,6 +1074,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/ai-as-untrusted-reasoning-worker.md",
+      "kind": "Document",
+      "label": "ai-as-untrusted-reasoning-worker.md",
+      "sourcePath": "docs/Knowledge-Bases/ai-as-untrusted-reasoning-worker.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/ai-compute-plan.md",
       "kind": "Document",
       "label": "ai-compute-plan.md",
@@ -1092,6 +1101,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/ai-understandable-architecture-policy.md",
+      "kind": "Document",
+      "label": "ai-understandable-architecture-policy.md",
+      "sourcePath": "docs/Knowledge-Bases/ai-understandable-architecture-policy.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/architecture-charter.md",
       "kind": "Document",
       "label": "architecture-charter.md",
@@ -1101,10 +1119,28 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/audit-actor-model.md",
+      "kind": "Document",
+      "label": "audit-actor-model.md",
+      "sourcePath": "docs/Knowledge-Bases/audit-actor-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/benchmark-success-plan.md",
       "kind": "Document",
       "label": "benchmark-success-plan.md",
       "sourcePath": "docs/Knowledge-Bases/benchmark-success-plan.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md",
+      "kind": "Document",
+      "label": "bit-width-and-base64-asset-policy.md",
+      "sourcePath": "docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md",
       "tags": [
         "document"
       ]
@@ -1128,6 +1164,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/builtin-view-levels.md",
+      "kind": "Document",
+      "label": "builtin-view-levels.md",
+      "sourcePath": "docs/Knowledge-Bases/builtin-view-levels.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/capabilities.md",
       "kind": "Document",
       "label": "capabilities.md",
@@ -1137,10 +1182,55 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/certified-package-registry.md",
+      "kind": "Document",
+      "label": "certified-package-registry.md",
+      "sourcePath": "docs/Knowledge-Bases/certified-package-registry.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/compile-time-metadata-reflection.md",
+      "kind": "Document",
+      "label": "compile-time-metadata-reflection.md",
+      "sourcePath": "docs/Knowledge-Bases/compile-time-metadata-reflection.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/compute-balancer.md",
+      "kind": "Document",
+      "label": "compute-balancer.md",
+      "sourcePath": "docs/Knowledge-Bases/compute-balancer.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/context-tagged-verified-execution-cache.md",
+      "kind": "Document",
+      "label": "context-tagged-verified-execution-cache.md",
+      "sourcePath": "docs/Knowledge-Bases/context-tagged-verified-execution-cache.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/core-application-model.md",
       "kind": "Document",
       "label": "core-application-model.md",
       "sourcePath": "docs/Knowledge-Bases/core-application-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/data-visibility-view-terminology.md",
+      "kind": "Document",
+      "label": "data-visibility-view-terminology.md",
+      "sourcePath": "docs/Knowledge-Bases/data-visibility-view-terminology.md",
       "tags": [
         "document"
       ]
@@ -1182,10 +1272,46 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/explicit-mutation-and-vault-writes.md",
+      "kind": "Document",
+      "label": "explicit-mutation-and-vault-writes.md",
+      "sourcePath": "docs/Knowledge-Bases/explicit-mutation-and-vault-writes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/fast-response-and-keep-alive.md",
       "kind": "Document",
       "label": "fast-response-and-keep-alive.md",
       "sourcePath": "docs/Knowledge-Bases/fast-response-and-keep-alive.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/field-read-rules.md",
+      "kind": "Document",
+      "label": "field-read-rules.md",
+      "sourcePath": "docs/Knowledge-Bases/field-read-rules.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/generative-runtime-mapper.md",
+      "kind": "Document",
+      "label": "generative-runtime-mapper.md",
+      "sourcePath": "docs/Knowledge-Bases/generative-runtime-mapper.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/governed-execution-director.md",
+      "kind": "Document",
+      "label": "governed-execution-director.md",
+      "sourcePath": "docs/Knowledge-Bases/governed-execution-director.md",
       "tags": [
         "document"
       ]
@@ -1254,6 +1380,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/memory-pressure-security.md",
+      "kind": "Document",
+      "label": "memory-pressure-security.md",
+      "sourcePath": "docs/Knowledge-Bases/memory-pressure-security.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/model-security-contracts.md",
       "kind": "Document",
       "label": "model-security-contracts.md",
@@ -1272,6 +1407,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/multi-actor-audit-events.md",
+      "kind": "Document",
+      "label": "multi-actor-audit-events.md",
+      "sourcePath": "docs/Knowledge-Bases/multi-actor-audit-events.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/no-inheritance-explicit-security.md",
       "kind": "Document",
       "label": "no-inheritance-explicit-security.md",
@@ -1285,6 +1429,15 @@
       "kind": "Document",
       "label": "node-hosted-runtime-roadmap.md",
       "sourcePath": "docs/Knowledge-Bases/node-hosted-runtime-roadmap.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/package-resolver.md",
+      "kind": "Document",
+      "label": "package-resolver.md",
+      "sourcePath": "docs/Knowledge-Bases/package-resolver.md",
       "tags": [
         "document"
       ]
@@ -1326,6 +1479,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/preplanned-startup-and-fast-response.md",
+      "kind": "Document",
+      "label": "preplanned-startup-and-fast-response.md",
+      "sourcePath": "docs/Knowledge-Bases/preplanned-startup-and-fast-response.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/priority-categories.md",
       "kind": "Document",
       "label": "priority-categories.md",
@@ -1344,6 +1506,24 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/runtime-policy-config.md",
+      "kind": "Document",
+      "label": "runtime-policy-config.md",
+      "sourcePath": "docs/Knowledge-Bases/runtime-policy-config.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/runtime-terminology-evolution.md",
+      "kind": "Document",
+      "label": "runtime-terminology-evolution.md",
+      "sourcePath": "docs/Knowledge-Bases/runtime-terminology-evolution.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/scoped-vaults.md",
       "kind": "Document",
       "label": "scoped-vaults.md",
@@ -1353,10 +1533,28 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/secure-by-default-syntax-principles.md",
+      "kind": "Document",
+      "label": "secure-by-default-syntax-principles.md",
+      "sourcePath": "docs/Knowledge-Bases/secure-by-default-syntax-principles.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/securely-governed-runtime.md",
       "kind": "Document",
       "label": "securely-governed-runtime.md",
       "sourcePath": "docs/Knowledge-Bases/securely-governed-runtime.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/security-invariants-and-policy-proof.md",
+      "kind": "Document",
+      "label": "security-invariants-and-policy-proof.md",
+      "sourcePath": "docs/Knowledge-Bases/security-invariants-and-policy-proof.md",
       "tags": [
         "document"
       ]
@@ -1380,10 +1578,55 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/standard-view-behaviour.md",
+      "kind": "Document",
+      "label": "standard-view-behaviour.md",
+      "sourcePath": "docs/Knowledge-Bases/standard-view-behaviour.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/startup-and-boot-warmup.md",
       "kind": "Document",
       "label": "startup-and-boot-warmup.md",
       "sourcePath": "docs/Knowledge-Bases/startup-and-boot-warmup.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/terminology-naming-philosophy.md",
+      "kind": "Document",
+      "label": "terminology-naming-philosophy.md",
+      "sourcePath": "docs/Knowledge-Bases/terminology-naming-philosophy.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/trust-conversion-and-data-safety.md",
+      "kind": "Document",
+      "label": "trust-conversion-and-data-safety.md",
+      "sourcePath": "docs/Knowledge-Bases/trust-conversion-and-data-safety.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/untrusted-file-asset-processing.md",
+      "kind": "Document",
+      "label": "untrusted-file-asset-processing.md",
+      "sourcePath": "docs/Knowledge-Bases/untrusted-file-asset-processing.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/variable-mutation-vault-design.md",
+      "kind": "Document",
+      "label": "variable-mutation-vault-design.md",
+      "sourcePath": "docs/Knowledge-Bases/variable-mutation-vault-design.md",
       "tags": [
         "document"
       ]
@@ -2268,6 +2511,16 @@
       ]
     },
     {
+      "id": "doc:packages-logicn/logicn-core/docs/ai-understandable-architecture-policy.md",
+      "kind": "Document",
+      "label": "ai-understandable-architecture-policy.md",
+      "sourcePath": "packages-logicn/logicn-core/docs/ai-understandable-architecture-policy.md",
+      "tags": [
+        "document",
+        "logicn-core"
+      ]
+    },
+    {
       "id": "doc:packages-logicn/logicn-core/docs/api-data-security-and-load-control.md",
       "kind": "Document",
       "label": "api-data-security-and-load-control.md",
@@ -2338,6 +2591,16 @@
       ]
     },
     {
+      "id": "doc:packages-logicn/logicn-core/docs/certified-package-registry.md",
+      "kind": "Document",
+      "label": "certified-package-registry.md",
+      "sourcePath": "packages-logicn/logicn-core/docs/certified-package-registry.md",
+      "tags": [
+        "document",
+        "logicn-core"
+      ]
+    },
+    {
       "id": "doc:packages-logicn/logicn-core/docs/compiler-backends.md",
       "kind": "Document",
       "label": "compiler-backends.md",
@@ -2372,6 +2635,16 @@
       "kind": "Document",
       "label": "concurrency.md",
       "sourcePath": "packages-logicn/logicn-core/docs/concurrency.md",
+      "tags": [
+        "document",
+        "logicn-core"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core/docs/context-tagged-verified-execution-cache.md",
+      "kind": "Document",
+      "label": "context-tagged-verified-execution-cache.md",
+      "sourcePath": "packages-logicn/logicn-core/docs/context-tagged-verified-execution-cache.md",
       "tags": [
         "document",
         "logicn-core"
@@ -2778,6 +3051,16 @@
       ]
     },
     {
+      "id": "doc:packages-logicn/logicn-core/docs/package-resolver.md",
+      "kind": "Document",
+      "label": "package-resolver.md",
+      "sourcePath": "packages-logicn/logicn-core/docs/package-resolver.md",
+      "tags": [
+        "document",
+        "logicn-core"
+      ]
+    },
+    {
       "id": "doc:packages-logicn/logicn-core/docs/package-use-registry.md",
       "kind": "Document",
       "label": "package-use-registry.md",
@@ -2902,6 +3185,16 @@
       "kind": "Document",
       "label": "security-first-build-system.md",
       "sourcePath": "packages-logicn/logicn-core/docs/security-first-build-system.md",
+      "tags": [
+        "document",
+        "logicn-core"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core/docs/security-invariants-and-policy-proof.md",
+      "kind": "Document",
+      "label": "security-invariants-and-policy-proof.md",
+      "sourcePath": "packages-logicn/logicn-core/docs/security-invariants-and-policy-proof.md",
       "tags": [
         "document",
         "logicn-core"
@@ -3282,6 +3575,16 @@
       "kind": "Document",
       "label": "tri-logic.md",
       "sourcePath": "packages-logicn/logicn-core/docs/tri-logic.md",
+      "tags": [
+        "document",
+        "logicn-core"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core/docs/trust-conversion-and-data-safety.md",
+      "kind": "Document",
+      "label": "trust-conversion-and-data-safety.md",
+      "sourcePath": "packages-logicn/logicn-core/docs/trust-conversion-and-data-safety.md",
       "tags": [
         "document",
         "logicn-core"
@@ -9618,6 +9921,16 @@
       ]
     },
     {
+      "id": "doc:packages-logicn/logicn-core-cli/package-lock.json",
+      "kind": "Document",
+      "label": "package-lock.json",
+      "sourcePath": "packages-logicn/logicn-core-cli/package-lock.json",
+      "tags": [
+        "report",
+        "logicn-core-cli"
+      ]
+    },
+    {
       "id": "doc:packages-logicn/logicn-core-cli/package.json",
       "kind": "Document",
       "label": "package.json",
@@ -9895,6 +10208,16 @@
       "tags": [
         "report",
         "logicn-core-cli"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-tasks/package-lock.json",
+      "kind": "Document",
+      "label": "package-lock.json",
+      "sourcePath": "packages-logicn/logicn-core-tasks/package-lock.json",
+      "tags": [
+        "report",
+        "logicn-core-tasks"
       ]
     },
     {
@@ -10332,6 +10655,16 @@
       "kind": "Document",
       "label": "logicn-devtools-project-graph.json",
       "sourcePath": "packages-logicn/logicn-devtools-project-graph/examples/logicn-devtools-project-graph.json",
+      "tags": [
+        "report",
+        "logicn-devtools-project-graph"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-devtools-project-graph/package-lock.json",
+      "kind": "Document",
+      "label": "package-lock.json",
+      "sourcePath": "packages-logicn/logicn-devtools-project-graph/package-lock.json",
       "tags": [
         "report",
         "logicn-devtools-project-graph"
@@ -12789,6 +13122,139 @@
       "evidencePath": "docs/Knowledge-Bases/benchmark-success-plan.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md",
+      "to": "package:logicn-core-vector",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md",
+      "to": "package:logicn-core-compute",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md",
+      "to": "package:logicn-ai",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md",
+      "to": "package:logicn-ai-lowbit",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md",
+      "to": "package:logicn-target-cpu",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md",
+      "to": "package:logicn-target-wasm",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md",
+      "to": "package:logicn-target-gpu",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md",
+      "to": "package:logicn-target-ai-accelerator",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md",
+      "to": "package:logicn-target-photonic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/generative-runtime-mapper.md",
+      "to": "package:logicn-ai",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/generative-runtime-mapper.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/preplanned-startup-and-fast-response.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/preplanned-startup-and-fast-response.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/preplanned-startup-and-fast-response.md",
+      "to": "package:logicn-core-runtime",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/preplanned-startup-and-fast-response.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/preplanned-startup-and-fast-response.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/preplanned-startup-and-fast-response.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/preplanned-startup-and-fast-response.md",
+      "to": "package:logicn-ai",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/preplanned-startup-and-fast-response.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/preplanned-startup-and-fast-response.md",
+      "to": "package:logicn-data",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/preplanned-startup-and-fast-response.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/preplanned-startup-and-fast-response.md",
+      "to": "package:logicn-data-search",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/preplanned-startup-and-fast-response.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/preplanned-startup-and-fast-response.md",
+      "to": "package:logicn-target-gpu",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/preplanned-startup-and-fast-response.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/preplanned-startup-and-fast-response.md",
+      "to": "package:logicn-framework-app-kernel",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/preplanned-startup-and-fast-response.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/startup-and-boot-warmup.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -15198,6 +15664,13 @@
     },
     {
       "from": "package:logicn-core",
+      "to": "doc:packages-logicn/logicn-core/docs/ai-understandable-architecture-policy.md",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core/docs/ai-understandable-architecture-policy.md"
+    },
+    {
+      "from": "package:logicn-core",
       "to": "doc:packages-logicn/logicn-core/docs/api-data-security-and-load-control.md",
       "kind": "owns",
       "confidence": "EXTRACTED",
@@ -15328,6 +15801,13 @@
       "kind": "owns",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core/docs/browser-dom-and-web-platform-primitives.md"
+    },
+    {
+      "from": "package:logicn-core",
+      "to": "doc:packages-logicn/logicn-core/docs/certified-package-registry.md",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core/docs/certified-package-registry.md"
     },
     {
       "from": "package:logicn-core",
@@ -15482,6 +15962,13 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "packages-logicn/logicn-core/docs/concurrency.md"
+    },
+    {
+      "from": "package:logicn-core",
+      "to": "doc:packages-logicn/logicn-core/docs/context-tagged-verified-execution-cache.md",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core/docs/context-tagged-verified-execution-cache.md"
     },
     {
       "from": "package:logicn-core",
@@ -16241,6 +16728,13 @@
     },
     {
       "from": "package:logicn-core",
+      "to": "doc:packages-logicn/logicn-core/docs/package-resolver.md",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core/docs/package-resolver.md"
+    },
+    {
+      "from": "package:logicn-core",
       "to": "doc:packages-logicn/logicn-core/docs/package-use-registry.md",
       "kind": "owns",
       "confidence": "EXTRACTED",
@@ -16710,6 +17204,13 @@
     },
     {
       "from": "package:logicn-core",
+      "to": "doc:packages-logicn/logicn-core/docs/security-invariants-and-policy-proof.md",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core/docs/security-invariants-and-policy-proof.md"
+    },
+    {
+      "from": "package:logicn-core",
       "to": "doc:packages-logicn/logicn-core/docs/security-model.md",
       "kind": "owns",
       "confidence": "EXTRACTED",
@@ -17106,6 +17607,13 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "packages-logicn/logicn-core/docs/tri-logic.md"
+    },
+    {
+      "from": "package:logicn-core",
+      "to": "doc:packages-logicn/logicn-core/docs/trust-conversion-and-data-safety.md",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core/docs/trust-conversion-and-data-safety.md"
     },
     {
       "from": "package:logicn-core",
@@ -24067,6 +24575,13 @@
     },
     {
       "from": "package:logicn-core-cli",
+      "to": "doc:packages-logicn/logicn-core-cli/package-lock.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-cli/package-lock.json"
+    },
+    {
+      "from": "package:logicn-core-cli",
       "to": "doc:packages-logicn/logicn-core-cli/package.json",
       "kind": "owns",
       "confidence": "EXTRACTED",
@@ -24330,6 +24845,13 @@
       "kind": "owns",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-cli/tsconfig.json"
+    },
+    {
+      "from": "package:logicn-core-tasks",
+      "to": "doc:packages-logicn/logicn-core-tasks/package-lock.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-tasks/package-lock.json"
     },
     {
       "from": "package:logicn-core-tasks",
@@ -24757,6 +25279,13 @@
       "kind": "owns",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-devtools-project-graph/examples/logicn-devtools-project-graph.json"
+    },
+    {
+      "from": "package:logicn-devtools-project-graph",
+      "to": "doc:packages-logicn/logicn-devtools-project-graph/package-lock.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-devtools-project-graph/package-lock.json"
     },
     {
       "from": "package:logicn-devtools-project-graph",
