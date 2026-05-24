@@ -85,6 +85,7 @@
   capabilities, effects, policies, audit and reports
 - [x] Document first-class layered policy architecture and policy report
   outputs
+- [x] Document system-level Runtime Policy Config defaults, controls, syntax and load lifecycle early in boot
 - [x] Document model views and data blocks as the safe simplification for
   model/request/response concepts
 - [x] Add a Hello World API pattern using data, flow, permission, route and

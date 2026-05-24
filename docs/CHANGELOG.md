@@ -6,6 +6,12 @@ All notable changes to this app should be documented here.
 
 ### Added
 
+- Added the Runtime Policy Config Knowledge Base concept and requirements,
+  defining a system-level configuration loaded early in the request/boot lifecycle
+  (`boot/main -> Runtime Policy Config -> Package Resolver -> Governance Checks -> Governed IR -> Runtime Execution`)
+  to define default environment constraints, security limits, budgets, package registry rules,
+  cache rules, allowed compute targets, and AI/tool permissions, while ensuring that local
+  permissions cannot exceed or override global runtime policy.
 - Added the Certified Package Registry Knowledge Base concept, defining a
   governed package source for signed, versioned, capability-declared,
   policy-rated packages; registry certification levels; lockfile evidence; and

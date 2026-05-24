@@ -2,3 +2,4 @@ build/target-cache/
 .logicn/capabilities.local.json
 .logicn/capabilities.local.*
 packages-logicn/logicn-core/examples/benchmark-results/*.json
+/NOTES TO COVER

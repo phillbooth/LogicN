@@ -220,8 +220,21 @@ workspace note is `docs/APP_CRASH_HANDLING. md`.
 
 The runtime architecture direction is the LogicN Securely Governed Runtime.
 
-Runtime authority must be established before code acts. Policy, capabilities,
-effects and audit hooks are part of execution itself, not optional middleware.
+Runtime authority must be established before code acts. This authority baseline is set by the Runtime Policy Config, which defines global environment rules, defaults, and boundaries. Policy, capabilities, effects and audit hooks are part of execution itself, not optional middleware. The system-level policy configuration must load early in the lifecycle:
+
+```text
+boot/main
+ -> Runtime Policy Config
+ -> Package Resolver
+ -> Governance Checks
+ -> Governed IR
+ -> Runtime Execution
+```
+
+Under this model, the runtime does not execute project code until the Runtime Policy Config is verified. Local permissions can only narrow or request authority within these global constraints; they can never exceed what the Runtime Policy Config allows. The policy configuration is kept strictly separated from `boot/main` startup wiring (which handles module registration and route loading).
+
+The concept lives in `docs/Knowledge-Bases/runtime-policy-config.md`.
+
 The runtime should separate a small trusted core, a governed runtime zone and an
 untrusted zone for plugins, third-party packages, external services,
 AI-generated code, unsafe interop and hardware accelerators.

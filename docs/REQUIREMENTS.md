@@ -188,6 +188,18 @@ must not be treated as implemented app functionality.
   live under `/policies`, local policy should be placed at the smallest useful
   boundary, and policy reports must include index, definitions, effective
   enforcement, conflicts and AI/human summaries.
+- LogicN must load a system-level Runtime Policy Config early in the request/boot
+  lifecycle (`boot/main -> Runtime Policy Config -> Package Resolver -> Governance Checks -> Governed IR -> Runtime Execution`)
+  before executing any project code. It serves as the runtime's default governance contract.
+- The Runtime Policy Config must define defaults and constraints for deny-by-default mode,
+  default view rules, audit settings, rate limits, budgets, package registry rules,
+  cache rules, vault backends, allowed compute targets, hardware trust levels, event rules,
+  secret handling, and AI/tool permissions.
+- Local permissions must not exceed or override global Runtime Policy Config rules
+  unless explicitly permitted by deployment policy.
+- The Runtime Policy Config must remain separated from `boot/main` startup wiring:
+  the policy config defines the rules of the environment, while `boot/main` declares
+  the entry point wiring and module loading.
 - LogicN encapsulation must be based on controlled data movement rather than
   public/private field visibility alone. Secure flow boundaries, explicit
   inputs and outputs, classification, response/view contracts, capabilities,
