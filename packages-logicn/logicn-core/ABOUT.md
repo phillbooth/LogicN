@@ -282,7 +282,7 @@ Original source:
   app/services/order-service.lln:42:7
 
 Suggestion:
-  Add a match case for Unknown.
+  Add a match branch for Unknown.
 ```
 
 This is essential for developer experience.

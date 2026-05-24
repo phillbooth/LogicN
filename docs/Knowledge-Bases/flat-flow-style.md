@@ -10,7 +10,7 @@ Deep nesting makes execution harder to audit, read and govern.
 ```text
 1. Maximum nesting depth: 2
 2. Prefer early return (guard clauses)
-3. Prefer map for multi-branch decisions
+3. Prefer match for multi-branch decisions
 4. Prefer small fn helpers for pure logic
 5. Prefer named flows for complex authorised steps
 6. Compiler warns on deep nesting
@@ -21,7 +21,7 @@ Compiler warning:
 ```text
 LNN-STYLE-012:
 Flow nesting exceeds recommended depth.
-Use early return, map, or extract a helper fn/flow.
+Use early return, match, or extract a helper fn/flow.
 ```
 
 ## Style Guide
@@ -31,7 +31,7 @@ Guard clauses first.
 Happy path last.
 No elseif.
 No switch.
-Use map for branches.
+Use match for branches.
 Use fn for pure helper logic.
 Use flow for authorised steps.
 ```
@@ -79,18 +79,16 @@ flow checkout(order: safe Order) -> Result {
 }
 ```
 
-## Multi-Branch Decisions with map
+## Multi-Branch Decisions with match
 
-For multiple outcomes, prefer `map` over chained conditionals:
+For multiple outcomes, prefer `match` over chained conditionals:
 
 ```logicn
-let decision = map(order.status) {
+let decision = match order.status {
   "invalid" => InvalidOrder
   "unpaid"  => PaymentRequired
   "empty"   => OutOfStock
-}
-else {
-  Ready
+  _ => Ready
 }
 
 if decision != Ready {

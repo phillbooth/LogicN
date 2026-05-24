@@ -24,6 +24,13 @@ adding post-v1 targets or domain package syntax.
 [ ] Define diagnostic format
 [ ] Define source-map contract
 [ ] Define compiler report output
+[ ] Define effect checker contract (what effects each function performs)
+[ ] Implement effect declaration validation (LLN-E4001, LLN-E4002)
+[ ] Implement compile-time effect restrictions (LLN-E4003)
+[ ] Define boundary checker contract (module/package/trust/runtime boundaries)
+[ ] Implement visibility boundary enforcement (LLN-E3004)
+[ ] Implement compile-time/runtime boundary enforcement (LLN-E4004)
+[ ] Implement package trust boundary enforcement (LLN-E4006)
 [ ] Parse at least 20 v1 .lln examples
 [ ] Reject post-v1 syntax with clear diagnostics
 [ ] Add examples

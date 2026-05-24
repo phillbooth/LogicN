@@ -262,7 +262,7 @@ Valid:
 ```LogicN
 match customer {
   Some(c) => process(c)
-  None => return Review("Customer missing")
+  None    => return Review("Customer missing")
 }
 ```
 
@@ -287,7 +287,7 @@ let customer: Option<Customer> = findCustomer(customerId)
 
 match customer {
   Some(c) => processCustomer(c)
-  None => return Review("Customer missing")
+  None    => return Review("Customer missing")
 }
 ```
 
@@ -337,7 +337,7 @@ flow loadOrder(id: OrderId) -> Result<Order, OrderError> {
 
   match order {
     Some(o) => return Ok(o)
-    None => return Err(OrderError.NotFound)
+    None    => return Err(OrderError.NotFound)
   }
 }
 ```
@@ -371,7 +371,7 @@ Example:
 ```LogicN
 secure flow accessDecision(user: User, resource: Resource) -> Decision {
   match policy.check(user, resource) {
-    Valid => ALOw
+    Valid   => ALOw
     Invalid => Deny
     Unknown => Review
   }

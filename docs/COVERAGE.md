@@ -1,7 +1,8 @@
 # LogicN Documentation Coverage
 
 This document tracks what has been documented, what needs more depth, and what
-is still missing across the three primary areas of the language specification.
+is still missing across the three primary areas of the language specification,
+plus the package documentation status.
 
 ```text
 ✅ Covered — dedicated KB file exists with full specification
@@ -19,12 +20,13 @@ Core language constructs, keywords, type system, declaration blocks.
 
 | Topic | Status | KB File |
 | --- | --- | --- |
-| Core keyword set (flow, fn, let, if, else, map, uses, each, attempt, none, release) | ✅ | `core-syntax-keywords.md` |
+| Core keyword set (flow, fn, let, if, else, match, uses, each, attempt, none, release) | ✅ | `core-syntax-keywords.md` |
 | Excluded keywords (switch, case, elseif, for, try/catch, null, async, await) | ✅ | `core-syntax-keywords.md`, `excluded-features.md` |
 | flow vs fn distinction | ✅ | `flow-vs-fn-security-model.md` |
 | Flat flow style (max depth 2, guard clauses) | ✅ | `flat-flow-style.md` |
-| Branching model (if/else, map) | ✅ | `branching-model.md` |
+| Branching model (if/else, match) | ✅ | `branching-model.md` |
 | Pattern matching (full) | ✅ | `pattern-matching.md` |
+| match catch-all (_ => arm) | ✅ | `match-catch-all-branch.md` |
 | task / wait (governed async) | ✅ | `async-task-model.md` |
 | release keyword | ✅ | `release-keyword.md` |
 | run worker syntax | ✅ | `governed-worker-pools.md`, `core-syntax-keywords.md` |
@@ -36,6 +38,7 @@ Core language constructs, keywords, type system, declaration blocks.
 | Topic | Status | KB File |
 | --- | --- | --- |
 | Primitive types (String, Int, Decimal, Float, Bool, None) | ✅ | `core-syntax-keywords.md` |
+| Auto — compile-time type inference keyword | ✅ | `auto-type-inference.md` |
 | safe / unsafe type qualifiers | ✅ | `safe-unsafe-trust-model.md` |
 | Context-specific safe types (safe Email, safe Url, etc.) | ✅ | `safe-unsafe-trust-model.md` |
 | Array<T> and string operations | ✅ | `arrays-and-string-operations.md` |
@@ -71,8 +74,8 @@ Core language constructs, keywords, type system, declaration blocks.
 | Extension point declaration | ✅ | `runtime-extension-points.md` |
 | Plugin declaration | ✅ | `plugin-security-architecture.md` |
 | Boot / main / runtime / compile / security blocks | ✅ | `boot-main-startup-defaults.md` |
-| Import / module system | ❌ | Not yet documented in KB |
-| Visibility (public/private) | ❌ | Not yet documented in KB |
+| Import / module system | ✅ | `module-system-and-visibility.md` |
+| Visibility (public/private) | ✅ | `module-system-and-visibility.md` |
 | Package declaration syntax | ✅ | `package-declaration-syntax.md` |
 
 ### Trust Conversion Syntax
@@ -100,10 +103,10 @@ How programs reason, branch, handle errors, enforce permissions, and prove corre
 | Result<T,E> model (no exceptions) | ✅ | `no-exceptions-result-model.md`, `typed-error-model.md` |
 | attempt ... else error pattern | ✅ | `core-syntax-keywords.md` |
 | Guard clause pattern | ✅ | `flat-flow-style.md` |
-| Branching (if/else, map) | ✅ | `branching-model.md` |
+| Branching (if/else, match) | ✅ | `branching-model.md` |
 | Pattern matching (full) | ✅ | `pattern-matching.md` |
-| match catch-all / else | ✅ | `match-catch-all-branch.md` |
-| Error propagation through call chains | ❌ | Not yet documented |
+| match catch-all (_ =>) | ✅ | `match-catch-all-branch.md` |
+| Error propagation through call chains | ✅ | `error-propagation-chains.md` |
 
 ### Permissions and Authority
 
@@ -112,7 +115,7 @@ How programs reason, branch, handle errors, enforce permissions, and prove corre
 | uses declaration | ✅ | `flow-vs-fn-security-model.md`, `developer-friendly-permission-model.md` |
 | Permission / capability / actor model | ✅ | `permission-capability-actor-model.md` |
 | Developer-friendly permission model | ✅ | `developer-friendly-permission-model.md` |
-| Runtime vs compile-time authority | ✅ | `authority-model.md` |
+| Runtime vs compile-time authority | ✅ | `authority-model.md`, `compile-time-vs-runtime-authority.md` |
 | How authority propagates through flows | ✅ | `authority-model.md` |
 | Audit actor model | ✅ | `audit-actor-model.md` |
 | Multi-actor audit events | ✅ | `multi-actor-audit-events.md` |
@@ -254,43 +257,265 @@ Execution, scheduling, trust verification, identity, memory, hardware targets.
 | Observability and monitoring | ✅ | `observability-and-monitoring.md` |
 | Build system and logicn build / logicn deploy CLI | ✅ | `build-system-and-cli.md` |
 | Deployment model (build-once, deploy-many) | ✅ | `build-system-and-cli.md` |
-| CI/CD integration (OIDC, SLSA provenance, attestation) | ❌ | Not yet documented in KB |
-| Runtime audit log format | ❌ | Not yet documented in KB |
+| Good-taste architecture principles | ✅ | `architecture-good-taste-principles.md` |
+| CI/CD integration (OIDC, SLSA provenance, attestation) | ✅ | `cicd-integration-and-provenance.md` |
+| Runtime audit log format | ✅ | `runtime-audit-log-format.md` |
+| Effect checker and boundary checker | ✅ | `effect-checker-and-boundary-checker.md` |
+| Compile-time vs runtime authority boundary | ✅ | `compile-time-vs-runtime-authority.md` |
+
+---
+
+## 4. Package Documentation Coverage
+
+Status of documentation for `logicn-core` and the `logicn-core-*` family of packages.
+
+```text
+✅ README complete — scope, contracts, boundary and usage documented
+⚠️  README partial — exists but missing contracts, scope or examples
+❌ README missing — file does not exist or is a placeholder only
+```
+
+### logicn-core (Language Specification)
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| README.md | ✅ | Full language overview, quickstart, feature table |
+| syntax.md | ✅ | Canonical syntax reference — all keywords, types, patterns |
+| type-system.md | ✅ | Type system — primitives, Auto, Option, Result, Tri, generics |
+| security-model.md | ✅ | Trust model, postfix state, SecureString, webhook, API security |
+| language-rules.md | ✅ | Strict rules — no null, no truthy/falsy, exhaustive match |
+| memory-safety.md | ✅ | Ownership, lifecycle, resource scopes |
+| json-native-design.md | ✅ | JSON decode/encode, typed access, policy |
+| strict-comments.md | ✅ | `///` doc comments and `@tag` annotations |
+| ARCHITECTURE.md | ✅ | Package architecture overview |
+| DESIGN.md | ✅ | Design decisions and rationale |
+| SECURITY.md | ✅ | Security design and threat model |
+| REQUIREMENTS.md | ✅ | Formal requirements (REQ-*) |
+| ROADMAP.md | ✅ | Version roadmap 0.1.x → 1.0.0 |
+| AI-INSTRUCTIONS.md | ✅ | AI coding assistant guidance |
+| docs/syntax.md | ✅ | Mirror of syntax.md in docs/ |
+| docs/type-system.md | ✅ | Mirror of type-system.md in docs/ |
+| docs/security-model.md | ✅ | Mirror of security-model.md in docs/ |
+| docs/language-rules.md | ✅ | Mirror of language-rules.md in docs/ |
+| docs/memory-safety.md | ✅ | Mirror of memory-safety.md in docs/ |
+| docs/tri-logic.md | ✅ | Tri / Bool / Decision logic in depth |
+| docs/polymorphism.md | ✅ | Polymorphism model |
+| docs/syntax-logic-status.md | ✅ | Syntax feature status table |
+| docs/language-core-maturity-roadmap.md | ✅ | Language core maturity checklist |
+| examples/ | ✅ | hello, option, result, decision, payment-webhook, benchmarks |
+| compiler/logicn.js | ✅ | Node.js prototype compiler with parser, type checker, formatter |
+
+### logicn-core-runtime
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| README.md | ✅ | Scope, execution model, philosophy, contracts, phases documented |
+| TODO.md | ✅ | Work tracking |
+| src/ | ⚠️ | Implementation stubs — runtime contracts defined, not yet executed |
+| Execution contract model | ✅ | Documented in README — request → planning → verification → execution → audit |
+| Effect dispatch | ✅ | Listed in README scope |
+| Resilient flow supervision | ✅ | Listed in README scope |
+| Checkpoint / resume hooks | ✅ | Listed in README scope |
+| Node-hosted adapter contracts | ✅ | Listed in README scope |
+| Verified boot-profile loading | ✅ | Listed in README scope |
+| AI compute plan execution hooks | ✅ | Listed in README scope |
+| Runtime reports | ✅ | Listed in README scope |
+
+### logicn-core-security
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| README.md | ✅ | Scope, boundary, contracts fully documented |
+| TODO.md | ✅ | Work tracking |
+| src/ | ⚠️ | Implementation stubs |
+| SecureString / Secret<T> | ✅ | Contracts documented |
+| Redaction primitives | ✅ | Contracts documented |
+| Permission model types | ✅ | Contracts documented |
+| Capability lease and attenuation | ✅ | Contracts documented |
+| Crypto policy and post-quantum planning | ✅ | Contracts documented |
+| Security diagnostics / reports | ✅ | Contracts documented |
+| Taint-flow and safe-sink diagnostics | ✅ | Contracts documented |
+
+### logicn-core-compiler
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| README.md | ✅ | Scope documented |
+| TODO.md | ✅ | Work tracking |
+| src/ | ⚠️ | Implementation stubs — compiler pipeline defined but not complete |
+| Lexer | ✅ | Implemented prototype in logicn-core/compiler/ |
+| Parser | ✅ | Implemented prototype in logicn-core/compiler/ |
+| Type checker | ✅ | Implemented prototype in logicn-core/compiler/ |
+| Formatter | ✅ | Implemented prototype in logicn-core/compiler/ |
+| AST / source map | ✅ | Implemented prototype in logicn-core/compiler/ |
+| Effect checker | ⚠️ | Specified in KB (`effect-checker-and-boundary-checker.md`); not yet implemented |
+| Boundary checker | ⚠️ | Specified in KB (`effect-checker-and-boundary-checker.md`); not yet implemented |
+| Manifest generation | ⚠️ | JSON schema output exists; full manifest not yet |
+
+### logicn-core-cli
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| README.md | ✅ | Scope documented |
+| TODO.md | ✅ | Work tracking |
+| dist/ | ⚠️ | Compiled output present |
+| logicn check | ✅ | Prototype implemented |
+| logicn build | ⚠️ | Partial — artefact generation not complete |
+| logicn fmt | ✅ | Prototype implemented |
+| logicn verify | ⚠️ | Partial — hash checks only |
+| logicn deploy | ❌ | Not yet implemented — specified in `build-system-and-cli.md` |
+| logicn explain | ❌ | Not yet implemented — specified in `build-system-and-cli.md` |
+| logicn plan | ❌ | Not yet implemented — specified in `build-system-and-cli.md` |
+
+### logicn-core-logic
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| README.md | ✅ | Scope documented |
+| TODO.md | ✅ | Work tracking |
+| src/ | ⚠️ | Implementation stubs |
+| Tri logic operations | ⚠️ | Defined in KB; implementation stubs |
+| Decision logic | ⚠️ | Defined in KB; implementation stubs |
+| Bool boundary rules | ⚠️ | Defined in KB; implementation stubs |
+| Omni logic | ❌ | Planned; not yet implemented |
+
+### logicn-core-compute
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| README.md | ✅ | Scope documented |
+| TODO.md | ✅ | Work tracking |
+| src/ | ⚠️ | Implementation stubs |
+| Compute block model | ✅ | Documented in logicn-core docs |
+| GPU plan output | ⚠️ | Report format defined; backend not implemented |
+| Photonic plan output | ⚠️ | Report format defined; backend not implemented |
+| WASM target | ❌ | Not yet implemented |
+| Target compatibility report | ⚠️ | Partial implementation |
+
+### logicn-core-config
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| README.md | ✅ | Scope documented |
+| TODO.md | ✅ | Work tracking |
+| src/ | ⚠️ | Implementation stubs |
+| Environment config model | ⚠️ | Defined in KB; stubs only |
+| Secret reference model | ⚠️ | Defined in security package |
+| Runtime policy config | ✅ | Documented in KB — `runtime-policy-config.md` |
+
+### logicn-core-network
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| README.md | ✅ | Scope documented |
+| TODO.md | ✅ | Work tracking |
+| src/ | ⚠️ | Implementation stubs |
+| Network boundary policy | ✅ | Documented in KB — `network-boundary-policy.md` |
+| Rate limiting | ✅ | Documented in KB — `layered-rate-limits.md` |
+| API boundary contracts | ✅ | Documented in KB — `runtime-boundary-declarations.md` |
+| Webhook HMAC / idempotency | ⚠️ | Documented in logicn-core; network package stubs |
+
+### logicn-core-reports
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| README.md | ✅ | Scope documented |
+| TODO.md | ✅ | Work tracking |
+| src/ | ⚠️ | Implementation stubs |
+| Security report contracts | ✅ | Defined in logicn-core-security scope |
+| AI context report | ✅ | Documented in logicn-core (app.ai-context.json) |
+| Build / deployment reports | ✅ | Documented in `build-system-and-cli.md` |
+| Runtime audit log format | ⚠️ | Specified in KB (`runtime-audit-log-format.md`); schema not yet finalised in package |
+
+### logicn-core-tasks
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| README.md | ✅ | Scope documented |
+| TODO.md | ✅ | Work tracking |
+| dist/ | ⚠️ | Compiled output present |
+| Task / wait model | ✅ | Documented in KB — `async-task-model.md` |
+| Worker pool contracts | ✅ | Documented in KB — `governed-worker-pools.md` |
+| Cancellation policy | ✅ | Documented in KB — `controlled-parallelism.md` |
+
+### logicn-core-vector
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| README.md | ✅ | Scope documented |
+| TODO.md | ✅ | Work tracking |
+| src/ | ⚠️ | Implementation stubs |
+| Vector<N,T> / Matrix<R,C,T> | ✅ | Documented in KB — `numeric-and-compute-types.md` |
+| pure vector flow model | ✅ | Documented in logicn-core docs |
+
+### logicn-core-photonic
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| README.md | ✅ | Scope documented |
+| TODO.md | ✅ | Work tracking |
+| src/ | ⚠️ | Implementation stubs — planning layer only |
+| Photonic compute plan | ✅ | Documented in KB — `native-photonic-compute-future.md` |
+| Photonic resolution boundary | ✅ | Documented in KB — `photonic-resolution-boundary.md` |
+| Real photonic backend | ❌ | Not yet — planning only until hardware available |
 
 ---
 
 ## Summary: Remaining Gaps
 
-### Priority 1 — Core Syntax (2 items)
+### Priority 1 — Core Syntax (resolved)
 
 ```text
-❌ Import / module system syntax — how modules are imported and resolved in .lln
-❌ Visibility (public / private) — how symbols are scoped within modules/packages
+✅ Import / module system syntax — module-system-and-visibility.md
+✅ Visibility (public / private) — module-system-and-visibility.md
 ```
 
-### Priority 2 — Logic (1 item)
+### Priority 2 — Logic (resolved)
 
 ```text
-❌ Error propagation through call chains — how Result<T,E> propagates, attempt chaining
+✅ Error propagation through call chains — error-propagation-chains.md
 ```
 
-### Priority 3 — Runtime (2 items)
+### Priority 3 — Runtime (resolved)
 
 ```text
-❌ CI/CD integration (OIDC, SLSA provenance, attestation workflow)
-❌ Runtime audit log format — structured log schema
+✅ CI/CD integration (OIDC, SLSA provenance, attestation workflow) — cicd-integration-and-provenance.md
+✅ Runtime audit log format — runtime-audit-log-format.md (schema planned, not yet finalised)
+✅ Effect checker and boundary checker — effect-checker-and-boundary-checker.md (planned, not yet implemented)
+✅ Compile-time vs runtime authority — compile-time-vs-runtime-authority.md
+```
+
+### Priority 4 — Package Implementation (key gaps remaining)
+
+```text
+⚠️ logicn-core-compiler: effect checker and boundary checker — KB specified, implementation pending
+❌ logicn-core-cli: logicn deploy, logicn explain, logicn plan — specified in KB, not yet implemented
+⚠️ logicn-core-reports: runtime audit log schema not yet finalised in package
+❌ logicn-core-compute: GPU and photonic backends not yet implemented (planning only)
+❌ logicn-core-logic: Omni logic not yet implemented
 ```
 
 ---
 
 ## Knowledge Base File Count
 
-Total KB files: ~150
+Total KB files: ~161
 
 | Area | Files | Coverage |
 | --- | --- | --- |
-| Syntax | ~28 core files | Strong — gaps: import/module system, visibility |
-| Logic | ~33 core files | Strong — gap: error propagation patterns |
-| Runtime | ~57 core files | Strong — gaps: CI/CD, audit log format |
+| Syntax | ~30 core files | Strong — module/visibility now covered |
+| Logic | ~34 core files | Strong — error propagation now covered |
+| Runtime | ~62 core files | Strong — CI/CD, audit log, effects, boundaries now covered |
 | AI/Compute | ~15 files | Strong |
-| Cross-cutting | ~17 files | Strong |
+| Cross-cutting | ~21 files | Strong |
+| Architecture | ~4 files | Strong |
+
+New files added (this session):
+```text
+module-system-and-visibility.md
+error-propagation-chains.md
+cicd-integration-and-provenance.md
+runtime-audit-log-format.md
+effect-checker-and-boundary-checker.md
+compile-time-vs-runtime-authority.md
+```

@@ -68,16 +68,16 @@ type Actor =
 
 ```logicn
 match actor {
-  HumanUser(user) => return handleHuman(user)
-  ServiceAccount(service) => return handleService(service)
-  AiAgent(agent) => return handleAgent(agent)
+  HumanUser(user)          => return handleHuman(user)
+  ServiceAccount(service)  => return handleService(service)
+  AiAgent(agent)           => return handleAgent(agent)
 }
 ```
 
 Production direction:
 
 ```text
-Variant matches should be exhaustive unless a declared safe fallback is used.
+Variant maps should be exhaustive unless a declared safe fallback (else branch) is used.
 ```
 
 ## Generic Polymorphism

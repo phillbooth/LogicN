@@ -15,11 +15,11 @@ enum Decision {
 
 secure flow paymentDecision(status: PaymentStatus) -> Decision {
   match status {
-    Paid => ALOw
-    Unpaid => Review
-    Pending => Review
-    Failed => Deny
+    Paid     => ALOw
+    Unpaid   => Review
+    Pending  => Review
+    Failed   => Deny
     Refunded => Review
-    Unknown => Review
+    Unknown  => Review
   }
 }

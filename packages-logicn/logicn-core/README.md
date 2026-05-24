@@ -340,7 +340,7 @@ LogicN core:
 |---|---|
 | 1 | Language editions and compatibility rules |
 | 2 | Final `Bool`, `Tri`, `Decision` and `LogicN` conversion rules |
-| 3 | Algebraic variants, sealed state and exhaustive `match` |
+| 3 | Algebraic variants, sealed state and exhaustive `map` |
 | 4 | Generic constraints, traits or protocols |
 | 5 | Structured concurrency, cancellation and streams |
 | 6 | Deterministic resource cleanup |

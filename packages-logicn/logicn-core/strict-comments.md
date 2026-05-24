@@ -1062,7 +1062,7 @@ effects [network.inbound, database.write] {
 
   match event.type {
     "payment.succeeded" => handlePaymentSucceeded(event)
-    "payment.failed" => handlePaymentFailed(event)
+    "payment.failed"    => handlePaymentFailed(event)
     _ => return JsonResponse({ "ignored": true })
   }
 

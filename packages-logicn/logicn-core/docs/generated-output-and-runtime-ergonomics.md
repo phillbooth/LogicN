@@ -50,7 +50,7 @@ define a request type
 define a response type
 define a secure flow
 declare effects
-match Result and Option
+map Result and Option
 decode JSON into a typed contract
 return a typed response
 read generated reports

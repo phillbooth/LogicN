@@ -381,7 +381,7 @@ let customer: Option<Customer> = findCustomer(customerId)
 
 match customer {
   Some(c) => processCustomer(c)
-  None => return Review("Customer missing")
+  None    => return Review("Customer missing")
 }
 ```
 
@@ -403,7 +403,7 @@ flow loadOrder(id: OrderId) -> Result<Order, OrderError> {
 
   match order {
     Some(o) => return Ok(o)
-    None => return Err(OrderError.NotFound)
+    None    => return Err(OrderError.NotFound)
   }
 }
 ```
@@ -431,8 +431,8 @@ Example usage:
 ```LogicN
 secure flow checkPayment(status: PaymentStatus) -> Decision {
   match status {
-    Paid => ALOw
-    Failed => Deny
+    Paid    => ALOw
+    Failed  => Deny
     Pending => Review
     Unknown => Review
   }
@@ -502,28 +502,28 @@ Better when multiple states exist:
 ```LogicN
 match customer {
   Some(c) => process(c)
-  None => return Review("Customer missing")
+  None    => return Review("Customer missing")
 }
 ```
 
 ---
 
-## Match Design
+## match Design (Pattern Matching)
 
-LogicN should use `match` for exhaustive state handling.
+LogicN uses `match value { ... }` for exhaustive state handling.
 
 Example:
 
 ```LogicN
 match order.payment.status {
-  Paid => shipOrder(order)
+  Paid    => shipOrder(order)
   Pending => holdForReview(order)
-  Failed => cancelOrder(order)
+  Failed  => cancelOrder(order)
   Unknown => holdForReview(order)
 }
 ```
 
-The compiler should warn or fail if a match is not exhaustive.
+The compiler should warn or fail if a map is not exhaustive.
 
 ---
 
@@ -1017,7 +1017,7 @@ let result = await PaymentsApi.capturePayment(paymentId)
 
 match result {
   Ok(payment) => return Ok(payment)
-  Err(error) => return Err(error)
+  Err(error)  => return Err(error)
 }
 ```
 
@@ -1396,7 +1396,7 @@ Original source:
   app/services/order-service.lln:42:7
 
 Suggestion:
-  Add a match case for Unknown.
+  Add a match branch for Unknown.
 ```
 
 ---

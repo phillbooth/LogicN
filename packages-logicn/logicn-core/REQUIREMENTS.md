@@ -185,12 +185,12 @@ Breaking changes SHOULD be edition-gated.
 
 ---
 
-### REQ-EVOLUTION-003: Algebraic Variants and Exhaustive Match
+### REQ-EVOLUTION-003: Algebraic Variants and Exhaustive map
 
-LogicN SHOULD treat enums, sealed variants and exhaustive `match` as core language
+LogicN SHOULD treat enums, sealed variants and exhaustive `map` as core language
 safety features.
 
-The compiler SHOULD reject incomplete matches for closed state sets such as
+The compiler SHOULD reject incomplete maps for closed state sets such as
 `Option<T>`, `Result<T, E>`, `Decision`, `Tri` and declared sealed variants.
 
 ---
@@ -612,7 +612,7 @@ let customer: Option<Customer> = findCustomer(customerId)
 
 match customer {
   Some(c) => processCustomer(c)
-  None => return Review("Customer missing")
+  None    => return Review("Customer missing")
 }
 ```
 
@@ -650,7 +650,7 @@ flow loadOrder(id: OrderId) -> Result<Order, OrderError> {
 
   match order {
     Some(o) => return Ok(o)
-    None => return Err(OrderError.NotFound)
+    None    => return Err(OrderError.NotFound)
   }
 }
 ```
@@ -675,9 +675,9 @@ Valid:
 
 ```LogicN
 match order.payment.status {
-  Paid => shipOrder(order)
+  Paid    => shipOrder(order)
   Pending => holdForReview(order)
-  Failed => cancelOrder(order)
+  Failed  => cancelOrder(order)
   Unknown => holdForReview(order)
 }
 ```
@@ -1787,7 +1787,7 @@ Original source:
   app/services/order-service.lln:42:7
 
 Suggestion:
-  Add a match case for Unknown.
+  Add a map branch for Unknown.
 ```
 
 ---

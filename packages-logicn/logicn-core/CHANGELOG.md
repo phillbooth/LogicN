@@ -205,7 +205,7 @@ Example:
 - Added source-mapped lexer prototype in compiler/lexer.js and `LogicN tokens`.
 - Added basic formatter prototype in compiler/formatter.js and `LogicN fmt`.
 - Added `LogicN test` prototype smoke tests for hello, boot, formatter and target diagnostics.
-- Added strict type checker prototype for declared types, generic arity and exhaustive matches.
+- Added strict type checker prototype for declared types, generic arity and exhaustive match branches.
 - Added JSON Schema generator, `LogicN schema`, `LogicN openapi` and `app.schemas.json`.
 - Added `LogicN verify`, build output hashes and build-manifest schema.
 - Added `app.map-manifest.json`, generated docs under `build/docs` and docs-manifest verification.
@@ -450,7 +450,7 @@ Version `0.2.0` should introduce the first parser prototype.
 - enum definitions
 - let bindings
 - mut bindings
-- match expressions
+- match expressions (pattern matching)
 - simple imports
 ```
 

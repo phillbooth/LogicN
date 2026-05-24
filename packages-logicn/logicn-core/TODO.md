@@ -418,7 +418,7 @@ Reason for additions:
 [ ] Define pattern report schema
 [ ] Define pattern map-manifest entries
 [ ] Define UnsafeRegex production gates
-[x] Decide match syntax
+[x] Decide map syntax (pattern matching)
 [x] Decide if syntax
 [x] Decide loop syntax
 [x] Decide for syntax
@@ -473,7 +473,7 @@ Reason for additions:
 [x] Define rejected implicit conversion rules
 [x] Define type inference boundaries
 [x] Define compile-time shape checking
-[x] Define exhaustive match checks
+[x] Define exhaustive map checks
 ```
 
 ---
@@ -1178,7 +1178,7 @@ Reason for additions:
 [x] Add no-truthy/falsy checks
 [x] Add basic Option handling
 [x] Add basic Result handling
-[x] Add exhaustive match checks
+[x] Add exhaustive map checks
 [x] Add failure report output
 ```
 

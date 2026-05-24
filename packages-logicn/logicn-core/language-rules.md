@@ -205,7 +205,7 @@ let customer: Option<Customer> = findCustomer(customerId)
 
 match customer {
   Some(c) => processCustomer(c)
-  None => return Review("Customer missing")
+  None    => return Review("Customer missing")
 }
 ```
 
@@ -236,7 +236,7 @@ let email: Option<Email> = customer.email
 
 match email {
   Some(e) => sendEmail(e)
-  None => return Review("Customer email missing")
+  None    => return Review("Customer email missing")
 }
 ```
 
@@ -260,7 +260,7 @@ flow loadOrder(id: OrderId) -> Result<Order, OrderError> {
 
   match order {
     Some(o) => return Ok(o)
-    None => return Err(OrderError.NotFound)
+    None    => return Err(OrderError.NotFound)
   }
 }
 ```
@@ -310,7 +310,7 @@ Valid:
 ```LogicN
 match customer {
   Some(c) => process(c)
-  None => return Review("Customer missing")
+  None    => return Review("Customer missing")
 }
 ```
 
@@ -326,9 +326,9 @@ Valid:
 
 ```LogicN
 match order.payment.status {
-  Paid => shipOrder(order)
+  Paid    => shipOrder(order)
   Pending => holdForReview(order)
-  Failed => cancelOrder(order)
+  Failed  => cancelOrder(order)
   Unknown => holdForReview(order)
 }
 ```
@@ -403,28 +403,29 @@ Any conversion must be explicit and must name the policy being applied.
 
 ---
 
-## Rule 13: `match` Should Be Exhaustive
+## Rule 13: `map` Should Be Exhaustive
 
-LogicN should prefer exhaustive `match` expressions.
+LogicN uses `match value { ... }` for all multi-branch matching. Enum maps
+must be exhaustive — the compiler reports any missing cases.
 
-Example:
+Example (complete):
 
 ```LogicN
 match status {
-  Paid => ALOw
-  Failed => Deny
+  Paid    => ALOw
+  Failed  => Deny
   Pending => Review
   Unknown => Review
 }
 ```
 
-If a case is missing, the compiler should fail or warn depending on severity.
+If a case is missing, the compiler fails or warns depending on severity.
 
-Invalid:
+Invalid (incomplete):
 
 ```LogicN
 match status {
-  Paid => ALOw
+  Paid   => ALOw
   Failed => Deny
 }
 ```
@@ -436,7 +437,7 @@ Pending
 Unknown
 ```
 
-then the match is incomplete.
+then the map is incomplete. The compiler error must name the missing cases.
 
 ---
 
@@ -1077,7 +1078,7 @@ Original source:
   app/services/order-service.lln:42:7
 
 Suggestion:
-  Add a match case for Unknown.
+  Add a map branch for Unknown.
 ```
 
 LogicN should generate:

@@ -28,7 +28,7 @@ export interface ProductionPackageOverride {
   readonly expires?: string;
 }
 
-export interface ConfigPathMap {
+export interface ConfigPathmatch {
   readonly [name: string]: string;
 }
 

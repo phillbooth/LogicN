@@ -18,6 +18,11 @@
 [x] Add LogicN security:check command integration
 [x] Add LogicN routes command integration
 [x] Add LogicN task command integration with logicn-core-tasks
+[ ] Add LogicN deploy command integration (consumes build manifest, verifies artifact, deploys to target)
+[ ] Add LogicN explain command integration (explain build decisions, authority, effects)
+[ ] Add LogicN plan command integration (preview deployment actions without applying)
+[ ] Add LogicN verify deploy command integration (verify running version against build manifest)
+[ ] Add LogicN promote command integration (promote artifact across environments)
 [ ] Add environment mode config loading
 [ ] Add structured CLI errors
 [x] Add report summary output

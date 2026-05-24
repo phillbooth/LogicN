@@ -147,6 +147,22 @@ logicn trust verify --profile production
 logicn deploy        # deploy after trust verification
 ```
 
+## Beyond Phase 5: Ecosystem Expansion
+
+After full self-hosting is achieved, the platform may extend to:
+
+```text
+Multi-runtime support         — multiple concurrent runtime implementations
+Edge deployment support       — constrained edge and embedded targets
+Federated trust domains       — cross-organisation trust federation
+Third-party verification      — external tooling to verify LogicN artifacts
+Multi-language compilation    — additional source language frontends
+```
+
+These are future directions, not current requirements.
+
+---
+
 ## Reference Standards Applied at Phase 5
 
 ```text

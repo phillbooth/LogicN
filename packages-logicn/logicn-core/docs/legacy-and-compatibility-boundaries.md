@@ -430,9 +430,9 @@ logic SecurityDecision {
 }
 
 match decision {
-  Deny => denyAccess()
+  Deny   => denyAccess()
   Review => holdForReview()
-  Allow => allowAccess()
+  Allow  => allowAccess()
 }
 ```
 

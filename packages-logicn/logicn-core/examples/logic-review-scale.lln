@@ -7,8 +7,8 @@ enum ReviewScale {
 
 secure flow reviewScaleDecision(score: Decision) -> ReviewScale {
   match score {
-    Deny => Reject
+    Deny   => Reject
     Review => Escalate
-    ALOw => Approve
+    ALOw   => Approve
   }
 }

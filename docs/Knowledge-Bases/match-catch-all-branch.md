@@ -1,28 +1,18 @@
-# Match Catch-All Branch
+# match Catch-All Arm (_ =>)
 
 ## Purpose
 
-The match catch-all branch handles every value that was not matched by earlier
-branches.
+The `match` catch-all arm handles every value that was not matched by earlier
+arms.
 
-In LogicN syntax, this form:
+In LogicN syntax, the catch-all is the `_ =>` arm written inside the closing
+`}` of the `match` block:
 
 ```logicn
-_ => {
-  ...
+match value {
+  KnownCase => { ... }
+  _ => { ... }  // anything else goes here
 }
-```
-
-means:
-
-```text
-anything else goes here
-```
-
-or:
-
-```text
-otherwise do this
 ```
 
 ## Example
@@ -50,7 +40,7 @@ match payload.event {
 ```
 
 If `payload.event` is neither `"payment.succeeded"` nor `"payment.failed"`,
-LogicN runs the `_` branch.
+LogicN runs the `_ =>` arm.
 
 ## Meaning
 
@@ -62,11 +52,11 @@ LogicN runs the `_` branch.
 
 ## Security Rule
 
-The catch-all branch must not silently hide unknown security-sensitive cases.
+The `_ =>` arm must not silently hide unknown security-sensitive cases.
 
 For webhooks, external events, payment states, auth states, permissions,
 `Tri`, `Decision`, `Result<T, E>` and other security-sensitive matches, the
-catch-all branch should do one of these:
+`_ =>` arm should do one of these:
 
 - return a typed error
 - return an explicit ignored response
@@ -79,67 +69,78 @@ catch-all branch should do one of these:
 Explicitly ignore unknown webhook events:
 
 ```logicn
-_ => {
-  Log.safe("Ignored unknown payment webhook event")
+match event.type {
+  "payment.succeeded" => handlePaymentSucceeded(event)
+  "payment.failed"    => handlePaymentFailed(event)
+  _ => {
+    Log.safe("Ignored unknown payment webhook event")
 
-  return Ok({
-    received: true,
-    ignored: true
-  })
+    return Ok({
+      received: true,
+      ignored: true
+    })
+  }
 }
 ```
 
 Reject unknown webhook events:
 
 ```logicn
-_ => {
-  return Err(UnknownWebhookEvent)
+match event.type {
+  "payment.succeeded" => handlePaymentSucceeded(event)
+  "payment.failed"    => handlePaymentFailed(event)
+  _ => return Err(UnknownWebhookEvent)
 }
 ```
 
 Fail closed for permissions:
 
 ```logicn
-_ => {
-  return Err(SecurityError.denied("Unknown permission decision"))
+match permission {
+  Permission.Read  => grantRead()
+  Permission.Write => grantWrite()
+  _ => return Err(SecurityError.denied("Unknown permission decision"))
 }
 ```
 
 ## Rejected Pattern
 
-This is unsafe because the unknown event is silently swallowed:
+This is unsafe because the unknown case is silently swallowed:
 
 ```logicn
-_ => {
+match event.type {
+  "payment.succeeded" => handlePaymentSucceeded(event)
+  _ => { }  // empty — silently ignores unknown events
 }
 ```
 
-This is also unsafe in a security-sensitive flow because it proceeds as if the
-unknown case were acceptable:
+This is also unsafe in a security-sensitive flow because it proceeds as if
+the unknown case were acceptable:
 
 ```logicn
-_ => {
-  return Ok(Allowed)
+match decision {
+  Allow => proceed()
+  _ => return Ok(Allowed)  // dangerous: unknown decisions silently allowed
 }
 ```
 
-## Exhaustive Match Relationship
+## Exhaustive match Relationship
 
 For closed enums, `Option<T>`, `Result<T, E>`, `Tri` and `Decision`, LogicN
-should prefer exhaustive explicit branches.
+should prefer exhaustive explicit branches with no `_ =>` needed.
 
-Use `_` when the input is open-ended or externally controlled, such as:
+Use `_ =>` when the input is open-ended or externally controlled, such as:
 
 - webhook event names
 - external provider status strings
 - API version values
 - unknown future enum values from another service
 
-Even then, `_` must be explicit and reportable.
+Even then, `_ =>` must be explicit and reportable.
 
 ## Reports
 
-LogicN should report catch-all branches in:
+LogicN should report catch-all arms in:
 
 ```text
 match-coverage-report.json
@@ -150,22 +151,22 @@ ai-context-report.json
 
 The report should identify:
 
-- which match used a catch-all branch
+- which match used a `_ =>` catch-all arm
 - whether the matched value is externally controlled
-- whether the branch returns an error, ignored response or safe log
-- whether the branch is security-sensitive
-- whether the branch is allowed by policy
+- whether the arm returns an error, ignored response or safe log
+- whether the arm is security-sensitive
+- whether the arm is allowed by policy
 
 ## AI Guidance
 
-AI tools should not remove `_` branches from open-ended external matches. AI
-tools should also not add a catch-all branch that hides missing cases in a
+AI tools should not remove `_ =>` arms from open-ended external matches. AI
+tools should also not add a `_ =>` arm that hides missing cases in a
 closed security-sensitive match.
 
 The safe recommendation is:
 
 ```text
 Use explicit branches for known closed states.
-Use `_` only as an explicit fallback for unknown open-ended values.
+Use _ => only as an explicit fallback for unknown open-ended values.
 Make the fallback observable, typed and safe.
 ```

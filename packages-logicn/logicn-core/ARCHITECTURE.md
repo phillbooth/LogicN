@@ -600,7 +600,7 @@ enums
 flows
 secure flows
 pure flows
-match expressions
+match expressions (pattern matching)
 if expressions
 wait-until blocks
 parallel blocks
@@ -1799,3 +1799,76 @@ accelerator-aware compute blocks
 ```
 
 The architecture should make LogicN useful before future hardware becomes common.
+
+---
+
+## Good-Taste Architecture Principles
+
+The LogicN architecture follows a "good taste" rule:
+
+```text
+Design the model so edge cases disappear.
+```
+
+This means the boring path should always be the safe path.
+
+### The Five Rules
+
+**Rule 1 — No special-case paths.**
+
+All external boundary inputs are `unsafe unvalidated` regardless of origin
+(API, webhook, CLI, queue). Use one model:
+
+```text
+Boundary<T> -> T unsafe unvalidated
+```
+
+**Rule 2 — Keep authority flat.**
+
+Authority decisions live in a pre-planned authority graph — not scattered
+through nested permission logic inside flows:
+
+```text
+flow -> effects -> runtime authority plan -> allow/deny
+```
+
+**Rule 3 — Avoid deep nesting.**
+
+Prefer early exits and guard clauses. Use `attempt ... else error` and
+`match value { ... }` to keep flows flat.
+
+**Rule 4 — Small focused flows.**
+
+Each flow should have one responsibility. Break large flows into:
+
+```text
+validateCheckout
+priceOrder
+reserveStock
+capturePayment
+writeAudit
+```
+
+**Rule 5 — Simple data structures.**
+
+Pre-compute manifests and tables instead of runtime discovery:
+
+```text
+route table
+type manifest
+effect graph
+authority plan
+decoder plan
+```
+
+### Making Edge Cases Impossible
+
+Use the type system to remove edge cases entirely:
+
+| Pattern | What it eliminates |
+| --- | --- |
+| `Option<T>` | Null dereference bugs |
+| `Result<T, E>` | Hidden exception paths |
+| Exhaustive `match` | Missing branch bugs |
+| `String unsafe unvalidated` | Implicit trust of boundary input |
+| `Email safe validated` | Untrusted input reaching trusted code |

@@ -14,6 +14,9 @@
 [ ] Define policy index, definitions, effective, conflict and AI-summary report contracts
 [ ] Define malicious data, exploit-resistance, resource-budget, taint-flow and hardware-risk report contracts
 [ ] Define specialist hardware, AI accelerator capability, accelerator fallback, data-sensitivity and precision-compatibility report contracts
+[ ] Define runtime audit log format (structured JSON schema, event categories, trace correlation)
+[ ] Define audit report contract (audit-report.json) fed from runtime audit log
+[ ] Define capability report contract (capability-report.json)
 [x] Define target report contract
 [x] Define runtime report contract
 [x] Define async/concurrency report contract

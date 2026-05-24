@@ -186,6 +186,100 @@ Never log raw secrets or unsafe values.
 Use redact() when explicitly logging sensitive identifiers.
 ```
 
+## OpenTelemetry Integration
+
+The preferred external observability integration model is OpenTelemetry.
+
+### Supported Telemetry Types
+
+```text
+Metrics          — runtime performance and capability counters
+Distributed traces — request spans across services and dependencies
+Structured logs  — JSON-formatted correlated log events
+```
+
+### Example Runtime Trace
+
+```text
+request.start
+  -> capability.check
+  -> dependency.call
+  -> db.query
+  -> response.complete
+```
+
+Each span includes:
+
+```text
+service identity     — which service produced the span
+artifact_digest      — cryptographic artifact identity
+runtime_instance     — runtime node identifier
+trace_id / span_id   — OTel-compatible correlation IDs
+```
+
+### Metrics Categories
+
+#### Runtime Metrics
+
+```text
+cpu_utilisation
+memory_usage
+event_loop_latency
+queue_depth
+```
+
+#### Capability Metrics
+
+```text
+capability_requests_total
+capability_denials_total
+policy_violations_total
+```
+
+#### Deployment Metrics
+
+```text
+deploy_frequency
+rollback_frequency
+verification_failures_total
+```
+
+### Structured Logging
+
+Runtime logs are:
+
+```text
+JSON formatted          — machine-parseable
+Trace-correlated        — linked to active spans
+Immutable where required — audit events are append-only
+Exportable              — forwarded to external systems
+```
+
+### Health and Readiness Endpoints
+
+The runtime exposes:
+
+```text
+Liveness endpoint        — is the runtime alive?
+Readiness endpoint       — is the runtime ready to serve?
+Dependency health checks — are dependencies reachable?
+Capability status        — are required capabilities available?
+```
+
+### Recommended Integrations
+
+```text
+OpenTelemetry Collector
+Grafana
+Prometheus
+Datadog
+Elastic
+Honeycomb
+Splunk
+```
+
+---
+
 ## Core Principle
 
 ```text
@@ -193,4 +287,5 @@ LogicN makes builds and runtime behaviour explainable by default.
 Developers declare intent.
 The runtime generates observability artifacts automatically.
 Monitoring is a runtime capability, not an application burden.
+Telemetry exports follow OpenTelemetry standards for ecosystem compatibility.
 ```

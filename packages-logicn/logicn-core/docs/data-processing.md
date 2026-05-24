@@ -291,7 +291,7 @@ The missing case must be handled:
 ```text
 match user {
     Some(found) => return UserResponse.from(found)
-    None => return NotFound("User not found")
+    None        => return NotFound("User not found")
 }
 ```
 

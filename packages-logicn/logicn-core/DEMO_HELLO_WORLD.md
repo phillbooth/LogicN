@@ -562,7 +562,7 @@ Original source:
   src/main.lln:4:18
 
 Suggestion:
-  Match the Option value first.
+  Use map to check the Option value first.
 ```
 
 Correct code:
@@ -573,7 +573,7 @@ secure flow main() -> Result<Void, Error> {
 
   match customer {
     Some(c) => print(c.name)
-    None => print("Customer not found")
+    None    => print("Customer not found")
   }
 
   return Ok()

@@ -198,7 +198,7 @@ flow definitions
 secure flow definitions
 type definitions
 enum definitions
-match expressions
+map expressions (pattern matching)
 let bindings
 mut bindings
 return statements
@@ -247,7 +247,7 @@ no silent null check
 truthy/falsy rejection
 Option<T> checks
 Result<T, Error> checks
-exhaustive match checking
+exhaustive map checking
 explicit conversion checks
 basic SecureString checks
 ```
@@ -256,9 +256,9 @@ basic SecureString checks
 
 ```text
 String + Int without conversion
-Option<T> accessed without match
+Option<T> accessed without map
 Result<T, E> ignored
-non-exhaustive match
+non-exhaustive map
 truthy/falsy checks
 secret logging
 unsafe denied by default
@@ -270,7 +270,7 @@ unsafe denied by default
 type errors include source file and line
 Option misuse is detected
 Result misuse is detected
-non-exhaustive match is detected
+non-exhaustive map is detected
 failure report is generated
 security report is generated
 ```
@@ -465,7 +465,7 @@ basic diagnostics
 ### Linter Checks
 
 ```text
-non-exhaustive match
+non-exhaustive map
 unused imports
 webhook without idempotency
 webhook without replay protection

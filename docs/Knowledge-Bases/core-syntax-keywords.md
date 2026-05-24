@@ -68,37 +68,33 @@ else {
 
 Use `if` for simple conditions only.
 
-### `map`
+### `match`
 
 Multi-branch logic and value matching. Replaces `switch`, `case`, and `elseif`:
 
 ```logicn
-let message: String = map(status) {
+let message: String = match status {
   "paid"    => "Payment complete"
   "failed"  => "Payment failed"
   "pending" => "Waiting for payment"
-}
-else {
-  "Unknown status"
+  _ => "Unknown status"
 }
 ```
 
 Range matching:
 
 ```logicn
-let grade = map(score) {
+let grade = match score {
   >= 90 => "excellent"
   >= 70 => "good"
   >= 50 => "pass"
-}
-else {
-  "fail"
+  _ => "fail"
 }
 ```
 
 ### `else`
 
-Fallback block after `if` or `map`. Appears after the closing `}`.
+Fallback block after `if`. Appears after the closing `}`.
 
 ### `uses`
 
@@ -180,9 +176,9 @@ let stats: safe Stats = wait stats_task
 
 | Excluded | Use Instead |
 | --- | --- |
-| `switch` | `map` |
-| `case` | `map` block entries |
-| `elseif` | `map` or separate `if` blocks |
+| `switch` | `match` |
+| `case` | `match` block entries |
+| `elseif` | `match` or separate `if` blocks |
 | `function` | `fn` or `flow` |
 | `def` | `fn` or `flow` |
 | `for` | `each` |
@@ -195,7 +191,7 @@ let stats: safe Stats = wait stats_task
 
 ```text
 if     = simple true/false condition
-map    = multiple branch logic and value matching
+match  = multiple branch logic and value matching
 flow   = authorised execution unit (may use task/wait)
 fn     = pure synchronous helper logic (no task/wait)
 each   = iteration

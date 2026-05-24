@@ -580,7 +580,7 @@ This is clearer than returning `Bool`.
 
 ---
 
-# 16. Match with Tri Logic
+# 16. Pattern Matching with Tri Logic
 
 Tri values should be handled exhaustively.
 
@@ -590,8 +590,8 @@ Example:
 let verified: Tri = hasVerifiedEmail(user)
 
 match verified {
-  true => allowEmailFeatures()
-  false => denyEmailFeatures()
+  true    => allowEmailFeatures()
+  false   => denyEmailFeatures()
   unknown => requestVerification()
 }
 ```
@@ -602,7 +602,7 @@ Bad:
 
 ```LogicN
 match verified {
-  true => allowEmailFeatures()
+  true  => allowEmailFeatures()
   false => denyEmailFeatures()
 }
 ```
@@ -610,7 +610,7 @@ match verified {
 Compiler warning:
 
 ```text
-Match is not exhaustive.
+match is not exhaustive.
 Missing branch:
   unknown
 ```
@@ -635,8 +635,8 @@ LogicN should require explicit handling:
 let decision: Tri = hasPermission(user)
 
 match decision {
-  true => allow()
-  false => deny()
+  true    => allow()
+  false   => deny()
   unknown => holdForReview()
 }
 ```
@@ -829,13 +829,13 @@ logic Decision {
 }
 ```
 
-Match:
+Map:
 
 ```LogicN
 match decision {
-  Deny => deny()
+  Deny   => deny()
   Review => holdForReview()
-  Allow => allow()
+  Allow  => allow()
 }
 ```
 
@@ -866,7 +866,7 @@ LogicN should enforce:
 ```text
 Tri cannot silently convert to Bool.
 Unknown cannot silently become Allow.
-Match over Tri should be exhaustive.
+match over Tri should be exhaustive.
 Security decisions should explicitly handle unknown/review states.
 Tri should not be stored as null unless configured.
 ```

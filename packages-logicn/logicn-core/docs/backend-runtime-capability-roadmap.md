@@ -56,7 +56,7 @@ typed flows
 typed request and response contracts
 typed JSON decoding and encoding
 Result and Option
-exhaustive match
+exhaustive map
 effects
 permissions
 secret handling
@@ -109,7 +109,7 @@ blocking calls
 | Area | LogicN requirement |
 |---|---|
 | Types | Strict scalar, record, enum, option, result and collection types. |
-| Control flow | `if`, loops, `match`, exhaustive state handling and explicit returns. |
+| Control flow | `if`, loops, `map` (pattern matching), exhaustive state handling and explicit returns. |
 | Errors | Declared recoverable errors through `Result`. |
 | Missing values | Explicit `Option`, not silent missing values. |
 | API boundaries | Typed requests, typed responses, route limits and policy reports. |

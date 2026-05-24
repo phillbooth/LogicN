@@ -697,7 +697,7 @@ manifests {
     output "./build/app.build-manifest.json"
   }
 
-  source_map {
+  source_match {
     required true
     output "./build/app.source-map.json"
   }

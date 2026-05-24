@@ -11,7 +11,7 @@ It is not a production compiler. It is a practical v0.1 scaffold that can:
 - extract `/// @tag` strict comments into AST, source-map and AI-context reports
 - run prototype smoke tests for parser, formatter and target diagnostics
 - check `undefined`, silent `null`, truthy/falsy conditions and compute-block I/O
-- type-check declared type references, generic arity and simple exhaustive matches
+- type-check declared type references, generic arity and simple exhaustive match branches
 - run simple checked `main` scripts through `LogicN run`
 - print simple Run Mode output with `print(...)` or `console.log(...)`,
   including literal strings, simple let bindings, pure-flow calls, numeric
@@ -139,7 +139,7 @@ It validates:
 
 - unknown declared type references
 - generic arity for `Option`, `Result`, `Array`, `Map`, `Vector`, `Matrix` and related types
-- exhaustive `match` cases for enum values, `Option<T>` and `Result<T, E>`
+- exhaustive `match` branches for enum values, `Option<T>` and `Result<T, E>`
 
 It does not yet infer expression types or validate handler return expressions.
 

@@ -555,7 +555,7 @@ effects [file.read, compute.run] {
 Package-defined type:
 
 ```LogicN
-type EdgeMap {
+type Edgematch {
   width: Int
   height: Int
   data: MaskData

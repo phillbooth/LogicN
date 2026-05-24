@@ -2,47 +2,42 @@
 
 ## Definition
 
-LogicN uses `map(value) { ... } else { ... }` for all multi-branch matching and
+LogicN uses `match value { ... }` for all multi-branch matching and
 value transformation. This replaces `switch`, `case`, and `elseif` from other
 languages.
 
-The `else` branch is the catch-all fallback. It is always written outside the
-closing `}` of the `map` block.
+The `_ =>` arm is the catch-all fallback. It is always written inside the
+closing `}` of the `match` block.
 
 ## Value Matching
 
 Match a value against known variants:
 
 ```logicn
-let message: String = map(payment.status) {
+let message: String = match payment.status {
   Paid     => "Payment complete"
   Failed   => "Payment failed"
   Pending  => "Waiting for payment"
   Refunded => "Refunded"
-}
-else {
-  "Unknown payment status"
+  _ => "Unknown payment status"
 }
 ```
 
 ## Enum Exhaustion
 
-The compiler reports non-exhaustive maps for known enum types:
+The compiler reports non-exhaustive matches for known enum types:
 
 ```logicn
 enum OrderStatus { Placed, Confirmed, Shipped, Delivered, Cancelled }
 
-let label: String = map(order.status) {
+let label: String = match order.status {
   Placed    => "Order received"
   Confirmed => "Order confirmed"
   Shipped   => "On the way"
   Delivered => "Delivered"
   // Missing: Cancelled
 }
-else {
-  "Unknown"
-}
-// Compiler: LNN-WARN — non-exhaustive enum map, Cancelled not handled explicitly
+// Compiler: LNN-WARN — non-exhaustive enum match, Cancelled not handled explicitly
 ```
 
 ## Range Matching
@@ -50,13 +45,11 @@ else {
 Numeric ranges are matched top-to-bottom, first match wins:
 
 ```logicn
-let grade: String = map(score) {
+let grade: String = match score {
   >= 90 => "excellent"
   >= 70 => "good"
   >= 50 => "pass"
-}
-else {
-  "fail"
+  _ => "fail"
 }
 ```
 
@@ -65,14 +58,12 @@ else {
 Match against a combination of fields:
 
 ```logicn
-let handler = map(request) {
+let handler = match request {
   { method: "GET",    path: "/users"    } => get_users()
   { method: "POST",   path: "/users"    } => create_user()
   { method: "GET",    path: "/orders"   } => get_orders()
   { method: "DELETE", path: "/orders"   } => cancel_order()
-}
-else {
-  not_found()
+  _ => not_found()
 }
 ```
 
@@ -81,7 +72,7 @@ else {
 Match on a discriminated union variant:
 
 ```logicn
-let result: String = map(api_result) {
+let result: String = match api_result {
   Ok(data)  => format_data(data)
   Err(e)    => format_error(e)
 }
@@ -90,7 +81,7 @@ let result: String = map(api_result) {
 ## Option Matching
 
 ```logicn
-let user_name: String = map(found_user) {
+let user_name: String = match found_user {
   Some(u) => u.name
   None    => "Guest"
 }
@@ -98,24 +89,24 @@ let user_name: String = map(found_user) {
 
 ## Nested Matching
 
-Avoid nesting `map` inside `map` where possible (max nesting depth 2). Extract
+Avoid nesting `match` inside `match` where possible (max nesting depth 2). Extract
 to a named `fn` or `flow` if logic grows:
 
 ```logicn
-fn classify_order(order: Order) -> String {
-  map(order.status) {
+flow classify_order(order: Order) -> String {
+  match order.status {
     Confirmed => classify_payment(order.payment)
     Cancelled => "cancelled"
+    _ => "unknown"
   }
-  else { "unknown" }
 }
 
-fn classify_payment(payment: Payment) -> String {
-  map(payment.status) {
+flow classify_payment(payment: Payment) -> String {
+  match payment.status {
     Paid   => "paid-confirmed"
     Failed => "payment-failed"
+    _ => "payment-unknown"
   }
-  else { "payment-unknown" }
 }
 ```
 
@@ -124,49 +115,47 @@ fn classify_payment(payment: Payment) -> String {
 Capture the matched value with a name:
 
 ```logicn
-map(response) {
+match response {
   Ok(order)     => save_and_return(order)
   Err(NotFound) => return Err(OrderError.NotFound)
   Err(e)        => return Err(e)
 }
 ```
 
-## map as Expression
+## match as Expression
 
-`map` is an expression and can be used directly in assignments:
+`match` is an expression and can be used directly in assignments:
 
 ```logicn
-let fee: Decimal = map(order.currency) {
+let fee: Decimal = match order.currency {
   GBP => Decimal(0.02)
   USD => Decimal(0.03)
   EUR => Decimal(0.025)
-}
-else {
-  Decimal(0.03)
+  _ => Decimal(0.03)
 }
 ```
 
-## What map Replaces
+## What match Replaces
 
 | Other language | LogicN |
 | --- | --- |
-| `switch (x) { case A: ... }` | `map(x) { A => ... }` |
-| `if x == A ... else if x == B` | `map(x) { A => ... B => ... }` |
-| `match x { A => ... }` (Rust) | `map(x) { A => ... }` |
+| `switch (x) { case A: ... }` | `match x { A => ... }` |
+| `if x == A ... else if x == B` | `match x { A => ... B => ... }` |
+| `match x { A => ... }` (Rust) | `match x { A => ... }` |
 
 ## Catch-All Rule
 
-The `else` block is the catch-all. It is required when:
+The `_ =>` arm is the catch-all. It is required when:
 
 ```text
-the matched type has variants not listed in the map block
+the matched type has variants not listed in the match block
 the matching is over a non-enum type (String, Int, etc.)
 ```
 
 It is optional when:
 
 ```text
-the map covers all known variants of an enum exhaustively
+the match covers all known variants of an enum exhaustively
 ```
 
 ## Governance and Validation Patterns
@@ -176,7 +165,7 @@ the map covers all known variants of an enum exhaustively
 ```logicn
 let rawEmail: String unsafe unvalidated = form.email
 
-map(validate.email(rawEmail)) {
+match validate.email(rawEmail) {
   Ok(email) => {
     let safeEmail: Email safe validated = email
     saveCustomer(safeEmail)
@@ -193,10 +182,10 @@ State pipeline: `unsafe unvalidated -> safe validated`
 secure flow createCustomer(req: Request) -> ApiResponse {
   let body: Json unsafe unvalidated = boundary.api.body(req)
 
-  map(validate.customer(body)) {
+  match validate.customer(body) {
     Ok(customerInput) => {
-      map(saveCustomer(customerInput)) {
-        Ok(customer)        => Api.created(customer)
+      match saveCustomer(customerInput) {
+        Ok(customer)         => Api.created(customer)
         Err(DatabaseFailure) => Api.retryLater()
       }
     }
@@ -210,7 +199,7 @@ secure flow createCustomer(req: Request) -> ApiResponse {
 ```logicn
 enum Decision { Allow, Deny, Review }
 
-map(fraudDecision(order)) {
+match fraudDecision(order) {
   Allow  => capturePayment(order)
   Deny   => cancelOrder(order)
   Review => queueManualReview(order)
@@ -225,7 +214,7 @@ and not applicable. Use `Decision` instead.
 ```logicn
 enum AuthDecision { Allow, Deny, RequireMFA }
 
-map(authorize(user, action)) {
+match authorize(user, action) {
   Allow      => executeAction()
   Deny       => Api.forbidden()
   RequireMFA => Api.mfaRequired()
@@ -244,13 +233,13 @@ enum OrderWorkflow {
   Cancelled
 }
 
-map(order.workflow) {
-  Draft          => allowEdits(order)
+match order.workflow {
+  Draft           => allowEdits(order)
   AwaitingPayment => sendReminder(order)
-  Paid           => queuePacking(order)
-  Packed         => notifyCourier(order)
-  Shipped        => archive(order)
-  Cancelled      => stopWorkflow(order)
+  Paid            => queuePacking(order)
+  Packed          => notifyCourier(order)
+  Shipped         => archive(order)
+  Cancelled       => stopWorkflow(order)
 }
 ```
 
@@ -264,12 +253,12 @@ enum ValidationError {
   WeakPassword
 }
 
-map(validate.registration(input)) {
-  Ok(data)                => createAccount(data)
-  Err(MissingField)       => Api.badRequest("Missing field")
-  Err(InvalidEmail)       => Api.badRequest("Invalid email")
-  Err(InvalidPhone)       => Api.badRequest("Invalid phone")
-  Err(WeakPassword)       => Api.badRequest("Weak password")
+match validate.registration(input) {
+  Ok(data)               => createAccount(data)
+  Err(MissingField)      => Api.badRequest("Missing field")
+  Err(InvalidEmail)      => Api.badRequest("Invalid email")
+  Err(InvalidPhone)      => Api.badRequest("Invalid phone")
+  Err(WeakPassword)      => Api.badRequest("Weak password")
 }
 ```
 
@@ -278,7 +267,7 @@ map(validate.registration(input)) {
 ```logicn
 enum RuntimeMode { Checked, Compiled, Development }
 
-map(runtime.mode()) {
+match runtime.mode() {
   Checked     => enableAuditTracing()
   Compiled    => enableOptimizedExecution()
   Development => enableDebugTools()
@@ -287,24 +276,82 @@ map(runtime.mode()) {
 
 ## Future Patterns
 
-### Wildcard
+### Struct Destructuring
 
 ```logicn
 // Future — not v1
-map(status) {
-  Paid => complete()
-  _    => hold()
+struct Point {
+  x: Int
+  y: Int
+}
+
+match point {
+  Point { x: 0, y: 0 } => "origin"
+  Point { x, y }        => "other"
 }
 ```
 
-Wildcards must still support exhaustiveness analysis. v1 avoids wildcards unless
-the compiler can prove exhaustiveness.
+Fields may be matched explicitly or bound into local variables.
+
+Nested struct destructuring:
+
+```logicn
+// Future — not v1
+match response {
+  Ok(User { role: Admin, name }) => grantAccess(name)
+  Ok(User { role: Guest, name }) => limitedAccess(name)
+  Err(error)                     => handleError(error)
+}
+```
+
+### Sequence / List Patterns
+
+```logicn
+// Future — not v1
+match items {
+  []              => "empty"
+  [x]             => "single"
+  [head, ..tail]  => "multiple"
+}
+```
+
+Sequence patterns simplify recursive and collection-oriented logic.
+
+### Guards
+
+```logicn
+// Future — not v1
+match number {
+  x if x < 0  => "negative"
+  x if x == 0 => "zero"
+  _            => "positive"
+}
+```
+
+Guards add runtime conditions evaluated after structural matching succeeds.
+
+```logicn
+// Future — not v1
+match order {
+  Order { total } if total > 1000 => requireManagerApproval()
+  Order { total }                 => autoApprove()
+}
+```
+
+### Pattern Binding (Variable Destructuring)
+
+```logicn
+// Future — not v1
+let Point { x, y } = point
+```
+
+Patterns may appear in assignment and parameter binding contexts.
 
 ### Tuple / Multi-Value
 
 ```logicn
 // Future — not v1
-map(paymentStatus, shipmentStatus) {
+match paymentStatus, shipmentStatus {
   (Paid, Queued)    => startPacking()
   (Paid, Delivered) => completeOrder()
   (Pending, _)      => holdOrder()
@@ -312,31 +359,11 @@ map(paymentStatus, shipmentStatus) {
 }
 ```
 
-### Destructuring
-
-```logicn
-// Future — not v1
-map(apiResponse) {
-  Ok(Customer { email }) => sendReceipt(email)
-  Err(error)             => log(error)
-}
-```
-
-### Guards
-
-```logicn
-// Future — not v1
-map(order) {
-  Order { total } if total > 1000 => requireManagerApproval()
-  Order { total }                 => autoApprove()
-}
-```
-
 ## Grammar Sketch
 
 ```text
 MatchExpression
-  = "map" "(" Expression ")" MatchBody ElseBranch?
+  = "match" Expression MatchBody
 
 MatchBody
   = "{" MatchArm+ "}"
@@ -347,6 +374,7 @@ MatchArm
 Pattern
   = Identifier
   | VariantPattern
+  | "_"
 
 VariantPattern
   = VariantName
@@ -356,15 +384,16 @@ VariantPattern
 Future expansion:
 ```text
 TuplePattern
-ObjectPattern
-WildcardPattern
-GuardPattern
+StructPattern    — Point { x, y }, Point { x: 0, y: 0 }
+SequencePattern  — [], [x], [head, ..tail]
+GuardPattern     — pattern if condition
+BindingPattern   — let Point { x, y } = value
 ```
 
 ## Compiler Diagnostics
 
 ```text
-LNN-ERR-TYPE-003: Non-exhaustive map — missing cases: Pending, Refunded
+LNN-ERR-TYPE-003: Non-exhaustive match — missing cases: Pending, Refunded
 LNN-WARN-DEAD:    Unreachable match arm
 LNN-ERR-DUP:      Duplicate match arm
 LNN-ERR-VARIANT:  Invalid variant name for enum PaymentStatus
@@ -373,8 +402,8 @@ LNN-ERR-VARIANT:  Invalid variant name for enum PaymentStatus
 ## Core Principle
 
 ```text
-map replaces switch, case, and elseif.
-The else block is the explicit catch-all — never implicit.
+match replaces switch, case, and elseif.
+The _ => arm is the explicit catch-all — always inside the match block.
 Exhaustive enum matching is compiler-enforced.
 Pattern matching supports governance — it makes state transitions,
 validation workflows, and security decisions explicit and auditable.

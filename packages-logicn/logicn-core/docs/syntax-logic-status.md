@@ -49,15 +49,15 @@ HTML or CSS badges may be added later by the documentation renderer.
 | `if` | `if condition { ... }` | Documented draft | Potential | Requires strict condition typing. |
 | Loops | `for`, `while`, `wait until` | Documented draft | Potential | Needs bounds, termination and resource diagnostics. |
 | For-each | typed collection iteration | Documented draft | Potential | Element types and mutation rules must be checked. |
-| Pattern matching | `map(value) { Case => ... }` | Implemented prototype | Managed | Used for enums, `Option`, `Result`, `Tri` and `Decision`. Replaces `match`, `switch`, `case`. |
-| Result match | `map(result) { Ok(value) => ... Err(error) => ... }` | Implemented prototype | Managed | Covered by `examples/result.lln`. |
-| Option match | `map(value) { Some(v) => ... None => ... }` | Implemented prototype | Managed | Makes missing values explicit. |
-| Enum match | `map(enumValue) { Case => ... }` | Implemented prototype | Managed | Exhaustiveness diagnostics are part of the checker direction. |
+| Pattern matching | `match value { Case => ... }` | Implemented prototype | Managed | Used for enums, `Option`, `Result`, `Tri` and `Decision`. Replaces `match`, `switch`, `case`. |
+| Result match | `match result { Ok(value) => ... Err(error) => ... }` | Implemented prototype | Managed | Covered by `examples/result.lln`. |
+| Option match | `match value { Some(v) => ... None => ... }` | Implemented prototype | Managed | Makes missing values explicit. |
+| Enum match | `match enumValue { Case => ... }` | Implemented prototype | Managed | Exhaustiveness diagnostics are part of the checker direction. |
 | Boolean | `Bool` | Documented draft | Potential | Full conversion rules are still being finalised. |
 | Ternary logic | `Tri` | Implemented prototype/package-owned | Managed | `logicn-core-logic` owns tested operations and conversion policy. |
 | Decision logic | `Decision` with `ALOw`, `Deny`, `Review` | Implemented prototype/package-owned | Managed | Avoids reducing approval states to unsafe booleans. |
 | Omni logic | bounded Omni logic definitions | Package-owned | Potential | Belongs to `logicn-core-logic`; unbounded spaces are rejected. |
-| Enums | `enum Name { Case }` | Implemented prototype | OK | Used by examples and map exhaustiveness checks. |
+| Enums | `enum Name { Case }` | Implemented prototype | OK | Used by examples and match exhaustiveness checks. |
 | Records | `type Name { field: Type }` | Implemented prototype | OK | Keeps data shape explicit and reportable. |
 | Type alias | `type Id = String` | Implemented prototype | OK | Useful for IDs and domain-specific scalar names. |
 | Optional value | `Option<T>`, `Some`, `None` | Implemented prototype | Managed | Avoids silent missing values. |
@@ -93,7 +93,7 @@ HTML or CSS badges may be added later by the documentation renderer.
 | Packages | package registry/lock/profile docs | TODO | High | Package resolution must be reproducible and permissioned. |
 | Classes/inheritance | disallowed in normal LogicN source | Not core | High | Use records, enums, flows, contracts and explicit composition instead; inherited authority is not allowed. |
 | Contract polymorphism | contracts plus explicit implementations/adapters | Documented draft | Managed | Allows different implementations without hiding authority. |
-| Variant polymorphism | sealed variants plus exhaustive `map` | TODO | Managed | Needed for safe domain variation without inheritance chains. |
+| Variant polymorphism | sealed variants plus exhaustive `match` | TODO | Managed | Needed for safe domain variation without inheritance chains. |
 | Generics | `Array<T>`, `Result<T,E>`, typed contracts | Documented draft | Potential | Generic constraints/protocols remain production-readiness work. |
 | Protocols/interfaces | protocol/constraint model pending | TODO | Potential | Needed before mature generic libraries and contract polymorphism. |
 | Native interop | `interop native` with explicit `abi` and audited contracts | TODO | High | Interop must declare ownership, nullability, layout and audit reports. |
@@ -121,9 +121,9 @@ invented as core syntax later.
 | Functions | lambda/closure | TODO | Deferred until capture, lifetime and effect rules are clear. |
 | Branching | `if` / `else` | Documented draft | Must preserve strict condition rules. |
 | Branching | pattern matching | Implemented prototype | Used for enums, `Option`, `Result`, `Tri`, `Decision`. |
-| Branching | `map(result)` | Implemented prototype | `examples/result.lln` uses `Ok` and `Err`. |
-| Branching | `map(option)` | Implemented prototype | `examples/option.lln` uses `Some` and `None`. |
-| Branching | catch-all branch (`else { ... }`) | Documented draft | `else` block outside the map is the catch-all; security-sensitive fallbacks must be explicit, observable and safe. |
+| Branching | `match result` | Implemented prototype | `examples/result.lln` uses `Ok` and `Err`. |
+| Branching | `match option` | Implemented prototype | `examples/option.lln` uses `Some` and `None`. |
+| Branching | catch-all arm (`_ => ...`) | Documented draft | `_ =>` inside the match block is the catch-all; security-sensitive fallbacks must be explicit, observable and safe. |
 | Loops | counted `for` | Documented draft | Planned with bounds and mutation checks. |
 | Loops | foreach | Documented draft | Prefer explicit collection iteration with element type checks. |
 | Loops | `while` | Documented draft | Planned with termination/resource diagnostics. |

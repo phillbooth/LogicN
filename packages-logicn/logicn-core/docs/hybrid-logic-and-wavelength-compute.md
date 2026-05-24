@@ -174,8 +174,8 @@ Example:
 ```LogicN
 secure flow checkPayment(status: PaymentStatus) -> Decision {
   match status {
-    Paid => ALOw
-    Failed => Deny
+    Paid    => ALOw
+    Failed  => Deny
     Pending => Review
     Unknown => Review
   }
@@ -382,9 +382,9 @@ secure flow handleOrder(req: Request) -> Result<Response, ApiError> {
   let paymentDecision: Decision = checkPayment(input.payment)
 
   match paymentDecision {
-    Deny => return JsonResponse({ "status": "denied" })
+    Deny   => return JsonResponse({ "status": "denied" })
     Review => return JsonResponse({ "status": "review" })
-    Allow => continue
+    Allow  => continue
   }
 
   compute target wavelength fallback gpu fallback cpu {
@@ -406,9 +406,9 @@ secure flow handleOrder(req: Request) -> Result<Response, ApiError> {
   let finalDecision: Decision = riskToDecision(riskScore)
 
   match finalDecision {
-    Allow => shipOrder(input)
+    Allow  => shipOrder(input)
     Review => holdForReview(input)
-    Deny => cancelOrder(input)
+    Deny   => cancelOrder(input)
   }
 }
 ```

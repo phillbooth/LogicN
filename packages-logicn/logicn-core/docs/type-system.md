@@ -138,7 +138,7 @@ if customer {
 }
 ```
 
-Use `Option<T>` and `map` for missing values.
+Use `Option<T>` and `match` for missing values.
 
 ---
 
@@ -395,10 +395,10 @@ Example:
 let customer: Option<Customer> = findCustomer(customerId)
 ```
 
-Handle with `map`:
+Handle with `match`:
 
 ```LogicN
-map(customer) {
+match customer {
   Some(c) => processCustomer(c)
   None    => return Review("Customer missing")
 }
@@ -427,7 +427,7 @@ Example:
 flow loadOrder(id: OrderId) -> Result<Order, OrderError> {
   let order: Option<Order> = database.findOrder(id)
 
-  map(order) {
+  match order {
     Some(o) => return Ok(o)
     None    => return Err(OrderError.NotFound)
   }
@@ -468,7 +468,7 @@ Example:
 
 ```LogicN
 secure flow checkPayment(status: PaymentStatus) -> Decision {
-  map(status) {
+  match status {
     Paid    => ALOw
     Failed  => Deny
     Pending => Review
@@ -499,12 +499,10 @@ Example:
 
 ```LogicN
 pure flow signalState(score: Float) -> Tri {
-  map(score) {
+  match score {
     score > 0.1  => Positive
     score < -0.1 => Negative
-  }
-  else {
-    Neutral
+    _ => Neutral
   }
 }
 ```
@@ -562,7 +560,7 @@ Example:
 
 ```LogicN
 secure flow riskToDecision(signal: Tri) -> Decision {
-  map(signal) {
+  match signal {
     Positive => Deny
     Neutral  => Review
     Negative => ALOw
@@ -591,13 +589,13 @@ enum PaymentStatus {
 }
 ```
 
-Enums should be handled exhaustively with `map`. The compiler enforces that
+Enums should be handled exhaustively with `match`. The compiler enforces that
 every variant is covered.
 
 Example:
 
 ```LogicN
-map(status) {
+match status {
   Paid     => ALOw
   Unpaid   => Review
   Pending  => Review
@@ -1079,6 +1077,64 @@ security-sensitive values
 
 ---
 
+## Auto — Explicit Type Inference Keyword
+
+`Auto` is a compile-time keyword that asks the compiler to infer the concrete
+type from the value. It is not `Any`.
+
+```text
+Auto = compiler resolves the concrete type at compile time
+Any  = value can be any type at runtime (unsafe — not used in LogicN)
+```
+
+### Rule
+
+```text
+Auto must resolve to a single concrete type at compile time.
+```
+
+### Valid uses
+
+```LogicN
+let count: Auto = 42          // inferred: Int
+let name: Auto  = "Phillip"   // inferred: String
+let active: Auto = true       // inferred: Bool
+```
+
+### Invalid use — ambiguous branches
+
+```LogicN
+let result: Auto = match status {
+  "ok"    => "continue"
+  "error" => 500
+}
+// ERROR: branches return String and Int — cannot infer a single type
+```
+
+Use explicit types when branches return different types:
+
+```LogicN
+let result: String = match status {
+  "ok"    => "continue"
+  "error" => "fail"
+}
+```
+
+### Style guidance
+
+Prefer explicit types in flow signatures and public API definitions.
+Use `Auto` for obvious local intermediate bindings:
+
+```LogicN
+let itemCount: Auto = order.items.length  // obvious: Int
+let subtotal: Auto  = order.items.sum(i => i.price)  // obvious: Decimal
+```
+
+`Auto` declarations appear in the type manifest with their resolved concrete
+type — not as `Auto`.
+
+---
+
 ## Function Parameters
 
 Parameters should be typed.
@@ -1133,7 +1189,7 @@ Matrix<128, 256, Float32>
 
 ---
 
-## Exhaustive Match Checking
+## Exhaustive match Checking
 
 Given:
 
@@ -1149,7 +1205,7 @@ enum PaymentStatus {
 This is incomplete:
 
 ```LogicN
-map(status) {
+match status {
   Paid   => ALOw
   Failed => Deny
 }
@@ -1169,7 +1225,7 @@ Unknown
 Example:
 
 ```LogicN
-map(customer) {
+match customer {
   Some(c) => process(c)
   None    => return Review("Customer missing")
 }
@@ -1182,7 +1238,7 @@ map(customer) {
 Example:
 
 ```LogicN
-map(result) {
+match result {
   Ok(order)  => return Ok(order)
   Err(error) => return Err(error)
 }

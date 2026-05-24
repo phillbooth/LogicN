@@ -56,9 +56,9 @@ effects [network.inbound, compute.run] {
   }?
 
   match safety.decision {
-    Deny => return JsonResponse({ "status": "blocked" })
+    Deny   => return JsonResponse({ "status": "blocked" })
     Review => return JsonResponse({ "status": "review" })
-    Allow => continue
+    Allow  => continue
   }
 
   let reply: GeneratedText = GenerationPackage.generate {

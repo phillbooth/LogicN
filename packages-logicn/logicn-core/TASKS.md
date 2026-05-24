@@ -123,7 +123,7 @@ package boundaries
 ```text
 [ ] Define language edition metadata and compatibility diagnostics
 [ ] Define compiler-facing Bool, Tri, Decision and LogicN syntax/report contracts
-[ ] Specify algebraic variants, sealed state and exhaustive match requirements
+[ ] Specify algebraic variants, sealed state and exhaustive map requirements
 [ ] Specify explicit generic constraints, traits or protocols
 [ ] Specify structured concurrency, cancellation and typed streams
 [ ] Specify deterministic cleanup for files, sockets, locks and FFI handles
@@ -393,7 +393,7 @@ Tasks:
 [x] Define Result syntax
 [x] Define Decision syntax
 [x] Define Tri syntax
-[x] Define match syntax
+[x] Define map syntax (pattern matching)
 [x] Define if syntax
 [x] Define loop syntax
 [x] Define wait until syntax
@@ -437,7 +437,7 @@ Tasks:
 [x] Define type inference rules
 [x] Define explicit conversion rules
 [x] Define rejected implicit coercions
-[x] Define exhaustive match checking
+[x] Define exhaustive map checking
 [x] Define compile-time shape checking
 ```
 
@@ -813,7 +813,7 @@ Version 0.2 should start validating syntax and simple execution.
 [ ] Parse flow definitions
 [ ] Parse type definitions
 [ ] Parse enum definitions
-[ ] Parse match expressions
+[ ] Parse map expressions (pattern matching)
 [ ] Parse Result and Option examples
 [ ] Parse JSON decode examples
 [x] Generate basic AST JSON output
@@ -830,7 +830,7 @@ Version 0.3 should add safety checks.
 
 ```text
 [x] Add strict type checker prototype
-[x] Add exhaustive match check
+[x] Add exhaustive map check
 [x] Add no-undefined check
 [x] Add no-silent-null check
 [x] Add truthy/falsy rejection

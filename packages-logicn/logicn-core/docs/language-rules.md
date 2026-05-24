@@ -204,7 +204,7 @@ Example:
 ```LogicN
 let customer: Option<Customer> = findCustomer(customerId)
 
-map(customer) {
+match customer {
   Some(c) => processCustomer(c)
   None    => return Review("Customer missing")
 }
@@ -235,7 +235,7 @@ Example:
 ```LogicN
 let email: Option<Email> = customer.email
 
-map(email) {
+match email {
   Some(e) => sendEmail(e)
   None    => return Review("Customer email missing")
 }
@@ -295,7 +295,7 @@ Example:
 flow loadOrder(id: OrderId) -> Result<Order, OrderError> {
   let order: Option<Order> = database.findOrder(id)
 
-  map(order) {
+  match order {
     Some(o) => return Ok(o)
     None    => return Err(OrderError.NotFound)
   }
@@ -345,7 +345,7 @@ if customer {
 Valid:
 
 ```LogicN
-map(customer) {
+match customer {
   Some(c) => process(c)
   None    => return Review("Customer missing")
 }
@@ -362,7 +362,7 @@ if order.payment.status {
 Valid:
 
 ```LogicN
-map(order.payment.status) {
+match order.payment.status {
   Paid    => shipOrder(order)
   Pending => holdForReview(order)
   Failed  => cancelOrder(order)
@@ -440,15 +440,15 @@ Any conversion must be explicit and must name the policy being applied.
 
 ---
 
-## Rule 13: `map` Should Be Exhaustive
+## Rule 13: `match` Should Be Exhaustive
 
-LogicN uses `map(value) { ... }` for all multi-branch matching. Enum maps
+LogicN uses `match value { ... }` for all multi-branch matching. Enum matches
 must be exhaustive — the compiler reports any missing cases.
 
 Example (complete):
 
 ```LogicN
-map(status) {
+match status {
   Paid    => ALOw
   Failed  => Deny
   Pending => Review
@@ -461,7 +461,7 @@ If a case is missing, the compiler fails or warns depending on severity.
 Invalid (incomplete):
 
 ```LogicN
-map(status) {
+match status {
   Paid   => ALOw
   Failed => Deny
 }
@@ -474,7 +474,7 @@ Pending
 Unknown
 ```
 
-then the map is incomplete. The compiler error must name the missing cases.
+then the match is incomplete. The compiler error must name the missing cases.
 
 ---
 
@@ -1115,7 +1115,7 @@ Original source:
   app/services/order-service.lln:42:7
 
 Suggestion:
-  Add a map branch for Unknown.
+  Add a match branch for Unknown.
 ```
 
 LogicN should generate:

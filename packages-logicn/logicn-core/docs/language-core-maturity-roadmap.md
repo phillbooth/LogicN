@@ -48,12 +48,12 @@ secure web runtime
 | Area | LogicN needs |
 |---|---|
 | Parser | A real parser for the v1 syntax subset. |
-| AST | Stable nodes for flows, types, routes, effects, policies and match blocks. |
+| AST | Stable nodes for flows, types, routes, effects, policies and map blocks (pattern matching). |
 | Symbols | Module, package, flow, type and visibility resolution. |
 | Types | Strict checking for scalar, record, enum, option, result and collection types. |
 | Effects | Compile-time effect declarations and permission decisions. |
 | Memory | Ownership modes, read-only views, explicit clone, resource scopes and reports. |
-| Match | Exhaustive handling for Result, Option, enums, Tri and Decision. |
+| map (Pattern Matching) | Exhaustive handling for Result, Option, enums, Tri and Decision. |
 | JSON | Typed decode/encode generation with unknown-field policy. |
 | Runtime | Checked secure runtime for APIs, webhooks, queues and workers. |
 | Reports | Security, memory, API, package, target and AI-safe reports. |
@@ -114,7 +114,7 @@ syntax outside the standard library.
 1. Freeze v1 syntax and examples.
 2. Build parser, AST and symbol table.
 3. Implement type, effect and permission checks.
-4. Implement Result, Option, Tri, Decision and exhaustive match semantics.
+4. Implement Result, Option, Tri, Decision and exhaustive map semantics.
 5. Define memory model: ownership, readonly views, clone and resource scopes.
 6. Build secure web runtime slice.
 7. Generate typed JSON codecs and route manifests.

@@ -667,7 +667,7 @@ Before merging a LogicN application change:
 [ ] API routes include timeout and body size where relevant
 [ ] Webhooks include verification and idempotency where relevant
 [ ] Result and Option handling is explicit
-[ ] Match statements handle all important states
+[ ] match branches handle all important states
 [ ] Source maps are enabled for debugging
 [ ] Build manifest is generated in CI/CD
 [ ] Security report has no high-risk warnings

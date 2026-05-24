@@ -533,8 +533,8 @@ Example:
 ```LogicN
 secure flow handleApiError(error: ApiError) -> Response {
   match error {
-    BodyTooLarge => return JsonResponse({ "error": "body_too_large" }, status: 413)
-    RateLimited => return JsonResponse({ "error": "rate_limited" }, status: 429)
+    BodyTooLarge   => return JsonResponse({ "error": "body_too_large" }, status: 413)
+    RateLimited    => return JsonResponse({ "error": "rate_limited" }, status: 429)
     SchemaMismatch => return JsonResponse({ "error": "invalid_request" }, status: 400)
     _ => return JsonResponse({ "error": "request_failed" }, status: 400)
   }

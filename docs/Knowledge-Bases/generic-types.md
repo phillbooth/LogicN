@@ -41,7 +41,7 @@ let customer: Option<Customer> = database.find_customer(id)
 Handling:
 
 ```logicn
-map(customer) {
+match customer {
   Some(c) => process(c)
   None    => return Err(CustomerError.NotFound)
 }
@@ -74,7 +74,7 @@ Handling:
 ```logicn
 let result: Result<Order, OrderError> = load_order(id)
 
-map(result) {
+match result {
   Ok(order) => process(order)
   Err(e)    => return Err(e)
 }

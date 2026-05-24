@@ -713,7 +713,7 @@ Example result handling:
 ```LogicN
 match results {
   Ok(validRows) => continueImport(validRows)
-  Err(errors) => return ImportError.RowValidation(errors)
+  Err(errors)   => return ImportError.RowValidation(errors)
 }
 ```
 

@@ -6,7 +6,7 @@ enum Tri {
 
 pure flow signalState(score: Float) -> Tri {
   match score {
-    score > 0.1 => Positive
+    score > 0.1  => Positive
     score < -0.1 => Negative
     _ => Neutral
   }

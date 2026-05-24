@@ -135,7 +135,7 @@ These categories must not be silently collapsed into one another.
 
 ### Rule 5: Exhaustive and Explainable Control Flow
 
-`match`-style branching should be exhaustive for enums, `Option<T>` and
+`map`-style branching should be exhaustive for enums, `Option<T>` and
 `Result<T, E>` where practical.
 
 The language should prefer explicit, readable control flow over implicit or

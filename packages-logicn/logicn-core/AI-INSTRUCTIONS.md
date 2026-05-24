@@ -325,7 +325,7 @@ Good:
 ```LogicN
 match customer {
   Some(c) => process(c)
-  None => return Review("Customer missing")
+  None    => return Review("Customer missing")
 }
 ```
 
@@ -350,7 +350,7 @@ let customer: Option<Customer> = findCustomer(customerId)
 
 match customer {
   Some(c) => processCustomer(c)
-  None => return Review("Customer not found")
+  None    => return Review("Customer not found")
 }
 ```
 
@@ -374,7 +374,7 @@ flow loadOrder(id: OrderId) -> Result<Order, OrderError> {
 
   match order {
     Some(o) => return Ok(o)
-    None => return Err(OrderError.NotFound)
+    None    => return Err(OrderError.NotFound)
   }
 }
 ```
@@ -742,7 +742,7 @@ Original source:
   app/services/order-service.lln:42:7
 
 Suggestion:
-  Add a match case for Unknown.
+  Add a match branch for Unknown.
 ```
 
 ---
@@ -1120,7 +1120,7 @@ effects [network.inbound] {
 
   match event.type {
     "payment.succeeded" => handlePaymentSucceeded(event)
-    "payment.failed" => handlePaymentFailed(event)
+    "payment.failed"    => handlePaymentFailed(event)
     _ => return JsonResponse({ "ignored": true })
   }
 

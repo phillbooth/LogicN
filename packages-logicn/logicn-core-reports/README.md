@@ -145,6 +145,16 @@ precision compatibility, data sensitivity, isolation level, memory limits,
 fallback decisions and audit status. Compute and target packages produce the
 facts; `logicn-core-reports` owns the shared shape.
 
+## Runtime Audit Log Format (Planned)
+
+The runtime audit log schema has not yet been finalised. When finalised it will
+define the structured JSON format for all security-sensitive runtime events,
+including capability events, policy events, deployment events, and provenance
+events. The schema will be versioned and promoted once stable.
+
+See `docs/Knowledge-Bases/runtime-audit-log-format.md` for the planned schema
+and event categories.
+
 Final rule:
 
 ```text

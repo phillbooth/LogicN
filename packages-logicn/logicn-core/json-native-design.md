@@ -1053,7 +1053,7 @@ secure flow handlePaymentWebhook(req: Request) -> Result<Response, WebhookError>
 
   match event.type {
     "payment.succeeded" => handlePaymentSucceeded(event)
-    "payment.failed" => handlePaymentFailed(event)
+    "payment.failed"    => handlePaymentFailed(event)
     _ => return JsonResponse({ "ignored": true })
   }
 

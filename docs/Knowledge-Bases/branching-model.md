@@ -3,9 +3,9 @@
 ## Core Rule
 
 ```text
-if  = simple decision (true/false)
-map = match and transform
-else = fallback
+if    = simple decision (true/false)
+match = pattern match and transform
+_ =>  = catch-all fallback (inside match block)
 ```
 
 ## if
@@ -15,92 +15,79 @@ Use `if` for simple true/false conditions:
 ```logicn
 if user.is_active {
   allow()
-}
-else {
+} else {
   deny()
 }
 ```
 
-## map
+## match
 
-Use `map(value)` for comparing one value against multiple outcomes.
+Use `match value` for comparing one value against multiple outcomes.
 
 ### Value Matching
 
 ```logicn
-let payment_message: Text = map(payment.status) {
+let payment_message: String = match payment.status {
   Paid    => "Payment complete"
   Failed  => "Payment failed"
   Pending => "Waiting for payment"
-}
-else {
-  "Unknown payment status"
+  _ => "Unknown payment status"
 }
 ```
 
 Standard syntax:
 
 ```logicn
-map(value_to_check) {
+match value_to_check {
   possible_value => result
-}
-else {
-  fallback_result
+  _ => fallback_result
 }
 ```
 
 ### Range Matching
 
 ```logicn
-let grade = map(score) {
+let grade = match score {
   >= 90 => "excellent"
   >= 70 => "good"
   >= 50 => "pass"
-}
-else {
-  "fail"
+  _ => "fail"
 }
 ```
 
 ### Object Pattern Matching
 
 ```logicn
-let output: Text = map(request) {
+let output: String = match request {
   { method: "GET", path: "/users" }  => get_users()
   { method: "POST", path: "/users" } => create_user()
-}
-else {
-  not_found()
+  _ => not_found()
 }
 ```
 
-## map Replaces switch and case
+## match Replaces switch and case
 
-LogicN does not use `switch` or `case`. `map` provides the same behaviour
+LogicN does not use `switch` or `case`. `match` provides the same behaviour
 with a smaller, cleaner syntax:
 
 ```logicn
-map(status) {
+match status {
   "paid"    => complete()
   "failed"  => retry()
   "pending" => wait()
-}
-else {
-  unknown()
+  _ => unknown()
 }
 ```
 
 ## No elseif
 
-`elseif` is not used. For multiple branches, use `map`:
+`elseif` is not used. For multiple branches, use `match`:
 
 ```logicn
-let result: Text = map(status) {
+let result: String = match status {
   "paid"   => "complete"
   "failed" => "failed"
-}
-else {
-  "unknown"
+  _ => "unknown"
 }
 ```
 
@@ -108,8 +95,9 @@ else {
 
 ```text
 if      = simple yes/no decision
-else    = fallback branch
-map     = multiple branch matching and transformation
+else    = fallback for if blocks
+match   = multiple branch matching and transformation
+_ =>    = catch-all arm inside match block
 elseif  = not required
 switch  = not required
 case    = not required as a standalone keyword

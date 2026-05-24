@@ -114,9 +114,9 @@ AI-readable guide output
 | AI-readable structure           | 0    | AI may misunderstand implicit behaviour | Core                                    | Explicit effects, source maps, generated summaries  |
 | Strict static types             | 0    | Type confusion                         | Core                                    | No implicit narrowing or unsafe coercion            |
 | `Bool`                          | 1    | Incorrect branch condition             | Core                                    | Only `Bool` controls normal `if`                    |
-| `Tri`                           | 2    | Unknown treated as allow/true          | Core                                    | No implicit `Bool`; exhaustive `match`              |
-| `LogicN`                      | 2    | Missing state handling                 | Core / advanced                        | Exhaustive `match`, no silent narrowing             |
-| `Option<T>`                     | 0    | Missing value bugs                     | Core                                    | Must unwrap/match explicitly                        |
+| `Tri`                           | 2    | Unknown treated as allow/true          | Core                                    | No implicit `Bool`; exhaustive `match`                |
+| `LogicN`                      | 2    | Missing state handling                 | Core / advanced                        | Exhaustive `match`, no silent narrowing               |
+| `Option<T>`                     | 0    | Missing value bugs                     | Core                                    | Must unwrap with `match` explicitly                   |
 | `Result<T, E>`                  | 0    | Hidden failure paths                   | Core                                    | Unhandled `Result` warning/error                    |
 | `null` at boundaries            | 3    | Null dereference, bypassed validation  | Boundary only                           | Decode to `Option`, `JsonNull` or reject            |
 | `undefined`                     | X    | Ambiguous missing state                | Unsupported                             | Reject; suggest `Option`, `Result` or compiler error |

@@ -26,23 +26,48 @@ show diagnostics
 generate project graphs
 ```
 
-## Early Commands
+## Command Status
+
+### Implemented (Prototype)
 
 ```text
-LogicN check
-LogicN build
-LogicN run
-LogicN serve
-LogicN reports
-LogicN security:check
-LogicN routes
-LogicN benchmark
-LogicN task
-LogicN graph
-LogicN graph query
-LogicN graph explain
-LogicN graph path
+logicn check             — validate source without producing artefacts
+logicn build             — compile and produce artefacts (partial)
+logicn run               — run compiled output
+logicn serve             — start server
+logicn reports           — generate reports
+logicn security:check    — run security scan
+logicn routes            — list route table
+logicn benchmark         — placeholder command
+logicn task              — run project automation tasks
+logicn graph             — generate project dependency graph
+logicn graph query       — query generated graph
+logicn graph explain     — explain graph node
+logicn graph path        — show path between nodes
+logicn fmt               — format source files
 ```
+
+### Planned / Not Yet Implemented
+
+```text
+logicn deploy            — deploy verified build to target environment
+logicn explain           — explain build decisions, authority model, effects
+logicn plan              — preview deployment actions without applying changes
+logicn verify deploy     — verify running version against build manifest
+logicn promote           — promote artifact from one environment to another
+logicn rollback          — rollback to previous deployment
+```
+
+`logicn deploy` consumes a verified build manifest. It does not recompile
+source. See `build-system-and-cli.md` in the knowledge base for the full
+deploy model, including build-once deploy-many, deployment profiles, secrets
+checks, and rollback.
+
+`logicn explain` is intended to explain compiler decisions, runtime authority,
+effect declarations, and boundary violations in human-readable form.
+
+`logicn plan` is a dry-run command that previews what `logicn deploy` would do
+without changing any infrastructure.
 
 `LogicN benchmark` is currently a placeholder command. The benchmark contracts,
 recommended modes and report shape live in `packages-logicn/logicn-tools-benchmark/README.md`.

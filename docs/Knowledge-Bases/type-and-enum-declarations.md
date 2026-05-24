@@ -315,10 +315,10 @@ fail closed with a typed error unless a boundary policy allows a fallback.
 
 ### Exhaustive Matching
 
-The `map` expression must cover all enum variants:
+The `match` expression must cover all enum variants:
 
 ```logicn
-let decision: Decision = map(status) {
+let decision: Decision = match status {
   Paid     => Allow
   Failed   => Deny
   Pending  => Review
@@ -326,15 +326,12 @@ let decision: Decision = map(status) {
   Unknown  => Review
   Unpaid   => Deny
 }
-else {
-  Review
-}
 ```
 
 Missing a variant produces:
 
 ```text
-LNN-ERR-TYPE-003: Non-exhaustive map — missing case: Unknown
+LNN-ERR-TYPE-003: Non-exhaustive match — missing case: Unknown
 ```
 
 ### Case Qualification
@@ -376,10 +373,11 @@ enum Decision {
 }
 
 secure flow paymentDecision(status: PaymentStatus) -> Decision {
-  map(status) {
+  match status {
     Paid    => Allow
     Failed  => Deny
     Pending => Review
+    _ => Review
   }
 }
 ```

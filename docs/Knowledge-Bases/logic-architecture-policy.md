@@ -163,7 +163,7 @@ flow -> effects -> runtime authority plan -> allow/deny
 Prefer early exits and pattern matching:
 
 ```logicn
-map(validate.email(rawEmail)) {
+match validate.email(rawEmail) {
   Err(error) => return Api.badRequest(error)
   Ok(email)  => save(email)
 }

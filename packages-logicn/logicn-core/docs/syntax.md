@@ -249,6 +249,32 @@ let total: Money<GBP> = Money(100.00)
 
 ---
 
+## Auto — Compile-Time Type Inference
+
+`Auto` asks the compiler to infer the concrete type from the value. It is not
+`Any`. The compiler resolves `Auto` at compile time to a single concrete type.
+
+```LogicN
+let count: Auto = 42          // inferred: Int
+let name: Auto  = "Phillip"   // inferred: String
+let active: Auto = true       // inferred: Bool
+```
+
+Invalid — ambiguous branches cannot resolve to one type:
+
+```LogicN
+let result: Auto = match status {
+  "ok"    => "continue"
+  "error" => 500
+}
+// ERROR: compiler cannot infer a single type
+```
+
+Rule: prefer explicit types in flow signatures, API boundaries and
+security-sensitive values. Use `Auto` only for obvious local bindings.
+
+---
+
 ## Explicit Conversion
 
 LogicN should not allow implicit type coercion.
@@ -522,7 +548,7 @@ Example:
 
 ```LogicN
 secure flow paymentDecision(status: PaymentStatus) -> Decision {
-  map(status) {
+  match status {
     Paid     => ALOw
     Failed   => Deny
     Pending  => Review
@@ -551,12 +577,10 @@ Example:
 
 ```LogicN
 pure flow signalState(score: Float) -> Tri {
-  map(score) {
+  match score {
     score > 0.1  => Positive
     score < -0.1 => Negative
-  }
-  else {
-    Neutral
+    _ => Neutral
   }
 }
 ```
@@ -575,10 +599,10 @@ Example:
 let customer: Option<Customer> = findCustomer(customerId)
 ```
 
-Handle with `map`:
+Handle with `match`:
 
 ```LogicN
-map(customer) {
+match customer {
   Some(c) => processCustomer(c)
   None    => return Review("Customer missing")
 }
@@ -600,7 +624,7 @@ Example:
 flow loadOrder(id: OrderId) -> Result<Order, OrderError> {
   let order: Option<Order> = database.findOrder(id)
 
-  map(order) {
+  match order {
     Some(o) => return Ok(o)
     None    => return Err(OrderError.NotFound)
   }
@@ -609,17 +633,17 @@ flow loadOrder(id: OrderId) -> Result<Order, OrderError> {
 
 ---
 
-## Pattern Matching (map)
+## Pattern Matching (match)
 
-LogicN uses `map(value) { ... }` for all multi-branch matching. The `else`
-branch is the catch-all and is always written outside the closing `}`.
+LogicN uses `match value { ... }` for all multi-branch matching. The `_ =>`
+arm is the catch-all and is always written inside the closing `}`.
 
-`map` replaces `switch`, `case`, `elseif`, and `match` from other languages.
+`match` replaces `switch`, `case`, `elseif` from other languages.
 
 Basic enum matching:
 
 ```LogicN
-map(order.payment.status) {
+match order.payment.status {
   Paid    => shipOrder(order)
   Pending => holdForReview(order)
   Failed  => cancelOrder(order)
@@ -634,7 +658,7 @@ Enum matching must be exhaustive. The compiler reports any missing cases.
 ## Pattern Matching with Blocks
 
 ```LogicN
-map(order.payment.status) {
+match order.payment.status {
   Paid => {
     shipOrder(order)
     return Ok(ALOw)
@@ -681,10 +705,10 @@ if customer {
 }
 ```
 
-Use `map` for `Option<T>`:
+Use `match` for `Option<T>`:
 
 ```LogicN
-map(customer) {
+match customer {
   Some(c) => process(c)
   None    => return Review("Customer missing")
 }
@@ -910,7 +934,7 @@ A possible syntax for explicit fallible operations:
 ```LogicN
 let result = attempt shipOrder(order)
 
-map(result) {
+match result {
   Ok(o)      => return Ok(o)
   Err(error) => return Err(error)
 }
@@ -1143,12 +1167,10 @@ secure flow handlePaymentWebhook(req: Request) -> Result<Response, WebhookError>
 effects [network.inbound] {
   let event: PaymentEvent = json.decode<PaymentEvent>(req.body)
 
-  map(event.type) {
+  match event.type {
     "payment.succeeded" => handlePaymentSucceeded(event)
     "payment.failed"    => handlePaymentFailed(event)
-  }
-  else {
-    return JsonResponse({ "ignored": true })
+    _ => return JsonResponse({ "ignored": true })
   }
 
   return JsonResponse({ "received": true })
@@ -1181,7 +1203,7 @@ Usage:
 ```LogicN
 let result = await PaymentsApi.capturePayment(paymentId)
 
-map(result) {
+match result {
   Ok(payment) => return Ok(payment)
   Err(error)  => return Err(error)
 }
@@ -1637,7 +1659,7 @@ General style:
 ```text
 two-space indentation or consistent project standard
 opening brace on same line
-blank line between major map branches
+blank line between major match branches
 explicit return types
 clear block structure
 ```

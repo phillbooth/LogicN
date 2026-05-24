@@ -31,7 +31,7 @@ LogicN should avoid it.
 | --- | --- | --- | --- |
 | Classes | Can hide state and behaviour inside objects | Harder to audit authority and side effects | Use `type`, `flow`, and `fn` |
 | Inheritance | Creates hidden behaviour through parent/child chains | Harder to reason about permissions, data flow, and overrides | Use composition and explicit functions |
-| Polymorphic inheritance | Same call can execute different hidden implementations | Makes runtime authority harder to prove | Use explicit `map` or typed flow dispatch |
+| Polymorphic inheritance | Same call can execute different hidden implementations | Makes runtime authority harder to prove | Use explicit `match` or typed flow dispatch |
 | Method overriding | Child logic can silently replace parent logic | Dangerous for security-critical flows | Use named flows and explicit selection |
 | Magic methods | Hidden behaviour triggered automatically | Hard to audit and easy to misuse | Use explicit runtime functions |
 | Reflection | Code can inspect or manipulate runtime structures dynamically | Can bypass governance if unrestricted | Use explicit metadata generated at compile time |
@@ -55,9 +55,9 @@ LogicN should avoid it.
 | Multiple inheritance | Complex behaviour resolution | Very hard to analyse and audit | Do not support inheritance |
 | Operator overloading | Operators can hide arbitrary logic | Confusing behaviour and side effects | Keep operators simple and predictable |
 | Exceptions as hidden control flow | Execution jumps are harder to audit | Can bypass cleanup or validation paths | Use explicit `Result` / `else` / `attempt` model |
-| `elseif` | Encourages long branch chains | Harder to read than structured mapping | Use `if/else` or `map` |
-| `switch` | Duplicates `map` behaviour | Extra syntax surface | Use `map(value) { ... } else { ... }` |
-| `case` | Duplicates `map` behaviour | Unneeded syntax complexity | Use `map` |
+| `elseif` | Encourages long branch chains | Harder to read than structured matching | Use `if/else` or `match` |
+| `switch` | Duplicates `match` behaviour | Extra syntax surface | Use `match value { ... }` |
+| `case` | Duplicates `match` behaviour | Unneeded syntax complexity | Use `match` |
 | Public mutable object state | State can be changed anywhere | Hard to audit ownership | Use explicit values and controlled flows |
 | Hidden constructors | Object setup can perform side effects | Runtime authority may be hidden | Use explicit factory flows/functions |
 | Destructors with side effects | Cleanup may secretly perform logic | Hard to reason about runtime actions | Use `release` and end-of-flow cleanup |
@@ -94,7 +94,7 @@ LogicN should avoid it.
 | `GlobalVault` | Secure secret/config access |
 | `release` | Optional early cleanup |
 | End-of-flow cleanup | Automatic runtime cleanup |
-| `map` | Multi-branch logic |
+| `match` | Multi-branch logic |
 | `if/else` | Simple boolean logic |
 | `task` / `wait` | Governed async work in flows |
 | `attempt ... else error {}` | Error handling without hidden jumps |

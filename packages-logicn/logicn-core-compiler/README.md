@@ -49,6 +49,31 @@ unsafe dynamic code execution calls
 The scan is intentionally fail-safe. It emits diagnostics for suspicious source
 instead of trying to infer intent from ambiguous syntax.
 
+## Effect Checker (Planned)
+
+The effect checker is not yet implemented. When implemented it will validate that
+functions declare all side effects they perform, that effects propagate through
+the call graph correctly, and that compile-time code does not attempt runtime-only
+effects.
+
+Effect error codes: LLN-E4001 (undeclared effect), LLN-E4002 (undeclared
+propagated effect), LLN-E4003 (forbidden compile-time effect).
+
+See `docs/Knowledge-Bases/effect-checker-and-boundary-checker.md` for the full
+specification.
+
+## Boundary Checker (Planned)
+
+The boundary checker is not yet implemented. When implemented it will validate
+that code does not cross module/package/trust/runtime boundaries incorrectly.
+
+Boundary error codes: LLN-E4004 (compile-time/runtime boundary violation),
+LLN-E4005 (capability boundary violation), LLN-E4006 (package trust boundary
+violation).
+
+See `docs/Knowledge-Bases/effect-checker-and-boundary-checker.md` for the full
+specification.
+
 ## Boundary
 
 `logicn-core` owns language documentation, grammar contracts and core safety rules.

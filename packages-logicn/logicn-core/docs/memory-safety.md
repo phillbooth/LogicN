@@ -385,7 +385,7 @@ let item: Option<OrderItem> = items.get(0)
 
 match item {
   Some(i) => processItem(i)
-  None => return Review("No item found")
+  None    => return Review("No item found")
 }
 ```
 
@@ -487,7 +487,7 @@ let customer: Option<Customer> = findCustomer(id)
 
 match customer {
   Some(c) => process(c)
-  None => return Review("Customer missing")
+  None    => return Review("Customer missing")
 }
 ```
 
@@ -1247,7 +1247,7 @@ let customer: Option<Customer> = findCustomer(id)
 
 match customer {
   Some(c) => print(c.name)
-  None => return Review("Customer missing")
+  None    => return Review("Customer missing")
 }
 ```
 
@@ -1268,7 +1268,7 @@ let first: Option<OrderItem> = items.get(0)
 
 match first {
   Some(item) => processItem(item)
-  None => return Review("No items found")
+  None       => return Review("No items found")
 }
 ```
 

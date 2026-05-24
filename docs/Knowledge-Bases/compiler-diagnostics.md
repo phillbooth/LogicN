@@ -79,7 +79,7 @@ FATAL — unrecoverable, runtime must halt
 ```text
 LNN-ERR-TYPE-001: Type mismatch — expected X, got Y
 LNN-ERR-TYPE-002: Field X is not a member of type Y
-LNN-ERR-TYPE-003: Non-exhaustive map — missing enum case: X
+LNN-ERR-TYPE-003: Non-exhaustive match — missing enum case: X
 LNN-ERR-NULL-001: Null is not a valid value — use Option<T>
 LNN-ERR-NULL-002: None used where a value is required — unwrap or handle None
 ```
@@ -135,7 +135,7 @@ LNN-WARN-MEM-005     — cache memory warning
 LNN-ERR-MEM-006      — memory integrity check failed
 LNN-ERR-TYPE-001     — type mismatch
 LNN-ERR-TYPE-002     — unknown field
-LNN-ERR-TYPE-003     — non-exhaustive map
+LNN-ERR-TYPE-003     — non-exhaustive match
 LNN-ERR-NULL-001     — null not allowed
 LNN-ERR-NULL-002     — unexpected None
 LNN-WARN-BUILD-002   — build warning

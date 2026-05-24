@@ -12,7 +12,7 @@ minimum acceptance bar is:
 ```text
 20 real .lln example programs
 a grammar that can parse those examples
-documented function, type, map (pattern matching), Result, Option, effect and import syntax
+documented function, type, match (pattern matching), Result, Option, effect and import syntax
 diagnostics for unsupported or post-v1 syntax
 ```
 
@@ -171,6 +171,32 @@ let age: Int = 35
 let email: String = "hello@example.com"
 let total: Money<GBP> = Money(100.00)
 ```
+
+---
+
+## Auto — Compile-Time Type Inference
+
+`Auto` asks the compiler to infer the concrete type from the value. It is not
+`Any`. The compiler resolves `Auto` at compile time to a single concrete type.
+
+```LogicN
+let count: Auto = 42          // inferred: Int
+let name: Auto  = "Phillip"   // inferred: String
+let active: Auto = true       // inferred: Bool
+```
+
+Invalid — ambiguous branches cannot resolve to one type:
+
+```LogicN
+let result: Auto = match status {
+  "ok"    => "continue"
+  "error" => 500
+}
+// ERROR: compiler cannot infer a single type
+```
+
+Rule: prefer explicit types in flow signatures, API boundaries and
+security-sensitive values. Use `Auto` only for obvious local bindings.
 
 ---
 
@@ -384,7 +410,7 @@ Example:
 
 ```LogicN
 secure flow paymentDecision(status: PaymentStatus) -> Decision {
-  map(status) {
+  match status {
     Paid     => ALOw
     Failed   => Deny
     Pending  => Review
@@ -413,12 +439,10 @@ Example:
 
 ```LogicN
 pure flow signalState(score: Float) -> Tri {
-  map(score) {
+  match score {
     score > 0.1  => Positive
     score < -0.1 => Negative
-  }
-  else {
-    Neutral
+    _ => Neutral
   }
 }
 ```
@@ -437,10 +461,10 @@ Example:
 let customer: Option<Customer> = findCustomer(customerId)
 ```
 
-Handle with `map`:
+Handle with `match`:
 
 ```LogicN
-map(customer) {
+match customer {
   Some(c) => processCustomer(c)
   None    => return Review("Customer missing")
 }
@@ -462,7 +486,7 @@ Example:
 flow loadOrder(id: OrderId) -> Result<Order, OrderError> {
   let order: Option<Order> = database.findOrder(id)
 
-  map(order) {
+  match order {
     Some(o) => return Ok(o)
     None    => return Err(OrderError.NotFound)
   }
@@ -504,17 +528,17 @@ error AuthError {
 
 ---
 
-## Pattern Matching (map)
+## Pattern Matching (match)
 
-LogicN uses `map(value) { ... }` for all multi-branch matching. The `else`
-branch is the catch-all and is always written outside the closing `}`.
+LogicN uses `match value { ... }` for all multi-branch matching. The `_ =>`
+arm is the catch-all and is always written inside the closing `}`.
 
-`map` replaces `switch`, `case`, `elseif`, and `match` from other languages.
+`match` replaces `switch`, `case`, `elseif` from other languages.
 
 Basic enum matching:
 
 ```LogicN
-map(order.payment.status) {
+match order.payment.status {
   Paid    => shipOrder(order)
   Pending => holdForReview(order)
   Failed  => cancelOrder(order)
@@ -524,29 +548,27 @@ map(order.payment.status) {
 
 Enum matching must be exhaustive. The compiler reports any missing cases.
 
-### map as Expression
+### match as Expression
 
 ```LogicN
-let fee: Decimal = map(order.currency) {
+let fee: Decimal = match order.currency {
   GBP => Decimal(0.02)
   USD => Decimal(0.03)
   EUR => Decimal(0.025)
-}
-else {
-  Decimal(0.03)
+  _ => Decimal(0.03)
 }
 ```
 
-### Catch-All (else)
+### Catch-All (_ =>)
 
-The `else` block is required when:
+The `_ =>` arm is required when:
 
 ```text
-the matched type has variants not listed in the map block
+the matched type has variants not listed in the match block
 the matching is over a non-enum type (String, Int, range, etc.)
 ```
 
-It is optional when the `map` covers all known enum variants exhaustively.
+It is optional when the `match` covers all known enum variants exhaustively.
 
 ---
 
@@ -555,7 +577,7 @@ It is optional when the `map` covers all known enum variants exhaustively.
 Use block bodies `{ ... }` when a branch needs multiple statements:
 
 ```LogicN
-map(order.payment.status) {
+match order.payment.status {
   Paid => {
     shipOrder(order)
     return Ok(ALOw)
@@ -585,7 +607,7 @@ map(order.payment.status) {
 Match typed error variants for explicit error handling:
 
 ```LogicN
-map(createOrder(input)) {
+match createOrder(input) {
   Ok(order)          => completeCheckout(order)
   Err(PaymentDeclined) => showDeclinedMessage()
   Err(FraudBlocked)    => escalateReview()
@@ -606,7 +628,7 @@ an explicit gate:
 ```LogicN
 let rawEmail: String unsafe unvalidated = form.email
 
-map(validate.email(rawEmail)) {
+match validate.email(rawEmail) {
   Ok(email) => {
     let safeEmail: Email safe validated = email
     saveCustomer(safeEmail)
@@ -633,9 +655,9 @@ Boundary matching makes all validation and persistence decisions visible:
 secure flow createCustomer(req: Request) -> ApiResponse {
   let body: Json unsafe unvalidated = boundary.api.body(req)
 
-  map(validate.customer(body)) {
+  match validate.customer(body) {
     Ok(customerInput) => {
-      map(saveCustomer(customerInput)) {
+      match saveCustomer(customerInput) {
         Ok(customer)         => Api.created(customer)
         Err(DatabaseFailure) => Api.retryLater()
       }
@@ -645,7 +667,7 @@ secure flow createCustomer(req: Request) -> ApiResponse {
 }
 ```
 
-Nested `map` is acceptable when each level represents a distinct boundary
+Nested `match` is acceptable when each level represents a distinct boundary
 decision. Max nesting depth 2 — extract to a named `flow` if deeper.
 
 ---
@@ -656,7 +678,7 @@ Three-state governance decisions are more expressive than `Bool`:
 
 ```LogicN
 // Fraud decision
-map(fraudDecision(order)) {
+match fraudDecision(order) {
   Allow  => capturePayment(order)
   Deny   => cancelOrder(order)
   Review => queueManualReview(order)
@@ -665,7 +687,7 @@ map(fraudDecision(order)) {
 // Auth decision
 enum AuthDecision { Allow, Deny, RequireMFA }
 
-map(authorize(user, action)) {
+match authorize(user, action) {
   Allow      => executeAction()
   Deny       => Api.forbidden()
   RequireMFA => Api.mfaRequired()
@@ -691,7 +713,7 @@ enum OrderWorkflow {
   Cancelled
 }
 
-map(order.workflow) {
+match order.workflow {
   Draft           => allowEdits(order)
   AwaitingPayment => sendReminder(order)
   Paid            => queuePacking(order)
@@ -715,7 +737,7 @@ enum ValidationError {
   WeakPassword
 }
 
-map(validate.registration(input)) {
+match validate.registration(input) {
   Ok(data)           => createAccount(data)
   Err(MissingField)  => Api.badRequest("Missing field")
   Err(InvalidEmail)  => Api.badRequest("Invalid email")
@@ -728,10 +750,10 @@ map(validate.registration(input)) {
 
 ## Pattern Matching — Branded Types
 
-Branded type validation uses the same map pattern:
+Branded type validation uses the same match pattern:
 
 ```LogicN
-map(validate.customerId(rawInput)) {
+match validate.customerId(rawInput) {
   Ok(customerId) => loadCustomer(customerId)
   Err(InvalidCustomerId) => Api.badRequest()
 }
@@ -742,16 +764,16 @@ map(validate.customerId(rawInput)) {
 ## Pattern Matching — v1 Rules
 
 ```text
-1. map works with enums, Option<T>, and Result<T, E>
+1. match works with enums, Option<T>, and Result<T, E>
 2. Enum matching must be exhaustive — compiler enforces missing cases
 3. Result matching should explicitly handle success and each error variant
-4. Validation workflows use map to enforce state transitions
-5. Nested map is acceptable (max depth 2) — extract to named flow if deeper
+4. Validation workflows use match to enforce state transitions
+5. Nested match is acceptable (max depth 2) — extract to named flow if deeper
 6. Avoid wildcard-heavy matching until exhaustiveness analysis is mature
 7. Keep v1 patterns simple — no guards, tuple matching or deep destructuring
 8. Pattern matching should improve auditability and governance visibility
 9. Compiler diagnostics for missing cases must be extremely clear
-10. map syntax prioritises readability over compact cleverness
+10. match syntax prioritises readability over compact cleverness
 ```
 
 ---
@@ -762,7 +784,7 @@ These patterns are planned but not part of v1:
 
 ```LogicN
 // Tuple / multi-value — future
-map(paymentStatus, shipmentStatus) {
+match paymentStatus, shipmentStatus {
   (Paid, Queued)    => startPacking()
   (Paid, Delivered) => completeOrder()
   (Pending, _)      => holdOrder()
@@ -770,19 +792,19 @@ map(paymentStatus, shipmentStatus) {
 }
 
 // Destructuring — future
-map(apiResponse) {
+match apiResponse {
   Ok(Customer { email }) => sendReceipt(email)
   Err(error)             => log(error)
 }
 
 // Guards — future
-map(order) {
+match order {
   Order { total } if total > 1000 => requireManagerApproval()
   Order { total }                 => autoApprove()
 }
 
 // Wildcard — future (must still support exhaustiveness proof)
-map(status) {
+match status {
   Paid => complete()
   _    => hold()
 }
@@ -814,10 +836,10 @@ if customer {
 }
 ```
 
-Use `map` for `Option<T>`:
+Use `match` for `Option<T>`:
 
 ```LogicN
-map(customer) {
+match customer {
   Some(c) => process(c)
   None    => return Review("Customer missing")
 }
@@ -1023,7 +1045,7 @@ A possible syntax for explicit fallible operations:
 ```LogicN
 let result = attempt shipOrder(order)
 
-map(result) {
+match result {
   Ok(o)      => return Ok(o)
   Err(error) => return Err(error)
 }
@@ -1256,12 +1278,10 @@ secure flow handlePaymentWebhook(req: Request) -> Result<Response, WebhookError>
 effects [network.inbound] {
   let event: PaymentEvent = json.decode<PaymentEvent>(req.body)
 
-  map(event.type) {
+  match event.type {
     "payment.succeeded" => handlePaymentSucceeded(event)
     "payment.failed"    => handlePaymentFailed(event)
-  }
-  else {
-    return JsonResponse({ "ignored": true })
+    _ => return JsonResponse({ "ignored": true })
   }
 
   return JsonResponse({ "received": true })
@@ -1294,7 +1314,7 @@ Usage:
 ```LogicN
 let result = await PaymentsApi.capturePayment(paymentId)
 
-map(result) {
+match result {
   Ok(payment) => return Ok(payment)
   Err(error)  => return Err(error)
 }
@@ -1675,7 +1695,7 @@ General style:
 ```text
 two-space indentation or consistent project standard
 opening brace on same line
-blank line between major map branches
+blank line between major match branches
 explicit return types
 clear block structure
 ```
@@ -1798,7 +1818,7 @@ always outputs the newline-separated canonical form.
 Enum names and cases: PascalCase.
 
 Enums are closed by default. Unknown external values fail closed at governed
-boundaries. `map` over enums must be exhaustive.
+boundaries. `match` over enums must be exhaustive.
 
 Full specification: `docs/Knowledge-Bases/type-and-enum-declarations.md`.
 
