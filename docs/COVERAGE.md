@@ -259,13 +259,18 @@ Execution, scheduling, trust verification, identity, memory, hardware targets.
 | Deployment model (build-once, deploy-many) | ✅ | `build-system-and-cli.md` |
 | Good-taste architecture principles | ✅ | `architecture-good-taste-principles.md` |
 | CI/CD integration (OIDC, SLSA provenance, attestation) | ✅ | `cicd-integration-and-provenance.md` |
-| Runtime audit log format | ✅ | `runtime-audit-log-format.md` (extended — JSONL, execution proof, 5-hash strategy, LN-AUDIT-001–007, secret safety rules) |
-| Effect checker and boundary checker | ✅ | `effect-checker-and-boundary-checker.md` (extended — 12-effect table, `effect network, storage` syntax, algorithm, LN-EFFECT/LN-BOUNDARY codes, 16-item checklist) |
+| Runtime audit log format | ✅ | `runtime-audit-log-format.md` (extended — JSONL, execution proof, five-hash strategy, LN-AUDIT-001–007, `RuntimeAuditEvent` interface, `RuntimeAuditStatus` type, `DenialReport`, `CapabilityEvidence`, `EffectEvidence`, `RuntimeEvidence`, `buildExecutionProof`, `sha256`, LN-REPORT/LN-PROOF/LN-DENIAL/LN-EVIDENCE codes, 4-phase implementation order) |
+| Effect checker and boundary checker | ✅ | `effect-checker-and-boundary-checker.md` (extended — 12-effect table, `effect network, storage` syntax, algorithm, LN-EFFECT/LN-BOUNDARY codes, 16-item checklist, compiler internal structures, `Effect` union type, `EffectSet`, `BoundaryMetadata`, `RuntimeManifest`, `buildManifest`, manifest pipeline, LN-MANIFEST-001–005) |
 | Compile-time vs runtime authority boundary | ✅ | `compile-time-vs-runtime-authority.md` |
 | Package completion status and implementation order | ✅ | `package-completion-status.md` |
-| CLI deploy / explain / plan (governance commands) | ✅ | `logicn-core-cli-deploy-explain-plan.md` (new — exit codes, output modes, all flags, all examples, report files) |
-| GPU and photonic compute backends | ✅ | `logicn-core-compute-gpu-and-photonic-backends.md` (new — architecture layers, compute effects/capabilities, GPU/accelerator/optical planning, LN-COMPUTE-001–007) |
-| Omni logic (multi-valued reasoning) | ✅ | `logicn-core-logic-omni-logic.md` (new — 8 states, binary safety rule, advisory model, LN-OMNI-001–005, v0.1 scope: none) |
+| CLI build / verify / deploy / explain / plan (governance) | ✅ | `logicn-core-cli-deploy-explain-plan.md` (extended — `logicn build` section with 14-pass pipeline/artefacts/BuildResult/buildWorkspace/LN-BUILD codes, `logicn verify` section with VerificationResult/verifyHash/LN-VERIFY codes, deploy/explain/plan sections with internal dirs/types/functions/diagnostic codes, 5-phase implementation order) |
+| GPU / photonic / WASM / compatibility backends | ✅ | `logicn-core-compute-gpu-and-photonic-backends.md` (extended — GpuPlan/OpticalPlan types, gpu/ and photonic/ internal dirs, WASM target governance+sandbox restrictions+WasmTarget+validateWasmEffect+LN-WASM codes, target compatibility reports+CompatibilityResult+validateTarget+buildCompatibilityReport+LN-COMPAT codes, 4-phase implementation order) |
+| Omni logic (multi-valued reasoning) | ✅ | `logicn-core-logic-omni-logic.md` (8 states, binary safety rule — "never: probably approved", advisory model, absolute unsafe pattern rule, LN-OMNI-001–005) |
+| Effect and boundary checker (expanded) | ✅ | `effect-checker-and-boundary-checker.md` (extended boundary types table, runtime manifest JSON with network_hosts/filesystem_paths/trust_level, foundational context section) |
+| Tri / Decision / Bool logic systems | ✅ | `logicn-core-logic-tri-decision-bool.md` (NEW — TriState type, AND/OR/NOT truth tables, triAnd function, Decision 5-state type, evaluateCapability, validateBoolBoundary, enforceDeterministicPath, LN-TRI/LN-DECISION/LN-BOOL-BOUNDARY codes, 4-phase implementation order) |
+| Environment config and secret reference model | ✅ | `logicn-core-config-environment-secrets.md` (NEW — EnvironmentMode closed type, EnvironmentConfig/SecretEnvironmentReference/SecretReference/SecretDerivedReference/SecretSafeSink types, ProtectedSecret class, loadEnvironmentConfig/canSendSecretToSink/redactSecretValue functions, ProductionStrictnessPolicy, RuntimeConfigHandoff, LN-CONFIG-001–010/LN-SECRET-001–002, package.json boundary rule) |
+| Network governance model | ✅ | `logicn-core-network-governance.md` (NEW — NetworkProtocol/NetworkDestinationReference/NetworkPermission/NetworkPolicy types, GovernedNetworkRuntime class, safeHttpRequest/validateDestination/validateTlsRequirement functions, AI networking governance, LN-NETWORK-001–008, 4-phase implementation order) |
+| Photonic backend architecture | ✅ | `logicn-core-photonic-backend-architecture.md` (NEW — governance-first architecture, OpticalTransportMode/PhotonicRuntimeTarget/PhotonicExecutionPlan types, estimateOpticalSuitability/buildPhotonicPlan/resolveFallback functions, fallback philosophy, LN-PHOTONIC-001–006, planned sub-packages, 4-phase implementation order) |
 
 ---
 
@@ -329,12 +334,13 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope, boundary, contracts fully documented |
-| TODO.md | ✅ | Work tracking |
+| README.md | ✅ | Scope, boundary, contracts fully documented — Secret Reference Model section added (SecretReference, ProtectedSecret, SecretSafeSink, LN-SECRET codes) |
+| TODO.md | ✅ | Work tracking — SecretReference, SecretDerivedReference, SecureStringReference, ProtectedSecret, canSendSecretToSink, redactSecretValue, LN-SECRET items added |
 | src/ | ⚠️ | Implementation stubs |
 | SecureString / Secret<T> | ✅ | Contracts documented |
 | Redaction primitives | ✅ | Contracts documented |
 | Permission model types | ✅ | Contracts documented |
+| Secret reference model | ⚠️ | Fully specified in `logicn-core-config-environment-secrets.md` (SecretReference, SecretDerivedReference, SecureStringReference, ProtectedSecret, SecretSafeSink, canSendSecretToSink, redactSecretValue, LN-SECRET-001–002); not yet implemented |
 | Capability lease and attenuation | ✅ | Contracts documented |
 | Crypto policy and post-quantum planning | ✅ | Contracts documented |
 | Security diagnostics / reports | ✅ | Contracts documented |
@@ -354,89 +360,90 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | AST / source map | ✅ | Implemented prototype in logicn-core/compiler/ |
 | Effect checker | ⚠️ | Specified in KB (`effect-checker-and-boundary-checker.md`, `package-completion-status.md`); not yet implemented |
 | Boundary checker | ⚠️ | Specified in KB (`effect-checker-and-boundary-checker.md`, `package-completion-status.md`); not yet implemented |
-| Compiler pass pipeline | ✅ | 13-pass pipeline documented in `package-completion-status.md` and README |
-| Manifest generation | ⚠️ | JSON schema output exists; full manifest not yet |
+| Compiler pass pipeline | ✅ | 14-pass pipeline — pass 14 (Runtime manifest generator) added to README and TODO |
+| Manifest generation (pass 14) | ⚠️ | Fully specified — `RuntimeManifest` type, `buildManifest()`, manifests/ dir, LN-MANIFEST codes documented; not yet implemented |
 
 ### logicn-core-cli
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented — exit codes, flag lists, KB reference added |
-| TODO.md | ✅ | Work tracking — sub-items for deploy/explain/plan added |
+| README.md | ✅ | Scope documented — build/verify sections, all diagnostic code series, KB reference updated |
+| TODO.md | ✅ | Work tracking — build/verify/deploy/explain/plan items with types, functions, diagnostic codes, internal dirs |
 | dist/ | ⚠️ | Compiled output present |
 | logicn check | ✅ | Prototype implemented |
-| logicn build | ⚠️ | Partial — artefact generation not complete |
+| logicn build | ⚠️ | Partial — artefact generation not complete; fully specified (14-pass pipeline, BuildResult, buildWorkspace, LN-BUILD-001–005) |
 | logicn fmt | ✅ | Prototype implemented |
-| logicn verify | ⚠️ | Partial — hash checks only |
-| logicn deploy | ⚠️ | Not yet implemented — fully specified in `logicn-core-cli-deploy-explain-plan.md` (exit codes 0–7, all flags, deployment report schema) |
-| logicn explain | ⚠️ | Not yet implemented — fully specified in `logicn-core-cli-deploy-explain-plan.md` (--tree, --trace, all flags) |
-| logicn plan | ⚠️ | Not yet implemented — fully specified in `logicn-core-cli-deploy-explain-plan.md` (--graph, all flags, compute-plan.json) |
+| logicn verify | ⚠️ | Partial — hash checks only; fully specified (VerificationResult, verifyHash, LN-VERIFY-001–005) |
+| logicn deploy | ⚠️ | Not yet implemented — fully specified (exit codes 0–7, all flags, DeploymentResult, validateEffects, LN-DEPLOY-001–005) |
+| logicn explain | ⚠️ | Not yet implemented — fully specified (ExplainResult, buildTrace, LN-EXPLAIN-001–004) |
+| logicn plan | ⚠️ | Not yet implemented — fully specified (ComputePlan, estimateTarget, --compatibility, LN-PLAN-001–004) |
 
 ### logicn-core-logic
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented — Omni Logic safety boundaries and 8 states added |
-| TODO.md | ✅ | Work tracking — Omni phases, safety rules, LN-OMNI codes added |
+| README.md | ✅ | Scope documented — Logic Systems Summary table, Tri/Decision/Bool sections added; Omni Logic safety boundaries and 8 states documented |
+| TODO.md | ✅ | Work tracking — TriState/triAnd/triOr/triNot, Decision/evaluateCapability, validateBoolBoundary/enforceDeterministicPath items; Omni phases, safety rules, LN-OMNI codes added |
 | src/ | ⚠️ | Implementation stubs |
-| Tri logic operations | ⚠️ | Defined in KB; implementation stubs |
-| Decision logic | ⚠️ | Defined in KB; implementation stubs |
-| Bool boundary rules | ⚠️ | Defined in KB; implementation stubs |
+| Tri logic operations | ⚠️ | Fully specified in `logicn-core-logic-tri-decision-bool.md` (TriState, triAnd/triOr/triNot, AND/OR/NOT truth tables, LN-TRI-001–003); not yet implemented |
+| Decision logic | ⚠️ | Fully specified in `logicn-core-logic-tri-decision-bool.md` (Decision 5-state type, evaluateCapability, LN-DECISION-001–003); not yet implemented |
+| Bool boundary rules | ⚠️ | Fully specified in `logicn-core-logic-tri-decision-bool.md` (validateBoolBoundary, enforceDeterministicPath, LN-BOOL-BOUNDARY-001–003); not yet implemented |
 | Omni logic | ⚠️ | Fully specified in `logicn-core-logic-omni-logic.md`; v0.1 implementation = none |
 
 ### logicn-core-compute
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented — compute layers, effects, capabilities, GPU/photonic status added |
-| TODO.md | ✅ | Work tracking — GPU, optical, scheduler, planner, audit items added |
+| README.md | ✅ | Scope documented — WASM Target section (governance constraints, sandbox restrictions, WasmTarget, LN-WASM codes) and Target Compatibility Reports section (CompatibilityResult, LN-COMPAT codes) added |
+| TODO.md | ✅ | Work tracking — GpuPlan, OpticalPlan, WasmTarget, CompatibilityResult items with all functions and internal dirs added |
 | src/ | ⚠️ | Implementation stubs |
 | Compute block model | ✅ | Documented in logicn-core docs |
 | Compute effects and capabilities | ✅ | Specified in `logicn-core-compute-gpu-and-photonic-backends.md` |
-| GPU plan output | ⚠️ | Fully specified in `logicn-core-compute-gpu-and-photonic-backends.md`; backend not implemented |
-| Photonic / optical plan output | ⚠️ | Fully specified in `logicn-core-compute-gpu-and-photonic-backends.md`; backend not implemented |
+| GPU plan output | ⚠️ | Fully specified in `logicn-core-compute-gpu-and-photonic-backends.md` (GpuPlan, estimateGpuSuitability, buildGpuPlan, gpu/ dir); backend not implemented |
+| Photonic / optical plan output | ⚠️ | Fully specified in `logicn-core-compute-gpu-and-photonic-backends.md` (OpticalPlan, estimateOpticalNeed, buildOpticalPlan, photonic/ dir); backend not implemented |
 | GPU fallback rules | ✅ | Specified — all fallback paths documented with audit events |
 | Scheduler and planner | ✅ | Specified — responsibilities, inputs, and audit events documented |
-| WASM target | ❌ | Not yet implemented |
-| Target compatibility report | ⚠️ | Partial implementation |
+| WASM target | ⚠️ | Fully specified in `logicn-core-compute-gpu-and-photonic-backends.md` (WasmTarget, validateWasmEffect, forbidden effects list, wasm/ dir, LN-WASM-001–004); not yet implemented |
+| Target compatibility report | ⚠️ | Fully specified in `logicn-core-compute-gpu-and-photonic-backends.md` (CompatibilityResult, validateTarget, buildCompatibilityReport, compatibility/ dir, LN-COMPAT-001–004); not yet implemented |
 
 ### logicn-core-config
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented |
-| TODO.md | ✅ | Work tracking |
+| README.md | ✅ | Scope documented — EnvironmentMode closed type, EnvironmentConfig, SecretEnvironmentReference, Safe Secret Resolution Flow, diagnostic codes table added |
+| TODO.md | ✅ | Work tracking — EnvironmentMode, SecretEnvironmentReference, loadEnvironmentConfig, ProductionStrictnessPolicy, RuntimeConfigHandoff, LN-CONFIG-010 items added |
 | src/ | ⚠️ | Implementation stubs |
-| Environment config model | ⚠️ | Defined in KB; stubs only |
-| Secret reference model | ⚠️ | Defined in security package |
+| Environment config model | ⚠️ | Fully specified in `logicn-core-config-environment-secrets.md` (EnvironmentMode closed type, EnvironmentConfig, SecretEnvironmentReference, loadEnvironmentConfig, LN-CONFIG-001–010); not yet implemented |
+| Secret reference model | ⚠️ | Fully specified in `logicn-core-config-environment-secrets.md` (SecretReference, ProtectedSecret class, SecretSafeSink, canSendSecretToSink, redactSecretValue, LN-SECRET-001–002); not yet implemented |
 | Runtime policy config | ✅ | Documented in KB — `runtime-policy-config.md` |
 
 ### logicn-core-network
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented |
-| TODO.md | ✅ | Work tracking |
+| README.md | ✅ | Scope documented — Governance Model section added (NetworkProtocol, NetworkDestinationReference, NetworkPolicy, GovernedNetworkRuntime, safeHttpRequest, AI provider governance, LN-NETWORK-001–008, internal structure) |
+| TODO.md | ✅ | Work tracking — all governance types, GovernedNetworkRuntime, safeHttpRequest, validateDestination, AI provider governance, LN-NETWORK codes, internal dir items added |
 | src/ | ⚠️ | Implementation stubs |
 | Network boundary policy | ✅ | Documented in KB — `network-boundary-policy.md` |
 | Rate limiting | ✅ | Documented in KB — `layered-rate-limits.md` |
 | API boundary contracts | ✅ | Documented in KB — `runtime-boundary-declarations.md` |
+| Governance model | ⚠️ | Fully specified in `logicn-core-network-governance.md` (NetworkProtocol, NetworkDestinationReference, NetworkPolicy, GovernedNetworkRuntime, safeHttpRequest, validateDestination, validateTlsRequirement, AI networking governance, LN-NETWORK-001–008); not yet implemented |
 | Webhook HMAC / idempotency | ⚠️ | Documented in logicn-core; network package stubs |
 
 ### logicn-core-reports
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented — JSONL rationale, audit files, secret safety, LN-AUDIT codes added |
-| TODO.md | ✅ | Work tracking — execution proof, effect/denial/capability report items added |
+| README.md | ✅ | Scope documented — comprehensive Runtime Audit Log Format section added (RuntimeAuditEvent, RuntimeAuditStatus, ExecutionProof, DenialReport, evidence types, all 4 internal dirs, all diagnostic code series) |
+| TODO.md | ✅ | Work tracking — RuntimeAuditEvent, serializeAuditEvent, appendAuditEvent, ExecutionProof, sha256, buildExecutionProof, validateExecutionProof, DenialReport, buildDenialReport, all evidence types, all LN-REPORT/PROOF/DENIAL/EVIDENCE codes added |
 | src/ | ⚠️ | Implementation stubs |
 | Security report contracts | ✅ | Defined in logicn-core-security scope |
 | AI context report | ✅ | Documented in logicn-core (app.ai-context.json) |
 | Build / deployment reports | ✅ | Documented in `build-system-and-cli.md` |
-| Runtime audit log format (JSONL) | ⚠️ | Fully specified in `runtime-audit-log-format.md` (JSONL, status values, all event types); not yet finalised in package |
-| Execution proof format | ⚠️ | Fully specified in `runtime-audit-log-format.md` (5-hash strategy); not yet implemented |
-| Denial report | ⚠️ | Schema specified; not yet implemented |
-| Capability / effect reports | ⚠️ | Evidence shapes specified; not yet implemented |
+| Runtime audit log format (JSONL) | ⚠️ | Fully specified in `runtime-audit-log-format.md` (JSONL, RuntimeAuditEvent TypeScript interface, RuntimeAuditStatus type, serializeAuditEvent, appendAuditEvent, audit/ dir, LN-REPORT-001–005); not yet finalised in package |
+| Execution proof format | ⚠️ | Fully specified in `runtime-audit-log-format.md` (ExecutionProof 5-hash interface, sha256, buildExecutionProof, validateExecutionProof, proofs/ dir, LN-PROOF-001–005); not yet implemented |
+| Denial report | ⚠️ | Fully specified in `runtime-audit-log-format.md` (DenialReport interface, buildDenialReport, denials/ dir, LN-DENIAL-001–004); not yet implemented |
+| Capability / effect / runtime evidence | ⚠️ | Fully specified in `runtime-audit-log-format.md` (CapabilityEvidence, EffectEvidence, RuntimeEvidence, buildRuntimeEvidence, evidence/ dir, LN-EVIDENCE-001–004); not yet implemented |
 
 ### logicn-core-tasks
 
@@ -463,11 +470,12 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented |
-| TODO.md | ✅ | Work tracking |
+| README.md | ✅ | Scope documented — Governance-First Architecture section added (OpticalTransportMode, PhotonicRuntimeTarget, PhotonicExecutionPlan, estimateOpticalSuitability, buildPhotonicPlan, resolveFallback, LN-PHOTONIC-001–006, planned sub-packages) |
+| TODO.md | ✅ | Work tracking — all governance types, functions, diagnostic codes, internal dir items; planned sub-packages (logicn-target-photonic-runtime, -routing, -audit) added |
 | src/ | ⚠️ | Implementation stubs — planning layer only |
 | Photonic compute plan | ✅ | Documented in KB — `native-photonic-compute-future.md` |
 | Photonic resolution boundary | ✅ | Documented in KB — `photonic-resolution-boundary.md` |
+| Governance architecture | ⚠️ | Fully specified in `logicn-core-photonic-backend-architecture.md` (OpticalTransportMode, PhotonicRuntimeTarget, PhotonicExecutionPlan, estimateOpticalSuitability, buildPhotonicPlan, resolveFallback, deny-by-default fallback, LN-PHOTONIC-001–006); not yet implemented |
 | Real photonic backend | ❌ | Not yet — planning only until hardware available |
 
 ---
@@ -503,21 +511,38 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
      KB: effect-checker-and-boundary-checker.md (16-item checklist, LN-EFFECT/LN-BOUNDARY codes)
      Status: fully specified, implementation pending
 
-⚠️ logicn-core-cli: logicn deploy, logicn explain, logicn plan
-     KB: logicn-core-cli-deploy-explain-plan.md (all flags, exit codes, report files, examples)
-     Status: fully specified, not yet implemented
+⚠️ logicn-core-compiler: manifest generation (pass 14)
+     KB: effect-checker-and-boundary-checker.md (RuntimeManifest, buildManifest, LN-MANIFEST-001–005)
+     Status: fully specified (RuntimeManifest type, manifests/ dir), not yet implemented
 
-⚠️ logicn-core-reports: runtime audit log schema / execution proof
-     KB: runtime-audit-log-format.md (JSONL, 5-hash execution proof, LN-AUDIT codes)
-     Status: fully specified, not yet finalised in package
+⚠️ logicn-core-cli: logicn build, logicn verify, logicn deploy, logicn explain, logicn plan
+     KB: logicn-core-cli-deploy-explain-plan.md (all flags, exit codes, report files, all 5 commands)
+     Status: fully specified (BuildResult, VerificationResult, DeploymentResult, ExplainResult, ComputePlan, LN-BUILD/VERIFY/DEPLOY/EXPLAIN/PLAN codes); build and verify partial, others not yet implemented
 
-⚠️ logicn-core-compute: GPU and photonic backends
-     KB: logicn-core-compute-gpu-and-photonic-backends.md (full architecture, LN-COMPUTE codes)
+⚠️ logicn-core-reports: runtime audit log schema / execution proof / denials / evidence
+     KB: runtime-audit-log-format.md (JSONL, 5-hash ExecutionProof, LN-AUDIT/REPORT/PROOF/DENIAL/EVIDENCE codes)
+     Status: fully specified (RuntimeAuditEvent, ExecutionProof, DenialReport, evidence types, all 4 dirs), not yet finalised in package
+
+⚠️ logicn-core-compute: GPU and photonic backends; WASM target; target compatibility
+     KB: logicn-core-compute-gpu-and-photonic-backends.md (full architecture, WasmTarget, CompatibilityResult, LN-COMPUTE/WASM/COMPAT codes)
      Status: fully specified, planning only (v0.1 = CPU + compute planner only)
 
-⚠️ logicn-core-logic: Omni logic
+⚠️ logicn-core-logic: Tri logic, Decision logic, Bool boundary rules, Omni logic
+     KB: logicn-core-logic-tri-decision-bool.md (TriState, Decision, validateBoolBoundary, LN-TRI/DECISION/BOOL-BOUNDARY codes)
      KB: logicn-core-logic-omni-logic.md (8 states, safety rules, LN-OMNI codes)
      Status: fully specified, v0.1 implementation = none
+
+⚠️ logicn-core-config: environment config model; secret reference model
+     KB: logicn-core-config-environment-secrets.md (EnvironmentMode, ProtectedSecret, canSendSecretToSink, LN-CONFIG/SECRET codes)
+     Status: fully specified (EnvironmentMode closed type, SecretReference, ProtectedSecret, SecretSafeSink), not yet implemented
+
+⚠️ logicn-core-network: governance model
+     KB: logicn-core-network-governance.md (NetworkDestinationReference, NetworkPolicy, GovernedNetworkRuntime, safeHttpRequest, LN-NETWORK-001–008)
+     Status: fully specified (deny-by-default, AI provider governance, TLS requirements), not yet implemented
+
+⚠️ logicn-core-photonic: governance architecture
+     KB: logicn-core-photonic-backend-architecture.md (OpticalTransportMode, PhotonicRuntimeTarget, PhotonicExecutionPlan, LN-PHOTONIC-001–006)
+     Status: fully specified (distributed photonic, fallback rules, planned sub-packages), not yet implemented
 ```
 
 See `package-completion-status.md` for the full implementation order (Phase 1–4).
@@ -526,27 +551,97 @@ See `package-completion-status.md` for the full implementation order (Phase 1–
 
 ## Knowledge Base File Count
 
-Total KB files: ~168
+Total KB files: ~176
 
 | Area | Files | Coverage |
 | --- | --- | --- |
 | Syntax | ~30 core files | Strong — module/visibility fully specified including declaration, type-only, capability imports |
-| Logic | ~35 core files | Strong — error propagation covered; Omni logic fully specified |
-| Runtime | ~62 core files | Strong — CI/CD, audit log (JSONL + execution proof), effects, boundaries covered |
-| AI/Compute | ~17 files | Strong — GPU/photonic architecture and compute effects fully specified |
-| Cross-cutting | ~22 files | Strong — CLI governance commands fully specified |
+| Logic | ~37 core files | Strong — error propagation covered; Tri/Decision/Bool fully specified; Omni logic fully specified |
+| Runtime | ~62 core files | Strong — CI/CD, audit log (JSONL + execution proof + denials + evidence), effects, boundaries covered |
+| AI/Compute | ~19 files | Strong — GPU/photonic/WASM/compatibility architecture and compute effects fully specified |
+| Cross-cutting | ~24 files | Strong — CLI (all 5 commands), config/secrets, network governance, photonic governance fully specified |
 | Architecture | ~4 files | Strong |
 
-New files added (this and prior session):
+New files added (prior sessions):
 ```text
 module-system-and-visibility.md           (extended — module declaration, type/capability imports, runtime loading)
 error-propagation-chains.md
 cicd-integration-and-provenance.md
 runtime-audit-log-format.md               (extended — JSONL, execution proof, LN-AUDIT-001–007)
-effect-checker-and-boundary-checker.md    (extended — 12-effect table, LN-EFFECT/LN-BOUNDARY codes, 16-item checklist)
+effect-checker-and-boundary-checker.md    (extended — 12-effect table, LN-EFFECT/LN-BOUNDARY codes, 16-item checklist,
+                                                       runtime manifest JSON, extended boundary types, foundational context)
 compile-time-vs-runtime-authority.md
 package-completion-status.md              (new — package gaps, compiler pipeline, implementation order)
-logicn-core-cli-deploy-explain-plan.md    (new — deploy/explain/plan commands, all flags, exit codes, report files)
-logicn-core-compute-gpu-and-photonic-backends.md  (new — GPU/photonic architecture, compute effects/capabilities, LN-COMPUTE codes)
-logicn-core-logic-omni-logic.md           (new — 8 Omni states, binary safety rule, LN-OMNI codes, advisory model)
+logicn-core-cli-deploy-explain-plan.md    (new — governance chain diagram, deploy validation sections, all flags, exit codes, report files)
+logicn-core-compute-gpu-and-photonic-backends.md  (new — intent→plan philosophy, GPU/photonic architecture,
+                                                         compute effects/capabilities, LN-COMPUTE codes)
+logicn-core-logic-omni-logic.md           (new — 8 Omni states, binary safety rule + forbidden examples,
+                                                  absolute unsafe pattern rule, advisory model, LN-OMNI codes)
+```
+
+New files added (this session):
+```text
+logicn-core-logic-tri-decision-bool.md         (new — Tri logic AND/OR/NOT truth tables, Decision 5-state type,
+                                                        Bool boundary rules, validateBoolBoundary,
+                                                        enforceDeterministicPath, LN-TRI/DECISION/BOOL-BOUNDARY codes)
+logicn-core-config-environment-secrets.md      (new — EnvironmentMode closed type, EnvironmentConfig,
+                                                        SecretEnvironmentReference, SecretReference, ProtectedSecret,
+                                                        SecretSafeSink, canSendSecretToSink, redactSecretValue,
+                                                        LN-CONFIG-001–010, LN-SECRET-001–002)
+logicn-core-network-governance.md             (new — NetworkProtocol, NetworkDestinationReference, NetworkPolicy,
+                                                        GovernedNetworkRuntime, safeHttpRequest, validateDestination,
+                                                        AI provider governance, deny-by-default, LN-NETWORK-001–008)
+logicn-core-photonic-backend-architecture.md  (new — OpticalTransportMode, PhotonicRuntimeTarget, PhotonicExecutionPlan,
+                                                        estimateOpticalSuitability, buildPhotonicPlan, resolveFallback,
+                                                        distributed photonic, planned sub-packages, LN-PHOTONIC-001–006)
+```
+
+Extended this session:
+```text
+logicn-core-cli-deploy-explain-plan.md         (extended — logicn build 14-pass section, logicn verify section,
+                                                             BuildResult, VerificationResult, DeploymentResult,
+                                                             ExplainResult, ComputePlan, all internal dirs,
+                                                             LN-BUILD/VERIFY/DEPLOY/EXPLAIN/PLAN codes, 5-phase impl order)
+logicn-core-compute-gpu-and-photonic-backends.md  (extended — GpuPlan/OpticalPlan TypeScript types, gpu/ dir,
+                                                                photonic/ dir, WASM Target (WasmTarget, validateWasmEffect,
+                                                                wasm/ dir, LN-WASM codes), Target Compatibility
+                                                                (CompatibilityResult, validateTarget, compatibility/ dir,
+                                                                LN-COMPAT codes), 4-phase impl order)
+runtime-audit-log-format.md                   (extended — RuntimeAuditEvent TypeScript interface, RuntimeAuditStatus type,
+                                                            serializeAuditEvent, appendAuditEvent, audit/ dir,
+                                                            ExecutionProof TypeScript interface (5-hash), sha256,
+                                                            buildExecutionProof, validateExecutionProof, proofs/ dir,
+                                                            DenialReport, buildDenialReport, denials/ dir,
+                                                            CapabilityEvidence, EffectEvidence, RuntimeEvidence,
+                                                            buildRuntimeEvidence, evidence/ dir,
+                                                            LN-REPORT/PROOF/DENIAL/EVIDENCE codes, 4-phase impl order)
+```
+
+Notes processed into KB (NOTES TO COVER 107–110, prior session):
+```text
+107  Effect Checker and Boundary Checker   → extended effect-checker-and-boundary-checker.md
+108  CLI deploy / explain / plan           → extended logicn-core-cli-deploy-explain-plan.md
+109  GPU and Photonic Backends             → extended logicn-core-compute-gpu-and-photonic-backends.md
+110  Omni Logic                            → extended logicn-core-logic-omni-logic.md
+```
+
+Notes processed into KB (NOTES TO COVER, this session):
+```text
+     Compiler Effect Boundary Manifest Documentation  → updated logicn-core-compiler README/TODO (pass 14, RuntimeManifest,
+                                                          manifests/ dir, LN-MANIFEST codes)
+     CLI Build Verify Deploy Explain Plan             → updated logicn-core-cli README/TODO; extended KB file
+                                                          (logicn build 14-pass, logicn verify, all 5 commands fully specified)
+     Logic Tri Decision Bool Omni                     → created logicn-core-logic-tri-decision-bool.md;
+                                                          updated logicn-core-logic README/TODO
+     Compute GPU Photonic WASM Compatibility          → extended logicn-core-compute-gpu-and-photonic-backends.md;
+                                                          updated logicn-core-compute README/TODO
+     Config Environment Secret References             → created logicn-core-config-environment-secrets.md;
+                                                          updated logicn-core-config README/TODO;
+                                                          updated logicn-core-security README/TODO
+     Network Documentation                            → created logicn-core-network-governance.md;
+                                                          updated logicn-core-network README/TODO
+     Reports Audit Proofs Denials Evidence            → extended runtime-audit-log-format.md;
+                                                          updated logicn-core-reports README/TODO
+     Photonic Backend Architecture                    → created logicn-core-photonic-backend-architecture.md;
+                                                          updated logicn-core-photonic README/TODO
 ```

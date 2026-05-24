@@ -44,6 +44,77 @@ How do we describe photonic matrix operations?
 How do we simulate photonic behaviour?
 ```
 
+## Governance-First Architecture
+
+`logicn-core-photonic` is the governance-first runtime coordination architecture
+for future optical compute systems. It is not a vendor-specific hardware wrapper.
+
+Photonic execution must never bypass:
+
+```text
+runtime policy
+deployment validation
+capability enforcement
+effect declarations
+audit generation
+```
+
+### Optical Transport Effect
+
+Optical coordination requires explicit effects:
+
+```logicn
+fn distribute_training_batch(batch: TensorBatch)
+    effect optical_io, distributed_compute
+{
+    runtime.distribute(batch)
+}
+```
+
+### Core Governance Types
+
+```ts
+export type OpticalTransportMode = "photonic" | "electrical" | "hybrid"
+
+export interface PhotonicRuntimeTarget {
+  name: string
+  distributed: boolean
+  transportMode: OpticalTransportMode
+  fallbackTarget: string
+}
+
+export interface PhotonicExecutionPlan {
+  module: string
+  distributed: boolean
+  recommendedTransport: string
+  fallbackTarget: string
+  reasoning: string[]
+}
+```
+
+Functions: `estimateOpticalSuitability()`, `buildPhotonicPlan()`, `resolveFallback()`.
+
+### Diagnostic Codes (LN-PHOTONIC series)
+
+| Code | Meaning |
+| --- | --- |
+| `LN-PHOTONIC-001` | optical runtime unavailable |
+| `LN-PHOTONIC-002` | optical transport denied by policy |
+| `LN-PHOTONIC-003` | distributed optical scheduler unavailable |
+| `LN-PHOTONIC-004` | photonic fallback occurred |
+| `LN-PHOTONIC-005` | unsupported optical target |
+| `LN-PHOTONIC-006` | invalid distributed transport graph |
+
+Internal structure: `photonic-runtime.ts`, `photonic-planner.ts`,
+`photonic-routing.ts`, `photonic-fallback.ts`, `photonic-audit.ts`,
+`photonic-targets.ts`.
+
+Planned sub-packages: `logicn-target-photonic-runtime`,
+`logicn-target-photonic-routing`, `logicn-target-photonic-audit`.
+
+See `docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md` for the
+full governance specification.
+
 ## Boundary
 
 `logicn-core-photonic` must not own `Tri`, `LogicN` or Omni logic semantics. Those

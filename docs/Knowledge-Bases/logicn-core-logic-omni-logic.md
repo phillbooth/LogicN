@@ -65,7 +65,7 @@ execution approval
 
 Omni Logic must not override any of these systems.
 
-Final execution approval must remain binary:
+Final execution approval must always remain binary:
 
 ```text
 deployment approved: yes/no
@@ -73,7 +73,15 @@ capability granted: yes/no
 module allowed: yes/no
 ```
 
-Not `probably approved`.
+Never:
+
+```text
+probably approved
+likely trusted
+mostly allowed
+```
+
+This separation is fundamental to LogicN governance.
 
 ---
 
@@ -237,6 +245,8 @@ if ai_decision == OmniState.PROBABLE {
 ```
 
 Reason: probabilistic logic must not replace deterministic security policy.
+
+This rule is absolute. No exception exists.
 
 ### Safe Pattern
 

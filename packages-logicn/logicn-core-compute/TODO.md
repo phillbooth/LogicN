@@ -29,6 +29,23 @@ active v1 runtime target.
 [ ] Define scheduler responsibilities (thermal balancing, queue depth, fairness, fallback)
 [ ] Define planner responsibilities (parallelism, memory, energy cost, backend suitability)
 [ ] Define compute audit event shapes for planner, scheduler, fallback, and distributed execution
+[ ] Define GpuPlan interface (module/recommendedTarget/fallbackTarget/parallelism/memoryPressure)
+[ ] Implement estimateGpuSuitability(graph: ExecutionGraph): boolean
+[ ] Implement buildGpuPlan(graph: ExecutionGraph): GpuPlan
+[ ] Create gpu/ dir: gpu-planner.ts, gpu-runtime.ts, gpu-fallback.ts, gpu-reports.ts, gpu-estimator.ts
+[ ] Define OpticalPlan interface (module/distributed/recommendedTransport/reasoning)
+[ ] Implement estimateOpticalNeed(graph: ExecutionGraph): boolean
+[ ] Implement buildOpticalPlan(graph: ExecutionGraph): OpticalPlan
+[ ] Create photonic/ dir: photonic-planner.ts, optical-routing.ts, distributed-graph.ts, optical-runtime.ts, photonic-audit.ts
+[ ] Define WasmTarget interface (sandboxed/allowedEffects)
+[ ] Implement validateWasmEffect(effect: string): boolean — reject process, filesystem, unsafe memory
+[ ] Create wasm/ dir: wasm-emitter.ts, wasm-runtime.ts, wasm-bindings.ts, wasm-sandbox.ts
+[ ] Define LN-WASM-001 through LN-WASM-004 diagnostic codes
+[ ] Define CompatibilityResult interface (target/compatible/reason?)
+[ ] Implement validateTarget(target: string, effects: string[]): CompatibilityResult
+[ ] Implement buildCompatibilityReport(targets: string[], effects: string[]): CompatibilityResult[]
+[ ] Create compatibility/ dir: target-compatibility.ts, compatibility-report.ts, compatibility-rules.ts, target-validator.ts
+[ ] Define LN-COMPAT-001 through LN-COMPAT-004 diagnostic codes
 [ ] Define future quantum target planning rules after core compute reports stabilise
 [x] Add examples
 [x] Add tests

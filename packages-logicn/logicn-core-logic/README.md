@@ -80,6 +80,71 @@ match signal {
 `unknown_as_error` or `unknown_as_false`; they must not allow unknown values to
 become access grants by default.
 
+## Logic Systems Summary
+
+| System | Purpose | Status |
+| --- | --- | --- |
+| Tri logic | explicit uncertainty modelling (TRUE/FALSE/UNKNOWN) | stubs |
+| Decision logic | structured governance outcomes | stubs |
+| Bool boundary rules | deterministic safety enforcement | stubs |
+| Omni logic | advisory future reasoning (8 states) | planning only |
+
+## Tri Logic Operations
+
+The `TriState` TypeScript type: `"TRUE" | "FALSE" | "UNKNOWN"`.
+
+AND truth table:
+
+| A | B | Result |
+| --- | --- | --- |
+| TRUE | TRUE | TRUE |
+| TRUE | UNKNOWN | UNKNOWN |
+| FALSE | UNKNOWN | FALSE |
+| UNKNOWN | UNKNOWN | UNKNOWN |
+
+Governance rule: `UNKNOWN` must never silently become an access grant.
+
+Diagnostic codes: `LN-TRI-001` through `LN-TRI-003`.
+
+Internal dir: `packages-logicn/logicn-core-logic/src/tri/`
+
+## Decision Logic
+
+The `Decision` TypeScript type:
+`"APPROVE" | "DENY" | "REVIEW_REQUIRED" | "DEFER" | "ESCALATE"`.
+
+Decision traces must remain auditable. Non-auditable runtime approvals are forbidden.
+
+Diagnostic codes: `LN-DECISION-001` through `LN-DECISION-003`.
+
+Internal dir: `packages-logicn/logicn-core-logic/src/decision/`
+
+## Bool Boundary Rules
+
+Bool boundary rules prevent uncertain reasoning from leaking into deterministic
+security enforcement.
+
+Protected systems (must remain TRUE/FALSE only):
+
+```text
+memory safety
+capability enforcement
+runtime policy
+deployment approval
+compiler correctness
+cryptographic validation
+module integrity
+```
+
+Forbidden: `if omni_result == PROBABLE { grant_capability() }`
+
+Diagnostic codes: `LN-BOOL-BOUNDARY-001` through `LN-BOOL-BOUNDARY-003`.
+
+Internal dir: `packages-logicn/logicn-core-logic/src/boundaries/`
+
+See `docs/Knowledge-Bases/logicn-core-logic-tri-decision-bool.md` for the full
+specification including all truth tables, TypeScript types, and implementation order.
+
 ## Omni Logic (Future)
 
 Omni Logic extends binary reasoning to multi-valued states for AI orchestration,

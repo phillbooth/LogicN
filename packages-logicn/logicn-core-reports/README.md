@@ -145,7 +145,7 @@ precision compatibility, data sensitivity, isolation level, memory limits,
 fallback decisions and audit status. Compute and target packages produce the
 facts; `logicn-core-reports` owns the shared shape.
 
-## Runtime Audit Log Format (Planned)
+## Runtime Audit Log Format
 
 The runtime audit log uses JSONL (JSON Lines) for the primary append-only event
 stream. Each event is one JSON object per line. The format is structured,
@@ -155,8 +155,7 @@ Key audit files:
 
 ```text
 runtime-audit.jsonl   — append-only runtime events
-execution-proof.json  — execution integrity with 5 hashes (manifest, module,
-                        policy, execution, result)
+execution-proof.json  — execution integrity with 5 hashes
 capability-report.json
 effect-report.json
 denial-report.json
@@ -164,14 +163,84 @@ runtime-health.json
 runtime-trace.json
 ```
 
-Status values: `success`, `failure`, `denied`, `fallback`, `cancelled`,
-`timeout`, `degraded`.
+### RuntimeAuditEvent Type
+
+```ts
+export interface RuntimeAuditEvent {
+  id: string
+  timestamp: string
+  traceId: string
+  category: string
+  event: string
+  status: RuntimeAuditStatus
+  module?: string
+  metadata?: Record<string, unknown>
+}
+
+export type RuntimeAuditStatus =
+  | "started"
+  | "running"
+  | "completed"
+  | "denied"
+  | "failed"
+  | "fallback"
+  | "deferred"
+```
+
+### ExecutionProof Type (five-hash strategy)
+
+```ts
+export interface ExecutionProof {
+  executionProofVersion: string
+  manifestHash: string   // compiler manifest integrity
+  graphHash: string      // execution graph integrity
+  policyHash: string     // deployment policy integrity
+  auditHash: string      // runtime audit stream integrity
+  runtimeHash: string    // runtime binary integrity
+}
+```
+
+### DenialReport Type
+
+```ts
+export interface DenialReport {
+  status: "denied"
+  category: string
+  reason: string
+  module?: string
+}
+```
+
+### Evidence Types
+
+```ts
+export interface CapabilityEvidence { module: string; capabilities: string[] }
+export interface EffectEvidence { module: string; effects: string[] }
+export interface RuntimeEvidence { module: string; effects: string[]; capabilities: string[]; runtimeTarget?: string }
+```
+
+### Internal Structure
+
+```text
+src/audit/     — audit-events.ts, audit-jsonl.ts, audit-runtime.ts, audit-validator.ts, audit-redaction.ts
+src/proofs/    — execution-proof.ts, proof-hashing.ts, proof-validator.ts, proof-runtime.ts, proof-report.ts
+src/denials/   — denial-report.ts, denial-runtime.ts, denial-validator.ts, denial-serializer.ts
+src/evidence/  — capability-report.ts, effect-report.ts, evidence-aggregator.ts, evidence-validator.ts
+```
+
+### Diagnostic Codes
+
+```text
+LN-AUDIT-001 through LN-AUDIT-007
+LN-REPORT-001 through LN-REPORT-005
+LN-PROOF-001 through LN-PROOF-005
+LN-DENIAL-001 through LN-DENIAL-004
+LN-EVIDENCE-001 through LN-EVIDENCE-004
+```
 
 Secret safety rule: audit logs must never store API keys, passwords, tokens,
 or private certificates — only hashes, status flags, presence checks, and
 capability names.
-
-Diagnostic codes: `LN-AUDIT-001` through `LN-AUDIT-007`.
 
 See `docs/Knowledge-Bases/runtime-audit-log-format.md` for the full schema,
 execution proof design, JSONL format rationale, and v0.1 scope.

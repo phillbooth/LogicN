@@ -51,7 +51,7 @@ instead of trying to infer intent from ambiguous syntax.
 
 ## Compiler Pass Pipeline
 
-Recommended 13-pass pipeline:
+14-pass pipeline:
 
 ```text
  1. Lexer
@@ -67,7 +67,82 @@ Recommended 13-pass pipeline:
 11. Optimisation planner
 12. Backend emitter
 13. Audit metadata emitter
+14. Runtime manifest generator
 ```
+
+## Runtime Manifest Generation (Pass 14)
+
+Pass 14 aggregates all compiler metadata into a canonical governance
+artefact: `runtime-manifest.json`.
+
+The manifest includes:
+
+```text
+module name
+declared and inferred effects
+capability grants
+runtime targets
+trust level
+audit requirements
+integrity hashes
+```
+
+### Internal Structure
+
+```text
+packages-logicn/logicn-core-compiler/src/manifests/
+```
+
+Suggested files:
+
+```text
+manifest-builder.ts
+manifest-schema.ts
+manifest-hash.ts
+manifest-serializer.ts
+manifest-validator.ts
+```
+
+### RuntimeManifest Type
+
+```ts
+export interface RuntimeManifest {
+    module: string
+    effects: string[]
+    capabilities: string[]
+    targets: string[]
+    trustLevel: string
+    auditRequired: boolean
+}
+```
+
+### Manifest Pipeline
+
+```text
+AST
+    ↓
+effect checker
+    ↓
+boundary checker
+    ↓
+capability resolver
+    ↓
+runtime graph builder
+    ↓
+manifest serializer
+    ↓
+runtime-manifest.json
+```
+
+### Manifest Diagnostic Codes (LN-MANIFEST series)
+
+| Code | Meaning |
+| --- | --- |
+| `LN-MANIFEST-001` | missing runtime manifest |
+| `LN-MANIFEST-002` | manifest integrity failure |
+| `LN-MANIFEST-003` | unsupported manifest version |
+| `LN-MANIFEST-004` | invalid capability reference |
+| `LN-MANIFEST-005` | runtime target mismatch |
 
 ## Effect Checker (Planned)
 

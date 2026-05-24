@@ -300,10 +300,12 @@ If `parser-lib` attempts to access secrets, the compiler rejects the build.
 | Module visibility | Private symbol accessed from outside module |
 | Package contract | Package internal API exposed to external consumers |
 | Compile-time / runtime | Runtime effect attempted at compile time |
+| Trust | Untrusted dependency inheriting sensitive authority |
 | Secret / data | Secret type escapes into public API or audit log |
 | Filesystem | Unrestricted file access outside declared paths |
-| Network | Undeclared outbound connections |
+| Network / API | Undeclared outbound connections or internal record leakage |
 | Capability | Capability used without being granted or declared |
+| Deployment | Environment-specific policy restrictions violated |
 
 ### Boundary Violation Examples
 
@@ -411,6 +413,197 @@ LLN-E4006  package trust boundary violation
 Both series are in use. `LN-EFFECT-*` and `LN-BOUNDARY-*` are the newer
 canonical forms; `LLN-E4*` codes are the earlier equivalents.
 
+## Compiler Internal Structures
+
+### Effect Checker Modules
+
+```text
+packages-logicn/logicn-core-compiler/src/effects/
+```
+
+Suggested files:
+
+```text
+effect-registry.ts
+effect-inference.ts
+effect-propagation.ts
+effect-validator.ts
+effect-diagnostics.ts
+effect-manifest.ts
+```
+
+Core type definitions:
+
+```ts
+export type Effect =
+    | "network"
+    | "storage"
+    | "filesystem"
+    | "secret"
+    | "accelerator"
+    | "optical_io"
+
+export interface EffectSet {
+    declared: Effect[]
+    inferred: Effect[]
+    propagated: Effect[]
+}
+```
+
+AST walk example:
+
+```ts
+function collectEffects(node: AstNode): Effect[] {
+    const effects: Effect[] = []
+
+    if (node.kind === "NetworkCall") {
+        effects.push("network")
+    }
+
+    if (node.kind === "FilesystemRead") {
+        effects.push("filesystem")
+    }
+
+    return effects
+}
+```
+
+### Boundary Checker Modules
+
+```text
+packages-logicn/logicn-core-compiler/src/boundaries/
+```
+
+Suggested files:
+
+```text
+boundary-validator.ts
+package-boundaries.ts
+visibility-boundaries.ts
+secret-analysis.ts
+capability-boundaries.ts
+trust-boundaries.ts
+boundary-diagnostics.ts
+```
+
+Core type definitions:
+
+```ts
+export interface BoundaryMetadata {
+    trustLevel: "internal" | "external"
+    publicApi: boolean
+    capabilities: string[]
+    effects: string[]
+}
+```
+
+### Manifest Generator Modules
+
+The manifest generator is pass 14 in the compiler pipeline (after audit metadata
+emitter). It aggregates all compiler metadata into a canonical governance
+artifact.
+
+```text
+packages-logicn/logicn-core-compiler/src/manifests/
+```
+
+Suggested files:
+
+```text
+manifest-builder.ts
+manifest-schema.ts
+manifest-hash.ts
+manifest-serializer.ts
+manifest-validator.ts
+```
+
+### RuntimeManifest Type
+
+```ts
+export interface RuntimeManifest {
+    module: string
+    effects: string[]
+    capabilities: string[]
+    targets: string[]
+    trustLevel: string
+    auditRequired: boolean
+}
+```
+
+### Manifest Builder Example
+
+```ts
+function buildManifest(
+    module: ModuleGraph
+): RuntimeManifest {
+    return {
+        module: module.name,
+        effects: module.effects,
+        capabilities: module.capabilities,
+        targets: module.targets,
+        trustLevel: module.trustLevel,
+        auditRequired: true
+    }
+}
+```
+
+### Extended Manifest Format
+
+The extended workspace manifest includes multi-module and deployment metadata:
+
+```json
+{
+  "workspace": "app-main",
+  "modules": [
+    {
+      "name": "app.users.service",
+      "effects": ["storage"],
+      "capabilities": ["Database"]
+    }
+  ],
+  "deployment": {
+    "allowTargets": ["cpu"],
+    "denyEffects": ["optical_io"]
+  },
+  "integrity": {
+    "manifestHash": "sha256:manifest",
+    "graphHash": "sha256:graph"
+  }
+}
+```
+
+### Manifest Pipeline
+
+```text
+AST
+    ↓
+effect checker
+    ↓
+boundary checker
+    ↓
+capability resolver
+    ↓
+runtime graph builder
+    ↓
+manifest serializer
+    ↓
+runtime-manifest.json
+```
+
+---
+
+## Manifest Diagnostic Codes (LN-MANIFEST series)
+
+| Code | Meaning |
+| --- | --- |
+| `LN-MANIFEST-001` | missing runtime manifest |
+| `LN-MANIFEST-002` | manifest integrity failure |
+| `LN-MANIFEST-003` | unsupported manifest version |
+| `LN-MANIFEST-004` | invalid capability reference |
+| `LN-MANIFEST-005` | runtime target mismatch |
+
+---
+
 ## Implementation Order (16-item checklist)
 
 These two systems are foundational and should be implemented early:
@@ -461,14 +654,77 @@ advanced network host allowlist
 advanced filesystem path allowlist
 ```
 
+## Runtime Manifest Output
+
+The boundary and effect checkers feed the compiler-generated runtime manifest.
+The manifest becomes the governance bridge between compiler, CLI, runtime, and
+audit systems.
+
+Example manifest with boundary and effect metadata:
+
+```json
+{
+  "module": "app.auth",
+  "effects": ["network", "secret"],
+  "capabilities": ["SecretRead"],
+  "network_hosts": ["api.example.com"],
+  "filesystem_paths": ["./config"],
+  "trust_level": "internal",
+  "audit_required": true
+}
+```
+
+This machine-readable governance layer is consumed by:
+
+```text
+compiler          — validates correctness
+runtime           — enforces execution authority
+logicn deploy     — validates before deployment
+logicn explain    — explains what the module does
+logicn plan       — estimates compute requirements
+security tooling  — audits authority claims
+AI tooling        — reads project reasoning
+```
+
+---
+
+## Why These Systems Are Foundational
+
+Without effect checking and boundary enforcement:
+
+```text
+runtime authority cannot be safely planned
+capabilities cannot be reliably scoped
+governed execution cannot be trusted
+audit metadata becomes incomplete
+AI-readable execution reasoning becomes unreliable
+```
+
+The effect checker and boundary checker together transform LogicN from a normal
+language runtime into a governed execution platform with:
+
+```text
+explicit authority
+deterministic compilation
+runtime governance
+trust-aware execution
+capability isolation
+secure package boundaries
+audit-grade execution metadata
+AI-readable execution reasoning
+```
+
+---
+
 ## Relationship to Other Systems
 
 ```text
 Effect checker     → feeds into runtime capability policies
 Boundary checker   → enforces module visibility + trust model
-Both               → required for Omni logic reasoning layer
+Both               → feed runtime manifests and governed execution plans
 Both               → required for `logicn explain` explanations
+Both               → required for Omni logic reasoning layer
 ```
 
 See also: `authority-model.md`, `compile-time-vs-runtime-authority.md`,
-`governed-capability-modules.md`.
+`governed-capability-modules.md`, `package-completion-status.md`.

@@ -40,7 +40,26 @@ hidden runtime switching
 magic acceleration
 unsafe DMA assumptions
 hardcoded GPU syntax
+backend-specific source semantics
 ```
+
+LogicN source code must remain stable even if runtime backends change.
+
+---
+
+## Core Execution Philosophy
+
+```text
+intent → governed execution plan → coordinated compute → audit proof
+```
+
+The compute layer exists to:
+- understand workload characteristics
+- estimate backend suitability
+- coordinate execution safely
+- enforce policy constraints
+- provide deterministic fallback behaviour
+- produce audit-grade execution metadata
 
 ---
 
@@ -323,6 +342,60 @@ LogicN must not hardcode CUDA, ROCm, DirectML, Metal, or Vulkan in source.
 Backend adapters map LogicN runtime operations onto available systems.
 Adapters are runtime plugins, not language syntax.
 
+### GPU Internal Structure
+
+```text
+packages-logicn/logicn-core-compute/src/gpu/
+```
+
+Suggested files:
+
+```text
+gpu-planner.ts
+gpu-runtime.ts
+gpu-fallback.ts
+gpu-reports.ts
+gpu-estimator.ts
+```
+
+### GPU Plan Types
+
+```ts
+export interface GpuPlan {
+    module: string
+    recommendedTarget: string
+    fallbackTarget: string
+    parallelism: string
+    memoryPressure: string
+}
+```
+
+### GPU Estimator Function
+
+```ts
+function estimateGpuSuitability(
+    graph: ExecutionGraph
+): boolean {
+    return graph.parallelism === "high"
+}
+```
+
+### GPU Planner Function
+
+```ts
+function buildGpuPlan(
+    graph: ExecutionGraph
+): GpuPlan {
+    return {
+        module: graph.module,
+        recommendedTarget: "gpu",
+        fallbackTarget: "cpu",
+        parallelism: "high",
+        memoryPressure: "high"
+    }
+}
+```
+
 ---
 
 ## Part C: AI Accelerators
@@ -420,6 +493,60 @@ capability rules
 effect declarations
 audit logging
 execution proof
+```
+
+### Photonic Internal Structure
+
+```text
+packages-logicn/logicn-core-compute/src/photonic/
+```
+
+Suggested files:
+
+```text
+photonic-planner.ts
+optical-routing.ts
+distributed-graph.ts
+optical-runtime.ts
+photonic-audit.ts
+```
+
+### Optical Plan Types
+
+```ts
+export interface OpticalPlan {
+    module: string
+    distributed: boolean
+    recommendedTransport: string
+    reasoning: string[]
+}
+```
+
+### Optical Estimator Function
+
+```ts
+function estimateOpticalNeed(
+    graph: ExecutionGraph
+): boolean {
+    return graph.transferPressure === "high"
+}
+```
+
+### Optical Planner Function
+
+```ts
+function buildOpticalPlan(
+    graph: ExecutionGraph
+): OpticalPlan {
+    return {
+        module: graph.module,
+        distributed: true,
+        recommendedTransport: "optical_io",
+        reasoning: [
+            "high bandwidth requirement"
+        ]
+    }
+}
 ```
 
 ---
@@ -629,6 +756,289 @@ Reasoning:
 
 ---
 
+## Part J: WASM Target
+
+### Purpose
+
+A WASM target allows LogicN execution inside sandboxed environments:
+
+```text
+browsers
+sandboxed runtimes
+edge runtimes
+portable execution environments
+embedded systems
+```
+
+### Status
+
+```text
+Not implemented.
+Conceptual architecture only.
+```
+
+### WASM Design Goals
+
+The WASM target must remain:
+
+```text
+portable
+sandboxed
+governance-aware
+deterministic
+runtime-compatible
+```
+
+### WASM Governance Constraints
+
+WASM execution must still obey:
+
+```text
+capability rules
+effect declarations
+deployment policy
+runtime manifests
+audit generation
+```
+
+### WASM Sandbox Restrictions
+
+Restricted effects in WASM contexts:
+
+```text
+filesystem      — restricted in sandbox
+process         — forbidden in sandbox
+unsafe memory   — forbidden in sandbox
+kernel ops      — unavailable in sandbox
+```
+
+### Example Build Command
+
+```bash
+logicn build --target wasm
+```
+
+### Example WASM Manifest
+
+```json
+{
+  "target": "wasm",
+  "sandboxed": true,
+  "effects": ["network"],
+  "capabilities": ["HttpClient"]
+}
+```
+
+### WASM Build Flow
+
+```text
+AST
+    ↓
+effect checker
+    ↓
+boundary checker
+    ↓
+runtime graph
+    ↓
+WASM emitter
+    ↓
+sandbox manifest
+```
+
+### WASM Internal Structure
+
+```text
+packages-logicn/logicn-core-compute/src/wasm/
+```
+
+Suggested files:
+
+```text
+wasm-emitter.ts
+wasm-runtime.ts
+wasm-bindings.ts
+wasm-sandbox.ts
+```
+
+### WASM Types
+
+```ts
+export interface WasmTarget {
+    sandboxed: boolean
+    allowedEffects: string[]
+}
+```
+
+### WASM Validator Function
+
+```ts
+function validateWasmEffect(
+    effect: string
+): boolean {
+    return effect !== "process"
+}
+```
+
+### Diagnostic Codes (LN-WASM series)
+
+| Code | Meaning |
+| --- | --- |
+| `LN-WASM-001` | unsupported effect for WASM |
+| `LN-WASM-002` | WASM sandbox violation |
+| `LN-WASM-003` | native capability unavailable |
+| `LN-WASM-004` | unsupported runtime target |
+
+---
+
+## Part K: Target Compatibility Reports
+
+### Purpose
+
+The compatibility report explains whether workloads are compatible with
+available runtime targets.
+
+### What Compatibility Validates
+
+```text
+CPU compatibility
+GPU compatibility
+WASM compatibility
+distributed execution support
+optical transport support
+runtime fallback support
+```
+
+### Example Command
+
+```bash
+logicn plan app/ai/inference --compatibility
+```
+
+### Compatibility Output (human)
+
+```text
+Compatibility Report
+
+CPU:
+    compatible
+
+GPU:
+    compatible
+
+WASM:
+    incompatible
+    reason: accelerator effect unsupported
+
+Optical:
+    unavailable
+```
+
+### Compatibility Output (JSON)
+
+```json
+{
+  "targets": {
+    "cpu": {
+      "compatible": true
+    },
+    "gpu": {
+      "compatible": true
+    },
+    "wasm": {
+      "compatible": false,
+      "reason": "accelerator unsupported"
+    }
+  }
+}
+```
+
+### Compatibility Rules
+
+```text
+accelerator effect
+    → incompatible with WASM
+
+optical_io effect
+    → requires distributed runtime
+
+process effect
+    → restricted in sandbox runtimes
+```
+
+### Compatibility Internal Structure
+
+```text
+packages-logicn/logicn-core-compute/src/compatibility/
+```
+
+Suggested files:
+
+```text
+target-compatibility.ts
+compatibility-report.ts
+compatibility-rules.ts
+target-validator.ts
+```
+
+### Compatibility Types
+
+```ts
+export interface CompatibilityResult {
+    target: string
+    compatible: boolean
+    reason?: string
+}
+```
+
+### Compatibility Validator Function
+
+```ts
+function validateTarget(
+    target: string,
+    effects: string[]
+): CompatibilityResult {
+    if (
+        target === "wasm" &&
+        effects.includes("accelerator")
+    ) {
+        return {
+            target,
+            compatible: false,
+            reason: "accelerator unsupported"
+        }
+    }
+
+    return {
+        target,
+        compatible: true
+    }
+}
+```
+
+### Compatibility Report Builder
+
+```ts
+function buildCompatibilityReport(
+    targets: string[],
+    effects: string[]
+): CompatibilityResult[] {
+    return targets.map(
+        target => validateTarget(target, effects)
+    )
+}
+```
+
+### Diagnostic Codes (LN-COMPAT series)
+
+| Code | Meaning |
+| --- | --- |
+| `LN-COMPAT-001` | runtime target incompatible |
+| `LN-COMPAT-002` | unsupported effect on target |
+| `LN-COMPAT-003` | required runtime unavailable |
+| `LN-COMPAT-004` | distributed transport unavailable |
+
+---
+
 ## Diagnostic Codes (LN-COMPUTE series)
 
 | Code | Meaning |
@@ -672,6 +1082,38 @@ runtime audit events recorded
 
 ---
 
+## Implementation Order
+
+### Phase 1
+
+```text
+CPU compatibility reports
+basic GPU planning metadata
+```
+
+### Phase 2
+
+```text
+target compatibility reports
+runtime fallback reports
+```
+
+### Phase 3
+
+```text
+WASM target planning
+sandbox validation
+```
+
+### Phase 4
+
+```text
+future optical planning
+distributed runtime coordination
+```
+
+---
+
 ## v0.1 Scope
 
 Implement first:
@@ -683,6 +1125,7 @@ basic GPU planning metadata
 runtime target selection
 fallback system
 runtime audit integration
+partial compatibility reports
 ```
 
 Defer:
@@ -693,6 +1136,8 @@ real optical runtime
 cluster orchestration
 photonic execution engine
 advanced distributed balancing
+WASM runtime
+distributed optical scheduling
 ```
 
 ---

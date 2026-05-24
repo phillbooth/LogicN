@@ -86,6 +86,77 @@ and allowed operation, but it must not expose the raw value to reports,
 diagnostics, AI context or normal strings. Values derived from secrets should
 remain secret-derived until an approved secret-safe sink consumes them.
 
+## Secret Reference Model
+
+Secret references represent sensitive values without exposing their contents.
+
+### Core Types
+
+```ts
+export interface SecretReference {
+  name: string
+  required: boolean
+  scope: string
+  fingerprint?: string
+  allowedOperation?: string
+  protected: true
+}
+
+export interface SecretDerivedReference {
+  source: SecretReference
+  derivedKind: "hash" | "token" | "signature" | "connection-string"
+  protected: true
+}
+
+export interface SecureStringReference {
+  label: string
+  redacted: true
+  fingerprint?: string
+}
+```
+
+### ProtectedSecret Class
+
+```ts
+export class ProtectedSecret {
+  toString(): string { return "[REDACTED]" }
+  useWithApprovedSink<T>(sink: SecretSafeSink, operation: (value: string) => T): T
+}
+```
+
+### SecretSafeSink Type
+
+```ts
+export interface SecretSafeSink {
+  name: string
+  kind: "network" | "crypto" | "database" | "token"
+  approved: boolean
+}
+```
+
+Safe sinks: declared network destination, approved cryptographic operation,
+approved token signing, database connection initialization.
+
+Unsafe sinks: logs, errors, AI prompts, build output, cache, telemetry,
+normal string conversion.
+
+### Secret Validation Functions
+
+```ts
+function canSendSecretToSink(secret: SecretReference, sink: SecretSafeSink): boolean
+function redactSecretValue(value: string): RedactionResult
+```
+
+### Diagnostic Codes (LN-SECRET series)
+
+| Code | Meaning |
+| --- | --- |
+| `LN-SECRET-001` | required secret unavailable |
+| `LN-SECRET-002` | secret value attempted to flow to unsafe sink |
+
+See `docs/Knowledge-Bases/logicn-core-config-environment-secrets.md` for the
+full secret reference model specification.
+
 ## Safety Contracts
 
 Security helpers must fail closed when a helper cannot prove that output is

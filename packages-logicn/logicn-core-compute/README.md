@@ -138,6 +138,45 @@ Fallback rules: GPU unavailable / overheating / policy denied / memory exhausted
 
 Diagnostic codes: `LN-COMPUTE-001` through `LN-COMPUTE-007`.
 
+TypeScript types: `GpuPlan` interface, `OpticalPlan` interface.
+
+Internal dirs: `gpu/` (gpu-planner.ts, gpu-runtime.ts, gpu-fallback.ts,
+gpu-reports.ts, gpu-estimator.ts), `photonic/` (photonic-planner.ts,
+optical-routing.ts, distributed-graph.ts, optical-runtime.ts, photonic-audit.ts).
+
+## WASM Target
+
+WASM target is not yet implemented. When implemented it will allow LogicN
+execution in sandboxed environments (browsers, edge runtimes).
+
+WASM governance constraints: capability rules, effect declarations, deployment
+policy, runtime manifests, and audit generation remain enforced.
+
+Sandbox restrictions (forbidden effects): `filesystem`, `process`, unsafe memory.
+
+TypeScript type: `WasmTarget { sandboxed: boolean; allowedEffects: string[] }`.
+
+Diagnostic codes: `LN-WASM-001` through `LN-WASM-004`.
+
+Internal dir: `wasm/` (wasm-emitter.ts, wasm-runtime.ts, wasm-bindings.ts,
+wasm-sandbox.ts).
+
+## Target Compatibility Reports
+
+Target compatibility reports explain whether workloads are compatible with
+available runtime targets. Accessed via `logicn plan --compatibility`.
+
+Output explains CPU/GPU/WASM/optical compatibility and incompatibility reasons.
+
+TypeScript types: `CompatibilityResult { target: string; compatible: boolean; reason?: string }`.
+
+Functions: `validateTarget()`, `buildCompatibilityReport()`.
+
+Diagnostic codes: `LN-COMPAT-001` through `LN-COMPAT-004`.
+
+Internal dir: `compatibility/` (target-compatibility.ts, compatibility-report.ts,
+compatibility-rules.ts, target-validator.ts).
+
 See `docs/Knowledge-Bases/logicn-core-compute-gpu-and-photonic-backends.md`
 for the full architecture specification.
 

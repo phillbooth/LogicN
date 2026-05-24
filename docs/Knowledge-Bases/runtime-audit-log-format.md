@@ -421,6 +421,122 @@ security investigation, and AI analysis.
 
 ---
 
+## TypeScript Contracts
+
+### RuntimeAuditEvent Type
+
+```ts
+export interface RuntimeAuditEvent {
+  /**
+   * Stable event identifier.
+   */
+  id: string
+
+  /**
+   * ISO timestamp.
+   */
+  timestamp: string
+
+  /**
+   * Trace identifier.
+   */
+  traceId: string
+
+  /**
+   * Event category.
+   */
+  category: string
+
+  /**
+   * Event name.
+   */
+  event: string
+
+  /**
+   * Runtime status.
+   */
+  status: RuntimeAuditStatus
+
+  /**
+   * Module or runtime scope.
+   */
+  module?: string
+
+  /**
+   * Structured metadata.
+   */
+  metadata?: Record<string, unknown>
+}
+```
+
+### RuntimeAuditStatus Type
+
+Canonical TypeScript type (implementation target):
+
+```ts
+export type RuntimeAuditStatus =
+  | "started"
+  | "running"
+  | "completed"
+  | "denied"
+  | "failed"
+  | "fallback"
+  | "deferred"
+```
+
+The earlier JSON schema examples use `success`, `failure`, `cancelled`,
+`timeout`, `degraded` as status values. These should be considered
+equivalent aliases until the canonical TypeScript type is finalised in
+`logicn-core-reports`.
+
+### JSONL Serializer
+
+```ts
+export function serializeAuditEvent(
+  event: RuntimeAuditEvent
+): string {
+  return JSON.stringify(event)
+}
+```
+
+### Append Writer
+
+```ts
+export function appendAuditEvent(
+  event: RuntimeAuditEvent
+): string {
+  return serializeAuditEvent(event) + "\n"
+}
+```
+
+### Internal Structure (audit/)
+
+```text
+packages-logicn/logicn-core-reports/src/audit/
+```
+
+Suggested files:
+
+```text
+audit-events.ts
+audit-jsonl.ts
+audit-runtime.ts
+audit-validator.ts
+audit-redaction.ts
+```
+
+### Diagnostic Codes (LN-REPORT series)
+
+| Code | Meaning |
+| --- | --- |
+| `LN-REPORT-001` | invalid audit event |
+| `LN-REPORT-002` | missing trace identifier |
+| `LN-REPORT-003` | invalid audit status |
+| `LN-REPORT-004` | secret leakage detected |
+| `LN-REPORT-005` | malformed JSONL event |
+
+---
+
 ## Execution Proof
 
 ### Purpose
@@ -476,10 +592,100 @@ Did execution stay within approved effects?
 | Hash | Purpose |
 | --- | --- |
 | `manifestHash` | compiler manifest integrity |
-| `moduleHash` | module source integrity |
+| `graphHash` | execution graph integrity |
 | `policyHash` | policy version integrity |
-| `executionHash` | combined execution proof |
-| `resultHash` | result integrity (never exposes secret data) |
+| `auditHash` | runtime audit stream integrity |
+| `runtimeHash` | runtime binary/runtime integrity |
+
+Note: earlier schema examples also use `moduleHash` (module source
+integrity), `executionHash` (combined execution proof), and `resultHash`
+(result integrity). The canonical TypeScript `ExecutionProof` interface uses
+the five-hash set above. Both sets may coexist until reconciled.
+
+### Execution Proof TypeScript Type
+
+```ts
+export interface ExecutionProof {
+  executionProofVersion: string
+  manifestHash: string
+  graphHash: string
+  policyHash: string
+  auditHash: string
+  runtimeHash: string
+}
+```
+
+### Hash Generator
+
+```ts
+import crypto from "crypto"
+
+export function sha256(
+  input: string
+): string {
+  return crypto
+    .createHash("sha256")
+    .update(input)
+    .digest("hex")
+}
+```
+
+### Proof Builder Function
+
+```ts
+export function buildExecutionProof(): ExecutionProof {
+  return {
+    executionProofVersion: "0.1",
+    manifestHash: "sha256:manifest",
+    graphHash: "sha256:graph",
+    policyHash: "sha256:policy",
+    auditHash: "sha256:audit",
+    runtimeHash: "sha256:runtime"
+  }
+}
+```
+
+### Proof Validator Function
+
+```ts
+export function validateExecutionProof(
+  proof: ExecutionProof
+): boolean {
+  return (
+    proof.manifestHash.length > 0 &&
+    proof.graphHash.length > 0 &&
+    proof.policyHash.length > 0 &&
+    proof.auditHash.length > 0 &&
+    proof.runtimeHash.length > 0
+  )
+}
+```
+
+### Internal Structure (proofs/)
+
+```text
+packages-logicn/logicn-core-reports/src/proofs/
+```
+
+Suggested files:
+
+```text
+execution-proof.ts
+proof-hashing.ts
+proof-validator.ts
+proof-runtime.ts
+proof-report.ts
+```
+
+### Diagnostic Codes (LN-PROOF series)
+
+| Code | Meaning |
+| --- | --- |
+| `LN-PROOF-001` | execution proof missing |
+| `LN-PROOF-002` | execution proof hash mismatch |
+| `LN-PROOF-003` | invalid proof schema |
+| `LN-PROOF-004` | runtime integrity mismatch |
+| `LN-PROOF-005` | audit integrity mismatch |
 
 ### Execution Hash Strategy
 
@@ -513,6 +719,175 @@ Not:
 ```json
 { "result": "password123" }
 ```
+
+---
+
+## Denial Reports
+
+### Purpose
+
+Denial reports explain why execution, deployment, or runtime operations were
+rejected. Every denial must remain explainable.
+
+### Denial Categories
+
+```text
+deployment policy
+capability restriction
+runtime incompatibility
+effect restriction
+target incompatibility
+secret policy
+network policy
+```
+
+### DenialReport Type
+
+```ts
+export interface DenialReport {
+  status: "denied"
+  category: string
+  reason: string
+  module?: string
+}
+```
+
+### Denial Builder Function
+
+```ts
+export function buildDenialReport(
+  reason: string
+): DenialReport {
+  return {
+    status: "denied",
+    category: "deployment",
+    reason
+  }
+}
+```
+
+### Example Denial Report
+
+```json
+{
+  "status": "denied",
+  "category": "deployment",
+  "reason": "accelerator effect denied by policy",
+  "module": "app/ai/inference"
+}
+```
+
+### Internal Structure (denials/)
+
+```text
+packages-logicn/logicn-core-reports/src/denials/
+```
+
+Suggested files:
+
+```text
+denial-report.ts
+denial-runtime.ts
+denial-validator.ts
+denial-serializer.ts
+```
+
+### Diagnostic Codes (LN-DENIAL series)
+
+| Code | Meaning |
+| --- | --- |
+| `LN-DENIAL-001` | denial reason missing |
+| `LN-DENIAL-002` | invalid denial category |
+| `LN-DENIAL-003` | unsafe denial payload |
+| `LN-DENIAL-004` | denial report generation failed |
+
+---
+
+## Runtime Evidence
+
+### Purpose
+
+Capability and effect evidence reports explain which authorities were used
+and which effects occurred during execution.
+
+### CapabilityEvidence Type
+
+```ts
+export interface CapabilityEvidence {
+  module: string
+  capabilities: string[]
+}
+```
+
+### EffectEvidence Type
+
+```ts
+export interface EffectEvidence {
+  module: string
+  effects: string[]
+}
+```
+
+### RuntimeEvidence Type
+
+```ts
+export interface RuntimeEvidence {
+  module: string
+  effects: string[]
+  capabilities: string[]
+  runtimeTarget?: string
+}
+```
+
+### Evidence Builder Function
+
+```ts
+export function buildRuntimeEvidence(
+  module: string
+): RuntimeEvidence {
+  return {
+    module,
+    effects: ["network"],
+    capabilities: ["HttpClient"],
+    runtimeTarget: "cpu"
+  }
+}
+```
+
+### Example Combined Evidence Report
+
+```json
+{
+  "module": "app/payments/service",
+  "effects": ["network", "secret"],
+  "capabilities": ["HttpClient", "SecretRead"],
+  "runtimeTarget": "cpu"
+}
+```
+
+### Internal Structure (evidence/)
+
+```text
+packages-logicn/logicn-core-reports/src/evidence/
+```
+
+Suggested files:
+
+```text
+capability-report.ts
+effect-report.ts
+evidence-aggregator.ts
+evidence-validator.ts
+```
+
+### Diagnostic Codes (LN-EVIDENCE series)
+
+| Code | Meaning |
+| --- | --- |
+| `LN-EVIDENCE-001` | capability evidence missing |
+| `LN-EVIDENCE-002` | effect evidence missing |
+| `LN-EVIDENCE-003` | invalid runtime evidence |
+| `LN-EVIDENCE-004` | evidence aggregation failed |
 
 ---
 
@@ -671,6 +1046,40 @@ compiler → deployment → runtime → audit chain
 | `LN-AUDIT-005` | secret leakage detected in audit payload |
 | `LN-AUDIT-006` | runtime capability evidence missing |
 | `LN-AUDIT-007` | distributed trace correlation failed |
+
+---
+
+## Implementation Order
+
+### Phase 1
+
+```text
+JSONL audit serializer
+basic runtime events
+basic denial reports
+```
+
+### Phase 2
+
+```text
+capability/effect reports
+runtime evidence aggregation
+```
+
+### Phase 3
+
+```text
+execution proof generation
+five-hash validation
+```
+
+### Phase 4
+
+```text
+distributed audit streams
+advanced replay verification
+cluster-scale evidence aggregation
+```
 
 ---
 

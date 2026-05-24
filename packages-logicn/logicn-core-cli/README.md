@@ -58,23 +58,42 @@ logicn promote           — promote artifact from one environment to another
 logicn rollback          — rollback to previous deployment
 ```
 
+`logicn build` compiles source into governed runtime artefacts through a
+14-pass pipeline. Flags: `--target`, `--json`, `--report`, `--strict`,
+`--profile`, `--out`, `--audit`. Produces `runtime-manifest.json`,
+`compiler-report.json`, `effect-report.json`, `capability-report.json`,
+`audit-report.json`, `build-hash.txt`. Diagnostic codes: `LN-BUILD-001`
+through `LN-BUILD-005`. Status: partial implementation.
+
+`logicn verify` validates compiler and runtime artefact integrity.
+Flags: `--json`, `--strict`, `--manifest`, `--hash`, `--policy`, `--audit`.
+Produces verification status with `manifestHash` and `graphHash`.
+Diagnostic codes: `LN-VERIFY-001` through `LN-VERIFY-005`.
+Status: partial — hash checks only.
+
 `logicn deploy` validates the runtime manifest, effects, capabilities, policy,
 target compatibility, and module hashes before deploying. Exit codes: `0`
 success, `2` policy denial, `3` runtime incompatibility, `4` deployment
 validation failure, `5` capability resolution failure, `7` manifest integrity
 failure. Flags: `--dry-run`, `--json`, `--report`, `--audit`, `--strict`,
 `--profile`, `--policy`, `--target`. Produces `deployment-report.json`.
+Diagnostic codes: `LN-DEPLOY-001` through `LN-DEPLOY-005`.
 
 `logicn explain` explains compiler decisions, runtime authority, effect
 declarations, boundary violations, and why deployment was denied.
 Flags: `--tree` (dependency graph), `--trace` (execution reasoning chain),
 `--effects`, `--capabilities`, `--runtime`, `--policy`, `--audit`, `--json`.
+Diagnostic codes: `LN-EXPLAIN-001` through `LN-EXPLAIN-004`.
 
 `logicn plan` estimates how execution will be coordinated — CPU/GPU suitability,
 memory pressure, parallelism, and fallback options. The planner recommends;
 the runtime decides final execution.
 Flags: `--json`, `--runtime`, `--memory`, `--parallelism`, `--energy`,
-`--target`, `--graph`. Produces `compute-plan.json`.
+`--target`, `--graph`, `--compatibility`. Produces `compute-plan.json`.
+Diagnostic codes: `LN-PLAN-001` through `LN-PLAN-004`.
+
+Implementation order: Phase 1 build → Phase 2 verify → Phase 3 explain →
+Phase 4 deploy → Phase 5 plan.
 
 See `docs/Knowledge-Bases/logicn-core-cli-deploy-explain-plan.md` for the
 full specification including all examples, exit codes, output modes, and

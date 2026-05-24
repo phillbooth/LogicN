@@ -21,6 +21,65 @@ safe environment variable references
 host package manifest boundary checks
 ```
 
+## Environment Mode
+
+`EnvironmentMode` is a closed set:
+
+```ts
+export type EnvironmentMode = "development" | "test" | "staging" | "production"
+```
+
+Unknown modes emit `LN-CONFIG-003` rather than silently falling back.
+
+## Environment Config Types
+
+```ts
+export interface EnvironmentConfig {
+  mode: EnvironmentMode
+  variables: string[]   // names only, not values
+  secrets: string[]     // names only, not values
+}
+
+export interface SecretEnvironmentReference {
+  name: string
+  present: boolean
+  redacted: true        // never the raw value
+  fingerprint?: string
+}
+```
+
+`loadEnvironmentConfig()` validates required variables and secrets, emits
+`LN-CONFIG-001` for missing public variables and `LN-CONFIG-002` for missing
+secrets.
+
+## Safe Secret Resolution Flow
+
+```text
+config declares required secret name
+    ↓
+security creates protected SecretReference
+    ↓
+runtime validates capability
+    ↓
+secret provider resolves raw value inside protected boundary
+    ↓
+approved safe sink consumes value
+    ↓
+raw value is never logged or reported
+```
+
+## Diagnostic Codes
+
+| Code | Meaning |
+| --- | --- |
+| `LN-CONFIG-001` | required public environment variable missing |
+| `LN-CONFIG-002` | required secret missing |
+| `LN-CONFIG-003` | unknown environment mode |
+| `LN-CONFIG-004` | production strict mode disabled |
+| `LN-CONFIG-005` | unsafe secret default detected |
+| `LN-CONFIG-006` | development package enabled in production |
+| `LN-CONFIG-010` | host package manifest boundary violation |
+
 ## Contracts
 
 `logicn-core-config` exposes typed contracts for:

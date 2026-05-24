@@ -39,7 +39,14 @@ adding post-v1 targets or domain package syntax.
 [ ] Implement capability boundary enforcement (LN-BOUNDARY-007, LLN-E4005)
 [ ] Add effect checker diagnostics with suggested fixes
 [ ] Add boundary checker diagnostics with suggested fixes
-[ ] Generate runtime manifest including effect and boundary metadata
+[ ] Generate runtime manifest including effect and boundary metadata (pass 14)
+[ ] Implement manifest builder — aggregate compiler metadata into runtime-manifest.json
+[ ] Define RuntimeManifest TypeScript type (module/effects/capabilities/targets/trustLevel/auditRequired)
+[ ] Implement manifest hash generation (LN-MANIFEST-002)
+[ ] Implement manifest schema validation (LN-MANIFEST-001, LN-MANIFEST-003)
+[ ] Implement capability reference validation in manifest (LN-MANIFEST-004)
+[ ] Implement runtime target validation in manifest (LN-MANIFEST-005)
+[ ] Create manifests/ dir structure: manifest-builder.ts, manifest-schema.ts, manifest-hash.ts, manifest-serializer.ts, manifest-validator.ts
 [ ] Parse at least 20 v1 .lln examples
 [ ] Reject post-v1 syntax with clear diagnostics
 [ ] Add examples

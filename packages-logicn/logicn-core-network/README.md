@@ -85,6 +85,94 @@ application route handlers
 `logicn-core-security` owns permission decisions, redaction and security report
 checks. `logicn-core-reports` owns shared report shape conventions.
 
+## Governance Model
+
+`logicn-core-network` is a governance-first runtime system. Its purpose is to
+provide explicit network permissions, runtime-aware destination validation,
+safe secret transmission, and audit-grade network evidence.
+
+Governance rules:
+
+```text
+policy-governed
+capability-controlled
+auditable
+explicit
+deny-by-default
+runtime-validated
+```
+
+### Core Governance Types
+
+```ts
+export type NetworkProtocol = "http" | "https" | "tcp" | "udp" | "grpc" | "websocket"
+
+export interface NetworkDestinationReference {
+  name: string
+  protocol: NetworkProtocol
+  host: string
+  port?: number
+  tlsRequired: boolean
+}
+
+export interface NetworkPolicy {
+  allowDestinations: NetworkDestinationReference[]
+  denyDestinations: string[]
+  requireTls: boolean
+  allowRawSockets: boolean
+}
+```
+
+`GovernedNetworkRuntime` validates requests against policy before traffic is
+allowed. `safeHttpRequest()` wraps the runtime with a policy-checked request path.
+
+### Network Effect Declaration
+
+Network access must declare the `network` effect:
+
+```logicn
+fn fetch_user(id: UserId) effect network capability HttpClient {
+    return http.get("/users/" + id)
+}
+```
+
+### Forbidden Defaults
+
+```text
+network.any
+rawSocket
+packetCapture
+promiscuousMode
+```
+
+These require explicit governance approval.
+
+### AI Networking Governance
+
+AI systems must not silently exfiltrate data. The runtime must always know:
+which AI provider is contacted, which capability allowed it, which data
+categories were transmitted, and which policy approved it.
+
+### Diagnostic Codes (LN-NETWORK series)
+
+| Code | Meaning |
+| --- | --- |
+| `LN-NETWORK-001` | undeclared network destination |
+| `LN-NETWORK-002` | capability missing for network operation |
+| `LN-NETWORK-003` | insecure transport denied |
+| `LN-NETWORK-004` | raw socket denied |
+| `LN-NETWORK-005` | destination not allowlisted |
+| `LN-NETWORK-006` | secret flow to unapproved destination |
+| `LN-NETWORK-007` | AI provider not approved |
+| `LN-NETWORK-008` | runtime network policy unavailable |
+
+Internal structure: `network-policy.ts`, `network-destination.ts`,
+`network-permissions.ts`, `network-runtime.ts`, `network-audit.ts`,
+`network-diagnostics.ts`, `network-reports.ts`.
+
+See `docs/Knowledge-Bases/logicn-core-network-governance.md` for the full
+governance specification.
+
 ## Core Concepts
 
 ### Network Policy
