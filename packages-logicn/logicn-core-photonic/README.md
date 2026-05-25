@@ -113,7 +113,194 @@ Planned sub-packages: `logicn-target-photonic-runtime`,
 `logicn-target-photonic-routing`, `logicn-target-photonic-audit`.
 
 See `docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md` for the
-full governance specification.
+prior governance specification.
+
+See `docs/Knowledge-Bases/logicn-core-photonic-v02.md` for the v0.2 formal spec.
+
+## v0.2 Architecture Depth
+
+The v0.2 formal specification (`logicn-core-photonic-v02.md`) introduces a
+complete governance architecture for optical runtime control. The types below
+supersede the prior KB types above.
+
+### OpticalTransportMode Enum (v0.2)
+
+```ts
+enum OpticalTransportMode {
+    Waveguide,
+    Coherent,
+    Mesh,
+    FreeSpace,
+    Hybrid,
+    Experimental
+}
+```
+
+Note: The prior KB used `"photonic" | "electrical" | "hybrid"` (3-value string
+union). The v0.2 formal spec defines this 6-value enum.
+
+| Mode | Description |
+| ------------ | ------------------------------- |
+| Waveguide | Structured optical wave routing |
+| Coherent | Coherent optical transport |
+| Mesh | Distributed optical mesh |
+| FreeSpace | Open optical propagation |
+| Hybrid | Mixed electronic/optical |
+| Experimental | Unsafe or research mode |
+
+### PhotonicRuntimeTarget (v0.2)
+
+```ts
+interface PhotonicRuntimeTarget {
+    id: string;
+    transport: OpticalTransportMode;
+    realtime: boolean;
+    deterministic: boolean;
+    supportsIsolation: boolean;
+    maxPropagationDepth: number;
+}
+```
+
+Note: The prior KB had `name`, `distributed`, `transportMode`, `fallbackTarget`.
+The v0.2 formal spec uses `id`, `transport`, `realtime`, `deterministic`,
+`supportsIsolation`, `maxPropagationDepth`.
+
+### PhotonicExecutionPlan (v0.2)
+
+```ts
+interface PhotonicExecutionPlan {
+    target: PhotonicRuntimeTarget;
+    topology: string;
+    propagationDepth: number;
+    estimatedLatencyNs: number;
+    isolated: boolean;
+    warnings: string[];
+}
+```
+
+Note: The prior KB had `module`, `distributed`, `recommendedTransport`,
+`fallbackTarget`, `reasoning[]`. The v0.2 formal spec uses the interface above.
+
+### buildPhotonicPlan() (v0.2)
+
+```ts
+function buildPhotonicPlan(
+    target: PhotonicRuntimeTarget
+): PhotonicExecutionPlan {
+    return {
+        target,
+        topology: "OpticalMesh",
+        propagationDepth: 12,
+        estimatedLatencyNs: 8,
+        isolated: true,
+        warnings: []
+    };
+}
+```
+
+### Validation Functions
+
+```ts
+// Prevents cross-runtime optical leakage.
+function validateIsolation(target: PhotonicRuntimeTarget): boolean {
+    return target.supportsIsolation;
+}
+
+// Prevents unstable execution and non-deterministic signal routing.
+function validatePropagation(
+    depth: number,
+    target: PhotonicRuntimeTarget
+): boolean {
+    return depth <= target.maxPropagationDepth;
+}
+
+// Hybrid runtimes require determinism.
+function validateHybridMode(target: PhotonicRuntimeTarget): boolean {
+    return (
+        target.transport === OpticalTransportMode.Hybrid &&
+        target.deterministic
+    );
+}
+
+// Real-time constraint: must be under 100ns.
+function validateRealtime(plan: PhotonicExecutionPlan): boolean {
+    return plan.estimatedLatencyNs < 100;
+}
+```
+
+### PhotonicCapability Enum (v0.2)
+
+```ts
+enum PhotonicCapability {
+    OpticalExecution,
+    HybridExecution,
+    ExperimentalRouting,
+    RealtimeScheduling
+}
+```
+
+`ExperimentalRouting` is blocked by default. Requires explicit override.
+
+### Optical Topologies (v0.2)
+
+| Topology | Purpose |
+| ------------ | ----------------------- |
+| OpticalMesh | Distributed propagation |
+| WaveguideBus | Structured routing |
+| CoherentRing | Low-latency execution |
+| HybridBridge | CPU/GPU bridging |
+
+### Diagnostic Codes (v0.2)
+
+| Code | Meaning |
+| --------------- | ---------------------------------- |
+| `LN-PHOTONIC-001` | Isolation guarantee missing |
+| `LN-PHOTONIC-002` | Propagation depth exceeded |
+| `LN-PHOTONIC-003` | Experimental runtime prohibited |
+| `LN-PHOTONIC-004` | Invalid optical topology |
+| `LN-PHOTONIC-005` | Non-deterministic runtime detected |
+| `LN-PHOTONIC-006` | Unsafe hybrid transition |
+
+Note: These meanings differ from the prior KB. See `logicn-core-photonic-v02.md`
+for full details on the v0.2 code meanings vs prior KB codes.
+
+### File Layout (v0.2)
+
+```text
+logicn-core-photonic/
+
+  runtime/
+    PhotonicRuntime.ts
+    transport.ts            (OpticalTransportMode enum)
+    isolation.ts            (validateIsolation)
+
+  planning/
+    PhotonicExecutionPlan.ts
+    topology.ts             (topologies list)
+    scheduling.ts           (validateRealtime)
+
+  governance/
+    validation.ts           (validatePropagation, validateHybridMode)
+    capabilities.ts         (PhotonicCapability enum, validateCapability)
+    policies.ts
+
+  diagnostics/
+    PhotonicDiagnostic.ts
+    codes.ts                (LN-PHOTONIC-001–006)
+
+  targets/
+    runtimeTargets.ts       (PhotonicRuntimeTarget)
+    OpticalTransportMode.ts
+```
+
+### Determinism Rule
+
+Given identical workloads, runtime targets, optical topology, and transport
+modes — the runtime must produce:
+- identical execution plans
+- identical propagation routes
+- identical runtime schedules
+- identical diagnostics
 
 ## Boundary
 

@@ -31,4 +31,29 @@ piece is required to clarify core `Tri` or `LogicN` semantics.
 [ ] Plan sub-packages: logicn-target-photonic-runtime, logicn-target-photonic-routing, logicn-target-photonic-audit
 [x] Add examples
 [x] Add tests
+
+## v0.2 Governance Architecture (from logicn-core-photonic-v02.md)
+
+[ ] Replace OpticalTransportMode string union with 6-value enum (Waveguide/Coherent/Mesh/FreeSpace/Hybrid/Experimental)
+[ ] Update PhotonicRuntimeTarget to v0.2 fields (id/transport/realtime/deterministic/supportsIsolation/maxPropagationDepth)
+[ ] Update PhotonicExecutionPlan to v0.2 fields (target/topology/propagationDepth/estimatedLatencyNs/isolated/warnings[])
+[ ] Update buildPhotonicPlan() signature to accept PhotonicRuntimeTarget and return v0.2 plan
+[ ] Implement validateIsolation(target: PhotonicRuntimeTarget): boolean
+[ ] Implement validatePropagation(depth: number, target: PhotonicRuntimeTarget): boolean
+[ ] Implement validateHybridMode(target: PhotonicRuntimeTarget): boolean
+[ ] Implement validateRealtime(plan: PhotonicExecutionPlan): boolean
+[ ] Define PhotonicCapability enum (OpticalExecution/HybridExecution/ExperimentalRouting/RealtimeScheduling)
+[ ] Implement validateCapability(capability: PhotonicCapability): boolean — blocks ExperimentalRouting by default
+[ ] Define optical topologies list (OpticalMesh/WaveguideBus/CoherentRing/HybridBridge)
+[ ] Update LN-PHOTONIC-001–006 meanings to v0.2 (001=isolation missing, 002=propagation exceeded, 003=experimental prohibited, 004=invalid topology, 005=non-deterministic, 006=unsafe hybrid)
+[ ] Create runtime/transport.ts (OpticalTransportMode enum)
+[ ] Create runtime/isolation.ts (validateIsolation)
+[ ] Create planning/topology.ts (topologies list)
+[ ] Create planning/scheduling.ts (validateRealtime)
+[ ] Create governance/validation.ts (validatePropagation, validateHybridMode)
+[ ] Create governance/capabilities.ts (PhotonicCapability enum, validateCapability)
+[ ] Create targets/runtimeTargets.ts (PhotonicRuntimeTarget)
+[ ] Create targets/OpticalTransportMode.ts
+[ ] Enforce determinism rule: identical inputs must produce identical execution plans/routes/schedules/diagnostics
+[ ] Add experimental transport restrictions (no production deployment, sandboxed only, explicit capability required, full audit logging)
 ```
