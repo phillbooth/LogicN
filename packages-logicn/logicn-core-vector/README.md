@@ -58,3 +58,35 @@ logicn-core-vector describes vector, matrix and tensor values and operations.
 logicn-core-compute decides how compute work can be planned.
 target packages decide how planned work is emitted.
 ```
+
+## Photonic Governance Proposal (Unresolved Boundary Conflict)
+
+A specification in the notes files (`28.txt`) proposes placing photonic governance
+contracts inside `logicn-core-vector`:
+
+```text
+OpticalTransportMode (6 values: electrical|hybrid|photonic|waveguide|plasmonic|coherent)
+PhotonicCapability (6 values)
+PhotonicTopology (6 values)
+PhotonicRuntimeTarget v0.2
+PhotonicExecutionPlan v0.2
+estimateOpticalSuitability
+buildPhotonicPlan
+resolveFallback
+validateTransportMode / validatePhotonicTarget / validatePhotonicPlan
+LN-PHOTONIC-001–006
+```
+
+This **conflicts with the boundary rule above** which states photonic representation
+belongs in `logicn-core-photonic`.
+
+The existing `logicn-core-photonic` package already has these types fully specified in:
+- `docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md`
+- `docs/Knowledge-Bases/logicn-core-photonic-v02.md`
+- `docs/Knowledge-Bases/logicn-core-photonic-governance-architecture.md`
+- `docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md` (conflict documented)
+
+**Resolution required before implementation.**
+
+See `docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md` for the full
+photonic governance spec and boundary conflict details.

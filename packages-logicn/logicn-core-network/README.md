@@ -298,43 +298,81 @@ secret-safe header handling
 audit evidence generation
 ```
 
-## WebhookVerificationConfig
+## Webhook Security Contracts
+
+See full specification: `docs/Knowledge-Bases/logicn-core-network-webhook.md`
+
+### WebhookVerificationConfig (v0.2)
 
 ```ts
 export interface WebhookVerificationConfig {
-    provider: "stripe" | "github" | "clerk" | "custom"
+    /** Human-readable provider name. Used in reports; never log the secret. */
+    provider: string
+
+    /** Shared signing secret — string or raw bytes. */
+    secret: string | Uint8Array
+
+    /** HMAC algorithm. Default: "sha256". */
+    algorithm?: "sha256" | "sha384" | "sha512"
+
+    /** Header containing the HMAC signature (e.g. x-hub-signature-256). */
     signatureHeader: string
-    algorithm: "sha256" | "sha512" | "hmac-sha256"
-    headerName?: string
+
+    /** Optional header containing a provider timestamp. */
     timestampHeader?: string
-    maxAgeSeconds?: number
-    maxTimestampAgeSeconds?: number
-    requireTimestamp: boolean
-    requireRawBody: boolean
-    requireReplayProtection: boolean
+
+    /** Optional header containing a delivery or event ID. */
+    deliveryIdHeader?: string
+
+    /** Prefix stripped from the signature value (e.g. "sha256="). */
+    signaturePrefix?: string
+
+    /** Maximum allowed clock skew in seconds. Default: 300. */
+    toleranceSeconds?: number
+
+    /** Encoding of the received signature. */
+    signatureEncoding?: "hex" | "base64" | "base64url"
+
+    /** Separator used when provider signs timestamp + body together. */
+    signedPayloadSeparator?: string
 }
 ```
 
 Webhook verification must use constant-time signature comparison.
 
-## ReplayStore
+### ReplayStore
 
 ```ts
 export interface ReplayStore {
-    has(key: string): Promise<boolean>
-    put(key: string, ttlSeconds: number): Promise<void>
-    insertOnce?(id: string, expiresAt: Date): Promise<boolean>
+    has(key: string): Promise<boolean> | boolean
+    put(key: string, ttlSeconds: number): Promise<void> | void
 }
 ```
 
-## IdempotencyStore
+### IdempotencyRecord and IdempotencyStore (v0.2)
 
 ```ts
-export interface IdempotencyStore {
-    has(idempotencyKey: string): Promise<boolean>
-    put(idempotencyKey: string, ttlSeconds: number): Promise<void>
-    getOrSet?(key: string, value: string): Promise<string>
+export interface IdempotencyRecord {
+    key: string
+    provider: string
+    status: "processing" | "processed" | "failed"
+    createdAtMs: number
+    expiresAtMs?: number
 }
+
+export interface IdempotencyStore {
+    get(key: string): Promise<IdempotencyRecord | undefined> | IdempotencyRecord | undefined
+    put(record: IdempotencyRecord, ttlSeconds?: number): Promise<void> | void
+}
+```
+
+### Validation Functions
+
+```ts
+// verifyWebhookHmac(VerifyWebhookHmacInput): VerifyWebhookHmacResult
+// validateWebhookTimestamp(ValidateWebhookTimestampInput): ValidateWebhookTimestampResult
+// validateReplayProtection(ValidateReplayProtectionInput): Promise<ValidateReplayProtectionResult>
+// validateIdempotency(ValidateIdempotencyInput): Promise<ValidateIdempotencyResult>
 ```
 
 ## validateAiPrompt()

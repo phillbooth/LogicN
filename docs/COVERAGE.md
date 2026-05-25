@@ -449,7 +449,7 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | Rate limiting | ✅ | Documented in KB — `layered-rate-limits.md` |
 | API boundary contracts | ✅ | Documented in KB — `runtime-boundary-declarations.md` |
 | Governance model | ⚠️ | Fully specified v0.2 (NetworkProtocol 7 values incl. tcp/udp, NetworkDestinationReference with name field, NetworkPolicy with default/allowDestinations/denyDestinations, productionNetworkPolicy SSRF deny list, GovernedNetworkRuntime, safeHttpRequest, validateDestination/TlsRequirement/Capability, AiProviderNetworkPolicy, LN-NETWORK-001–008); not yet implemented |
-| Webhook HMAC / replay / idempotency | ⚠️ | Fully specified (WebhookVerificationConfig, verifyWebhookHmac, validateWebhookTimestamp, ReplayStore {has/put} /validateReplayProtection, IdempotencyStore/validateIdempotency, webhook/ dir); not yet implemented |
+| Webhook HMAC / replay / idempotency | ✅ | Fully specified v0.2 in `logicn-core-network-webhook.md` (NEW dedicated KB — WebhookVerificationConfig {provider:string, secret:string|Uint8Array, algorithm?:"sha256"|"sha384"|"sha512", signatureHeader, timestampHeader?, deliveryIdHeader?, signaturePrefix?, toleranceSeconds?, signatureEncoding?, signedPayloadSeparator?}, VerifyWebhookHmacInput/Result with 4-value error union, ValidateWebhookTimestampInput/Result, ReplayStore {has/put}, ValidateReplayProtectionInput/Result, IdempotencyRecord {key,provider,status:"processing"|"processed"|"failed",createdAtMs,expiresAtMs?}, IdempotencyStore {get/put}, ValidateIdempotencyInput/Result with 4-value error union, 5-step pipeline, 7 security rules, 15-item checklist, 7-file webhook/ layout, full diagnostic code table); not yet implemented |
 
 ### logicn-core-reports
 
@@ -481,11 +481,12 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented |
+| README.md | ✅ | Scope documented — Photonic governance proposal and boundary conflict note added (see `logicn-core-vector-photonic-governance.md`) |
 | TODO.md | ✅ | Work tracking |
 | src/ | ⚠️ | Implementation stubs |
 | Vector<N,T> / Matrix<R,C,T> | ✅ | Documented in KB — `numeric-and-compute-types.md` |
 | pure vector flow model | ✅ | Documented in logicn-core docs |
+| Photonic governance (proposed) | ⚠️ | Fully specified in `logicn-core-vector-photonic-governance.md` (NEW — OpticalTransportMode prior 3-value + v0.2 6-value, PhotonicCapability 6 values, PhotonicTopology 6 values, PhotonicRuntimeTarget v0.2 with topology/capabilities[]/deterministic, PhotonicExecutionPlan v0.2 with governanceChecks[], estimateOpticalSuitability, buildPhotonicPlan, resolveFallback, validateTransportMode/validatePhotonicTarget/validatePhotonicPlan, LN-PHOTONIC-001–006 prior+v0.2 meanings, determinism rule, deny-by-default fallback); BOUNDARY CONFLICT — existing README says photonic belongs in logicn-core-photonic; must resolve before implementation |
 
 ### logicn-core-photonic
 
@@ -587,7 +588,8 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 
 ⚠️ logicn-core-network: governance model
      KB: logicn-core-network-governance.md (UPDATED — NetworkProtocol adds tcp/udp, drops ws/wss; NetworkPolicy redesigned with default/allowDestinations[]/denyDestinations[]; productionNetworkPolicy SSRF deny list)
-     README: Updated — NetworkProtocol 7 values (tcp/udp added), NetworkPolicy with allowDestinations/denyDestinations/default, productionNetworkPolicy SSRF-safe deny list, AiProviderNetworkPolicy/OPENAI_POLICY, GovernedNetworkRuntime, safeHttpRequest, validateDestination/TlsRequirement/Capability, WebhookVerificationConfig, ReplayStore, IdempotencyStore, validateAiPrompt, NetworkDiagnostic/NetworkPolicyReport
+     KB: logicn-core-network-webhook.md (NEW — WebhookVerificationConfig v0.2 with typed Input/Result structs for all functions, IdempotencyRecord with status field, 5-step pipeline, 7 security rules, 15-item checklist)
+     README: Updated — NetworkProtocol 7 values, NetworkPolicy with allowDestinations/denyDestinations/default, productionNetworkPolicy SSRF-safe deny list, AiProviderNetworkPolicy/OPENAI_POLICY, GovernedNetworkRuntime, safeHttpRequest, WebhookVerificationConfig v0.2 corrected (provider:string, secret:string|Uint8Array), IdempotencyRecord with status field, all typed Input/Result structs
      Status: fully specified v0.2 (with breaking protocol changes from downloaded update), not yet implemented
 
 ⚠️ logicn-core-photonic: governance architecture
@@ -595,6 +597,19 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
      KB: logicn-core-photonic-v02.md (v0.2 formal spec — OpticalTransportMode 6-value enum, PhotonicRuntimeTarget/PhotonicExecutionPlan v0.2, validation functions, PhotonicCapability, topologies, LN-PHOTONIC-001–006 v0.2 meanings, determinism rule)
      README: updated with v0.2 Architecture Depth section; TODO: all v0.2 items added
      Status: both prior and v0.2 fully specified; README and TODO updated; not yet implemented
+
+⚠️ logicn-core-vector: photonic governance proposal (boundary conflict)
+     KB: logicn-core-vector-photonic-governance.md (NEW — OpticalTransportMode prior 3-value + v0.2 6-value
+         "electrical"|"hybrid"|"photonic"|"waveguide"|"plasmonic"|"coherent",
+         PhotonicCapability 6-value, PhotonicTopology 6-value,
+         PhotonicRuntimeTarget v0.2 {topology, capabilities[], deterministic},
+         PhotonicExecutionPlan v0.2 {governanceChecks[], validated, deterministic},
+         estimateOpticalSuitability, buildPhotonicPlan, resolveFallback,
+         validateTransportMode/validatePhotonicTarget/validatePhotonicPlan,
+         LN-PHOTONIC-001–006 prior+v0.2, determinism rule, deny-by-default,
+         BOUNDARY CONFLICT documented — existing README says photonic belongs in logicn-core-photonic)
+     README: Boundary conflict note added, reference to KB file
+     Status: fully specified (both prior + v0.2); BOUNDARY CONFLICT must be resolved before implementation
 
 ⚠️ logicn-framework-api-server: full API server implementation
      KB: logicn-api-boundary-architecture.md (prior KB — full request flow, LogicnApiManifest, all route policies, handleApiRequest pipeline, webhook HMAC, replay, OpenAPI export)
@@ -611,7 +626,7 @@ See `package-completion-status.md` for the full implementation order (Phase 1–
 
 ## Knowledge Base File Count
 
-Total KB files: ~199
+Total KB files: ~201
 
 | Area | Files | Coverage |
 | --- | --- | --- |
@@ -619,7 +634,7 @@ Total KB files: ~199
 | Logic | ~39 core files | Strong — error propagation covered; Tri/Decision/Bool v0.2 discriminated unions (UPDATED with breaking changes: UnknownReason, 4-state Decision, DecisionEvidence); Omni logic updated (OmniEvidence); developer guide added |
 | Runtime | ~67 core files | Strong — CI/CD, audit log v0.2 (JSONL + execution proof + denials + evidence), effects, boundaries covered; v0.2 formal spec KBs + pass-14 manifest update (ManifestIntegrity, permissions[], serializeManifestStable) |
 | AI/Compute | ~19 files | Strong — GPU/photonic/WASM/compatibility v0.2 architecture; PhotonicPlan explicit type added; photonic governance architecture spec added |
-| Cross-cutting | ~37 files | Strong — CLI v0.2, config v0.2, network v0.2 (UPDATED tcp/udp, NetworkPolicy redesign), security v0.2, API boundary architecture; online safety act policy, security secret ref model architecture spec, api server implementation spec added |
+| Cross-cutting | ~39 files | Strong — CLI v0.2, config v0.2, network v0.2 (UPDATED tcp/udp, NetworkPolicy redesign), security v0.2, API boundary architecture; online safety act policy, security secret ref model architecture spec, api server implementation spec added; network webhook dedicated KB + vector photonic governance KB added |
 | Architecture | ~4 files | Strong |
 
 New files added (prior sessions):
@@ -920,16 +935,73 @@ Downloaded git updates (external files now confirmed on disk):
         packages-logicn/logicn-core-network/README.md   — NetworkProtocol with tcp/udp
 ```
 
+Notes processed into KB (NOTES TO COVER 1–28, current session):
+```text
+1–11   — content from these files already captured in prior sessions (effect checker,
+          boundary checker, manifest generation, CLI build/verify/deploy/explain/plan,
+          Tri logic, Decision logic, Bool boundary, Omni logic, Config env/secrets,
+          Network governance, API server implementation); no new KB files needed
+
+12     — note only: confirms logicn-core-logic-decision-logic.md exists in KB
+13     — Bool boundary spec → already covered in logicn-core-logic-tri-decision-bool.md
+14     — note only: confirms logicn-core-logic-omni-logic.md exists in KB
+15     — GPU Plan Output → already in logicn-core-compute-gpu-and-photonic-backends.md + v02 KB
+16     — Optical/Photonic Plan → already in logicn-core-compute-gpu-and-photonic-backends.md
+17     — duplicate of 16.txt
+18     — WASM Target → already in logicn-core-compute-gpu-and-photonic-backends.md + v02 KB
+19     — Target Compatibility Report → already in logicn-core-compute-gpu-and-photonic-backends.md + v02 KB
+20     — Environment Config → already in logicn-core-config-environment-secrets.md + v02 KB
+21     — Secret Reference (config layer) → already in logicn-core-config-environment-secrets.md + v02 KB
+22     — Network Governance v0.2 → updates already in logicn-core-network-governance.md
+23     — note only: confirms network governance doc exists
+24     — Webhook Security (full spec) → created logicn-core-network-webhook.md (NEW dedicated KB —
+          WebhookVerificationConfig {provider:string, secret:string|Uint8Array, algorithm?,
+          signatureHeader, timestampHeader?, deliveryIdHeader?, signaturePrefix?, toleranceSeconds?,
+          signatureEncoding?, signedPayloadSeparator?},
+          verifyWebhookHmac/validateWebhookTimestamp typed with Input/Result structs,
+          ReplayStore {has(key), put(key, ttlSeconds)}, validateReplayProtection typed,
+          IdempotencyRecord {key, provider, status:"processing"|"processed"|"failed", createdAtMs, expiresAtMs?},
+          IdempotencyStore {get/put}, validateIdempotency typed,
+          5-step pipeline, 7 security rules, 15-item checklist, full diagnostic code table)
+          → updated logicn-core-network README (corrected provider:string, added IdempotencyRecord,
+          added typed Input/Result structs, referenced webhook KB)
+25     — note only: confirms logicn-core-reports sections were added
+26     — webhook content (duplicate of 24.txt) + audit log spec → already in runtime-audit-log-format.md
+27     — 42-line duplicate/note of 26.txt
+28     — large multi-spec file (2976 lines):
+          webhook (lines 1–675)      → duplicate of 24/26.txt, already covered
+          audit log (lines 676–1423) → already in runtime-audit-log-format.md
+          execution proof (lines 1424–1778) → already in runtime-audit-log-format.md (extended)
+          denial report (lines 1779–1955) → already in runtime-audit-log-format.md (extended)
+          evidence (lines 1956–2251) → already in runtime-audit-log-format.md (extended)
+          vector photonic prior (lines 2252–2594) → created logicn-core-vector-photonic-governance.md
+          vector photonic v0.2 (lines 2595–2975) → included in logicn-core-vector-photonic-governance.md
+          (NEW KB — OpticalTransportMode prior 3-value + v0.2 6-value, PhotonicCapability 6 values,
+          PhotonicTopology 6 values, PhotonicRuntimeTarget v0.2 {topology, capabilities[], deterministic},
+          PhotonicExecutionPlan v0.2 {governanceChecks[], validated, deterministic},
+          estimateOpticalSuitability, buildPhotonicPlan, resolveFallback,
+          validateTransportMode/validatePhotonicTarget/validatePhotonicPlan,
+          LN-PHOTONIC-001–006 prior + v0.2 meanings, determinism rule, deny-by-default fallback,
+          BOUNDARY CONFLICT documented)
+          → updated logicn-core-vector README (boundary conflict note added)
+```
+
 Version conflict notes (documented in new v0.2 KB files):
 ```text
 - OpticalTransportMode: prior KB = "photonic"|"electrical"|"hybrid" (3-value string union)
                          v0.2 (x10) = Waveguide|Coherent|Mesh|FreeSpace|Hybrid|Experimental (6-value enum)
                          governance spec (x16) = DIRECT|WAVELENGTH|PACKETIZED|HYBRID|EMULATED|SIMULATED (6-value enum, different names)
-                         → UNRESOLVED: two incompatible 6-value enums; must be reconciled before implementation
+                         28.txt vector spec = "electrical"|"hybrid"|"photonic"|"waveguide"|"plasmonic"|"coherent" (6-value, different again)
+                         → UNRESOLVED: three incompatible 6-value enums; must be reconciled before implementation
 - LN-PHOTONIC codes:    prior KB = 001 unavailable, 002 denied by policy, 003 scheduler unavailable,
                                     004 fallback occurred, 005 unsupported target, 006 invalid graph
                          v0.2    = 001 isolation missing, 002 propagation exceeded, 003 experimental prohibited,
                                     004 invalid topology, 005 non-deterministic, 006 unsafe hybrid
+                         28.txt  = 001 invalid transport mode, 002 invalid capability, 003 invalid topology,
+                                    004 target validation failed, 005 plan validation failed, 006 deterministic violation
+- Photonic package ownership: logicn-core-vector README says photonic belongs in logicn-core-photonic;
+                               28.txt proposes OpticalTransportMode/PhotonicRuntimeTarget/PhotonicExecutionPlan
+                               in logicn-core-vector — BOUNDARY CONFLICT, unresolved
 - TriState discriminant: x6 (v0.2 runtime spec) = type:"TRI_TRUE"/"TRI_FALSE"/"TRI_UNKNOWN"
                           x12 (developer guide)  = kind:"true"/"false"/"unknown"
                           downloaded update       = kind:"true"|"false"|"unknown" with value: true/false
@@ -937,8 +1009,12 @@ Version conflict notes (documented in new v0.2 KB files):
                           downloaded update = 4-state (allow/deny/review/unknown) — review is a breaking addition
 - WebhookVerificationConfig: network package (x9) uses `sharedSecret` field
                                api server package (x11/x17) uses `secret` field
+                               24.txt/28.txt v0.2 = `secret: string | Uint8Array` (now canonical in logicn-core-network-webhook.md)
 - ReplayStore: network package (x9) = has()/store() methods
                api server package (x11/x17) = exists()/save() methods
+               24.txt/28.txt v0.2 = has()/put() with ttlSeconds — now canonical in logicn-core-network-webhook.md
+- IdempotencyStore: network package (x9) = has()/put() with no IdempotencyRecord
+                     24.txt/28.txt v0.2 = get()/put(IdempotencyRecord) with status field — now canonical
 - ProtectedSecret: logicn-core-config (x7) = simple interface {reference, protected:true}
                     logicn-core-security (x8) = class ProtectedSecret<T> with reveal() method
                     architecture spec (x14)   = class ProtectedSecret<T> with unwrapForApprovedSink() NOT reveal()

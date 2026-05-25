@@ -82,7 +82,7 @@ Provides:
 - ConfigDiagnostic
 - ProjectPackageReference
 - ProductionPackageOverride
-- ConfigPathMap
+- ConfigPathmatch
 - ProjectConfig
 - EnvironmentVariableScope
 - EnvironmentVariableReference

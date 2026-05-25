@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-05-24T09:54:45.413Z",
+  "generatedAt": "2026-05-25T11:43:17.640Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -633,6 +633,15 @@
       ]
     },
     {
+      "id": "doc:docs/compiler-effect-and-boundary-checker.md",
+      "kind": "Document",
+      "label": "compiler-effect-and-boundary-checker.md",
+      "sourcePath": "docs/compiler-effect-and-boundary-checker.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/contracts/contracts-flow.md",
       "kind": "Document",
       "label": "contracts-flow.md",
@@ -700,6 +709,15 @@
       "kind": "Document",
       "label": "CORE_FOUNDATION_ROADMAP.md",
       "sourcePath": "docs/CORE_FOUNDATION_ROADMAP.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/COVERAGE.md",
+      "kind": "Document",
+      "label": "COVERAGE.md",
+      "sourcePath": "docs/COVERAGE.md",
       "tags": [
         "document"
       ]
@@ -1092,6 +1110,24 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/ai-friendly-architecture-documentation.md",
+      "kind": "Document",
+      "label": "ai-friendly-architecture-documentation.md",
+      "sourcePath": "docs/Knowledge-Bases/ai-friendly-architecture-documentation.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/ai-linear-algebra-accelerator-support.md",
+      "kind": "Document",
+      "label": "ai-linear-algebra-accelerator-support.md",
+      "sourcePath": "docs/Knowledge-Bases/ai-linear-algebra-accelerator-support.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/ai-self-modification-governance.md",
       "kind": "Document",
       "label": "ai-self-modification-governance.md",
@@ -1119,10 +1155,73 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/architecture-good-taste-principles.md",
+      "kind": "Document",
+      "label": "architecture-good-taste-principles.md",
+      "sourcePath": "docs/Knowledge-Bases/architecture-good-taste-principles.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/architecture-self-verification-questions.md",
+      "kind": "Document",
+      "label": "architecture-self-verification-questions.md",
+      "sourcePath": "docs/Knowledge-Bases/architecture-self-verification-questions.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/arrays-and-string-operations.md",
+      "kind": "Document",
+      "label": "arrays-and-string-operations.md",
+      "sourcePath": "docs/Knowledge-Bases/arrays-and-string-operations.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/async-task-model.md",
+      "kind": "Document",
+      "label": "async-task-model.md",
+      "sourcePath": "docs/Knowledge-Bases/async-task-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/audit-actor-model.md",
       "kind": "Document",
       "label": "audit-actor-model.md",
       "sourcePath": "docs/Knowledge-Bases/audit-actor-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/authority-model.md",
+      "kind": "Document",
+      "label": "authority-model.md",
+      "sourcePath": "docs/Knowledge-Bases/authority-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/auto-type-inference.md",
+      "kind": "Document",
+      "label": "auto-type-inference.md",
+      "sourcePath": "docs/Knowledge-Bases/auto-type-inference.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/automated-runtime-trust-strategy.md",
+      "kind": "Document",
+      "label": "automated-runtime-trust-strategy.md",
+      "sourcePath": "docs/Knowledge-Bases/automated-runtime-trust-strategy.md",
       "tags": [
         "document"
       ]
@@ -1146,6 +1245,24 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/boot-main-startup-defaults.md",
+      "kind": "Document",
+      "label": "boot-main-startup-defaults.md",
+      "sourcePath": "docs/Knowledge-Bases/boot-main-startup-defaults.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/bootstrap-runtime-roadmap.md",
+      "kind": "Document",
+      "label": "bootstrap-runtime-roadmap.md",
+      "sourcePath": "docs/Knowledge-Bases/bootstrap-runtime-roadmap.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/boundary-extension-concepts.md",
       "kind": "Document",
       "label": "boundary-extension-concepts.md",
@@ -1159,6 +1276,24 @@
       "kind": "Document",
       "label": "boundary-safety-proof.md",
       "sourcePath": "docs/Knowledge-Bases/boundary-safety-proof.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/branching-model.md",
+      "kind": "Document",
+      "label": "branching-model.md",
+      "sourcePath": "docs/Knowledge-Bases/branching-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/build-system-and-cli.md",
+      "kind": "Document",
+      "label": "build-system-and-cli.md",
+      "sourcePath": "docs/Knowledge-Bases/build-system-and-cli.md",
       "tags": [
         "document"
       ]
@@ -1191,10 +1326,37 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/cicd-integration-and-provenance.md",
+      "kind": "Document",
+      "label": "cicd-integration-and-provenance.md",
+      "sourcePath": "docs/Knowledge-Bases/cicd-integration-and-provenance.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/compile-time-metadata-reflection.md",
       "kind": "Document",
       "label": "compile-time-metadata-reflection.md",
       "sourcePath": "docs/Knowledge-Bases/compile-time-metadata-reflection.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/compile-time-vs-runtime-authority.md",
+      "kind": "Document",
+      "label": "compile-time-vs-runtime-authority.md",
+      "sourcePath": "docs/Knowledge-Bases/compile-time-vs-runtime-authority.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/compiler-diagnostics.md",
+      "kind": "Document",
+      "label": "compiler-diagnostics.md",
+      "sourcePath": "docs/Knowledge-Bases/compiler-diagnostics.md",
       "tags": [
         "document"
       ]
@@ -1218,10 +1380,55 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/controlled-mutation-model.md",
+      "kind": "Document",
+      "label": "controlled-mutation-model.md",
+      "sourcePath": "docs/Knowledge-Bases/controlled-mutation-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/controlled-parallelism.md",
+      "kind": "Document",
+      "label": "controlled-parallelism.md",
+      "sourcePath": "docs/Knowledge-Bases/controlled-parallelism.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/core-application-model.md",
       "kind": "Document",
       "label": "core-application-model.md",
       "sourcePath": "docs/Knowledge-Bases/core-application-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/core-syntax-keywords.md",
+      "kind": "Document",
+      "label": "core-syntax-keywords.md",
+      "sourcePath": "docs/Knowledge-Bases/core-syntax-keywords.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/critical-and-deferred-compute-paths.md",
+      "kind": "Document",
+      "label": "critical-and-deferred-compute-paths.md",
+      "sourcePath": "docs/Knowledge-Bases/critical-and-deferred-compute-paths.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/data-in-motion-security.md",
+      "kind": "Document",
+      "label": "data-in-motion-security.md",
+      "sourcePath": "docs/Knowledge-Bases/data-in-motion-security.md",
       "tags": [
         "document"
       ]
@@ -1245,6 +1452,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/design-patterns-for-logicn.md",
+      "kind": "Document",
+      "label": "design-patterns-for-logicn.md",
+      "sourcePath": "docs/Knowledge-Bases/design-patterns-for-logicn.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/developer-friendly-permission-model.md",
       "kind": "Document",
       "label": "developer-friendly-permission-model.md",
@@ -1263,10 +1479,37 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/effect-checker-and-boundary-checker.md",
+      "kind": "Document",
+      "label": "effect-checker-and-boundary-checker.md",
+      "sourcePath": "docs/Knowledge-Bases/effect-checker-and-boundary-checker.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/encapsulation-model.md",
       "kind": "Document",
       "label": "encapsulation-model.md",
       "sourcePath": "docs/Knowledge-Bases/encapsulation-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/error-propagation-chains.md",
+      "kind": "Document",
+      "label": "error-propagation-chains.md",
+      "sourcePath": "docs/Knowledge-Bases/error-propagation-chains.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/excluded-features.md",
+      "kind": "Document",
+      "label": "excluded-features.md",
+      "sourcePath": "docs/Knowledge-Bases/excluded-features.md",
       "tags": [
         "document"
       ]
@@ -1299,10 +1542,73 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/flat-flow-style.md",
+      "kind": "Document",
+      "label": "flat-flow-style.md",
+      "sourcePath": "docs/Knowledge-Bases/flat-flow-style.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/flow-finalizer-and-cleanup.md",
+      "kind": "Document",
+      "label": "flow-finalizer-and-cleanup.md",
+      "sourcePath": "docs/Knowledge-Bases/flow-finalizer-and-cleanup.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/flow-vs-fn-security-model.md",
+      "kind": "Document",
+      "label": "flow-vs-fn-security-model.md",
+      "sourcePath": "docs/Knowledge-Bases/flow-vs-fn-security-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/formal-proof-system.md",
+      "kind": "Document",
+      "label": "formal-proof-system.md",
+      "sourcePath": "docs/Knowledge-Bases/formal-proof-system.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/generative-runtime-mapper.md",
       "kind": "Document",
       "label": "generative-runtime-mapper.md",
       "sourcePath": "docs/Knowledge-Bases/generative-runtime-mapper.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/generic-types.md",
+      "kind": "Document",
+      "label": "generic-types.md",
+      "sourcePath": "docs/Knowledge-Bases/generic-types.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/governed-capability-modules.md",
+      "kind": "Document",
+      "label": "governed-capability-modules.md",
+      "sourcePath": "docs/Knowledge-Bases/governed-capability-modules.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/governed-event-driven-execution.md",
+      "kind": "Document",
+      "label": "governed-event-driven-execution.md",
+      "sourcePath": "docs/Knowledge-Bases/governed-event-driven-execution.md",
       "tags": [
         "document"
       ]
@@ -1317,10 +1623,73 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/governed-streams.md",
+      "kind": "Document",
+      "label": "governed-streams.md",
+      "sourcePath": "docs/Knowledge-Bases/governed-streams.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/governed-worker-pools.md",
+      "kind": "Document",
+      "label": "governed-worker-pools.md",
+      "sourcePath": "docs/Knowledge-Bases/governed-worker-pools.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/hello-world-api-pattern.md",
       "kind": "Document",
       "label": "hello-world-api-pattern.md",
       "sourcePath": "docs/Knowledge-Bases/hello-world-api-pattern.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/http-method-declarations.md",
+      "kind": "Document",
+      "label": "http-method-declarations.md",
+      "sourcePath": "docs/Knowledge-Bases/http-method-declarations.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/hybrid-electronic-optical-compute.md",
+      "kind": "Document",
+      "label": "hybrid-electronic-optical-compute.md",
+      "sourcePath": "docs/Knowledge-Bases/hybrid-electronic-optical-compute.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/layered-rate-limits.md",
+      "kind": "Document",
+      "label": "layered-rate-limits.md",
+      "sourcePath": "docs/Knowledge-Bases/layered-rate-limits.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/legacy-pattern-restrictions.md",
+      "kind": "Document",
+      "label": "legacy-pattern-restrictions.md",
+      "sourcePath": "docs/Knowledge-Bases/legacy-pattern-restrictions.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/list-operations.md",
+      "kind": "Document",
+      "label": "list-operations.md",
+      "sourcePath": "docs/Knowledge-Bases/list-operations.md",
       "tags": [
         "document"
       ]
@@ -1344,10 +1713,298 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logic-architecture-policy.md",
+      "kind": "Document",
+      "label": "logic-architecture-policy.md",
+      "sourcePath": "docs/Knowledge-Bases/logic-architecture-policy.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-api-boundary-architecture.md",
+      "kind": "Document",
+      "label": "logicn-api-boundary-architecture.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-api-boundary-architecture.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-concept-map.md",
       "kind": "Document",
       "label": "logicn-concept-map.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-concept-map.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-cli-deploy-explain-plan.md",
+      "kind": "Document",
+      "label": "logicn-core-cli-deploy-explain-plan.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-cli-deploy-explain-plan.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-cli-v02.md",
+      "kind": "Document",
+      "label": "logicn-core-cli-v02.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-cli-v02.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-compiler-manifest-generation-pass-14.md",
+      "kind": "Document",
+      "label": "logicn-core-compiler-manifest-generation-pass-14.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-compiler-manifest-generation-pass-14.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-compute-gpu-and-photonic-backends.md",
+      "kind": "Document",
+      "label": "logicn-core-compute-gpu-and-photonic-backends.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-compute-gpu-and-photonic-backends.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-compute-v02.md",
+      "kind": "Document",
+      "label": "logicn-core-compute-v02.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-compute-v02.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-config-environment-secrets.md",
+      "kind": "Document",
+      "label": "logicn-core-config-environment-secrets.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-config-environment-secrets.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-config-v02.md",
+      "kind": "Document",
+      "label": "logicn-core-config-v02.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-config-v02.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-effect-checker-v02.md",
+      "kind": "Document",
+      "label": "logicn-core-effect-checker-v02.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-effect-checker-v02.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-logic-omni-logic.md",
+      "kind": "Document",
+      "label": "logicn-core-logic-omni-logic.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-logic-omni-logic.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-logic-tri-decision-bool.md",
+      "kind": "Document",
+      "label": "logicn-core-logic-tri-decision-bool.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-logic-tri-decision-bool.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-logic-tristate-developer-guide.md",
+      "kind": "Document",
+      "label": "logicn-core-logic-tristate-developer-guide.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-logic-tristate-developer-guide.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-logic-v02.md",
+      "kind": "Document",
+      "label": "logicn-core-logic-v02.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-logic-v02.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-manifest-generation-v02.md",
+      "kind": "Document",
+      "label": "logicn-core-manifest-generation-v02.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-manifest-generation-v02.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-network-governance.md",
+      "kind": "Document",
+      "label": "logicn-core-network-governance.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-network-governance.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-network-v02.md",
+      "kind": "Document",
+      "label": "logicn-core-network-v02.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-network-v02.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md",
+      "kind": "Document",
+      "label": "logicn-core-photonic-backend-architecture.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-photonic-governance-architecture.md",
+      "kind": "Document",
+      "label": "logicn-core-photonic-governance-architecture.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-photonic-governance-architecture.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-photonic-v02.md",
+      "kind": "Document",
+      "label": "logicn-core-photonic-v02.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-photonic-v02.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-policy-online-safety-act.md",
+      "kind": "Document",
+      "label": "logicn-core-policy-online-safety-act.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-policy-online-safety-act.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-reports-v02.md",
+      "kind": "Document",
+      "label": "logicn-core-reports-v02.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-reports-v02.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-security-secret-reference-model.md",
+      "kind": "Document",
+      "label": "logicn-core-security-secret-reference-model.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-security-secret-reference-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-security-v02.md",
+      "kind": "Document",
+      "label": "logicn-core-security-v02.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-security-v02.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-design-primitive-obsession.md",
+      "kind": "Document",
+      "label": "logicn-design-primitive-obsession.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-design-primitive-obsession.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-framework-api-server-implementation.md",
+      "kind": "Document",
+      "label": "logicn-framework-api-server-implementation.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-framework-api-server-implementation.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-framework-api-server-v02.md",
+      "kind": "Document",
+      "label": "logicn-framework-api-server-v02.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-framework-api-server-v02.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-naming-philosophy.md",
+      "kind": "Document",
+      "label": "logicn-naming-philosophy.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-naming-philosophy.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-runtime-rationale.md",
+      "kind": "Document",
+      "label": "logicn-runtime-rationale.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-runtime-rationale.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-syntax-if-match-optional.md",
+      "kind": "Document",
+      "label": "logicn-syntax-if-match-optional.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-syntax-if-match-optional.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-syntax-loops-iteration.md",
+      "kind": "Document",
+      "label": "logicn-syntax-loops-iteration.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-syntax-loops-iteration.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/lsgr-runtime-components.md",
+      "kind": "Document",
+      "label": "lsgr-runtime-components.md",
+      "sourcePath": "docs/Knowledge-Bases/lsgr-runtime-components.md",
       "tags": [
         "document"
       ]
@@ -1366,6 +2023,15 @@
       "kind": "Document",
       "label": "match-catch-all-branch.md",
       "sourcePath": "docs/Knowledge-Bases/match-catch-all-branch.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/mathematics-and-tri-logic.md",
+      "kind": "Document",
+      "label": "mathematics-and-tri-logic.md",
+      "sourcePath": "docs/Knowledge-Bases/mathematics-and-tri-logic.md",
       "tags": [
         "document"
       ]
@@ -1407,10 +2073,55 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/module-system-and-visibility.md",
+      "kind": "Document",
+      "label": "module-system-and-visibility.md",
+      "sourcePath": "docs/Knowledge-Bases/module-system-and-visibility.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/multi-actor-audit-events.md",
       "kind": "Document",
       "label": "multi-actor-audit-events.md",
       "sourcePath": "docs/Knowledge-Bases/multi-actor-audit-events.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/native-photonic-compute-future.md",
+      "kind": "Document",
+      "label": "native-photonic-compute-future.md",
+      "sourcePath": "docs/Knowledge-Bases/native-photonic-compute-future.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/network-boundary-policy.md",
+      "kind": "Document",
+      "label": "network-boundary-policy.md",
+      "sourcePath": "docs/Knowledge-Bases/network-boundary-policy.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/neutral-governed-ir.md",
+      "kind": "Document",
+      "label": "neutral-governed-ir.md",
+      "sourcePath": "docs/Knowledge-Bases/neutral-governed-ir.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/no-exceptions-result-model.md",
+      "kind": "Document",
+      "label": "no-exceptions-result-model.md",
+      "sourcePath": "docs/Knowledge-Bases/no-exceptions-result-model.md",
       "tags": [
         "document"
       ]
@@ -1434,10 +2145,55 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/numeric-and-compute-types.md",
+      "kind": "Document",
+      "label": "numeric-and-compute-types.md",
+      "sourcePath": "docs/Knowledge-Bases/numeric-and-compute-types.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/observability-and-monitoring.md",
+      "kind": "Document",
+      "label": "observability-and-monitoring.md",
+      "sourcePath": "docs/Knowledge-Bases/observability-and-monitoring.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/package-completion-status.md",
+      "kind": "Document",
+      "label": "package-completion-status.md",
+      "sourcePath": "docs/Knowledge-Bases/package-completion-status.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/package-declaration-syntax.md",
+      "kind": "Document",
+      "label": "package-declaration-syntax.md",
+      "sourcePath": "docs/Knowledge-Bases/package-declaration-syntax.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/package-resolver.md",
       "kind": "Document",
       "label": "package-resolver.md",
       "sourcePath": "docs/Knowledge-Bases/package-resolver.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/pattern-matching.md",
+      "kind": "Document",
+      "label": "pattern-matching.md",
+      "sourcePath": "docs/Knowledge-Bases/pattern-matching.md",
       "tags": [
         "document"
       ]
@@ -1461,6 +2217,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/plugin-security-architecture.md",
+      "kind": "Document",
+      "label": "plugin-security-architecture.md",
+      "sourcePath": "docs/Knowledge-Bases/plugin-security-architecture.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/policy-architecture.md",
       "kind": "Document",
       "label": "policy-architecture.md",
@@ -1474,6 +2239,15 @@
       "kind": "Document",
       "label": "polymorphism.md",
       "sourcePath": "docs/Knowledge-Bases/polymorphism.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/postfix-type-state-syntax.md",
+      "kind": "Document",
+      "label": "postfix-type-state-syntax.md",
+      "sourcePath": "docs/Knowledge-Bases/postfix-type-state-syntax.md",
       "tags": [
         "document"
       ]
@@ -1497,10 +2271,145 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/production-scaling-model.md",
+      "kind": "Document",
+      "label": "production-scaling-model.md",
+      "sourcePath": "docs/Knowledge-Bases/production-scaling-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/prompt-injection-defense.md",
+      "kind": "Document",
+      "label": "prompt-injection-defense.md",
+      "sourcePath": "docs/Knowledge-Bases/prompt-injection-defense.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/quantum-readiness.md",
       "kind": "Document",
       "label": "quantum-readiness.md",
       "sourcePath": "docs/Knowledge-Bases/quantum-readiness.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/query-type-and-database-access.md",
+      "kind": "Document",
+      "label": "query-type-and-database-access.md",
+      "sourcePath": "docs/Knowledge-Bases/query-type-and-database-access.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/quiet-runtime-secure-defaults.md",
+      "kind": "Document",
+      "label": "quiet-runtime-secure-defaults.md",
+      "sourcePath": "docs/Knowledge-Bases/quiet-runtime-secure-defaults.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/release-keyword.md",
+      "kind": "Document",
+      "label": "release-keyword.md",
+      "sourcePath": "docs/Knowledge-Bases/release-keyword.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/request-context-keyword.md",
+      "kind": "Document",
+      "label": "request-context-keyword.md",
+      "sourcePath": "docs/Knowledge-Bases/request-context-keyword.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/request-lifecycle.md",
+      "kind": "Document",
+      "label": "request-lifecycle.md",
+      "sourcePath": "docs/Knowledge-Bases/request-lifecycle.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/restricted-native-boundary.md",
+      "kind": "Document",
+      "label": "restricted-native-boundary.md",
+      "sourcePath": "docs/Knowledge-Bases/restricted-native-boundary.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/runtime-assembler.md",
+      "kind": "Document",
+      "label": "runtime-assembler.md",
+      "sourcePath": "docs/Knowledge-Bases/runtime-assembler.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/runtime-audit-log-format.md",
+      "kind": "Document",
+      "label": "runtime-audit-log-format.md",
+      "sourcePath": "docs/Knowledge-Bases/runtime-audit-log-format.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/runtime-boundary-declarations.md",
+      "kind": "Document",
+      "label": "runtime-boundary-declarations.md",
+      "sourcePath": "docs/Knowledge-Bases/runtime-boundary-declarations.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/runtime-context-not-superglobals.md",
+      "kind": "Document",
+      "label": "runtime-context-not-superglobals.md",
+      "sourcePath": "docs/Knowledge-Bases/runtime-context-not-superglobals.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/runtime-extension-points.md",
+      "kind": "Document",
+      "label": "runtime-extension-points.md",
+      "sourcePath": "docs/Knowledge-Bases/runtime-extension-points.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/runtime-identity-model.md",
+      "kind": "Document",
+      "label": "runtime-identity-model.md",
+      "sourcePath": "docs/Knowledge-Bases/runtime-identity-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/runtime-package-structure.md",
+      "kind": "Document",
+      "label": "runtime-package-structure.md",
+      "sourcePath": "docs/Knowledge-Bases/runtime-package-structure.md",
       "tags": [
         "document"
       ]
@@ -1515,10 +2424,64 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/runtime-profiles.md",
+      "kind": "Document",
+      "label": "runtime-profiles.md",
+      "sourcePath": "docs/Knowledge-Bases/runtime-profiles.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/runtime-scheduler.md",
+      "kind": "Document",
+      "label": "runtime-scheduler.md",
+      "sourcePath": "docs/Knowledge-Bases/runtime-scheduler.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/runtime-terminology-evolution.md",
       "kind": "Document",
       "label": "runtime-terminology-evolution.md",
       "sourcePath": "docs/Knowledge-Bases/runtime-terminology-evolution.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/runtime-trusted-core-design.md",
+      "kind": "Document",
+      "label": "runtime-trusted-core-design.md",
+      "sourcePath": "docs/Knowledge-Bases/runtime-trusted-core-design.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/safe-unsafe-trust-model.md",
+      "kind": "Document",
+      "label": "safe-unsafe-trust-model.md",
+      "sourcePath": "docs/Knowledge-Bases/safe-unsafe-trust-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/scheduled-actions.md",
+      "kind": "Document",
+      "label": "scheduled-actions.md",
+      "sourcePath": "docs/Knowledge-Bases/scheduled-actions.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/scheduled-chain-blocks.md",
+      "kind": "Document",
+      "label": "scheduled-chain-blocks.md",
+      "sourcePath": "docs/Knowledge-Bases/scheduled-chain-blocks.md",
       "tags": [
         "document"
       ]
@@ -1542,6 +2505,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/secure-channels-and-portals.md",
+      "kind": "Document",
+      "label": "secure-channels-and-portals.md",
+      "sourcePath": "docs/Knowledge-Bases/secure-channels-and-portals.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/securely-governed-runtime.md",
       "kind": "Document",
       "label": "securely-governed-runtime.md",
@@ -1555,6 +2527,24 @@
       "kind": "Document",
       "label": "security-invariants-and-policy-proof.md",
       "sourcePath": "docs/Knowledge-Bases/security-invariants-and-policy-proof.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/server-platform-support.md",
+      "kind": "Document",
+      "label": "server-platform-support.md",
+      "sourcePath": "docs/Knowledge-Bases/server-platform-support.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/session-vault.md",
+      "kind": "Document",
+      "label": "session-vault.md",
+      "sourcePath": "docs/Knowledge-Bases/session-vault.md",
       "tags": [
         "document"
       ]
@@ -1605,10 +2595,73 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/triggers.md",
+      "kind": "Document",
+      "label": "triggers.md",
+      "sourcePath": "docs/Knowledge-Bases/triggers.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/trust-conversion-and-data-safety.md",
       "kind": "Document",
       "label": "trust-conversion-and-data-safety.md",
       "sourcePath": "docs/Knowledge-Bases/trust-conversion-and-data-safety.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/trust-conversion-model.md",
+      "kind": "Document",
+      "label": "trust-conversion-model.md",
+      "sourcePath": "docs/Knowledge-Bases/trust-conversion-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/trusted-boot-preload-graph.md",
+      "kind": "Document",
+      "label": "trusted-boot-preload-graph.md",
+      "sourcePath": "docs/Knowledge-Bases/trusted-boot-preload-graph.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/type-and-enum-declarations.md",
+      "kind": "Document",
+      "label": "type-and-enum-declarations.md",
+      "sourcePath": "docs/Knowledge-Bases/type-and-enum-declarations.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/type-manifest.md",
+      "kind": "Document",
+      "label": "type-manifest.md",
+      "sourcePath": "docs/Knowledge-Bases/type-manifest.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/typed-error-model.md",
+      "kind": "Document",
+      "label": "typed-error-model.md",
+      "sourcePath": "docs/Knowledge-Bases/typed-error-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/unified-syntax-architecture.md",
+      "kind": "Document",
+      "label": "unified-syntax-architecture.md",
+      "sourcePath": "docs/Knowledge-Bases/unified-syntax-architecture.md",
       "tags": [
         "document"
       ]
@@ -1632,10 +2685,28 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/vault-write-syntax.md",
+      "kind": "Document",
+      "label": "vault-write-syntax.md",
+      "sourcePath": "docs/Knowledge-Bases/vault-write-syntax.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/verified-fast-paths.md",
       "kind": "Document",
       "label": "verified-fast-paths.md",
       "sourcePath": "docs/Knowledge-Bases/verified-fast-paths.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/what-logicn-refuses-to-become.md",
+      "kind": "Document",
+      "label": "what-logicn-refuses-to-become.md",
+      "sourcePath": "docs/Knowledge-Bases/what-logicn-refuses-to-become.md",
       "tags": [
         "document"
       ]
@@ -1654,6 +2725,33 @@
       "kind": "Document",
       "label": "LEARNING_MODE.md",
       "sourcePath": "docs/LEARNING_MODE.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/logicn-core-cli-deploy-explain-plan.md",
+      "kind": "Document",
+      "label": "logicn-core-cli-deploy-explain-plan.md",
+      "sourcePath": "docs/logicn-core-cli-deploy-explain-plan.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/logicn-core-compute-gpu-and-photonic-backends.md",
+      "kind": "Document",
+      "label": "logicn-core-compute-gpu-and-photonic-backends.md",
+      "sourcePath": "docs/logicn-core-compute-gpu-and-photonic-backends.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/logicn-core-logic-omni-logic.md",
+      "kind": "Document",
+      "label": "logicn-core-logic-omni-logic.md",
+      "sourcePath": "docs/logicn-core-logic-omni-logic.md",
       "tags": [
         "document"
       ]
@@ -1699,6 +2797,15 @@
       "kind": "Document",
       "label": "MEMORY_HIERARCHY_RELIABILITY.md",
       "sourcePath": "docs/MEMORY_HIERARCHY_RELIABILITY.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/module-system-and-visibility.md",
+      "kind": "Document",
+      "label": "module-system-and-visibility.md",
+      "sourcePath": "docs/module-system-and-visibility.md",
       "tags": [
         "document"
       ]
@@ -1753,6 +2860,15 @@
       "kind": "Document",
       "label": "OPTICAL_IO.md",
       "sourcePath": "docs/OPTICAL_IO.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/package-implementation-and-runtime-gaps.md",
+      "kind": "Document",
+      "label": "package-implementation-and-runtime-gaps.md",
+      "sourcePath": "docs/package-implementation-and-runtime-gaps.md",
       "tags": [
         "document"
       ]
@@ -1987,6 +3103,15 @@
       "kind": "Document",
       "label": "rules-unsupported-legacy.md",
       "sourcePath": "docs/rules/rules-unsupported-legacy.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/runtime-audit-log-schema-and-execution-proof.md",
+      "kind": "Document",
+      "label": "runtime-audit-log-schema-and-execution-proof.md",
+      "sourcePath": "docs/runtime-audit-log-schema-and-execution-proof.md",
       "tags": [
         "document"
       ]
@@ -5201,9 +6326,9 @@
       ]
     },
     {
-      "id": "type:logicn-core-config:ConfigPathMap",
+      "id": "type:logicn-core-config:ConfigPathmatch",
       "kind": "Type",
-      "label": "ConfigPathMap",
+      "label": "ConfigPathmatch",
       "sourcePath": "packages-logicn/logicn-core-config/src/index.ts",
       "tags": [
         "type",
@@ -12821,11 +13946,144 @@
       "evidencePath": "docs/CHANGELOG.md"
     },
     {
+      "from": "doc:docs/compiler-effect-and-boundary-checker.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/compiler-effect-and-boundary-checker.md"
+    },
+    {
+      "from": "doc:docs/compiler-effect-and-boundary-checker.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/compiler-effect-and-boundary-checker.md"
+    },
+    {
+      "from": "doc:docs/compiler-effect-and-boundary-checker.md",
+      "to": "package:logicn-core-runtime",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/compiler-effect-and-boundary-checker.md"
+    },
+    {
+      "from": "doc:docs/compiler-effect-and-boundary-checker.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/compiler-effect-and-boundary-checker.md"
+    },
+    {
       "from": "doc:docs/CORE_FOUNDATION_ROADMAP.md",
       "to": "package:logicn-core",
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/CORE_FOUNDATION_ROADMAP.md"
+    },
+    {
+      "from": "doc:docs/COVERAGE.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/COVERAGE.md"
+    },
+    {
+      "from": "doc:docs/COVERAGE.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/COVERAGE.md"
+    },
+    {
+      "from": "doc:docs/COVERAGE.md",
+      "to": "package:logicn-core-runtime",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/COVERAGE.md"
+    },
+    {
+      "from": "doc:docs/COVERAGE.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/COVERAGE.md"
+    },
+    {
+      "from": "doc:docs/COVERAGE.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/COVERAGE.md"
+    },
+    {
+      "from": "doc:docs/COVERAGE.md",
+      "to": "package:logicn-core-config",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/COVERAGE.md"
+    },
+    {
+      "from": "doc:docs/COVERAGE.md",
+      "to": "package:logicn-core-reports",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/COVERAGE.md"
+    },
+    {
+      "from": "doc:docs/COVERAGE.md",
+      "to": "package:logicn-core-logic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/COVERAGE.md"
+    },
+    {
+      "from": "doc:docs/COVERAGE.md",
+      "to": "package:logicn-core-vector",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/COVERAGE.md"
+    },
+    {
+      "from": "doc:docs/COVERAGE.md",
+      "to": "package:logicn-core-compute",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/COVERAGE.md"
+    },
+    {
+      "from": "doc:docs/COVERAGE.md",
+      "to": "package:logicn-core-photonic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/COVERAGE.md"
+    },
+    {
+      "from": "doc:docs/COVERAGE.md",
+      "to": "package:logicn-target-photonic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/COVERAGE.md"
+    },
+    {
+      "from": "doc:docs/COVERAGE.md",
+      "to": "package:logicn-framework-api-server",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/COVERAGE.md"
+    },
+    {
+      "from": "doc:docs/COVERAGE.md",
+      "to": "package:logicn-core-cli",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/COVERAGE.md"
+    },
+    {
+      "from": "doc:docs/COVERAGE.md",
+      "to": "package:logicn-core-tasks",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/COVERAGE.md"
     },
     {
       "from": "doc:docs/CSRF_PROTECTION.md",
@@ -13192,6 +14450,34 @@
       "evidencePath": "docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/effect-checker-and-boundary-checker.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/effect-checker-and-boundary-checker.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/effect-checker-and-boundary-checker.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/effect-checker-and-boundary-checker.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/effect-checker-and-boundary-checker.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/effect-checker-and-boundary-checker.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/effect-checker-and-boundary-checker.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/effect-checker-and-boundary-checker.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/generative-runtime-mapper.md",
       "to": "package:logicn-ai",
       "kind": "documents",
@@ -13199,6 +14485,804 @@
       "evidencePath": "docs/Knowledge-Bases/generative-runtime-mapper.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/logicn-api-boundary-architecture.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-api-boundary-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-api-boundary-architecture.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-api-boundary-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-api-boundary-architecture.md",
+      "to": "package:logicn-core-runtime",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-api-boundary-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-api-boundary-architecture.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-api-boundary-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-api-boundary-architecture.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-api-boundary-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-api-boundary-architecture.md",
+      "to": "package:logicn-core-reports",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-api-boundary-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-api-boundary-architecture.md",
+      "to": "package:logicn-framework-app-kernel",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-api-boundary-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-api-boundary-architecture.md",
+      "to": "package:logicn-framework-api-server",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-api-boundary-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-cli-deploy-explain-plan.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-cli-deploy-explain-plan.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-cli-deploy-explain-plan.md",
+      "to": "package:logicn-core-cli",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-cli-deploy-explain-plan.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-cli-v02.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-cli-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-cli-v02.md",
+      "to": "package:logicn-core-cli",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-cli-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-compiler-manifest-generation-pass-14.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-compiler-manifest-generation-pass-14.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-compiler-manifest-generation-pass-14.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-compiler-manifest-generation-pass-14.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-compiler-manifest-generation-pass-14.md",
+      "to": "package:logicn-framework-api-server",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-compiler-manifest-generation-pass-14.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-compute-gpu-and-photonic-backends.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-compute-gpu-and-photonic-backends.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-compute-gpu-and-photonic-backends.md",
+      "to": "package:logicn-core-compute",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-compute-gpu-and-photonic-backends.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-compute-v02.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-compute-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-compute-v02.md",
+      "to": "package:logicn-core-compute",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-compute-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-config-environment-secrets.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-config-environment-secrets.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-config-environment-secrets.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-config-environment-secrets.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-config-environment-secrets.md",
+      "to": "package:logicn-core-runtime",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-config-environment-secrets.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-config-environment-secrets.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-config-environment-secrets.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-config-environment-secrets.md",
+      "to": "package:logicn-core-config",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-config-environment-secrets.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-config-environment-secrets.md",
+      "to": "package:logicn-core-reports",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-config-environment-secrets.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-config-environment-secrets.md",
+      "to": "package:logicn-tools-benchmark",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-config-environment-secrets.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-config-environment-secrets.md",
+      "to": "package:logicn-framework-example-app",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-config-environment-secrets.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-config-v02.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-config-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-config-v02.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-config-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-config-v02.md",
+      "to": "package:logicn-core-config",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-config-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-effect-checker-v02.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-effect-checker-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-effect-checker-v02.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-effect-checker-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-logic-omni-logic.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-logic-omni-logic.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-logic-omni-logic.md",
+      "to": "package:logicn-core-logic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-logic-omni-logic.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-logic-tri-decision-bool.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-logic-tri-decision-bool.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-logic-tri-decision-bool.md",
+      "to": "package:logicn-core-logic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-logic-tri-decision-bool.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-logic-tristate-developer-guide.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-logic-tristate-developer-guide.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-logic-tristate-developer-guide.md",
+      "to": "package:logicn-core-logic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-logic-tristate-developer-guide.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-logic-v02.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-logic-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-logic-v02.md",
+      "to": "package:logicn-core-logic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-logic-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-manifest-generation-v02.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-manifest-generation-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-network-governance.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-network-governance.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-network-governance.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-network-governance.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-network-governance.md",
+      "to": "package:logicn-core-runtime",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-network-governance.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-network-governance.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-network-governance.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-network-governance.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-network-governance.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-network-governance.md",
+      "to": "package:logicn-core-config",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-network-governance.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-network-governance.md",
+      "to": "package:logicn-framework-app-kernel",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-network-governance.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-network-governance.md",
+      "to": "package:logicn-framework-api-server",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-network-governance.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-network-governance.md",
+      "to": "package:logicn-tools-benchmark",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-network-governance.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-network-v02.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-network-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-network-v02.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-network-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md",
+      "to": "package:logicn-core-runtime",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md",
+      "to": "package:logicn-core-reports",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md",
+      "to": "package:logicn-core-logic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md",
+      "to": "package:logicn-core-compute",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md",
+      "to": "package:logicn-core-photonic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md",
+      "to": "package:logicn-target-photonic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-photonic-governance-architecture.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-photonic-governance-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-photonic-governance-architecture.md",
+      "to": "package:logicn-core-photonic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-photonic-governance-architecture.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-photonic-v02.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-photonic-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-photonic-v02.md",
+      "to": "package:logicn-core-photonic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-photonic-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-policy-online-safety-act.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-policy-online-safety-act.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-policy-online-safety-act.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-policy-online-safety-act.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-policy-online-safety-act.md",
+      "to": "package:logicn-core-logic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-policy-online-safety-act.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-reports-v02.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-reports-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-reports-v02.md",
+      "to": "package:logicn-core-reports",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-reports-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-security-secret-reference-model.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-security-secret-reference-model.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-security-secret-reference-model.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-security-secret-reference-model.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-security-v02.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-security-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-security-v02.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-security-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-design-primitive-obsession.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-design-primitive-obsession.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-design-primitive-obsession.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-design-primitive-obsession.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-design-primitive-obsession.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-design-primitive-obsession.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-design-primitive-obsession.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-design-primitive-obsession.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-design-primitive-obsession.md",
+      "to": "package:logicn-core-config",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-design-primitive-obsession.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-design-primitive-obsession.md",
+      "to": "package:logicn-core-logic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-design-primitive-obsession.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-design-primitive-obsession.md",
+      "to": "package:logicn-framework-api-server",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-design-primitive-obsession.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-framework-api-server-implementation.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-framework-api-server-implementation.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-framework-api-server-implementation.md",
+      "to": "package:logicn-core-runtime",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-framework-api-server-implementation.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-framework-api-server-implementation.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-framework-api-server-implementation.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-framework-api-server-implementation.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-framework-api-server-implementation.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-framework-api-server-implementation.md",
+      "to": "package:logicn-core-reports",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-framework-api-server-implementation.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-framework-api-server-implementation.md",
+      "to": "package:logicn-framework-app-kernel",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-framework-api-server-implementation.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-framework-api-server-implementation.md",
+      "to": "package:logicn-framework-api-server",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-framework-api-server-implementation.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-framework-api-server-v02.md",
+      "to": "package:logicn-framework-api-server",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-framework-api-server-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-syntax-if-match-optional.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-syntax-if-match-optional.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-syntax-if-match-optional.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-syntax-if-match-optional.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-syntax-if-match-optional.md",
+      "to": "package:logicn-core-config",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-syntax-if-match-optional.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-syntax-if-match-optional.md",
+      "to": "package:logicn-core-logic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-syntax-if-match-optional.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-syntax-loops-iteration.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-syntax-loops-iteration.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-syntax-loops-iteration.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-syntax-loops-iteration.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-syntax-loops-iteration.md",
+      "to": "package:logicn-core-reports",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-syntax-loops-iteration.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-syntax-loops-iteration.md",
+      "to": "package:logicn-core-logic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-syntax-loops-iteration.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/mathematics-and-tri-logic.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/mathematics-and-tri-logic.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/module-system-and-visibility.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/module-system-and-visibility.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/module-system-and-visibility.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/module-system-and-visibility.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/package-completion-status.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/package-completion-status.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/package-completion-status.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/package-completion-status.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/package-completion-status.md",
+      "to": "package:logicn-core-reports",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/package-completion-status.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/package-completion-status.md",
+      "to": "package:logicn-core-logic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/package-completion-status.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/package-completion-status.md",
+      "to": "package:logicn-core-compute",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/package-completion-status.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/package-completion-status.md",
+      "to": "package:logicn-core-cli",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/package-completion-status.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/package-declaration-syntax.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/package-declaration-syntax.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/package-declaration-syntax.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/package-declaration-syntax.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/package-declaration-syntax.md",
+      "to": "package:logicn-core-runtime",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/package-declaration-syntax.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/package-declaration-syntax.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/package-declaration-syntax.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/package-declaration-syntax.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/package-declaration-syntax.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/package-declaration-syntax.md",
+      "to": "package:logicn-core-compute",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/package-declaration-syntax.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/package-declaration-syntax.md",
+      "to": "package:logicn-ai",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/package-declaration-syntax.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/package-declaration-syntax.md",
+      "to": "package:logicn-data",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/package-declaration-syntax.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/preplanned-startup-and-fast-response.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -13255,6 +15339,76 @@
       "evidencePath": "docs/Knowledge-Bases/preplanned-startup-and-fast-response.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/runtime-audit-log-format.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/runtime-audit-log-format.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/runtime-audit-log-format.md",
+      "to": "package:logicn-core-reports",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/runtime-audit-log-format.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/runtime-package-structure.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/runtime-package-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/runtime-package-structure.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/runtime-package-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/runtime-package-structure.md",
+      "to": "package:logicn-core-runtime",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/runtime-package-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/runtime-package-structure.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/runtime-package-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/runtime-package-structure.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/runtime-package-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/runtime-package-structure.md",
+      "to": "package:logicn-core-compute",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/runtime-package-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/runtime-package-structure.md",
+      "to": "package:logicn-ai",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/runtime-package-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/runtime-package-structure.md",
+      "to": "package:logicn-data",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/runtime-package-structure.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/startup-and-boot-warmup.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -13309,6 +15463,34 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/Knowledge-Bases/startup-and-boot-warmup.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/type-manifest.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/type-manifest.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/type-manifest.md",
+      "to": "package:logicn-core-runtime",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/type-manifest.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/type-manifest.md",
+      "to": "package:logicn-data",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/type-manifest.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/type-manifest.md",
+      "to": "package:logicn-data-json",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/type-manifest.md"
     },
     {
       "from": "doc:docs/LEARNING_MODE.md",
@@ -13365,6 +15547,55 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/LEARNING_MODE.md"
+    },
+    {
+      "from": "doc:docs/logicn-core-cli-deploy-explain-plan.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/logicn-core-cli-deploy-explain-plan.md"
+    },
+    {
+      "from": "doc:docs/logicn-core-cli-deploy-explain-plan.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/logicn-core-cli-deploy-explain-plan.md"
+    },
+    {
+      "from": "doc:docs/logicn-core-cli-deploy-explain-plan.md",
+      "to": "package:logicn-core-cli",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/logicn-core-cli-deploy-explain-plan.md"
+    },
+    {
+      "from": "doc:docs/logicn-core-compute-gpu-and-photonic-backends.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/logicn-core-compute-gpu-and-photonic-backends.md"
+    },
+    {
+      "from": "doc:docs/logicn-core-compute-gpu-and-photonic-backends.md",
+      "to": "package:logicn-core-compute",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/logicn-core-compute-gpu-and-photonic-backends.md"
+    },
+    {
+      "from": "doc:docs/logicn-core-logic-omni-logic.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/logicn-core-logic-omni-logic.md"
+    },
+    {
+      "from": "doc:docs/logicn-core-logic-omni-logic.md",
+      "to": "package:logicn-core-logic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/logicn-core-logic-omni-logic.md"
     },
     {
       "from": "doc:docs/LOGICN_CHARTER_STATEMENT.md",
@@ -13526,6 +15757,20 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/MEMORY_HIERARCHY_RELIABILITY.md"
+    },
+    {
+      "from": "doc:docs/module-system-and-visibility.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/module-system-and-visibility.md"
+    },
+    {
+      "from": "doc:docs/module-system-and-visibility.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/module-system-and-visibility.md"
     },
     {
       "from": "doc:docs/NETWORK_ETHERNET_IO.md",
@@ -13694,6 +15939,48 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/OPTICAL_IO.md"
+    },
+    {
+      "from": "doc:docs/package-implementation-and-runtime-gaps.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/package-implementation-and-runtime-gaps.md"
+    },
+    {
+      "from": "doc:docs/package-implementation-and-runtime-gaps.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/package-implementation-and-runtime-gaps.md"
+    },
+    {
+      "from": "doc:docs/package-implementation-and-runtime-gaps.md",
+      "to": "package:logicn-core-reports",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/package-implementation-and-runtime-gaps.md"
+    },
+    {
+      "from": "doc:docs/package-implementation-and-runtime-gaps.md",
+      "to": "package:logicn-core-logic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/package-implementation-and-runtime-gaps.md"
+    },
+    {
+      "from": "doc:docs/package-implementation-and-runtime-gaps.md",
+      "to": "package:logicn-core-compute",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/package-implementation-and-runtime-gaps.md"
+    },
+    {
+      "from": "doc:docs/package-implementation-and-runtime-gaps.md",
+      "to": "package:logicn-core-cli",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/package-implementation-and-runtime-gaps.md"
     },
     {
       "from": "doc:docs/PACKAGE_LAYOUT.md",
@@ -14639,6 +16926,20 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/RESILIENT_FLOWS.md"
+    },
+    {
+      "from": "doc:docs/runtime-audit-log-schema-and-execution-proof.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/runtime-audit-log-schema-and-execution-proof.md"
+    },
+    {
+      "from": "doc:docs/runtime-audit-log-schema-and-execution-proof.md",
+      "to": "package:logicn-core-reports",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/runtime-audit-log-schema-and-execution-proof.md"
     },
     {
       "from": "doc:docs/SECURE_FAST_ROUTING.md",
@@ -18499,6 +20800,13 @@
     },
     {
       "from": "doc:packages-logicn/logicn-core-compiler/README.md",
+      "to": "package:logicn-core-compute",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/README.md"
+    },
+    {
+      "from": "doc:packages-logicn/logicn-core-compiler/README.md",
       "to": "package:logicn-target-native",
       "kind": "documents",
       "confidence": "INFERRED",
@@ -18856,13 +21164,6 @@
     },
     {
       "from": "doc:packages-logicn/logicn-core-network/README.md",
-      "to": "package:logicn-core-reports",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "packages-logicn/logicn-core-network/README.md"
-    },
-    {
-      "from": "doc:packages-logicn/logicn-core-network/README.md",
       "to": "package:logicn-framework-app-kernel",
       "kind": "documents",
       "confidence": "INFERRED",
@@ -19123,6 +21424,13 @@
     {
       "from": "doc:packages-logicn/logicn-core-security/README.md",
       "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "packages-logicn/logicn-core-security/README.md"
+    },
+    {
+      "from": "doc:packages-logicn/logicn-core-security/README.md",
+      "to": "package:logicn-core-config",
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "packages-logicn/logicn-core-security/README.md"
@@ -19528,7 +21836,7 @@
     },
     {
       "from": "package:logicn-core-config",
-      "to": "type:logicn-core-config:ConfigPathMap",
+      "to": "type:logicn-core-config:ConfigPathmatch",
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-config/src/index.ts"
@@ -20255,27 +22563,6 @@
       "evidencePath": "packages-logicn/logicn-core-logic/README.md"
     },
     {
-      "from": "doc:packages-logicn/logicn-core-logic/README.md",
-      "to": "package:logicn-ai",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "packages-logicn/logicn-core-logic/README.md"
-    },
-    {
-      "from": "doc:packages-logicn/logicn-core-logic/README.md",
-      "to": "package:logicn-ai-lowbit",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "packages-logicn/logicn-core-logic/README.md"
-    },
-    {
-      "from": "doc:packages-logicn/logicn-core-logic/README.md",
-      "to": "package:logicn-core-photonic",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "packages-logicn/logicn-core-logic/README.md"
-    },
-    {
       "from": "package:logicn-core-logic",
       "to": "type:logicn-core-logic:Tri",
       "kind": "provides",
@@ -20817,55 +23104,6 @@
     {
       "from": "doc:packages-logicn/logicn-core-compute/README.md",
       "to": "package:logicn-core-compute",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "packages-logicn/logicn-core-compute/README.md"
-    },
-    {
-      "from": "doc:packages-logicn/logicn-core-compute/README.md",
-      "to": "package:logicn-ai",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "packages-logicn/logicn-core-compute/README.md"
-    },
-    {
-      "from": "doc:packages-logicn/logicn-core-compute/README.md",
-      "to": "package:logicn-ai-lowbit",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "packages-logicn/logicn-core-compute/README.md"
-    },
-    {
-      "from": "doc:packages-logicn/logicn-core-compute/README.md",
-      "to": "package:logicn-target-cpu",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "packages-logicn/logicn-core-compute/README.md"
-    },
-    {
-      "from": "doc:packages-logicn/logicn-core-compute/README.md",
-      "to": "package:logicn-cpu-kernels",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "packages-logicn/logicn-core-compute/README.md"
-    },
-    {
-      "from": "doc:packages-logicn/logicn-core-compute/README.md",
-      "to": "package:logicn-target-native",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "packages-logicn/logicn-core-compute/README.md"
-    },
-    {
-      "from": "doc:packages-logicn/logicn-core-compute/README.md",
-      "to": "package:logicn-target-ai-accelerator",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "packages-logicn/logicn-core-compute/README.md"
-    },
-    {
-      "from": "doc:packages-logicn/logicn-core-compute/README.md",
-      "to": "package:logicn-target-photonic",
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "packages-logicn/logicn-core-compute/README.md"
@@ -23204,6 +25442,13 @@
     {
       "from": "doc:packages-logicn/logicn-core-photonic/TODO.md",
       "to": "package:logicn-core-photonic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "packages-logicn/logicn-core-photonic/TODO.md"
+    },
+    {
+      "from": "doc:packages-logicn/logicn-core-photonic/TODO.md",
+      "to": "package:logicn-target-photonic",
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "packages-logicn/logicn-core-photonic/TODO.md"
