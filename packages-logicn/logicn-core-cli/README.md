@@ -160,6 +160,244 @@ running dry-run plans. Task runs write a structured report to
 a different path, or `--no-report` to skip writing the report. Built-in
 operation execution remains in `logicn-core-tasks`.
 
+## Architecture Depth: TypeScript Contracts (v0.2 Specification)
+
+### Core Result Types
+
+```ts
+export interface CliCommandResult {
+    success: boolean
+    diagnostics: CompilerDiagnostic[]
+    reportPath?: string
+    exitCode: number
+}
+
+export interface CompilerDiagnostic {
+    code: string
+    message: string
+    severity: "error" | "warning" | "info"
+    file?: string
+    line?: number
+}
+
+export interface Workspace {
+    root: string
+    packages: string[]
+    entryPoints: string[]
+    config: WorkspaceConfig
+}
+```
+
+### Build Contracts
+
+```ts
+export interface BuildArtefact {
+    path: string
+    kind: "manifest" | "bundle" | "report" | "hash" | "map"
+    hash: string
+    target: RuntimeTarget
+}
+
+export interface BuildResult {
+    success: boolean
+    artefacts: BuildArtefact[]
+    diagnostics: CompilerDiagnostic[]
+    manifestPath: string
+    duration: number
+}
+
+export interface BuildWorkspaceInput {
+    workspace: Workspace
+    target: RuntimeTarget
+    strict: boolean
+    profile?: string
+    outDir: string
+}
+
+export async function buildWorkspace(
+    input: BuildWorkspaceInput
+): Promise<BuildResult>
+// Pass 1:  Lexer
+// Pass 2:  Parser
+// Pass 3:  AST builder
+// Pass 4:  Type checker
+// Pass 5:  Visibility checker
+// Pass 6:  Effect checker
+// Pass 7:  Boundary checker
+// Pass 8:  Capability resolver
+// Pass 9:  Package graph validator
+// Pass 10: Runtime graph generator
+// Pass 11: Optimisation planner
+// Pass 12: Backend emitter
+// Pass 13: Audit metadata emitter
+// Pass 14: Runtime manifest generator
+```
+
+### Verify Contracts
+
+```ts
+export interface VerifiedArtefact {
+    path: string
+    hash: string
+    verified: boolean
+    diagnostics: CompilerDiagnostic[]
+}
+
+export interface VerificationResult {
+    success: boolean
+    artefacts: VerifiedArtefact[]
+    diagnostics: CompilerDiagnostic[]
+}
+
+export async function verifyHash(
+    artefact: BuildArtefact,
+    expected: string
+): Promise<VerifiedArtefact>
+```
+
+### Deploy Contracts
+
+```ts
+export type DeploymentTarget =
+    | "node"
+    | "wasm"
+    | "native"
+    | "serverless"
+    | "edge"
+    | "gpu"
+    | "photonic"
+
+export interface DeploymentResult {
+    success: boolean
+    target: DeploymentTarget
+    manifestHash: string
+    diagnostics: CompilerDiagnostic[]
+    reportPath?: string
+}
+```
+
+### Effect Validation
+
+```ts
+export interface ValidateEffectsInput {
+    manifest: RuntimeManifest
+    policy: EffectsPolicy
+    target: DeploymentTarget
+}
+
+export function validateEffects(
+    input: ValidateEffectsInput
+): CompilerDiagnostic[]
+// For each function in manifest.functions:
+//   effectiveEffects = declaredEffects ∪ inferredEffects
+//   check each effect against policy.allowedEffects
+//   check capabilities present for each effect
+//   emit LN-EFFECT-001 through LN-EFFECT-004 as needed
+```
+
+### Explain Contracts
+
+```ts
+export interface ExplainTrace {
+    step: number
+    label: string
+    input: string
+    output: string
+    diagnostics: CompilerDiagnostic[]
+}
+
+export interface ExplainResult {
+    traces: ExplainTrace[]
+    effects: string[]
+    capabilities: string[]
+    boundaries: string[]
+    diagnostics: CompilerDiagnostic[]
+}
+
+export function buildTrace(
+    manifest: RuntimeManifest,
+    options: ExplainOptions
+): ExplainTrace[]
+```
+
+### Compute Plan Contracts
+
+```ts
+export interface ComputePlan {
+    target: RuntimeTarget
+    gpu: GpuPlan
+    optical: OpticalPlan
+    wasm: WasmTarget | null
+    compatibility: CompatibilityReport
+    estimatedMemoryMb: number
+    parallelism: number
+    diagnostics: CompilerDiagnostic[]
+}
+
+export function estimateTarget(
+    workspace: Workspace,
+    options: PlanOptions
+): ComputePlan
+```
+
+### Exit Codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | success |
+| `1` | general error |
+| `2` | policy denial |
+| `3` | runtime incompatibility |
+| `4` | deployment validation failure |
+| `5` | capability resolution failure |
+| `6` | verification failure |
+| `7` | manifest integrity failure |
+
+### CLI Report Files
+
+| File | Command | Description |
+| --- | --- | --- |
+| `runtime-manifest.json` | build | Full v0.2 runtime manifest |
+| `compiler-report.json` | build | All compiler diagnostics |
+| `effect-report.json` | build | Effect graph and decisions |
+| `capability-report.json` | build | Capability resolution log |
+| `audit-report.json` | build | Audit metadata |
+| `build-hash.txt` | build | Artefact hashes |
+| `verification-report.json` | verify | Hash verification results |
+| `deployment-report.json` | deploy | Deploy decisions and policy log |
+| `explain-report.json` | explain | Execution reasoning traces |
+| `compute-plan.json` | plan | GPU/WASM/optical suitability |
+
+### CLI Directory Layout
+
+```text
+packages-logicn/logicn-core-cli/src/
+  commands/
+    build.ts
+    verify.ts
+    deploy.ts
+    explain.ts
+    plan.ts
+    check.ts
+    serve.ts
+    routes.ts
+    graph.ts
+    task.ts
+    fmt.ts
+    security-check.ts
+    reports.ts
+  contracts/
+    build-contracts.ts
+    verify-contracts.ts
+    deploy-contracts.ts
+    explain-contracts.ts
+    plan-contracts.ts
+  output/
+    safe-output.ts       ← redact SecureString, tokens
+    json-output.ts
+  index.ts
+```
+
 ## Security Rules
 
 CLI output is safe by default. It must redact `SecureString` values, bearer

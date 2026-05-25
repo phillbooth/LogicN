@@ -442,6 +442,228 @@ Example:
 }
 ```
 
+## Architecture Depth: TypeScript Contracts (v0.2 Specification)
+
+### Core Types (Extended)
+
+```ts
+export type NetworkProtocol =
+    | "http" | "https" | "tcp" | "udp"
+    | "grpc" | "websocket" | "quic"
+
+export interface NetworkDestinationReference {
+    name: string
+    protocol: NetworkProtocol
+    host: string
+    port?: number
+    tlsRequired: boolean
+    provider?: string                   // e.g. "openai", "stripe"
+    category?: "ai" | "payment" | "analytics" | "internal" | "public"
+    dataCategories?: string[]           // e.g. ["pii", "financial"]
+}
+
+export interface NetworkPolicy {
+    allowDestinations: NetworkDestinationReference[]
+    denyDestinations: string[]
+    requireTls: boolean
+    allowRawSockets: boolean
+    default: "allow" | "deny"
+    allowPlainHttp: boolean
+    aiProviders: AiProviderNetworkPolicy[]
+    requireTimeouts: boolean
+    requireRateLimits: boolean
+}
+
+// Production safe defaults
+export const productionNetworkPolicy: NetworkPolicy = {
+    default: "deny",
+    requireTls: true,
+    allowRawSockets: false,
+    allowPlainHttp: false,
+    requireTimeouts: true,
+    requireRateLimits: true,
+    // SSRF-safe deny list
+    denyDestinations: [
+        "localhost", "127.0.0.1", "0.0.0.0",
+        "169.254.169.254",               // AWS metadata
+        "metadata.google.internal",
+        "metadata.azure.internal"
+    ],
+    allowDestinations: [],
+    aiProviders: []
+}
+```
+
+### AI Provider Governance
+
+```ts
+export interface AiProviderNetworkPolicy {
+    provider: string
+    allowedEndpoints: string[]
+    requireApiKeyCapability: string
+    dataCategories: string[]
+    auditRequired: boolean
+}
+
+export const OPENAI_POLICY: AiProviderNetworkPolicy = {
+    provider: "openai",
+    allowedEndpoints: ["api.openai.com"],
+    requireApiKeyCapability: "OpenAiApiKey",
+    dataCategories: [],
+    auditRequired: true
+}
+```
+
+### Governed Network Runtime
+
+```ts
+export interface GovernedNetworkRuntime {
+    policy: NetworkPolicy
+    validate(destination: NetworkDestinationReference): NetworkDiagnostic[]
+    request(input: SafeHttpRequestInput): Promise<SafeHttpResponse>
+}
+
+export interface SafeHttpRequestInput {
+    destination: NetworkDestinationReference
+    method: HttpMethod
+    headers: Record<string, string>
+    body?: string
+    timeoutMs: number
+    capability: string
+}
+
+export interface SafeHttpResponse {
+    status: number
+    headers: Record<string, string>
+    body: string
+    destination: NetworkDestinationReference
+}
+
+export function validateDestination(
+    destination: NetworkDestinationReference,
+    policy: NetworkPolicy
+): NetworkDiagnostic[]
+
+export function validateTlsRequirement(
+    destination: NetworkDestinationReference,
+    policy: NetworkPolicy
+): NetworkDiagnostic[]
+
+export function validateCapability(
+    capability: string,
+    policy: NetworkPolicy
+): NetworkDiagnostic[]
+
+export async function safeHttpRequest(
+    input: SafeHttpRequestInput,
+    runtime: GovernedNetworkRuntime
+): Promise<SafeHttpResponse>
+```
+
+### Webhook Verification
+
+```ts
+export interface WebhookVerificationConfig {
+    secret: string
+    algorithm: "hmac-sha256"
+    headerName: string          // e.g. "x-signature-sha256"
+    timestampHeader?: string
+    maxAgeSeconds: number
+}
+
+export interface WebhookVerificationResult {
+    valid: boolean
+    reason?: string
+    diagnostics: NetworkDiagnostic[]
+}
+
+export function verifyWebhookHmac(
+    payload: string,
+    signature: string,
+    config: WebhookVerificationConfig
+): WebhookVerificationResult
+
+export function validateWebhookTimestamp(
+    timestamp: string,
+    maxAgeSeconds: number
+): WebhookVerificationResult
+```
+
+### Replay and Idempotency
+
+```ts
+export interface ReplayStore {
+    insertOnce(id: string, expiresAt: Date): Promise<boolean>
+    has(id: string): Promise<boolean>
+}
+
+export async function validateReplayProtection(
+    id: string,
+    store: ReplayStore
+): Promise<NetworkDiagnostic[]>
+
+export interface IdempotencyStore {
+    getOrSet(key: string, value: string): Promise<string>
+}
+
+export async function validateIdempotency(
+    key: string,
+    store: IdempotencyStore
+): Promise<NetworkDiagnostic[]>
+```
+
+### AI Prompt Governance
+
+```ts
+export function validateAiPrompt(
+    prompt: string,
+    policy: AiProviderNetworkPolicy
+): NetworkDiagnostic[]
+```
+
+### Report Types
+
+```ts
+export interface NetworkDiagnostic {
+    code: string
+    message: string
+    severity: "error" | "warning" | "info"
+    destination?: string
+}
+
+export interface NetworkPolicyReport {
+    schemaVersion: "logicn.network.report.v1"
+    policy: NetworkPolicy
+    validatedDestinations: NetworkDestinationReference[]
+    deniedDestinations: string[]
+    diagnostics: NetworkDiagnostic[]
+}
+```
+
+### Internal File Layout
+
+```text
+packages-logicn/logicn-core-network/src/
+  policy/
+    network-policy.ts         ← NetworkPolicy, productionNetworkPolicy
+    network-destination.ts    ← NetworkDestinationReference, NetworkProtocol
+    ai-provider-policy.ts     ← AiProviderNetworkPolicy, OPENAI_POLICY
+  runtime/
+    governed-runtime.ts       ← GovernedNetworkRuntime
+    safe-request.ts           ← SafeHttpRequestInput, SafeHttpResponse, safeHttpRequest()
+    validation.ts             ← validateDestination(), validateTlsRequirement(), validateCapability()
+  webhook/
+    webhook-verify.ts         ← WebhookVerificationConfig, verifyWebhookHmac()
+    webhook-timestamp.ts      ← validateWebhookTimestamp()
+    replay-store.ts           ← ReplayStore, validateReplayProtection()
+    idempotency-store.ts      ← IdempotencyStore, validateIdempotency()
+  reports/
+    network-report.ts         ← NetworkPolicyReport
+    network-diagnostic.ts     ← NetworkDiagnostic
+  diagnostics/
+    network-diagnostics.ts    ← LN-NETWORK-001–008
+```
+
 Final rule:
 
 ```text

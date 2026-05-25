@@ -24,6 +24,8 @@ Core language constructs, keywords, type system, declaration blocks.
 | Excluded keywords (switch, case, elseif, for, try/catch, null, async, await) | ✅ | `core-syntax-keywords.md`, `excluded-features.md` |
 | flow vs fn distinction | ✅ | `flow-vs-fn-security-model.md` |
 | Flat flow style (max depth 2, guard clauses) | ✅ | `flat-flow-style.md` |
+| if/match/Optional syntax rules | ✅ | `logicn-syntax-if-match-optional.md` |
+| Loop and iteration model | ✅ | `logicn-syntax-loops-iteration.md` |
 | Branching model (if/else, match) | ✅ | `branching-model.md` |
 | Pattern matching (full) | ✅ | `pattern-matching.md` |
 | match catch-all (_ => arm) | ✅ | `match-catch-all-branch.md` |
@@ -51,6 +53,7 @@ Core language constructs, keywords, type system, declaration blocks.
 | Enum syntax (enum Status { Paid, Failed }) | ✅ | `type-and-enum-declarations.md` |
 | Generic types (Option<T>, Result<T,E>, Array<T>, Map<K,V>) | ✅ | `generic-types.md` |
 | Branded/opaque types (Brand<T,"Name">) | ✅ | `type-and-enum-declarations.md`, `generic-types.md` |
+| Primitive obsession design principle | ✅ | `logicn-design-primitive-obsession.md` |
 | Postfix type state syntax (String unsafe, Email safe validated) | ✅ | `postfix-type-state-syntax.md` |
 | Type manifest (app.type-manifest.json) | ✅ | `type-manifest.md` |
 | Money<Currency> and Decimal precision | ✅ | `numeric-and-compute-types.md` |
@@ -264,6 +267,7 @@ Execution, scheduling, trust verification, identity, memory, hardware targets.
 | Compile-time vs runtime authority boundary | ✅ | `compile-time-vs-runtime-authority.md` |
 | Package completion status and implementation order | ✅ | `package-completion-status.md` |
 | CLI build / verify / deploy / explain / plan (governance) | ✅ | `logicn-core-cli-deploy-explain-plan.md` (extended — `logicn build` section with 14-pass pipeline/artefacts/BuildResult/buildWorkspace/LN-BUILD codes, `logicn verify` section with VerificationResult/verifyHash/LN-VERIFY codes, deploy/explain/plan sections with internal dirs/types/functions/diagnostic codes, 5-phase implementation order) |
+| API boundary architecture (request flow, manifest, routes) | ✅ | `logicn-api-boundary-architecture.md` |
 | GPU / photonic / WASM / compatibility backends | ✅ | `logicn-core-compute-gpu-and-photonic-backends.md` (extended — GpuPlan/OpticalPlan types, gpu/ and photonic/ internal dirs, WASM target governance+sandbox restrictions+WasmTarget+validateWasmEffect+LN-WASM codes, target compatibility reports+CompatibilityResult+validateTarget+buildCompatibilityReport+LN-COMPAT codes, 4-phase implementation order) |
 | Omni logic (multi-valued reasoning) | ✅ | `logicn-core-logic-omni-logic.md` (8 states, binary safety rule — "never: probably approved", advisory model, absolute unsafe pattern rule, LN-OMNI-001–005) |
 | Effect and boundary checker (expanded) | ✅ | `effect-checker-and-boundary-checker.md` (extended boundary types table, runtime manifest JSON with network_hosts/filesystem_paths/trust_level, foundational context section) |
@@ -334,116 +338,116 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope, boundary, contracts fully documented — Secret Reference Model section added (SecretReference, ProtectedSecret, SecretSafeSink, LN-SECRET codes) |
-| TODO.md | ✅ | Work tracking — SecretReference, SecretDerivedReference, SecureStringReference, ProtectedSecret, canSendSecretToSink, redactSecretValue, LN-SECRET items added |
+| README.md | ✅ | Scope, boundary, contracts fully documented — Architecture Depth section added (SecretSource discriminated union, SecretCategory 13 values, SecretRedactionPolicy, SecretReference v0.2, SecretDerivedReference/SecretDerivation, SecureStringReference extended, ProtectedSecret<T> full impl, SecretSafeSink extended with 14 type values, SecretDiagnostic, SecretTaint, safeLog, buildAuthorizationHeader, internal file layout) |
+| TODO.md | ✅ | Work tracking — all v0.2 items added: SecretSource, SecretCategory, SecretRedactionPolicy, SecretTaint, combineTaint, checkStringConcat, checkSecretSink, safeLog, buildAuthorizationHeader, createSecretFingerprint, secrets/checks/runtime dirs |
 | src/ | ⚠️ | Implementation stubs |
 | SecureString / Secret<T> | ✅ | Contracts documented |
 | Redaction primitives | ✅ | Contracts documented |
 | Permission model types | ✅ | Contracts documented |
-| Secret reference model | ⚠️ | Fully specified in `logicn-core-config-environment-secrets.md` (SecretReference, SecretDerivedReference, SecureStringReference, ProtectedSecret, SecretSafeSink, canSendSecretToSink, redactSecretValue, LN-SECRET-001–002); not yet implemented |
+| Secret reference model | ⚠️ | Fully specified in `logicn-core-security` README and `logicn_core_security_secret_reference_model.md` (SecretReference v0.2 with id/source/category/provider/environmentScope/allowedSinks/deniedSinks/allowDerivation, SecretDerivedReference, SecureStringReference, ProtectedSecret<T>, SecretSafeSink, canSendSecretToSink deny-first, redactSecretValue, LN-SECRET-001–002); not yet implemented |
 | Capability lease and attenuation | ✅ | Contracts documented |
 | Crypto policy and post-quantum planning | ✅ | Contracts documented |
 | Security diagnostics / reports | ✅ | Contracts documented |
-| Taint-flow and safe-sink diagnostics | ✅ | Contracts documented |
+| Taint-flow and safe-sink diagnostics | ✅ | Contracts documented with SecretTaint discriminated union and combineTaint() |
 
 ### logicn-core-compiler
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented |
-| TODO.md | ✅ | Work tracking |
+| README.md | ✅ | Scope documented — Architecture Depth section added (RuntimeManifest v0.2 with all sub-types, BuildManifestInput, Effect interface with 10-value EffectCategory, CheckedFunction/EffectGraphNode/EffectGraph, inferExpressionEffects/propagateEffects, Boundary/BoundaryRequirement/BoundaryEdge/BoundaryGraph, CheckedCallExpression, LN-EFFECT-001–004, LN-BOUNDARY-001–004, Layered Compute Adapter, ComputeDeviceProfile, internal file layout) |
+| TODO.md | ✅ | Work tracking — all v0.2 items added: RuntimeManifest sub-types, BuildManifestInput, Effect interface, EffectCategory, CheckedFunction, EffectGraph, propagateEffects, Boundary types, BoundaryGraph, CheckedCallExpression, ComputeDeviceProfile, effects/boundaries/manifests/ir dirs |
 | src/ | ⚠️ | Implementation stubs — compiler pipeline defined but not complete |
 | Lexer | ✅ | Implemented prototype in logicn-core/compiler/ |
 | Parser | ✅ | Implemented prototype in logicn-core/compiler/ |
 | Type checker | ✅ | Implemented prototype in logicn-core/compiler/ |
 | Formatter | ✅ | Implemented prototype in logicn-core/compiler/ |
 | AST / source map | ✅ | Implemented prototype in logicn-core/compiler/ |
-| Effect checker | ⚠️ | Specified in KB (`effect-checker-and-boundary-checker.md`, `package-completion-status.md`); not yet implemented |
-| Boundary checker | ⚠️ | Specified in KB (`effect-checker-and-boundary-checker.md`, `package-completion-status.md`); not yet implemented |
+| Effect checker | ⚠️ | Fully specified in README and KB (Effect interface, EffectCategory, CheckedFunction, EffectGraphNode, EffectGraph, inferExpressionEffects, propagateEffects, LN-EFFECT-001–004); not yet implemented |
+| Boundary checker | ⚠️ | Fully specified in README and KB (Boundary, BoundaryRequirement, BoundaryEdge, BoundaryGraph, CheckedCallExpression, LN-BOUNDARY-001–004); not yet implemented |
 | Compiler pass pipeline | ✅ | 14-pass pipeline — pass 14 (Runtime manifest generator) added to README and TODO |
-| Manifest generation (pass 14) | ⚠️ | Fully specified — `RuntimeManifest` type, `buildManifest()`, manifests/ dir, LN-MANIFEST codes documented; not yet implemented |
+| Manifest generation (pass 14) | ⚠️ | Fully specified (RuntimeManifest v0.2 with RouteManifest/FunctionManifest/EffectManifest/BoundaryManifest, BuildManifestInput, buildManifest(), validateManifest(), manifests/ dir, LN-MANIFEST-001–005); not yet implemented |
 
 ### logicn-core-cli
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented — build/verify sections, all diagnostic code series, KB reference updated |
-| TODO.md | ✅ | Work tracking — build/verify/deploy/explain/plan items with types, functions, diagnostic codes, internal dirs |
+| README.md | ✅ | Scope documented — Architecture Depth section added (CliCommandResult, CompilerDiagnostic, Workspace, BuildArtefact, BuildResult, BuildWorkspaceInput, buildWorkspace() with 14-pass comments, VerifiedArtefact, VerificationResult, verifyHash(), DeploymentTarget 7 values, DeploymentResult, ValidateEffectsInput, validateEffects(), ExplainTrace, ExplainResult, buildTrace(), ComputePlan extended, estimateTarget(), exit codes 0–7, CLI report files table, CLI dir layout) |
+| TODO.md | ✅ | Work tracking — all v0.2 items: BuildArtefact, BuildResult, BuildWorkspaceInput, buildWorkspace; VerifiedArtefact, VerificationResult, verifyHash; DeploymentTarget union, DeploymentResult, ValidateEffectsInput, validateEffects; ExplainTrace, ExplainResult, buildTrace; ComputePlan extended, estimateTarget; exit codes 0–7; verification-report.json, explain-report.json |
 | dist/ | ⚠️ | Compiled output present |
 | logicn check | ✅ | Prototype implemented |
-| logicn build | ⚠️ | Partial — artefact generation not complete; fully specified (14-pass pipeline, BuildResult, buildWorkspace, LN-BUILD-001–005) |
+| logicn build | ⚠️ | Partial — artefact generation not complete; fully specified (BuildArtefact, BuildResult, BuildWorkspaceInput, buildWorkspace, 14-pass pipeline, LN-BUILD-001–005) |
 | logicn fmt | ✅ | Prototype implemented |
-| logicn verify | ⚠️ | Partial — hash checks only; fully specified (VerificationResult, verifyHash, LN-VERIFY-001–005) |
-| logicn deploy | ⚠️ | Not yet implemented — fully specified (exit codes 0–7, all flags, DeploymentResult, validateEffects, LN-DEPLOY-001–005) |
-| logicn explain | ⚠️ | Not yet implemented — fully specified (ExplainResult, buildTrace, LN-EXPLAIN-001–004) |
-| logicn plan | ⚠️ | Not yet implemented — fully specified (ComputePlan, estimateTarget, --compatibility, LN-PLAN-001–004) |
+| logicn verify | ⚠️ | Partial — hash checks only; fully specified (VerifiedArtefact, VerificationResult, verifyHash, verification-report.json, LN-VERIFY-001–005) |
+| logicn deploy | ⚠️ | Not yet implemented — fully specified (DeploymentTarget 7 values, DeploymentResult, ValidateEffectsInput, validateEffects, exit codes 0–7, LN-DEPLOY-001–005) |
+| logicn explain | ⚠️ | Not yet implemented — fully specified (ExplainTrace, ExplainResult, buildTrace, explain-report.json, LN-EXPLAIN-001–004) |
+| logicn plan | ⚠️ | Not yet implemented — fully specified (ComputePlan with GpuPlan/OpticalPlan/CompatibilityReport, estimateTarget, compute-plan.json, LN-PLAN-001–004) |
 
 ### logicn-core-logic
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented — Logic Systems Summary table, Tri/Decision/Bool sections added; Omni Logic safety boundaries and 8 states documented |
-| TODO.md | ✅ | Work tracking — TriState/triAnd/triOr/triNot, Decision/evaluateCapability, validateBoolBoundary/enforceDeterministicPath items; Omni phases, safety rules, LN-OMNI codes added |
+| README.md | ✅ | Scope documented — Architecture Depth section added (TriState discriminated union {kind:"true"|"false"|"unknown"}, TRI_TRUE/TRI_FALSE/triUnknown, triNot/triAnd/triOr with combineUnknownReasons, Decision discriminated union allow|deny|unknown|notApplicable|conflict, constructors, decisionToRuntimeBool fails-closed, requireDeterministicDecision, CapabilityRequest/PolicyContext/evaluateCapability deny-first, combineDecisions priority order, BoolBoundaryResult, validateBoolBoundary, enforceDeterministicPath, file layout tri/decision/bool-boundary/omni) |
+| TODO.md | ✅ | Work tracking — all v0.2 items: TriState discriminated union, TRI_TRUE/TRI_FALSE, triUnknown, triNot/triAnd/triOr, combineUnknownReasons, Decision discriminated union, constructors, decisionToRuntimeBool, requireDeterministicDecision, CapabilityRequest, PolicyContext, evaluateCapability, combineDecisions, BoolBoundaryResult, validateBoolBoundary, enforceDeterministicPath, tri/decision/bool-boundary dirs |
 | src/ | ⚠️ | Implementation stubs |
-| Tri logic operations | ⚠️ | Fully specified in `logicn-core-logic-tri-decision-bool.md` (TriState, triAnd/triOr/triNot, AND/OR/NOT truth tables, LN-TRI-001–003); not yet implemented |
-| Decision logic | ⚠️ | Fully specified in `logicn-core-logic-tri-decision-bool.md` (Decision 5-state type, evaluateCapability, LN-DECISION-001–003); not yet implemented |
-| Bool boundary rules | ⚠️ | Fully specified in `logicn-core-logic-tri-decision-bool.md` (validateBoolBoundary, enforceDeterministicPath, LN-BOOL-BOUNDARY-001–003); not yet implemented |
+| Tri logic operations | ⚠️ | Fully specified in `logicn-core-logic-tri-decision-bool.md` and README (TriState discriminated union, TRI_TRUE/TRI_FALSE, triUnknown, triNot/triAnd/triOr, combineUnknownReasons, LN-TRI-001–003); not yet implemented |
+| Decision logic | ⚠️ | Fully specified in `logicn-core-logic-tri-decision-bool.md` and README (Decision discriminated union 5 kinds, allow()/deny()/unknown()/notApplicable()/conflict() constructors, decisionToRuntimeBool, requireDeterministicDecision, CapabilityRequest, PolicyContext, evaluateCapability deny-first, combineDecisions, LN-DECISION-001–003); not yet implemented |
+| Bool boundary rules | ⚠️ | Fully specified (BoolBoundaryResult, validateBoolBoundary, enforceDeterministicPath, LN-BOOL-BOUNDARY-001–003); not yet implemented |
 | Omni logic | ⚠️ | Fully specified in `logicn-core-logic-omni-logic.md`; v0.1 implementation = none |
 
 ### logicn-core-compute
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented — WASM Target section (governance constraints, sandbox restrictions, WasmTarget, LN-WASM codes) and Target Compatibility Reports section (CompatibilityResult, LN-COMPAT codes) added |
-| TODO.md | ✅ | Work tracking — GpuPlan, OpticalPlan, WasmTarget, CompatibilityResult items with all functions and internal dirs added |
+| README.md | ✅ | Scope documented — Architecture Depth section added (RuntimeTarget 11 values, GpuSuitability/GpuRequirements/GpuFallbackPlan/GpuPlan v0.2, estimateGpuSuitability score-based, buildGpuPlan, OpticalNeed/OpticalFallbackPlan/OpticalPlan, WasmTarget extended with runtime type+forbiddenEffects, DEFAULT_WASM_FORBIDDEN_EFFECTS, BROWSER_WASM_FORBIDDEN_EFFECTS, validateWasmEffect/validateWasmTarget, CompatibilityLevel/Blockers/Warnings/Fallback, CompatibilityResult extended, TargetProfile, validateTarget, buildCompatibilityReport, CompatibilityReport, shared types ComputeWorkload/DataShape/DeploymentShape/ComputeDiagnostic) |
+| TODO.md | ✅ | Work tracking — all v0.2 items: RuntimeTarget 11 values, GpuSuitability, GpuRequirements, GpuFallbackPlan, GpuPlan v0.2, estimateGpuSuitability, buildGpuPlan, OpticalNeed, OpticalFallbackPlan, OpticalPlan, estimateOpticalNeed, buildOpticalPlan, WasmTarget extended, DEFAULT/BROWSER forbidden effects, validateWasmEffect, validateWasmTarget, CompatibilityLevel, Blockers/Warnings/Fallback, CompatibilityResult extended, TargetProfile, validateTarget, CompatibilityReport, buildCompatibilityReport, shared types |
 | src/ | ⚠️ | Implementation stubs |
 | Compute block model | ✅ | Documented in logicn-core docs |
 | Compute effects and capabilities | ✅ | Specified in `logicn-core-compute-gpu-and-photonic-backends.md` |
-| GPU plan output | ⚠️ | Fully specified in `logicn-core-compute-gpu-and-photonic-backends.md` (GpuPlan, estimateGpuSuitability, buildGpuPlan, gpu/ dir); backend not implemented |
-| Photonic / optical plan output | ⚠️ | Fully specified in `logicn-core-compute-gpu-and-photonic-backends.md` (OpticalPlan, estimateOpticalNeed, buildOpticalPlan, photonic/ dir); backend not implemented |
+| GPU plan output | ⚠️ | Fully specified (GpuPlan v0.2 with schemaVersion, GpuSuitability 5 values, estimateGpuSuitability score-based, buildGpuPlan, gpu/ dir); backend not implemented |
+| Photonic / optical plan output | ⚠️ | Fully specified (OpticalNeed 5 values, OpticalFallbackPlan, OpticalPlan with recommendedMode, estimateOpticalNeed, buildOpticalPlan, photonic/ dir); backend not implemented |
 | GPU fallback rules | ✅ | Specified — all fallback paths documented with audit events |
 | Scheduler and planner | ✅ | Specified — responsibilities, inputs, and audit events documented |
-| WASM target | ⚠️ | Fully specified in `logicn-core-compute-gpu-and-photonic-backends.md` (WasmTarget, validateWasmEffect, forbidden effects list, wasm/ dir, LN-WASM-001–004); not yet implemented |
-| Target compatibility report | ⚠️ | Fully specified in `logicn-core-compute-gpu-and-photonic-backends.md` (CompatibilityResult, validateTarget, buildCompatibilityReport, compatibility/ dir, LN-COMPAT-001–004); not yet implemented |
+| WASM target | ⚠️ | Fully specified (WasmTarget extended with runtime type + forbiddenEffects[], DEFAULT_WASM_FORBIDDEN_EFFECTS, BROWSER_WASM_FORBIDDEN_EFFECTS, validateWasmEffect, validateWasmTarget, wasm/ dir, LN-WASM-001–004); not yet implemented |
+| Target compatibility report | ⚠️ | Fully specified (CompatibilityLevel, CompatibilityBlocker/Warning/Fallback, CompatibilityResult extended, TargetProfile, validateTarget, CompatibilityReport, buildCompatibilityReport, compatibility/ dir, LN-COMPAT-001–004); not yet implemented |
 
 ### logicn-core-config
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented — EnvironmentMode closed type, EnvironmentConfig, SecretEnvironmentReference, Safe Secret Resolution Flow, diagnostic codes table added |
-| TODO.md | ✅ | Work tracking — EnvironmentMode, SecretEnvironmentReference, loadEnvironmentConfig, ProductionStrictnessPolicy, RuntimeConfigHandoff, LN-CONFIG-010 items added |
+| README.md | ✅ | Scope documented — Architecture Depth section added (ConfigValue discriminated union 6 kinds, EnvironmentPolicy with allowSecretValuesInReports: false, defaultEnvironmentPolicy() per mode, EnvironmentConfig v0.2 with schemaVersion, SecretEnvironmentReference v0.2 with id/source/category/provider/requiredIn[]/allowedSinks/deniedSinks/redaction, SecretConfigSource discriminated union env|file|secretStore|runtimeInjected, LoadEnvironmentConfigInput, loadEnvironmentConfig(), EnvironmentConfigReport, SecretReportValue, internal file layout) |
+| TODO.md | ✅ | Work tracking — all v0.2 items: ConfigValue discriminated union, EnvironmentPolicy with allowSecretValuesInReports always false, defaultEnvironmentPolicy(), EnvironmentConfig schemaVersion, SecretEnvironmentReference v0.2, SecretConfigSource, LoadEnvironmentConfigInput, loadEnvironmentConfig(), EnvironmentConfigReport, SecretReportValue, environment/secrets/loaders/types dirs |
 | src/ | ⚠️ | Implementation stubs |
-| Environment config model | ⚠️ | Fully specified in `logicn-core-config-environment-secrets.md` (EnvironmentMode closed type, EnvironmentConfig, SecretEnvironmentReference, loadEnvironmentConfig, LN-CONFIG-001–010); not yet implemented |
-| Secret reference model | ⚠️ | Fully specified in `logicn-core-config-environment-secrets.md` (SecretReference, ProtectedSecret class, SecretSafeSink, canSendSecretToSink, redactSecretValue, LN-SECRET-001–002); not yet implemented |
+| Environment config model | ⚠️ | Fully specified (EnvironmentConfig v0.2, EnvironmentMode, EnvironmentPolicy, defaultEnvironmentPolicy(), LoadEnvironmentConfigInput, loadEnvironmentConfig(), EnvironmentConfigReport, LN-CONFIG-001–010); not yet implemented |
+| Secret reference model | ⚠️ | Fully specified (SecretEnvironmentReference v0.2, SecretConfigSource discriminated union, SecretReportValue); ownership in logicn-core-security |
 | Runtime policy config | ✅ | Documented in KB — `runtime-policy-config.md` |
 
 ### logicn-core-network
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented — Governance Model section added (NetworkProtocol, NetworkDestinationReference, NetworkPolicy, GovernedNetworkRuntime, safeHttpRequest, AI provider governance, LN-NETWORK-001–008, internal structure) |
-| TODO.md | ✅ | Work tracking — all governance types, GovernedNetworkRuntime, safeHttpRequest, validateDestination, AI provider governance, LN-NETWORK codes, internal dir items added |
+| README.md | ✅ | Scope documented — Architecture Depth section added (NetworkProtocol extended with quic, NetworkDestinationReference extended with provider/category/dataCategories, NetworkPolicy extended with default/allowPlainHttp/aiProviders/requireTimeouts/requireRateLimits, productionNetworkPolicy with SSRF-safe deny list, AiProviderNetworkPolicy/OPENAI_POLICY, GovernedNetworkRuntime, SafeHttpRequestInput/SafeHttpResponse, validateDestination/validateTlsRequirement/validateCapability/safeHttpRequest, WebhookVerificationConfig/WebhookVerificationResult/verifyWebhookHmac/validateWebhookTimestamp, ReplayStore/validateReplayProtection, IdempotencyStore/validateIdempotency, validateAiPrompt, NetworkDiagnostic/NetworkPolicyReport, policy/runtime/webhook/reports/diagnostics dirs) |
+| TODO.md | ✅ | Work tracking — all v0.2 items: quic protocol, NetworkDestinationReference extended fields, NetworkPolicy extended fields, productionNetworkPolicy, AiProviderNetworkPolicy, OPENAI_POLICY, GovernedNetworkRuntime, SafeHttpRequestInput, SafeHttpResponse, validateDestination, validateTlsRequirement, validateCapability, safeHttpRequest, WebhookVerificationConfig, WebhookVerificationResult, verifyWebhookHmac, validateWebhookTimestamp, ReplayStore, validateReplayProtection, IdempotencyStore, validateIdempotency, validateAiPrompt, NetworkDiagnostic, NetworkPolicyReport |
 | src/ | ⚠️ | Implementation stubs |
 | Network boundary policy | ✅ | Documented in KB — `network-boundary-policy.md` |
 | Rate limiting | ✅ | Documented in KB — `layered-rate-limits.md` |
 | API boundary contracts | ✅ | Documented in KB — `runtime-boundary-declarations.md` |
-| Governance model | ⚠️ | Fully specified in `logicn-core-network-governance.md` (NetworkProtocol, NetworkDestinationReference, NetworkPolicy, GovernedNetworkRuntime, safeHttpRequest, validateDestination, validateTlsRequirement, AI networking governance, LN-NETWORK-001–008); not yet implemented |
-| Webhook HMAC / idempotency | ⚠️ | Documented in logicn-core; network package stubs |
+| Governance model | ⚠️ | Fully specified (NetworkProtocol 7 values, NetworkDestinationReference, NetworkPolicy, productionNetworkPolicy, GovernedNetworkRuntime, safeHttpRequest, validateDestination/TlsRequirement/Capability, AiProviderNetworkPolicy, SSRF deny list, LN-NETWORK-001–008); not yet implemented |
+| Webhook HMAC / replay / idempotency | ⚠️ | Fully specified (WebhookVerificationConfig, verifyWebhookHmac, validateWebhookTimestamp, ReplayStore/validateReplayProtection, IdempotencyStore/validateIdempotency, webhook/ dir); not yet implemented |
 
 ### logicn-core-reports
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope documented — comprehensive Runtime Audit Log Format section added (RuntimeAuditEvent, RuntimeAuditStatus, ExecutionProof, DenialReport, evidence types, all 4 internal dirs, all diagnostic code series) |
-| TODO.md | ✅ | Work tracking — RuntimeAuditEvent, serializeAuditEvent, appendAuditEvent, ExecutionProof, sha256, buildExecutionProof, validateExecutionProof, DenialReport, buildDenialReport, all evidence types, all LN-REPORT/PROOF/DENIAL/EVIDENCE codes added |
+| README.md | ✅ | Scope documented — Architecture Depth section added (RuntimeAuditStatus v0.2 allowed|denied|warning|error|executed|verified with v0.1 aliases, RuntimeAuditEvent v0.2 with schemaVersion/eventId/category 8 values/runtime/references, RuntimeAuditRuntime, RuntimeAuditReference, serializeAuditEvent sync/appendAuditEvent async, ExecutionProofHashes 5 SHA256 fields, ExecutionProof v0.2 with schemaVersion, buildExecutionProof/validateExecutionProof async, DenialReport v0.2 with 6 categories, CapabilityEvidence v0.2, EffectEvidence v0.2, RuntimeEvidence v0.2 with arrays, buildRuntimeEvidence(), validateAuditSafety(), shared/ dir, output layout build/reports/audit/proofs/denials/evidence) |
+| TODO.md | ✅ | Work tracking — all v0.2 items: RuntimeAuditStatus v0.2, RuntimeAuditEvent v0.2, RuntimeAuditRuntime, RuntimeAuditReference, serializeAuditEvent/appendAuditEvent, validateAuditSafety, ExecutionProofHashes, ExecutionProof v0.2, buildExecutionProof/validateExecutionProof, DenialReport v0.2, CapabilityEvidence/EffectEvidence/RuntimeEvidence v0.2, buildRuntimeEvidence, shared/ dir, evidence/ dir |
 | src/ | ⚠️ | Implementation stubs |
 | Security report contracts | ✅ | Defined in logicn-core-security scope |
 | AI context report | ✅ | Documented in logicn-core (app.ai-context.json) |
 | Build / deployment reports | ✅ | Documented in `build-system-and-cli.md` |
-| Runtime audit log format (JSONL) | ⚠️ | Fully specified in `runtime-audit-log-format.md` (JSONL, RuntimeAuditEvent TypeScript interface, RuntimeAuditStatus type, serializeAuditEvent, appendAuditEvent, audit/ dir, LN-REPORT-001–005); not yet finalised in package |
-| Execution proof format | ⚠️ | Fully specified in `runtime-audit-log-format.md` (ExecutionProof 5-hash interface, sha256, buildExecutionProof, validateExecutionProof, proofs/ dir, LN-PROOF-001–005); not yet implemented |
-| Denial report | ⚠️ | Fully specified in `runtime-audit-log-format.md` (DenialReport interface, buildDenialReport, denials/ dir, LN-DENIAL-001–004); not yet implemented |
-| Capability / effect / runtime evidence | ⚠️ | Fully specified in `runtime-audit-log-format.md` (CapabilityEvidence, EffectEvidence, RuntimeEvidence, buildRuntimeEvidence, evidence/ dir, LN-EVIDENCE-001–004); not yet implemented |
+| Runtime audit log format (JSONL) | ⚠️ | Fully specified v0.2 (RuntimeAuditEvent with schemaVersion "logicn.runtime.audit.v1", RuntimeAuditStatus 6 values, RuntimeAuditRuntime, RuntimeAuditReference, serializeAuditEvent sync, appendAuditEvent async, validateAuditSafety, audit/ dir, LN-REPORT-001–005); not yet implemented |
+| Execution proof format | ⚠️ | Fully specified v0.2 (ExecutionProofHashes with 5 SHA256 fields, ExecutionProof schemaVersion "logicn.proof.v1", buildExecutionProof/validateExecutionProof async, proofs/ dir, LN-PROOF-001–005); not yet implemented |
+| Denial report | ⚠️ | Fully specified v0.2 (DenialReport with schemaVersion "logicn.denial.v1" and 6-category union, denials/ dir, LN-DENIAL-001–004); not yet implemented |
+| Capability / effect / runtime evidence | ⚠️ | Fully specified v0.2 (CapabilityEvidence, EffectEvidence with declared/inferred/transitive fields, RuntimeEvidence with arrays, buildRuntimeEvidence async, evidence/ dir, LN-EVIDENCE-001–004); not yet implemented |
 
 ### logicn-core-tasks
 
@@ -478,6 +482,20 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | Governance architecture | ⚠️ | Fully specified in `logicn-core-photonic-backend-architecture.md` (OpticalTransportMode, PhotonicRuntimeTarget, PhotonicExecutionPlan, estimateOpticalSuitability, buildPhotonicPlan, resolveFallback, deny-by-default fallback, LN-PHOTONIC-001–006); not yet implemented |
 | Real photonic backend | ❌ | Not yet — planning only until hardware available |
 
+### logicn-framework-api-server
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| README.md | ✅ | Fully documented — LogicnApiManifest schema v1, LogicnRouteManifest with all sub-policies (BodyPolicy, RouteLimits, AuthPolicy, IdempotencyPolicy, WebhookPolicy, EffectsPolicy, RouteReportPolicy), startApiServer, readBodyWithLimit, handleApiRequest pipeline, verifyHmacSha256Webhook, timingSafeHexEqual, assertWebhookNotReplayed, ReplayStore, exportOpenApi, LogicnHttpError, mapErrorToHttpResponse, assertNetworkAllowed, JSON rules (unknown/duplicate/null/UTF-8), HTTP status codes table, build output layout, src layout |
+| TODO.md | ✅ | Work tracking — all Architecture Depth items added: HttpMethod 7 values, LogicnApiManifest, LogicnRouteManifest, all sub-policy types, startApiServer, readBodyWithLimit, handleApiRequest pipeline steps, JSON rules, verifyHmacSha256Webhook, timingSafeHexEqual, ReplayStore, exportOpenApi, LogicnHttpError, mapErrorToHttpResponse, assertNetworkAllowed, HTTP status codes, src/ dir layout |
+| src/ | ❌ | Not yet implemented |
+| API manifest schema | ✅ | Fully specified in `logicn-api-boundary-architecture.md` and README |
+| Route manifest | ✅ | Fully specified (LogicnRouteManifest with all policies) |
+| Request handling pipeline | ✅ | Fully specified (handleApiRequest: assertContentType → assertRateLimit → assertAuth → decodeRequestBody → validateType → assertEffectsAllowed → callFlow) |
+| Webhook HMAC verification | ✅ | Fully specified (verifyHmacSha256Webhook, timingSafeHexEqual, assertWebhookNotReplayed, ReplayStore) |
+| OpenAPI export | ✅ | Fully specified (exportOpenApi) |
+| Error mapping | ✅ | Fully specified (LogicnHttpError, mapErrorToHttpResponse, 16 HTTP status codes) |
+
 ---
 
 ## Summary: Remaining Gaps
@@ -509,40 +527,58 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 ```text
 ⚠️ logicn-core-compiler: effect checker and boundary checker
      KB: effect-checker-and-boundary-checker.md (16-item checklist, LN-EFFECT/LN-BOUNDARY codes)
-     Status: fully specified, implementation pending
+     README: Effect/CheckedFunction/EffectGraphNode/EffectGraph, Boundary types, LN-EFFECT-001–004, LN-BOUNDARY-001–004
+     Status: fully specified v0.2 (Effect interface, EffectCategory 10 values, propagateEffects iterative fixpoint, Boundary, BoundaryGraph, CheckedCallExpression), implementation pending
 
 ⚠️ logicn-core-compiler: manifest generation (pass 14)
      KB: effect-checker-and-boundary-checker.md (RuntimeManifest, buildManifest, LN-MANIFEST-001–005)
-     Status: fully specified (RuntimeManifest type, manifests/ dir), not yet implemented
+     README: RuntimeManifest v0.2 with RouteManifest/FunctionManifest/EffectManifest/BoundaryManifest, BuildManifestInput
+     Status: fully specified v0.2, not yet implemented
 
 ⚠️ logicn-core-cli: logicn build, logicn verify, logicn deploy, logicn explain, logicn plan
      KB: logicn-core-cli-deploy-explain-plan.md (all flags, exit codes, report files, all 5 commands)
-     Status: fully specified (BuildResult, VerificationResult, DeploymentResult, ExplainResult, ComputePlan, LN-BUILD/VERIFY/DEPLOY/EXPLAIN/PLAN codes); build and verify partial, others not yet implemented
+     README: BuildArtefact, BuildResult, buildWorkspace, VerifiedArtefact, VerificationResult, verifyHash, DeploymentTarget 7 values, DeploymentResult, ValidateEffectsInput, validateEffects, ExplainTrace, ExplainResult, buildTrace, ComputePlan extended, estimateTarget, exit codes 0–7
+     Status: fully specified v0.2; build and verify partial, others not yet implemented
 
 ⚠️ logicn-core-reports: runtime audit log schema / execution proof / denials / evidence
      KB: runtime-audit-log-format.md (JSONL, 5-hash ExecutionProof, LN-AUDIT/REPORT/PROOF/DENIAL/EVIDENCE codes)
-     Status: fully specified (RuntimeAuditEvent, ExecutionProof, DenialReport, evidence types, all 4 dirs), not yet finalised in package
+     README: RuntimeAuditStatus v0.2, RuntimeAuditEvent v0.2, ExecutionProofHashes, DenialReport v0.2, all evidence types v0.2, validateAuditSafety
+     Status: fully specified v0.2, not yet finalised in package
 
 ⚠️ logicn-core-compute: GPU and photonic backends; WASM target; target compatibility
      KB: logicn-core-compute-gpu-and-photonic-backends.md (full architecture, WasmTarget, CompatibilityResult, LN-COMPUTE/WASM/COMPAT codes)
-     Status: fully specified, planning only (v0.1 = CPU + compute planner only)
+     README: GpuSuitability, GpuPlan v0.2, OpticalNeed, OpticalPlan, WasmTarget extended with runtime+forbiddenEffects, DEFAULT/BROWSER forbidden effects, CompatibilityLevel/Blockers/Warnings, TargetProfile, CompatibilityReport, shared ComputeWorkload/DataShape types
+     Status: fully specified v0.2, planning only (v0.1 = CPU + compute planner only)
 
 ⚠️ logicn-core-logic: Tri logic, Decision logic, Bool boundary rules, Omni logic
-     KB: logicn-core-logic-tri-decision-bool.md (TriState, Decision, validateBoolBoundary, LN-TRI/DECISION/BOOL-BOUNDARY codes)
+     KB: logicn-core-logic-tri-decision-bool.md (TriState discriminated union, Decision, validateBoolBoundary, LN-TRI/DECISION/BOOL-BOUNDARY codes)
      KB: logicn-core-logic-omni-logic.md (8 states, safety rules, LN-OMNI codes)
-     Status: fully specified, v0.1 implementation = none
+     README: TriState as discriminated union, TRI_TRUE/TRI_FALSE/triUnknown, combineUnknownReasons, Decision as discriminated union with constructors, decisionToRuntimeBool fails-closed, combineDecisions priority order, CapabilityRequest, PolicyContext, evaluateCapability deny-first, BoolBoundaryResult
+     Status: fully specified v0.2, v0.1 implementation = none
 
 ⚠️ logicn-core-config: environment config model; secret reference model
      KB: logicn-core-config-environment-secrets.md (EnvironmentMode, ProtectedSecret, canSendSecretToSink, LN-CONFIG/SECRET codes)
-     Status: fully specified (EnvironmentMode closed type, SecretReference, ProtectedSecret, SecretSafeSink), not yet implemented
+     README: ConfigValue discriminated union, EnvironmentPolicy with allowSecretValuesInReports: false, defaultEnvironmentPolicy(), EnvironmentConfig v0.2 with schemaVersion, SecretEnvironmentReference v0.2, SecretConfigSource discriminated union, LoadEnvironmentConfigInput, loadEnvironmentConfig(), EnvironmentConfigReport, SecretReportValue
+     Status: fully specified v0.2, not yet implemented
+
+⚠️ logicn-core-security: secret reference model with taint tracking
+     KB: logicn_core_security_secret_reference_model.md
+     README: SecretSource discriminated union, SecretCategory 13 values, SecretRedactionPolicy, SecretReference v0.2, SecretDerivedReference/SecretDerivation, SecureStringReference extended, ProtectedSecret<T> full impl, SecretSafeSink extended, SecretDiagnostic, SecretTaint, safeLog, buildAuthorizationHeader, file layout
+     Status: fully specified v0.2, not yet implemented
 
 ⚠️ logicn-core-network: governance model
      KB: logicn-core-network-governance.md (NetworkDestinationReference, NetworkPolicy, GovernedNetworkRuntime, safeHttpRequest, LN-NETWORK-001–008)
-     Status: fully specified (deny-by-default, AI provider governance, TLS requirements), not yet implemented
+     README: NetworkProtocol+quic, productionNetworkPolicy SSRF-safe, AiProviderNetworkPolicy/OPENAI_POLICY, GovernedNetworkRuntime, SafeHttpRequest types, validateDestination/TlsRequirement/Capability, WebhookVerificationConfig, ReplayStore, IdempotencyStore, validateAiPrompt, NetworkDiagnostic/NetworkPolicyReport
+     Status: fully specified v0.2, not yet implemented
 
 ⚠️ logicn-core-photonic: governance architecture
      KB: logicn-core-photonic-backend-architecture.md (OpticalTransportMode, PhotonicRuntimeTarget, PhotonicExecutionPlan, LN-PHOTONIC-001–006)
      Status: fully specified (distributed photonic, fallback rules, planned sub-packages), not yet implemented
+
+⚠️ logicn-framework-api-server: full API server implementation
+     KB: logicn-api-boundary-architecture.md (full request flow, LogicnApiManifest, all route policies, handleApiRequest pipeline, webhook HMAC, replay, OpenAPI export)
+     TODO: all Architecture Depth items specified — HttpMethod, LogicnRouteManifest, all policies, handleApiRequest pipeline, verifyHmacSha256Webhook, ReplayStore, exportOpenApi, LogicnHttpError, mapErrorToHttpResponse
+     Status: fully documented, not yet implemented
 ```
 
 See `package-completion-status.md` for the full implementation order (Phase 1–4).
@@ -551,15 +587,15 @@ See `package-completion-status.md` for the full implementation order (Phase 1–
 
 ## Knowledge Base File Count
 
-Total KB files: ~176
+Total KB files: ~180
 
 | Area | Files | Coverage |
 | --- | --- | --- |
-| Syntax | ~30 core files | Strong — module/visibility fully specified including declaration, type-only, capability imports |
-| Logic | ~37 core files | Strong — error propagation covered; Tri/Decision/Bool fully specified; Omni logic fully specified |
-| Runtime | ~62 core files | Strong — CI/CD, audit log (JSONL + execution proof + denials + evidence), effects, boundaries covered |
-| AI/Compute | ~19 files | Strong — GPU/photonic/WASM/compatibility architecture and compute effects fully specified |
-| Cross-cutting | ~24 files | Strong — CLI (all 5 commands), config/secrets, network governance, photonic governance fully specified |
+| Syntax | ~33 core files | Strong — module/visibility, if/match/Optional rules, loop/iteration model, primitive obsession design principle added |
+| Logic | ~37 core files | Strong — error propagation covered; Tri/Decision/Bool v0.2 discriminated unions; Omni logic fully specified |
+| Runtime | ~62 core files | Strong — CI/CD, audit log v0.2 (JSONL + execution proof + denials + evidence), effects, boundaries covered |
+| AI/Compute | ~19 files | Strong — GPU/photonic/WASM/compatibility v0.2 architecture and compute effects fully specified |
+| Cross-cutting | ~25 files | Strong — CLI v0.2 (all 5 commands + build types), config v0.2, network v0.2 governance, security v0.2, API boundary architecture added |
 | Architecture | ~4 files | Strong |
 
 New files added (prior sessions):
@@ -644,4 +680,41 @@ Notes processed into KB (NOTES TO COVER, this session):
                                                           updated logicn-core-reports README/TODO
      Photonic Backend Architecture                    → created logicn-core-photonic-backend-architecture.md;
                                                           updated logicn-core-photonic README/TODO
+```
+
+Notes processed into KB (NOTES TO COVER, continuation session — v0.2 Architecture Depth):
+```text
+     obsession (primitive obsession design principle) → created logicn-design-primitive-obsession.md
+     if.txt (if/match/Optional syntax rules)          → created logicn-syntax-if-match-optional.md
+     foreach.txt (loop and iteration model)           → created logicn-syntax-loops-iteration.md
+     logicn_api_boundary_architecture.md             → created logicn-api-boundary-architecture.md;
+                                                          updated logicn-framework-api-server TODO.md
+     logicn_core_security_secret_reference_model.md  → added Architecture Depth to logicn-core-security README/TODO
+                                                          (SecretSource, SecretCategory, SecretRedactionPolicy, SecretTaint,
+                                                           safeLog, buildAuthorizationHeader, secrets/checks/runtime dirs)
+     logicn_core_cli_architecture.md                 → added Architecture Depth to logicn-core-cli README/TODO
+                                                          (BuildArtefact, VerifiedArtefact, DeploymentTarget, ExplainTrace,
+                                                           ComputePlan extended, exit codes 0–7, CLI report files table, CLI dir layout)
+     logicn_core_logic_tri_decision_bool_omni_arch.md → added Architecture Depth to logicn-core-logic README/TODO
+                                                          (TriState discriminated union, Decision discriminated union,
+                                                           constructors, combineDecisions, BoolBoundaryResult, tri/decision dirs)
+     logicn_core_compute_gpu_optical_wasm_compat.md  → added Architecture Depth to logicn-core-compute README/TODO
+                                                          (GpuSuitability, GpuPlan v0.2, OpticalNeed, OpticalPlan, WasmTarget extended,
+                                                           CompatibilityLevel/Blockers/Warnings, TargetProfile, RuntimeTarget 11 values)
+     logicn_core_config_environment_secrets_arch.md  → added Architecture Depth to logicn-core-config README/TODO
+                                                          (ConfigValue discriminated union, EnvironmentPolicy, defaultEnvironmentPolicy,
+                                                           EnvironmentConfig v0.2, SecretConfigSource, LoadEnvironmentConfigInput)
+     logicn_core_network_governance_webhook_arch.md  → added Architecture Depth to logicn-core-network README/TODO
+                                                          (quic protocol, productionNetworkPolicy SSRF-safe, AiProviderNetworkPolicy,
+                                                           GovernedNetworkRuntime, WebhookVerificationConfig, ReplayStore, IdempotencyStore)
+     logicn_core_reports_runtime_audit_proofs_arch.md → added Architecture Depth to logicn-core-reports README/TODO
+                                                          (RuntimeAuditStatus v0.2, RuntimeAuditEvent v0.2, ExecutionProofHashes,
+                                                           DenialReport v0.2, CapabilityEvidence/EffectEvidence/RuntimeEvidence v0.2,
+                                                           validateAuditSafety, shared/ dir)
+     logicn_core_compiler_effect_boundary_arch.md    → added Architecture Depth to logicn-core-compiler README/TODO
+                                                          (Effect interface, EffectCategory 10 values, CheckedFunction/EffectGraph,
+                                                           inferExpressionEffects, propagateEffects iterative fixpoint,
+                                                           Boundary/BoundaryRequirement/BoundaryEdge/BoundaryGraph,
+                                                           CheckedCallExpression, RuntimeManifest v0.2 sub-types, ComputeDeviceProfile,
+                                                           effects/boundaries/manifests/ir dirs)
 ```

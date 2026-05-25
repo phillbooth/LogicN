@@ -1142,6 +1142,341 @@ distributed optical scheduling
 
 ---
 
+## Architecture Depth: TypeScript Contracts (v0.2 Specification)
+
+### GpuPlan (v0.2 Structured)
+
+```ts
+export interface GpuPlan {
+  schemaVersion: "logicn.compute.gpu.plan.v1"
+  workloadId: string
+  suitability: GpuSuitability
+  recommendedTarget: "gpu" | "cpu"
+  reasons: GpuPlanReason[]
+  requirements: GpuRequirements
+  fallback: GpuFallbackPlan
+  diagnostics: ComputeDiagnostic[]
+}
+
+export type GpuSuitability =
+  | "high"
+  | "medium"
+  | "low"
+  | "unsuitable"
+  | "unknown"
+```
+
+### GpuRequirements / GpuFallbackPlan
+
+```ts
+export interface GpuRequirements {
+  minMemoryMb?: number
+  requiredCapabilities: string[]
+  requiredEffects: string[]
+}
+
+export interface GpuFallbackPlan {
+  target: "cpu"
+  reason: string
+}
+```
+
+### estimateGpuSuitability() Scoring Algorithm
+
+```ts
+export function estimateGpuSuitability(
+  workload: ComputeWorkload
+): GpuSuitability {
+  let score = 0
+
+  if (workload.parallelism === "high")    score += 3
+  if (workload.parallelism === "medium")  score += 1
+  if (workload.hasTensorOps)              score += 3
+  if (workload.dataShape?.batchSize && workload.dataShape.batchSize > 100) score += 2
+  if (workload.estimatedMemoryMb && workload.estimatedMemoryMb > 500)      score += 1
+
+  if (score >= 6) return "high"
+  if (score >= 3) return "medium"
+  if (score >= 1) return "low"
+  return "unsuitable"
+}
+```
+
+### buildGpuPlan()
+
+```ts
+export function buildGpuPlan(
+  workload: ComputeWorkload
+): GpuPlan {
+  const suitability = estimateGpuSuitability(workload)
+
+  return {
+    schemaVersion: "logicn.compute.gpu.plan.v1",
+    workloadId: workload.id,
+    suitability,
+    recommendedTarget: suitability === "unsuitable" ? "cpu" : "gpu",
+    reasons: [],
+    requirements: {
+      requiredCapabilities: ["GpuRuntime"],
+      requiredEffects: ["accelerator"]
+    },
+    fallback: {
+      target: "cpu",
+      reason: suitability === "unsuitable" ? "workload not suitable for GPU" : "GPU unavailable"
+    },
+    diagnostics: suitability === "low"
+      ? [{ code: "LN-COMPUTE-001", severity: "warning", message: "GPU benefit may be marginal for this workload." }]
+      : []
+  }
+}
+```
+
+### OpticalPlan (v0.2)
+
+```ts
+export interface OpticalPlan {
+  schemaVersion: "logicn.compute.optical.plan.v1"
+  workloadId: string
+  need: OpticalNeed
+  recommendedMode: "none" | "optical_io_awareness" | "photonic_planning_only"
+  fallback: OpticalFallbackPlan
+  diagnostics: ComputeDiagnostic[]
+}
+
+export type OpticalNeed = "high" | "medium" | "low" | "none" | "unknown"
+
+export interface OpticalFallbackPlan {
+  target: "network_io" | "cpu" | "cluster_runtime"
+  reason: string
+}
+```
+
+### estimateOpticalNeed() / buildOpticalPlan()
+
+```ts
+export function estimateOpticalNeed(
+  workload: ComputeWorkload
+): OpticalNeed {
+  if (workload.distributed && workload.dataShape?.transferPressure === "high") return "high"
+  if (workload.distributed) return "medium"
+  if (workload.dataShape?.transferPressure === "high") return "low"
+  return "none"
+}
+
+export function buildOpticalPlan(
+  workload: ComputeWorkload
+): OpticalPlan {
+  const need = estimateOpticalNeed(workload)
+
+  return {
+    schemaVersion: "logicn.compute.optical.plan.v1",
+    workloadId: workload.id,
+    need,
+    recommendedMode: need === "none" ? "none" : "optical_io_awareness",
+    fallback: { target: "network_io", reason: "optical transport unavailable" },
+    diagnostics: []
+  }
+}
+```
+
+### WasmTarget (Extended)
+
+```ts
+export interface WasmTarget {
+  schemaVersion: "logicn.compute.wasm.target.v1"
+  runtime: "browser" | "wasi" | "edge" | "node-wasm" | "unknown"
+  memoryLimitMb?: number
+  allowNetwork: boolean
+  allowFilesystem: boolean
+  allowThreads: boolean
+  forbiddenEffects: string[]
+  diagnostics: ComputeDiagnostic[]
+}
+
+export const DEFAULT_WASM_FORBIDDEN_EFFECTS: string[] = [
+  "process",
+  "shell.execute",
+  "accelerator",
+  "optical_io"
+]
+
+export const BROWSER_WASM_FORBIDDEN_EFFECTS: string[] = [
+  ...DEFAULT_WASM_FORBIDDEN_EFFECTS,
+  "filesystem",
+  "database"
+]
+```
+
+### validateWasmEffect() / validateWasmTarget()
+
+```ts
+export function validateWasmEffect(
+  effect: string,
+  target: WasmTarget
+): ComputeDiagnostic[] {
+  if (target.forbiddenEffects.includes(effect)) {
+    return [{
+      code: "LN-WASM-001",
+      severity: "error",
+      message: `Effect ${effect} is forbidden in WASM runtime ${target.runtime}.`
+    }]
+  }
+  return []
+}
+
+export function validateWasmTarget(
+  target: WasmTarget,
+  effects: string[]
+): ComputeDiagnostic[] {
+  return effects.flatMap(effect => validateWasmEffect(effect, target))
+}
+```
+
+### CompatibilityResult (Extended)
+
+```ts
+export interface CompatibilityResult {
+  schemaVersion: "logicn.compute.compatibility.v1"
+  target: RuntimeTarget
+  compatible: boolean
+  level: "full" | "partial" | "degraded" | "incompatible"
+  diagnostics: ComputeDiagnostic[]
+  blockers: CompatibilityBlocker[]
+  warnings: CompatibilityWarning[]
+  fallback?: CompatibilityFallback
+}
+
+export interface CompatibilityBlocker {
+  code: string
+  effect: string
+  message: string
+}
+
+export interface CompatibilityWarning {
+  code: string
+  message: string
+}
+
+export interface CompatibilityFallback {
+  target: RuntimeTarget
+  reason: string
+}
+```
+
+### RuntimeTarget (Extended)
+
+```ts
+export type RuntimeTarget =
+  | "cpu"
+  | "node"
+  | "wasm"
+  | "browser-wasm"
+  | "wasi"
+  | "gpu"
+  | "optical_io"
+  | "photonic"
+  | "native"
+  | "serverless"
+  | "edge"
+```
+
+### TargetProfile / validateTarget()
+
+```ts
+export interface TargetProfile {
+  target: RuntimeTarget
+  forbiddenEffects: string[]
+  requiredCapabilities: string[]
+  sandboxed: boolean
+  distributedSupport: boolean
+}
+
+export function validateTarget(
+  profile: TargetProfile,
+  effects: string[]
+): CompatibilityResult {
+  const blockers: CompatibilityBlocker[] = []
+
+  for (const effect of effects) {
+    if (profile.forbiddenEffects.includes(effect)) {
+      blockers.push({
+        code: "LN-COMPAT-002",
+        effect,
+        message: `Effect ${effect} is not supported on target ${profile.target}.`
+      })
+    }
+  }
+
+  return {
+    schemaVersion: "logicn.compute.compatibility.v1",
+    target: profile.target,
+    compatible: blockers.length === 0,
+    level: blockers.length === 0 ? "full" : "incompatible",
+    diagnostics: [],
+    blockers,
+    warnings: []
+  }
+}
+```
+
+### buildCompatibilityReport()
+
+```ts
+export interface CompatibilityReport {
+  results: CompatibilityResult[]
+  targets: RuntimeTarget[]
+  effects: string[]
+  generatedAt: string
+}
+
+export function buildCompatibilityReport(
+  targets: TargetProfile[],
+  effects: string[]
+): CompatibilityReport {
+  return {
+    results: targets.map(t => validateTarget(t, effects)),
+    targets: targets.map(t => t.target),
+    effects,
+    generatedAt: new Date().toISOString()
+  }
+}
+```
+
+### Shared Compute Types
+
+```ts
+export interface ComputeWorkload {
+  id: string
+  parallelism: "high" | "medium" | "low" | "none"
+  hasTensorOps: boolean
+  distributed: boolean
+  estimatedMemoryMb?: number
+  dataShape?: DataShape
+  deploymentShape?: DeploymentShape
+}
+
+export interface DataShape {
+  batchSize?: number
+  transferPressure?: "high" | "medium" | "low"
+  inputSizeMb?: number
+}
+
+export interface DeploymentShape {
+  nodeCount?: number
+  regionCount?: number
+  sandboxed: boolean
+}
+
+export interface ComputeDiagnostic {
+  code: string
+  severity: "info" | "warning" | "error"
+  message: string
+  suggestion?: string
+}
+```
+
+---
+
 ## Relationship to Other Systems
 
 ```text

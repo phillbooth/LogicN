@@ -1111,6 +1111,407 @@ photonic distributed runtime proofing
 
 ---
 
+## Architecture Depth: TypeScript Contracts (v0.2 Specification)
+
+### RuntimeAuditStatus (Canonical v0.2)
+
+```ts
+export type RuntimeAuditStatus =
+  | "allowed"
+  | "denied"
+  | "warning"
+  | "error"
+  | "executed"
+  | "verified"
+```
+
+Note: The v0.1 forms use different values:
+- Earlier JSON examples use: `success | failure | denied | fallback | cancelled | timeout | degraded`
+- The v0.1 TypeScript type uses: `started | running | completed | denied | failed | fallback | deferred`
+
+The v0.2 canonical set above is the target for `logicn-core-reports`. The earlier
+sets should be considered aliases until reconciliation is complete.
+
+### RuntimeAuditEvent (v0.2)
+
+```ts
+export interface RuntimeAuditEvent {
+  schemaVersion: "logicn.runtime.audit.v1"
+
+  /** Stable event ID. */
+  eventId: string
+
+  /** ISO timestamp. */
+  timestamp: string
+
+  /** Event category. */
+  category:
+    | "runtime"
+    | "network"
+    | "capability"
+    | "effect"
+    | "secret"
+    | "deployment"
+    | "webhook"
+    | "verification"
+
+  /** Event status. */
+  status: RuntimeAuditStatus
+
+  /** Human-readable summary. */
+  message: string
+
+  /** Optional runtime identifiers. */
+  runtime?: RuntimeAuditRuntime
+
+  /** Optional effect reference. */
+  effect?: string
+
+  /** Optional capability reference. */
+  capability?: string
+
+  /** Optional destination. */
+  destination?: string
+
+  /** Optional denial/proof references. */
+  references?: RuntimeAuditReference[]
+
+  /** Safe metadata only — never raw secrets. */
+  metadata?: Record<string, unknown>
+}
+```
+
+### RuntimeAuditRuntime
+
+```ts
+export interface RuntimeAuditRuntime {
+  runtimeId: string
+  environment: "development" | "test" | "staging" | "production"
+  target: "node" | "wasm" | "serverless" | "edge" | "gpu" | "cpu"
+  processId?: number
+  region?: string
+}
+```
+
+### RuntimeAuditReference
+
+```ts
+export interface RuntimeAuditReference {
+  type: "proof" | "denial" | "evidence" | "manifest" | "policy"
+  id: string
+}
+```
+
+### serializeAuditEvent()
+
+```ts
+export function serializeAuditEvent(
+  event: RuntimeAuditEvent
+): string {
+  // Redaction must happen before serialization.
+  return JSON.stringify(event)
+}
+```
+
+### appendAuditEvent() (Async File-Based)
+
+```ts
+import fs from "node:fs/promises"
+
+export async function appendAuditEvent(input: {
+  file: string
+  event: RuntimeAuditEvent
+}): Promise<void> {
+  const line = serializeAuditEvent(input.event) + "\n"
+  await fs.appendFile(input.file, line, "utf8")
+}
+```
+
+Note: The v0.1 `appendAuditEvent()` returned `string`. The v0.2 version is
+async and writes to disk directly.
+
+### ExecutionProof (v0.2 — Structured Hashes)
+
+```ts
+export interface ExecutionProof {
+  schemaVersion: "logicn.execution.proof.v1"
+  proofId: string
+  generatedAt: string
+  hashes: ExecutionProofHashes
+  metadata?: Record<string, unknown>
+}
+```
+
+### ExecutionProofHashes (v0.2 — SHA256 Suffix Naming)
+
+```ts
+export interface ExecutionProofHashes {
+  /** Hash of runtime manifest. */
+  manifestSha256: string
+
+  /** Hash of runtime audit log segment. */
+  auditSha256: string
+
+  /** Hash of runtime evidence. */
+  evidenceSha256: string
+
+  /** Hash of denial report set. */
+  denialSha256: string
+
+  /** Hash of compiled/runtime artefact. */
+  artefactSha256: string
+}
+```
+
+Note: The v0.1 `ExecutionProof` interface uses flat fields:
+`executionProofVersion, manifestHash, graphHash, policyHash, auditHash, runtimeHash`.
+The v0.2 form uses a nested `hashes` sub-object with `Sha256` suffix naming.
+Both forms should be supported until the canonical v0.2 is finalised.
+
+### buildExecutionProof() (Async)
+
+```ts
+export async function buildExecutionProof(input: {
+  manifestContents: string
+  auditContents: string
+  evidenceContents: string
+  denialContents: string
+  artefactContents: Buffer
+}): Promise<ExecutionProof> {
+  return {
+    schemaVersion: "logicn.execution.proof.v1",
+    proofId: createProofId(),
+    generatedAt: new Date().toISOString(),
+    hashes: {
+      manifestSha256: sha256(input.manifestContents),
+      auditSha256:    sha256(input.auditContents),
+      evidenceSha256: sha256(input.evidenceContents),
+      denialSha256:   sha256(input.denialContents),
+      artefactSha256: sha256(input.artefactContents)
+    }
+  }
+}
+```
+
+### validateExecutionProof() (Async)
+
+```ts
+export async function validateExecutionProof(input: {
+  proof: ExecutionProof
+  manifestContents: string
+  auditContents: string
+  evidenceContents: string
+  denialContents: string
+  artefactContents: Buffer
+}): Promise<boolean> {
+  return (
+    input.proof.hashes.manifestSha256 === sha256(input.manifestContents) &&
+    input.proof.hashes.auditSha256    === sha256(input.auditContents) &&
+    input.proof.hashes.evidenceSha256 === sha256(input.evidenceContents) &&
+    input.proof.hashes.denialSha256   === sha256(input.denialContents) &&
+    input.proof.hashes.artefactSha256 === sha256(input.artefactContents)
+  )
+}
+```
+
+### DenialReport (v0.2 Extended)
+
+```ts
+export interface DenialReport {
+  schemaVersion: "logicn.denial.report.v1"
+  denialId: string
+  timestamp: string
+  category:
+    | "network"
+    | "secret"
+    | "effect"
+    | "capability"
+    | "deployment"
+    | "webhook"
+  reason: string
+  policyId?: string
+  runtimeId?: string
+  effect?: string
+  capability?: string
+  destination?: string
+  diagnostics: string[]
+  references?: RuntimeAuditReference[]
+}
+```
+
+### buildDenialReport() (v0.2)
+
+```ts
+export function buildDenialReport(input: {
+  category: DenialReport["category"]
+  reason: string
+  diagnostics: string[]
+}): DenialReport {
+  return {
+    schemaVersion: "logicn.denial.report.v1",
+    denialId: createDenialId(),
+    timestamp: new Date().toISOString(),
+    category: input.category,
+    reason: input.reason,
+    diagnostics: input.diagnostics
+  }
+}
+```
+
+### CapabilityEvidence (v0.2)
+
+```ts
+export interface CapabilityEvidence {
+  schemaVersion: "logicn.capability.evidence.v1"
+  evidenceId: string
+  generatedAt: string
+  capability: string
+  decision: "allow" | "deny"
+  policyId?: string
+  reason: string
+  references?: RuntimeAuditReference[]
+}
+```
+
+### EffectEvidence (v0.2)
+
+```ts
+export interface EffectEvidence {
+  schemaVersion: "logicn.effect.evidence.v1"
+  evidenceId: string
+  generatedAt: string
+  effect: string
+  declared: boolean
+  inferred: boolean
+  transitive: boolean
+  allowed: boolean
+  reason: string
+}
+```
+
+### RuntimeEvidence (v0.2)
+
+```ts
+export interface RuntimeEvidence {
+  schemaVersion: "logicn.runtime.evidence.v1"
+  runtimeId: string
+  generatedAt: string
+  target: "node" | "wasm" | "serverless" | "edge" | "gpu" | "cpu"
+  environment: "development" | "test" | "staging" | "production"
+  capabilityEvidence: CapabilityEvidence[]
+  effectEvidence: EffectEvidence[]
+  denialReferences: string[]
+  proofReferences: string[]
+  diagnostics: string[]
+}
+```
+
+### buildRuntimeEvidence() (v0.2 Full Implementation)
+
+```ts
+export function buildRuntimeEvidence(input: {
+  runtimeId: string
+  target: RuntimeEvidence["target"]
+  environment: RuntimeEvidence["environment"]
+  capabilityEvidence: CapabilityEvidence[]
+  effectEvidence: EffectEvidence[]
+  denialReferences: string[]
+  proofReferences: string[]
+}): RuntimeEvidence {
+  return {
+    schemaVersion: "logicn.runtime.evidence.v1",
+    runtimeId: input.runtimeId,
+    generatedAt: new Date().toISOString(),
+    target: input.target,
+    environment: input.environment,
+    capabilityEvidence: input.capabilityEvidence,
+    effectEvidence: input.effectEvidence,
+    denialReferences: input.denialReferences,
+    proofReferences: input.proofReferences,
+    diagnostics: []
+  }
+}
+```
+
+### validateAuditSafety()
+
+```ts
+export function validateAuditSafety(input: {
+  serialized: string
+}): string[] {
+  const findings: string[] = []
+
+  if (input.serialized.includes("sk_live_")) {
+    findings.push("Potential Stripe secret leaked.")
+  }
+
+  if (input.serialized.includes("Bearer ")) {
+    findings.push("Potential Authorization token leaked.")
+  }
+
+  return findings
+}
+```
+
+### Updated Internal Structure (v0.2)
+
+```text
+packages-logicn/logicn-core-reports/src/
+
+  audit/
+    runtime-audit-event.ts      (RuntimeAuditEvent, RuntimeAuditStatus v0.2)
+    runtime-audit-status.ts
+    serialize-audit-event.ts
+    append-audit-event.ts       (async file-based)
+    audit-diagnostics.ts
+
+  proofs/
+    execution-proof.ts          (ExecutionProof, ExecutionProofHashes v0.2)
+    sha256.ts
+    build-execution-proof.ts    (async)
+    validate-execution-proof.ts (async)
+    proof-diagnostics.ts
+
+  denials/
+    denial-report.ts            (DenialReport v0.2 with extended fields)
+    build-denial-report.ts
+    denial-diagnostics.ts
+
+  evidence/
+    capability-evidence.ts      (CapabilityEvidence v0.2)
+    effect-evidence.ts          (EffectEvidence v0.2)
+    runtime-evidence.ts         (RuntimeEvidence v0.2)
+    build-runtime-evidence.ts   (full implementation)
+    evidence-diagnostics.ts
+
+  shared/
+    report-ids.ts               (createProofId, createDenialId)
+    timestamps.ts
+    redact-report-values.ts
+```
+
+### Updated Output Layout (v0.2)
+
+```text
+build/
+  reports/
+    audit/
+      runtime-audit.jsonl
+
+    proofs/
+      execution-proof.json
+
+    denials/
+      denials.json
+
+    evidence/
+      capability-evidence.json
+      effect-evidence.json
+      runtime-evidence.json
+```
+
+---
+
 ## Relationship to Other Systems
 
 ```text

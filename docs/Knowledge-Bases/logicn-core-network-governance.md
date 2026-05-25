@@ -743,6 +743,473 @@ photonic network coordination
 
 ---
 
+## Architecture Depth: TypeScript Contracts (v0.2 Specification)
+
+### NetworkProtocol (Extended Closed Type)
+
+```ts
+export type NetworkProtocol =
+  | "http"
+  | "https"
+  | "tcp"
+  | "udp"
+  | "grpc"
+  | "websocket"
+  | "quic"
+```
+
+Note: `quic` is added in v0.2. The v0.1 form ends at `websocket`.
+
+### NetworkDestinationReference (Extended)
+
+```ts
+export interface NetworkDestinationReference {
+  name: string
+  protocol: NetworkProtocol
+  host: string
+  port?: number
+  tlsRequired: boolean
+
+  /** Optional provider reference. */
+  provider?: string
+
+  /** Optional category for governance grouping. */
+  category?:
+    | "payment"
+    | "ai"
+    | "database"
+    | "webhook"
+    | "internal"
+    | "custom"
+
+  /** Optional data categories for AI governance. */
+  dataCategories?: string[]
+}
+```
+
+### NetworkPolicy (Extended)
+
+```ts
+export interface NetworkPolicy {
+  default: "deny" | "allow"
+  allowDestinations: NetworkDestinationReference[]
+  denyDestinations: string[]
+  requireTls: boolean
+  allowRawSockets: boolean
+  allowPlainHttp: boolean
+  aiProviders?: AiProviderNetworkPolicy[]
+  requireTimeouts?: boolean
+  requireRateLimits?: boolean
+}
+```
+
+### productionNetworkPolicy Example (SSRF-safe)
+
+```ts
+export const productionNetworkPolicy: NetworkPolicy = {
+  default: "deny",
+
+  allowDestinations: [STRIPE_DESTINATION],
+
+  // SSRF-safe deny list — always included:
+  denyDestinations: [
+    "localhost",
+    "127.0.0.1",
+    "0.0.0.0",
+    "169.254.169.254",          // AWS metadata
+    "metadata.google.internal", // GCP metadata
+    "metadata.azure.internal"   // Azure metadata
+  ],
+
+  requireTls: true,
+  allowRawSockets: false,
+  allowPlainHttp: false,
+  requireTimeouts: true,
+  requireRateLimits: true
+}
+```
+
+### AiProviderNetworkPolicy
+
+```ts
+export interface AiProviderNetworkPolicy {
+  provider: "openai" | "anthropic" | "google" | "azure-openai" | "custom"
+  allowSecretsInPrompt: boolean
+  allowPii: boolean
+  allowedRegions?: string[]
+  maxPromptBytes?: number
+  requireRedaction: boolean
+}
+
+export const OPENAI_POLICY: AiProviderNetworkPolicy = {
+  provider: "openai",
+  allowSecretsInPrompt: false,
+  allowPii: false,
+  allowedRegions: ["eu-west"],
+  maxPromptBytes: 1024 * 1024,
+  requireRedaction: true
+}
+```
+
+### GovernedNetworkRuntime Interface (v0.2)
+
+```ts
+export interface GovernedNetworkRuntime {
+  policy: NetworkPolicy
+
+  validateDestination(
+    destination: NetworkDestinationReference
+  ): NetworkDiagnostic[]
+
+  validateTlsRequirement(
+    destination: NetworkDestinationReference
+  ): NetworkDiagnostic[]
+
+  validateCapability(
+    capability: string
+  ): NetworkDiagnostic[]
+
+  safeHttpRequest(
+    input: SafeHttpRequestInput
+  ): Promise<SafeHttpResponse>
+}
+```
+
+### SafeHttpRequestInput / SafeHttpResponse
+
+```ts
+export interface SafeHttpRequestInput {
+  destination: NetworkDestinationReference
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
+  path: string
+  headers?: Record<string, string>
+  body?: unknown
+  timeoutMs?: number
+  capability?: string
+}
+
+export interface SafeHttpResponse {
+  status: number
+  headers: Record<string, string>
+  body: unknown
+  receivedAt: string
+  durationMs: number
+}
+```
+
+### validateDestination() Implementation
+
+```ts
+export function validateDestination(input: {
+  destination: NetworkDestinationReference
+  policy: NetworkPolicy
+}): NetworkDiagnostic[] {
+  const diagnostics: NetworkDiagnostic[] = []
+
+  const denied = input.policy.denyDestinations.includes(input.destination.host)
+  if (denied) {
+    diagnostics.push({
+      code: "LN-NETWORK-001",
+      severity: "error",
+      message: `Destination ${input.destination.host} is explicitly denied.`
+    })
+    return diagnostics
+  }
+
+  const allowed = input.policy.allowDestinations.some(
+    d => d.host === input.destination.host &&
+         d.protocol === input.destination.protocol
+  )
+
+  if (!allowed && input.policy.default === "deny") {
+    diagnostics.push({
+      code: "LN-NETWORK-002",
+      severity: "error",
+      message: `Destination ${input.destination.host} is not allowlisted.`
+    })
+  }
+
+  return diagnostics
+}
+```
+
+### validateTlsRequirement() Implementation
+
+```ts
+export function validateTlsRequirement(input: {
+  destination: NetworkDestinationReference
+  policy: NetworkPolicy
+}): NetworkDiagnostic[] {
+  const diagnostics: NetworkDiagnostic[] = []
+
+  if (input.policy.requireTls && !input.destination.tlsRequired) {
+    diagnostics.push({
+      code: "LN-NETWORK-003",
+      severity: "error",
+      message: `TLS is required for destination ${input.destination.host}.`
+    })
+  }
+
+  if (input.destination.protocol === "http" && !input.policy.allowPlainHttp) {
+    diagnostics.push({
+      code: "LN-NETWORK-004",
+      severity: "error",
+      message: `Plain HTTP is forbidden by policy.`
+    })
+  }
+
+  return diagnostics
+}
+```
+
+### validateCapability() Implementation
+
+```ts
+export function validateCapability(input: {
+  capability?: string
+  allowedCapabilities: string[]
+}): NetworkDiagnostic[] {
+  if (!input.capability) {
+    return [{ code: "LN-NETWORK-005", severity: "error", message: "Network capability is missing." }]
+  }
+
+  if (!input.allowedCapabilities.includes(input.capability)) {
+    return [{ code: "LN-NETWORK-006", severity: "error", message: `Capability ${input.capability} is not allowed.` }]
+  }
+
+  return []
+}
+```
+
+### safeHttpRequest() — Combining All Validations
+
+```ts
+export async function safeHttpRequest(input: {
+  runtime: GovernedNetworkRuntime
+  request: SafeHttpRequestInput
+}): Promise<SafeHttpResponse> {
+  const diagnostics = [
+    ...input.runtime.validateDestination(input.request.destination),
+    ...input.runtime.validateTlsRequirement(input.request.destination),
+    ...input.runtime.validateCapability(input.request.capability ?? "network")
+  ]
+
+  const errors = diagnostics.filter(d => d.severity === "error")
+  if (errors.length > 0) {
+    throw new GovernedNetworkError("LN-NETWORK-007", "Network request denied by policy.", diagnostics)
+  }
+
+  const response = await performHttpRequest(input.request)
+
+  return {
+    status: response.status,
+    headers: response.headers,
+    body: response.body,
+    receivedAt: new Date().toISOString(),
+    durationMs: response.durationMs
+  }
+}
+```
+
+### Forbidden SSRF Destinations
+
+Always deny:
+
+```text
+localhost
+127.0.0.1
+0.0.0.0
+169.254.169.254           — AWS instance metadata
+metadata.google.internal  — GCP instance metadata
+metadata.azure.internal   — Azure instance metadata
+internal admin endpoints
+unknown wildcard destinations
+```
+
+### Webhook Contracts
+
+```ts
+export interface WebhookVerificationConfig {
+  provider: "stripe" | "github" | "clerk" | "custom"
+  signatureHeader: string
+  algorithm: "sha256" | "sha512"
+  maxTimestampAgeSeconds?: number
+  requireTimestamp?: boolean
+  requireRawBody: boolean
+  requireReplayProtection: boolean
+}
+
+export interface WebhookVerificationResult {
+  verified: boolean
+  timestampValid: boolean
+  signatureValid: boolean
+  replayDetected: boolean
+  diagnostics: NetworkDiagnostic[]
+}
+```
+
+### verifyWebhookHmac()
+
+```ts
+export function verifyWebhookHmac(input: {
+  rawBody: string
+  signature: string
+  secret: string
+  algorithm: "sha256" | "sha512"
+}): boolean {
+  const digest = crypto
+    .createHmac(input.algorithm, input.secret)
+    .update(input.rawBody)
+    .digest("hex")
+
+  // Constant-time compare required to prevent timing side-channel attacks.
+  return crypto.timingSafeEqual(
+    Buffer.from(digest),
+    Buffer.from(input.signature)
+  )
+}
+```
+
+### validateWebhookTimestamp()
+
+```ts
+export function validateWebhookTimestamp(input: {
+  timestamp: number
+  maxAgeSeconds: number
+}): boolean {
+  const now = Math.floor(Date.now() / 1000)
+  return Math.abs(now - input.timestamp) <= input.maxAgeSeconds
+}
+```
+
+### ReplayStore / validateReplayProtection()
+
+```ts
+export interface ReplayStore {
+  has(key: string): Promise<boolean>
+  put(key: string, ttlSeconds: number): Promise<void>
+}
+
+export async function validateReplayProtection(input: {
+  replayStore: ReplayStore
+  replayKey: string
+  ttlSeconds: number
+}): Promise<NetworkDiagnostic[]> {
+  const exists = await input.replayStore.has(input.replayKey)
+  if (exists) {
+    return [{ code: "LN-NETWORK-008", severity: "error", message: "Webhook replay detected." }]
+  }
+
+  await input.replayStore.put(input.replayKey, input.ttlSeconds)
+  return []
+}
+```
+
+### IdempotencyStore / validateIdempotency()
+
+```ts
+export interface IdempotencyStore {
+  has(idempotencyKey: string): Promise<boolean>
+  put(idempotencyKey: string, ttlSeconds: number): Promise<void>
+}
+
+export async function validateIdempotency(input: {
+  store: IdempotencyStore
+  key: string
+  ttlSeconds: number
+}): Promise<NetworkDiagnostic[]> {
+  const exists = await input.store.has(input.key)
+  if (exists) {
+    return [{ code: "LN-NETWORK-008", severity: "warning", message: "Duplicate idempotent request detected." }]
+  }
+
+  await input.store.put(input.key, input.ttlSeconds)
+  return []
+}
+```
+
+### validateAiPrompt()
+
+```ts
+export function validateAiPrompt(input: {
+  prompt: string
+  policy: AiProviderNetworkPolicy
+}): NetworkDiagnostic[] {
+  const diagnostics: NetworkDiagnostic[] = []
+  const size = Buffer.byteLength(input.prompt)
+
+  if (input.policy.maxPromptBytes && size > input.policy.maxPromptBytes) {
+    diagnostics.push({
+      code: "LN-NETWORK-008",
+      severity: "error",
+      message: "AI prompt exceeds policy size limit."
+    })
+  }
+
+  return diagnostics
+}
+```
+
+### NetworkDiagnostic Type
+
+```ts
+export interface NetworkDiagnostic {
+  code: string
+  severity: "info" | "warning" | "error"
+  message: string
+  suggestion?: string
+}
+```
+
+### NetworkPolicyReport
+
+```ts
+export interface NetworkPolicyReport {
+  schemaVersion: "logicn.network.policy.report.v1"
+  generatedAt: string
+  policy: NetworkPolicy
+  diagnostics: NetworkDiagnostic[]
+  destinations: NetworkDestinationReference[]
+  webhookPolicies: WebhookVerificationConfig[]
+}
+```
+
+### Updated File Layout (v0.2)
+
+```text
+packages-logicn/logicn-core-network/src/
+
+  policy/
+    network-protocol.ts
+    network-destination-reference.ts
+    network-policy.ts
+    ai-provider-policy.ts
+
+  runtime/
+    governed-network-runtime.ts
+    safe-http-request.ts
+    validate-destination.ts
+    validate-tls-requirement.ts
+    validate-capability.ts
+
+  webhook/
+    webhook-verification-config.ts
+    verify-webhook-hmac.ts
+    validate-webhook-timestamp.ts
+    replay-store.ts
+    validate-replay-protection.ts
+    idempotency-store.ts
+    validate-idempotency.ts
+
+  reports/
+    network-policy-report.ts
+
+  diagnostics/
+    network-diagnostics.ts
+```
+
+---
+
 ## Relationship to Other Systems
 
 ```text

@@ -157,6 +157,247 @@ function redactSecretValue(value: string): RedactionResult
 See `docs/Knowledge-Bases/logicn-core-config-environment-secrets.md` for the
 full secret reference model specification.
 
+## Architecture Depth: TypeScript Contracts (v0.2 Specification)
+
+### SecretSource (Discriminated Union)
+
+```ts
+export type SecretSource =
+    | { type: "env";             variable: string }
+    | { type: "file";            path: string; key?: string }
+    | { type: "secretStore";     provider: "aws-secrets-manager" | "gcp-secret-manager" | "azure-key-vault" | "vault" | "custom"; key: string }
+    | { type: "runtimeInjected"; name: string }
+```
+
+### SecretCategory
+
+```ts
+export type SecretCategory =
+    | "api_token"
+    | "oauth_client_secret"
+    | "jwt_signing_key"
+    | "webhook_signing_secret"
+    | "database_password"
+    | "private_key"
+    | "session_secret"
+    | "encryption_key"
+    | "payment_provider_token"
+    | "smtp_password"
+    | "cloud_access_key"
+    | "ai_provider_token"
+    | "custom"
+```
+
+### SecretRedactionPolicy
+
+```ts
+export interface SecretRedactionPolicy {
+    mode: "full" | "partial" | "hashOnly"
+    replacement: "[REDACTED_SECRET]"
+    showPrefixChars?: number    // partial only; avoid in production
+    showSuffixChars?: number
+    allowFingerprint: boolean   // keyed HMAC hash, not raw value
+}
+```
+
+### SecretReference (Extended v0.2)
+
+```ts
+export interface SecretReference {
+    id: string
+    name: string
+    source: SecretSource
+    category: SecretCategory
+    provider?: string           // e.g. "stripe", "openai", "postgres"
+    environmentScope: "development" | "test" | "staging" | "production" | "any"
+    allowedSinks: string[]
+    deniedSinks: string[]
+    allowDerivation: boolean
+    redaction: SecretRedactionPolicy
+    // kept from v0.1
+    required: boolean
+    scope: string
+    fingerprint?: string
+    allowedOperation?: string
+    protected: true
+}
+```
+
+### SecretDerivedReference (Extended)
+
+```ts
+export interface SecretDerivedReference {
+    id: string
+    parentSecretId: string
+    name: string
+    derivation: SecretDerivation
+    allowedSinks: string[]
+    expiresAt?: string
+    redaction: SecretRedactionPolicy
+    source: SecretReference
+    derivedKind: "hash" | "token" | "signature" | "connection-string"
+    protected: true
+}
+
+export type SecretDerivation =
+    | { type: "hmac";        algorithm: "sha256"|"sha384"|"sha512"; purpose: "webhook_signature"|"request_signature"|"custom" }
+    | { type: "hash";        algorithm: "sha256"|"sha512"|"argon2id"|"bcrypt"; purpose: "fingerprint"|"credential_check"|"custom" }
+    | { type: "tokenExchange"; provider: string; purpose: "oauth_access_token"|"session_token"|"custom" }
+    | { type: "keyDerivation"; algorithm: "hkdf"|"pbkdf2"|"scrypt"|"argon2id"; purpose: "encryption"|"signing"|"custom" }
+```
+
+### SecureStringReference (Extended)
+
+```ts
+export interface SecureStringReference {
+    id: string
+    name: string
+    source: "http_header" | "cookie" | "request_body" | "query_parameter" | "runtime" | "derived" | "unknown"
+    category: "authorization_header" | "cookie" | "jwt" | "session_id" | "password" | "webhook_signature" | "signed_url" | "temporary_token" | "custom"
+    lifetime: "request" | "job" | "process" | "persistent"
+    redaction: SecretRedactionPolicy
+    label: string
+    redacted: true
+    fingerprint?: string
+}
+```
+
+### ProtectedSecret<T> (Full Implementation)
+
+```ts
+export class ProtectedSecret<T> {
+    readonly kind = "ProtectedSecret"
+
+    constructor(
+        private readonly value: T,
+        public readonly reference: SecretReference | SecretDerivedReference | SecureStringReference
+    ) {}
+
+    unwrapForApprovedSink(sink: SecretSafeSink): T {
+        if (!canSendSecretToSink(this.reference, sink)) {
+            throw new SecretPolicyError("LN-SECRET-001",
+                `Secret ${this.reference.name} cannot be sent to sink ${sink.id}`)
+        }
+        return this.value
+    }
+
+    toString(): string { return "[REDACTED_SECRET]" }
+    toJSON(): string   { return "[REDACTED_SECRET]" }
+}
+```
+
+### SecretSafeSink (Extended)
+
+```ts
+export interface SecretSafeSink {
+    id: string
+    type:
+        | "https_header_authorization"
+        | "https_body"
+        | "webhook_verifier"
+        | "database_password"
+        | "jwt_signer"
+        | "encryption_module"
+        | "tls_client_auth"
+        | "log"
+        | "api_response"
+        | "query_string"
+        | "error_message"
+        | "report"
+        | "ai_context"
+        | "unknown"
+    provider?: string
+    transport: "none" | "http" | "https" | "internal" | "native"
+    productionSafe: boolean
+    redactedOnly: boolean
+    // kept from v0.1
+    name: string
+    kind: "network" | "crypto" | "database" | "token"
+    approved: boolean
+}
+
+export const LOG_SINK: SecretSafeSink          // productionSafe: false, redactedOnly: true
+export const API_RESPONSE_SINK: SecretSafeSink  // productionSafe: false, redactedOnly: true
+export const STRIPE_AUTH_HEADER_SINK: SecretSafeSink  // productionSafe: true, redactedOnly: false
+```
+
+### SecretDiagnostic
+
+```ts
+export interface SecretDiagnostic {
+    code: "LN-SECRET-001" | "LN-SECRET-002"
+    severity: "error" | "warning"
+    message: string
+    secretName?: string
+    sinkId?: string
+    sourceLocation?: SourceLocation
+    suggestion?: string
+}
+```
+
+### Compile-Time Taint Tracking
+
+```ts
+export type SecretTaint =
+    | { kind: "none" }
+    | { kind: "secret";        referenceId: string }
+    | { kind: "derivedSecret"; referenceId: string }
+    | { kind: "secureString";  referenceId: string }
+
+export function combineTaint(left: SecretTaint, right: SecretTaint): SecretTaint
+
+// Emits LN-SECRET-002 on tainted string concatenation
+export function checkStringConcat(input: {
+    left: ExpressionInfo; right: ExpressionInfo; location: SourceLocation
+}): SecretDiagnostic[]
+
+// Emits LN-SECRET-001 on unsafe sink
+export function checkSecretSink(input: {
+    secret: SecretReference; sink: SecretSafeSink; location: SourceLocation
+}): SecretDiagnostic[]
+```
+
+### Runtime Helpers
+
+```ts
+// Safe logger: redacts any ProtectedSecret in fields before writing
+export function safeLog(message: string, fields: Record<string, unknown>): void
+
+// Fingerprint helper: HMAC-SHA256 with runtime salt (first 16 hex chars)
+export function createSecretFingerprint(input: {
+    rawSecret: string; runtimeSalt: string
+}): string
+
+// Build Authorization header after sink approval check
+export function buildAuthorizationHeader(input: {
+    secret: ProtectedSecret<string>; sink: SecretSafeSink
+}): Record<string, string>
+```
+
+### Internal File Layout
+
+```text
+packages-logicn/logicn-core-security/src/
+  secrets/
+    secret-reference.ts        ← SecretReference, SecretSource, SecretCategory, SecretRedactionPolicy
+    secret-derived-reference.ts ← SecretDerivedReference, SecretDerivation
+    secure-string-reference.ts ← SecureStringReference
+    protected-secret.ts        ← ProtectedSecret<T>
+    secret-safe-sink.ts        ← SecretSafeSink, LOG_SINK, API_RESPONSE_SINK
+    secret-policy.ts           ← canSendSecretToSink()
+    secret-redaction.ts        ← redactSecretValue(), createSecretFingerprint()
+    secret-diagnostics.ts      ← SecretDiagnostic, LN-SECRET-001, LN-SECRET-002
+    secret-report.ts           ← logicn.secret.report.v1
+  checks/
+    check-secret-sink.ts       ← checkSecretSink()
+    check-secret-string-conversion.ts ← checkStringConcat()
+    secret-taint.ts            ← SecretTaint, combineTaint()
+  runtime/
+    secret-resolver.ts
+    safe-log.ts                ← safeLog(), redactObject()
+    safe-json.ts
+```
+
 ## Safety Contracts
 
 Security helpers must fail closed when a helper cannot prove that output is

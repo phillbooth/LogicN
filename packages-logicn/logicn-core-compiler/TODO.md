@@ -42,11 +42,35 @@ adding post-v1 targets or domain package syntax.
 [ ] Generate runtime manifest including effect and boundary metadata (pass 14)
 [ ] Implement manifest builder — aggregate compiler metadata into runtime-manifest.json
 [ ] Define RuntimeManifest TypeScript type (module/effects/capabilities/targets/trustLevel/auditRequired)
+[ ] Upgrade RuntimeManifest to v0.2 schema: schemaVersion, buildId, generatedAt, target, routes[], functions[], effects[], permissions[], boundaries[], reports[], diagnostics[]
+[ ] Define RouteManifest, FunctionManifest, EffectManifest, BoundaryManifest sub-types
+[ ] Define BuildManifestInput: checkedProgram, effectGraph, boundaryGraph, compilerOptions
+[ ] Implement buildManifest(input: BuildManifestInput): RuntimeManifest
+[ ] Implement validateManifest(manifest: RuntimeManifest): CompilerDiagnostic[]
 [ ] Implement manifest hash generation (LN-MANIFEST-002)
 [ ] Implement manifest schema validation (LN-MANIFEST-001, LN-MANIFEST-003)
 [ ] Implement capability reference validation in manifest (LN-MANIFEST-004)
 [ ] Implement runtime target validation in manifest (LN-MANIFEST-005)
 [ ] Create manifests/ dir structure: manifest-builder.ts, manifest-schema.ts, manifest-hash.ts, manifest-serializer.ts, manifest-validator.ts
+[ ] Define Effect interface: id, name, category (10 values), unsafe, boundarySensitive, requiredCapability
+[ ] Define EffectCategory union: network|database|filesystem|shell|process|secret|ai|gpu|native|custom
+[ ] Define CheckedFunction: id, name, declaredEffects, inferredEffects, effectiveEffects = union, boundaryRequirements, diagnostics
+[ ] Define EffectGraphNode: functionId, outgoingCalls, inferredEffects
+[ ] Define EffectGraph: nodes, nodeMap
+[ ] Implement inferExpressionEffects(expression, context): Effect[] — switch on expression.kind
+[ ] Implement propagateEffects(graph: EffectGraph): EffectGraph — iterative fixpoint
+[ ] Create effects/ dir: effect-interface.ts, effect-graph.ts, effect-propagation.ts, effect-diagnostics.ts
+[ ] Implement LN-EFFECT-001 (undeclared), LN-EFFECT-002 (forbidden), LN-EFFECT-003 (missing capability), LN-EFFECT-004 (unsafe transitive)
+[ ] Define Boundary: id, type (10 BoundaryType values), trustLevel (4 values), allowedEffects, deniedEffects, requiredPolicies
+[ ] Define BoundaryRequirement: boundaryType, requiresValidation, requiresAuth, requiresRateLimit, requiresReplayProtection, requiresSecretProtection
+[ ] Define BoundaryEdge: from, to, transferredEffects, transferredSecrets, requiresValidation
+[ ] Define BoundaryGraph: boundaries, edges
+[ ] Define CheckedCallExpression IR: callee, arguments, resolvedEffects, boundaryContext
+[ ] Create boundaries/ dir: boundary-interface.ts, boundary-graph.ts, boundary-requirement.ts, boundary-diagnostics.ts
+[ ] Implement LN-BOUNDARY-001 (missing validation), LN-BOUNDARY-002 (missing replay), LN-BOUNDARY-003 (unsafe effect crossing), LN-BOUNDARY-004 (secret leak)
+[ ] Define ComputeDeviceProfile: id, vendor, family, kind, capabilities, memoryMb, supports(effect)
+[ ] Implement selectDevice(profiles, plan): ComputeDeviceProfile | null
+[ ] Create ir/ dir: checked-call.ts, checked-function.ts
 [ ] Parse at least 20 v1 .lln examples
 [ ] Reject post-v1 syntax with clear diagnostics
 [ ] Add examples

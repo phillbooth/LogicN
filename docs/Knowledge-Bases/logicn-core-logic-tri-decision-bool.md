@@ -684,6 +684,307 @@ photonic coordination
 
 ---
 
+## Architecture Depth: TypeScript Contracts (v0.2 Specification)
+
+### TriState as Discriminated Union (Preferred)
+
+The v0.2 form uses a discriminated union rather than a string literal type:
+
+```ts
+export type TriState =
+  | { kind: "true" }
+  | { kind: "false" }
+  | { kind: "unknown"; reason?: string }
+```
+
+Constants:
+
+```ts
+export const TRI_TRUE: TriState = { kind: "true" }
+export const TRI_FALSE: TriState = { kind: "false" }
+
+export function triUnknown(reason?: string): TriState {
+  return { kind: "unknown", reason }
+}
+```
+
+Note: The earlier `"TRUE" | "FALSE" | "UNKNOWN"` string type is the v0.1 form.
+The discriminated union above is the v0.2 target — it allows carrying a reason
+on `UNKNOWN` states, which is essential for governance explanations.
+
+### triNot() with Default Case
+
+```ts
+export function triNot(a: TriState): TriState {
+  switch (a.kind) {
+    case "true":    return TRI_FALSE
+    case "false":   return TRI_TRUE
+    case "unknown": return a  // unknown remains unknown
+    default:        return triUnknown("unexpected TriState")
+  }
+}
+```
+
+### triAnd() with False Short-Circuit
+
+```ts
+export function triAnd(a: TriState, b: TriState): TriState {
+  if (a.kind === "false" || b.kind === "false") {
+    return TRI_FALSE
+  }
+
+  if (a.kind === "unknown" || b.kind === "unknown") {
+    return triUnknown(combineUnknownReasons(a, b))
+  }
+
+  return TRI_TRUE
+}
+```
+
+### triOr() with True Short-Circuit
+
+```ts
+export function triOr(a: TriState, b: TriState): TriState {
+  if (a.kind === "true" || b.kind === "true") {
+    return TRI_TRUE
+  }
+
+  if (a.kind === "unknown" || b.kind === "unknown") {
+    return triUnknown(combineUnknownReasons(a, b))
+  }
+
+  return TRI_FALSE
+}
+```
+
+### combineUnknownReasons()
+
+```ts
+function combineUnknownReasons(a: TriState, b: TriState): string | undefined {
+  const reasons: string[] = []
+  if (a.kind === "unknown" && a.reason) reasons.push(a.reason)
+  if (b.kind === "unknown" && b.reason) reasons.push(b.reason)
+  return reasons.length > 0 ? reasons.join("; ") : undefined
+}
+```
+
+### Decision as Discriminated Union (Preferred)
+
+```ts
+export type Decision =
+  | { kind: "allow";         reason?: string }
+  | { kind: "deny";          reason: string }
+  | { kind: "unknown";       reason?: string }
+  | { kind: "notApplicable"; reason?: string }
+  | { kind: "conflict";      reason: string }
+```
+
+Constructors:
+
+```ts
+export const allow        = (reason?: string): Decision => ({ kind: "allow", reason })
+export const deny         = (reason: string):  Decision => ({ kind: "deny", reason })
+export const unknown      = (reason?: string): Decision => ({ kind: "unknown", reason })
+export const notApplicable = (reason?: string): Decision => ({ kind: "notApplicable", reason })
+export const conflict     = (reason: string):  Decision => ({ kind: "conflict", reason })
+```
+
+Note: The earlier `"APPROVE" | "DENY" | "REVIEW_REQUIRED" | "DEFER" | "ESCALATE"` form
+is the v0.1 vocabulary. The discriminated union above aligns with the
+capability evaluation model used in `evaluateCapability()`.
+
+### decisionToRuntimeBool() — Fails Closed
+
+```ts
+export function decisionToRuntimeBool(decision: Decision): boolean {
+  switch (decision.kind) {
+    case "allow": return true
+    case "deny":  return false
+    // All non-deterministic outcomes fail closed:
+    case "unknown":
+    case "notApplicable":
+    case "conflict":
+    default:
+      return false
+  }
+}
+```
+
+### requireDeterministicDecision()
+
+```ts
+export function requireDeterministicDecision(decision: Decision): void {
+  if (decision.kind !== "allow" && decision.kind !== "deny") {
+    throw new LogicBoundaryError(
+      `Non-deterministic Decision (${decision.kind}) at deterministic path`
+    )
+  }
+}
+```
+
+### CapabilityRequest and PolicyContext
+
+```ts
+export interface CapabilityRequest {
+  subjectId: string
+  capability: string
+  resource?: string
+  context: PolicyContext
+}
+
+export interface PolicyContext {
+  environment: "development" | "test" | "staging" | "production"
+  routeId?: string
+  packageName?: string
+  target?: string
+}
+```
+
+### evaluateCapability() — Deny-First
+
+```ts
+export function evaluateCapability(
+  request: CapabilityRequest,
+  policies: CapabilityPolicy[]
+): Decision {
+  // 1. Deny rules have priority.
+  const denied = policies.find(
+    p => p.subject === request.subjectId &&
+         p.capability === request.capability &&
+         p.effect === "deny"
+  )
+  if (denied) return deny(denied.reason ?? "capability explicitly denied")
+
+  // 2. Allow rules next.
+  const allowed = policies.find(
+    p => p.subject === request.subjectId &&
+         p.capability === request.capability &&
+         p.effect === "allow"
+  )
+  if (allowed) return allow(allowed.reason)
+
+  // 3. No matching rule — unknown.
+  return unknown("no matching capability policy found")
+}
+```
+
+### combineDecisions() — Priority Order
+
+Priority: conflict > deny > unknown > allow > notApplicable
+
+```ts
+export function combineDecisions(decisions: Decision[]): Decision {
+  const conflict = decisions.find(d => d.kind === "conflict")
+  if (conflict) return conflict
+
+  const deny = decisions.find(d => d.kind === "deny")
+  if (deny) return deny
+
+  const unknown = decisions.find(d => d.kind === "unknown")
+  if (unknown) return unknown
+
+  const allow = decisions.find(d => d.kind === "allow")
+  if (allow) return allow
+
+  return notApplicable("no deterministic decision found")
+}
+```
+
+### BoolBoundaryResult
+
+```ts
+export interface BoolBoundaryResult {
+  allowed: boolean
+  source: string
+  deterministic: boolean
+  diagnostics: string[]
+}
+```
+
+### validateBoolBoundary() (Updated)
+
+```ts
+export function validateBoolBoundary(
+  decision: Decision
+): BoolBoundaryResult {
+  return {
+    allowed: decision.kind === "allow",
+    source: "decision-evaluator",
+    deterministic: decision.kind === "allow" || decision.kind === "deny",
+    diagnostics: decision.kind !== "allow" && decision.kind !== "deny"
+      ? [`LN-BOOL-BOUNDARY-001: non-deterministic state ${decision.kind}`]
+      : []
+  }
+}
+```
+
+### enforceDeterministicPath() (Updated)
+
+```ts
+export function enforceDeterministicPath(
+  decision: Decision
+): void {
+  if (decision.kind !== "allow" && decision.kind !== "deny") {
+    throw new LogicBoundaryError(
+      `LN-BOOL-BOUNDARY-001: non-deterministic logic (${decision.kind}) forbidden in restricted path`
+    )
+  }
+}
+```
+
+### Practical Example: Route Capability Check
+
+```logicn
+match evaluateCapability(user, NetworkAccess) {
+  Allow =>
+    runNetworkTask()
+
+  Deny(reason) => {
+    audit.deny(reason)
+    return Error(reason)
+  }
+
+  Unknown(reason) => {
+    // Unknown fails closed.
+    return Error("capability unknown")
+  }
+
+  Conflict(reason) => {
+    // Conflict is a policy error.
+    fail PolicyConflict(reason)
+  }
+}
+```
+
+### File Layout
+
+```text
+packages-logicn/logicn-core-logic/src/
+
+  tri/
+    tri-types.ts        (TriState discriminated union, TRI_TRUE, TRI_FALSE, triUnknown)
+    tri-operators.ts    (triNot, triAnd, triOr, combineUnknownReasons)
+    tri-runtime.ts
+    tri-compiler.ts
+
+  decision/
+    decision-types.ts   (Decision discriminated union, constructors)
+    decision-runtime.ts (decisionToRuntimeBool, requireDeterministicDecision)
+    decision-policy.ts  (evaluateCapability, combineDecisions, CapabilityRequest, PolicyContext)
+    decision-traces.ts
+
+  bool-boundary/
+    bool-boundaries.ts  (BoolBoundaryResult, validateBoolBoundary)
+    boundary-validator.ts (enforceDeterministicPath, LogicBoundaryError)
+    governance-boundaries.ts
+    runtime-boundaries.ts
+
+  omni/
+    (spec-only for v0.1 — not yet implemented)
+```
+
+---
+
 ## Relationship to Other Systems
 
 ```text

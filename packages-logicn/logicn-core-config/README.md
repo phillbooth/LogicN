@@ -173,6 +173,132 @@ policy or production package overrides.
 LogicN package selection belongs in future `package-logicn.json` and `logicn.lock.json`
 schemas once those schemas are implemented.
 
+## Architecture Depth: TypeScript Contracts (v0.2 Specification)
+
+### ConfigValue (Discriminated Union)
+
+```ts
+export type ConfigValue =
+    | { kind: "string";   value: string   }
+    | { kind: "number";   value: number   }
+    | { kind: "boolean";  value: boolean  }
+    | { kind: "url";      value: string   }
+    | { kind: "duration"; value: number; unit: "ms" | "s" | "m" | "h" }
+    | { kind: "bytes";    value: number; unit: "b" | "kb" | "mb" | "gb" }
+```
+
+### EnvironmentPolicy
+
+```ts
+export interface EnvironmentPolicy {
+    mode: EnvironmentMode
+    requireHttps: boolean
+    requireSecrets: boolean
+    allowLocalhost: boolean
+    allowDevTools: boolean
+    allowDebugLogging: boolean
+    allowSecretValuesInReports: false   // always false — never expose secret values
+    strictMode: boolean
+}
+
+// Returns the default policy for the given mode
+export function defaultEnvironmentPolicy(mode: EnvironmentMode): EnvironmentPolicy
+// development: loose, test: moderate, staging: strict-ish, production: full strict
+```
+
+### EnvironmentConfig (v0.2)
+
+```ts
+export interface EnvironmentConfig {
+    schemaVersion: "logicn.config.environment.v1"
+    mode: EnvironmentMode
+    variables: string[]    // names only, not values
+    secrets: SecretEnvironmentReference[]
+    policy: EnvironmentPolicy
+}
+```
+
+### SecretEnvironmentReference (Extended)
+
+```ts
+export type SecretConfigSource =
+    | { kind: "env";             variableName: string }
+    | { kind: "file";            path: string         }
+    | { kind: "secretStore";     provider: string; secretId: string }
+    | { kind: "runtimeInjected"; label: string        }
+
+export interface SecretEnvironmentReference {
+    id: string
+    name: string
+    present: boolean
+    redacted: true           // never the raw value
+    fingerprint?: string
+    source: SecretConfigSource
+    category: "api_key" | "password" | "token" | "certificate" | "signing_key" | "generic"
+    provider?: string
+    requiredIn: EnvironmentMode[]     // modes where this secret is required
+    allowedSinks: string[]
+    deniedSinks: string[]
+    redaction: "full" | "partial" | "fingerprint_only"
+}
+```
+
+### Loading Contracts
+
+```ts
+export interface LoadEnvironmentConfigInput {
+    mode: EnvironmentMode
+    variableNames: string[]
+    secretNames: string[]
+    availableEnvironment: Record<string, string>
+    policy?: Partial<EnvironmentPolicy>
+}
+
+export async function loadEnvironmentConfig(
+    input: LoadEnvironmentConfigInput
+): Promise<{ config: EnvironmentConfig; diagnostics: ConfigDiagnostic[] }>
+```
+
+### Config Report Types
+
+```ts
+export interface EnvironmentConfigReport {
+    schemaVersion: "logicn.config.report.v1"
+    mode: EnvironmentMode
+    policy: EnvironmentPolicy
+    variables: string[]
+    secrets: SecretReportValue[]
+    diagnostics: ConfigDiagnostic[]
+}
+
+export interface SecretReportValue {
+    name: string
+    present: boolean
+    redaction: string
+    source: string     // kind only, not raw path/value
+}
+```
+
+### Internal File Layout
+
+```text
+packages-logicn/logicn-core-config/src/
+  environment/
+    environment-config.ts     ← EnvironmentConfig, EnvironmentMode, EnvironmentPolicy
+    environment-policy.ts     ← defaultEnvironmentPolicy()
+    environment-report.ts     ← EnvironmentConfigReport, SecretReportValue
+  secrets/
+    secret-reference.ts       ← SecretEnvironmentReference, SecretConfigSource
+    secret-categories.ts
+  loaders/
+    load-environment.ts       ← loadEnvironmentConfig()
+    load-project.ts
+    load-config-objects.ts    ← loadConfigFromObjects()
+  types/
+    config-value.ts           ← ConfigValue discriminated union
+    config-diagnostic.ts      ← ConfigDiagnostic
+```
+
 ## Boundary
 
 `logicn-core-config` should load and validate configuration. It must not execute app

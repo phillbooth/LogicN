@@ -800,6 +800,252 @@ external secret manager adapters
 
 ---
 
+## Architecture Depth: TypeScript Contracts (v0.2 Specification)
+
+### ConfigValue Discriminated Union
+
+Values carry their type explicitly rather than being raw strings:
+
+```ts
+export type ConfigValue =
+  | { kind: "string";   value: string }
+  | { kind: "number";   value: number }
+  | { kind: "boolean";  value: boolean }
+  | { kind: "url";      value: string }
+  | { kind: "duration"; value: string; ms: number }
+  | { kind: "bytes";    value: string; bytes: number }
+```
+
+### EnvironmentPolicy
+
+```ts
+export interface EnvironmentPolicy {
+  /** Whether to reject unknown environment variables. */
+  strict: boolean
+
+  /** Whether missing optional variables should be an error. */
+  allowMissingOptional: boolean
+
+  /** Whether .env files are allowed as a source. */
+  allowDotEnvFiles: boolean
+
+  /** Whether process.env overrides are permitted. */
+  allowUnsafeOverrides: boolean
+
+  /** Whether plain HTTP is allowed in this environment. */
+  allowPlainHttp: boolean
+
+  /** Raw secret values must never appear in reports. */
+  allowSecretValuesInReports: false
+}
+```
+
+### defaultEnvironmentPolicy()
+
+```ts
+export function defaultEnvironmentPolicy(
+  mode: EnvironmentMode
+): EnvironmentPolicy {
+  switch (mode) {
+    case "development":
+      return {
+        strict: false,
+        allowMissingOptional: true,
+        allowDotEnvFiles: true,
+        allowUnsafeOverrides: true,
+        allowPlainHttp: true,
+        allowSecretValuesInReports: false
+      }
+
+    case "test":
+      return {
+        strict: true,
+        allowMissingOptional: true,
+        allowDotEnvFiles: true,
+        allowUnsafeOverrides: false,
+        allowPlainHttp: false,
+        allowSecretValuesInReports: false
+      }
+
+    case "staging":
+      return {
+        strict: true,
+        allowMissingOptional: false,
+        allowDotEnvFiles: false,
+        allowUnsafeOverrides: false,
+        allowPlainHttp: false,
+        allowSecretValuesInReports: false
+      }
+
+    case "production":
+      return {
+        strict: true,
+        allowMissingOptional: false,
+        allowDotEnvFiles: false,
+        allowUnsafeOverrides: false,
+        allowPlainHttp: false,
+        allowSecretValuesInReports: false
+      }
+  }
+}
+```
+
+### EnvironmentConfig (Extended with values and policy)
+
+```ts
+export interface EnvironmentConfig {
+  schemaVersion: "logicn.environment.config.v1"
+  mode: EnvironmentMode
+  rootPath: string
+  values: Record<string, ConfigValue>
+  secrets: SecretEnvironmentReference[]
+  policy: EnvironmentPolicy
+  diagnostics: ConfigDiagnostic[]
+}
+```
+
+### SecretEnvironmentReference (Extended)
+
+```ts
+export interface SecretEnvironmentReference {
+  id: string
+  name: string
+
+  /** Source of the secret at runtime. */
+  source: SecretConfigSource
+
+  /** Category for audit and governance. */
+  category: SecretCategory
+
+  /** Optional external provider. */
+  provider?: string
+
+  /** Which environment modes require this secret. */
+  requiredIn: EnvironmentMode[]
+
+  /** Allowed safe sinks at runtime. */
+  allowedSinks: string[]
+
+  /** Explicitly denied sinks at runtime. */
+  deniedSinks: string[]
+
+  /** Redaction policy for reports. */
+  redaction: SecretRedactionPolicy
+}
+
+export type SecretConfigSource =
+  | { kind: "env";         variableName: string }
+  | { kind: "file";        filePath: string }
+  | { kind: "secretStore"; storeId: string; keyPath: string }
+  | { kind: "runtimeInjected" }
+```
+
+### LoadEnvironmentConfigInput
+
+```ts
+export interface LoadEnvironmentConfigInput {
+  rootPath: string
+  mode: EnvironmentMode
+  env?: Record<string, string | undefined>
+  configFile?: string
+  allowDotEnv?: boolean
+}
+```
+
+### loadEnvironmentConfig() Sketch (v0.2)
+
+```ts
+export async function loadEnvironmentConfig(
+  input: LoadEnvironmentConfigInput
+): Promise<EnvironmentConfig> {
+  const diagnostics: ConfigDiagnostic[] = []
+  const policy = defaultEnvironmentPolicy(input.mode)
+
+  // Validate mode.
+  if (!["development", "test", "staging", "production"].includes(input.mode)) {
+    diagnostics.push({
+      code: "LN-CONFIG-003",
+      severity: "error",
+      message: `Unknown environment mode: ${input.mode}.`
+    })
+  }
+
+  // Check .env file policy.
+  if (input.allowDotEnv && !policy.allowDotEnvFiles) {
+    diagnostics.push({
+      code: "LN-CONFIG-004",
+      severity: "error",
+      message: `.env files are not allowed in ${input.mode} mode.`
+    })
+  }
+
+  // Load and check variables...
+  // (Full implementation deferred to logicn-core-config package)
+
+  return {
+    schemaVersion: "logicn.environment.config.v1",
+    mode: input.mode,
+    rootPath: input.rootPath,
+    values: {},
+    secrets: [],
+    policy,
+    diagnostics
+  }
+}
+```
+
+### EnvironmentConfigReport
+
+```ts
+export interface EnvironmentConfigReport {
+  schemaVersion: "logicn.environment.config.report.v1"
+  generatedAt: string
+  mode: EnvironmentMode
+  variablesPresent: number
+  variablesMissing: number
+  secretsPresent: number
+  secretsMissing: number
+  secretValues: SecretReportValue[]
+  diagnostics: ConfigDiagnostic[]
+}
+
+export interface SecretReportValue {
+  name: string
+  present: boolean
+  /** Always [REDACTED] — raw value never included in reports. */
+  value: "[REDACTED]"
+  fingerprint?: string
+}
+```
+
+### Updated File Layout (v0.2)
+
+```text
+packages-logicn/logicn-core-config/src/
+
+  environment/
+    environment-mode.ts
+    environment-config.ts       (EnvironmentConfig, ConfigValue discriminated union)
+    environment-policy.ts       (EnvironmentPolicy, defaultEnvironmentPolicy)
+
+  secrets/
+    secret-environment-ref.ts   (SecretEnvironmentReference extended, SecretConfigSource)
+    secret-report-value.ts      (SecretReportValue)
+
+  loaders/
+    load-environment-config.ts  (loadEnvironmentConfig async sketch)
+    environment-config-report.ts (EnvironmentConfigReport)
+
+  environment-config.ts
+  environment-loader.ts
+  production-policy.ts
+  runtime-handoff.ts
+  config-diagnostics.ts
+  host-package-boundary.ts
+```
+
+---
+
 ## Relationship to Other Systems
 
 ```text

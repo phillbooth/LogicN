@@ -688,6 +688,547 @@ AI tooling        — reads project reasoning
 
 ---
 
+## Architecture Depth: TypeScript Contracts (v0.2 Specification)
+
+### Effect Interface
+
+```ts
+export interface Effect {
+  id: string
+
+  /**
+   * Human-readable effect name.
+   * Example: "network", "database.write"
+   */
+  name: string
+
+  /**
+   * Effect category used for policy grouping.
+   */
+  category:
+    | "network"
+    | "database"
+    | "filesystem"
+    | "shell"
+    | "process"
+    | "secret"
+    | "ai"
+    | "gpu"
+    | "native"
+    | "custom"
+
+  /**
+   * Whether this effect is considered unsafe by default.
+   */
+  unsafe: boolean
+
+  /**
+   * Whether this effect may cross trust boundaries.
+   */
+  boundarySensitive: boolean
+
+  /**
+   * Optional capability requirement.
+   */
+  requiredCapability?: string
+}
+```
+
+Note: The earlier `Effect` type as a string union is the simplified v0.1 form.
+This fuller interface is the v0.2 target for the effect checker.
+
+### CheckedFunction Interface
+
+Every checked function should have effect metadata:
+
+```ts
+export interface CheckedFunction {
+  id: string
+  name: string
+
+  /** Effects explicitly declared in the function signature. */
+  declaredEffects: EffectReference[]
+
+  /** Effects inferred from the function body by AST walking. */
+  inferredEffects: EffectReference[]
+
+  /**
+   * Effective effects = declaredEffects ∪ inferredEffects.
+   * This is what the boundary checker validates.
+   */
+  effectiveEffects: EffectReference[]
+
+  /** Boundary requirements derived from the call context. */
+  boundaryRequirements: BoundaryRequirement[]
+
+  diagnostics: CompilerDiagnostic[]
+}
+```
+
+### EffectGraphNode Interface
+
+```ts
+export interface EffectGraphNode {
+  functionId: string
+  outgoingCalls: string[]
+  inferredEffects: EffectReference[]
+}
+```
+
+### EffectGraph Interface
+
+```ts
+export interface EffectGraph {
+  nodes: EffectGraphNode[]
+  nodeMap: Map<string, EffectGraphNode>
+}
+```
+
+### inferExpressionEffects() Implementation
+
+```ts
+export function inferExpressionEffects(
+  expression: CheckedExpression
+): EffectReference[] {
+  switch (expression.kind) {
+    case "HttpCallExpression":
+      return [{ name: "network" }]
+    case "DatabaseQueryExpression":
+      return [{ name: "database.read" }]
+    case "DatabaseMutationExpression":
+      return [{ name: "database.write" }]
+    case "ShellExecExpression":
+      return [{ name: "shell.execute" }]
+    default:
+      return []
+  }
+}
+```
+
+### propagateEffects() Implementation (Iterative Fixpoint)
+
+```ts
+export function propagateEffects(
+  graph: EffectGraph
+): EffectGraph {
+  let changed = true
+
+  while (changed) {
+    changed = false
+
+    for (const node of graph.nodes) {
+      for (const childId of node.outgoingCalls) {
+        const child = graph.nodeMap.get(childId)
+        if (!child) continue
+
+        for (const effect of child.inferredEffects) {
+          if (!containsEffect(node.inferredEffects, effect)) {
+            node.inferredEffects.push(effect)
+            changed = true
+          }
+        }
+      }
+    }
+  }
+
+  return graph
+}
+```
+
+### Boundary Interface (v0.2)
+
+```ts
+export interface Boundary {
+  id: string
+
+  type:
+    | "api"
+    | "webhook"
+    | "worker"
+    | "job"
+    | "network"
+    | "database"
+    | "secret"
+    | "ffi"
+    | "filesystem"
+    | "ai"
+
+  trustLevel:
+    | "untrusted"
+    | "validated"
+    | "internal"
+    | "privileged"
+
+  allowedEffects: string[]
+  deniedEffects: string[]
+  requiredPolicies: BoundaryPolicy[]
+}
+```
+
+### BoundaryRequirement Interface
+
+```ts
+export interface BoundaryRequirement {
+  boundaryType: string
+  requiresValidation: boolean
+  requiresAuth: boolean
+  requiresRateLimit: boolean
+  requiresReplayProtection: boolean
+  requiresSecretProtection: boolean
+}
+```
+
+### BoundaryEdge Interface
+
+```ts
+export interface BoundaryEdge {
+  from: string
+  to: string
+  transferredEffects: string[]
+  transferredSecrets: string[]
+  requiresValidation: boolean
+}
+```
+
+### BoundaryGraph Interface
+
+```ts
+export interface BoundaryGraph {
+  boundaries: BoundaryNode[]
+  edges: BoundaryEdge[]
+}
+```
+
+### Checked IR: CheckedCallExpression
+
+```ts
+export interface CheckedCallExpression {
+  kind: "CheckedCallExpression"
+  targetFunctionId: string
+  argumentTypes: CheckedType[]
+  inferredEffects: EffectReference[]
+  sourceLocation: SourceLocation
+}
+```
+
+The IR pipeline flows:
+
+```text
+AST
+  ↓
+typed AST
+  ↓
+checked IR (includes CheckedCallExpression)
+  ↓
+effect graph
+  ↓
+boundary graph
+  ↓
+runtime manifest
+```
+
+### Full RuntimeManifest Type (v0.2)
+
+```ts
+export interface RuntimeManifest {
+  schemaVersion: string
+  buildId: string
+  generatedAt: string
+  target: RuntimeTarget
+  routes: RouteManifest[]
+  functions: FunctionManifest[]
+  effects: EffectManifest[]
+  permissions: PermissionManifest[]
+  boundaries: BoundaryManifest[]
+  reports: ReportManifest[]
+  diagnostics: CompilerDiagnostic[]
+}
+```
+
+The earlier simplified RuntimeManifest (module/effects/capabilities/targets/trustLevel)
+is the v0.1 form. The full interface above is the v0.2 target.
+
+### RouteManifest
+
+```ts
+export interface RouteManifest {
+  id: string
+  method: string
+  path: string
+  requestType?: string
+  responseType?: string
+  auth?: AuthManifest
+  body?: BodyManifest
+  limits?: LimitsManifest
+  effects: string[]
+  boundaries: string[]
+  webhook?: WebhookManifest
+}
+```
+
+### FunctionManifest
+
+```ts
+export interface FunctionManifest {
+  id: string
+  name: string
+  declaredEffects: string[]
+  inferredEffects: string[]
+  transitiveEffects: string[]
+  boundaries: string[]
+  capabilities: string[]
+}
+```
+
+### EffectManifest
+
+```ts
+export interface EffectManifest {
+  name: string
+  category: string
+  unsafe: boolean
+  boundarySensitive: boolean
+  requiredCapability?: string
+}
+```
+
+### BoundaryManifest
+
+```ts
+export interface BoundaryManifest {
+  id: string
+  type: string
+  trustLevel: string
+  allowedEffects: string[]
+  deniedEffects: string[]
+  requiredPolicies: string[]
+}
+```
+
+### BuildManifestInput
+
+```ts
+export interface BuildManifestInput {
+  checkedProgram: CheckedProgram
+  effectGraph: EffectGraph
+  boundaryGraph: BoundaryGraph
+  compilerOptions: CompilerOptions
+}
+```
+
+### buildManifest() Implementation
+
+```ts
+export function buildManifest(
+  input: BuildManifestInput
+): RuntimeManifest {
+  return {
+    schemaVersion: "logicn.runtime.manifest.v1",
+    buildId: createBuildId(),
+    generatedAt: new Date().toISOString(),
+    target: input.compilerOptions.target,
+    routes: buildRouteManifests(input),
+    functions: buildFunctionManifests(input),
+    effects: buildEffectManifests(input),
+    permissions: buildPermissionManifests(input),
+    boundaries: buildBoundaryManifests(input),
+    reports: buildReportManifests(input),
+    diagnostics: input.checkedProgram.diagnostics
+  }
+}
+```
+
+### validateManifest()
+
+```ts
+export function validateManifest(
+  manifest: RuntimeManifest
+): CompilerDiagnostic[] {
+  const diagnostics: CompilerDiagnostic[] = []
+
+  if (!manifest.schemaVersion) {
+    diagnostics.push({
+      code: "LN-MANIFEST-002",
+      severity: "error",
+      message: "Manifest schemaVersion is missing."
+    })
+  }
+
+  return diagnostics
+}
+```
+
+### Manifest Output Structure
+
+```text
+build/
+  manifests/
+    runtime-manifest.json
+    route-manifest.json
+    permissions-manifest.json
+    effects-manifest.json
+    boundary-manifest.json
+    openapi.json
+
+  reports/
+    compiler-report.json
+    effect-report.json
+    boundary-report.json
+    security-report.json
+    runtime-report.json
+```
+
+### Effect Checker Architecture
+
+```ts
+export function checkApiBoundary(
+  route: CheckedRoute
+): CompilerDiagnostic[] {
+  const diagnostics: CompilerDiagnostic[] = []
+
+  if (!route.requestType) {
+    diagnostics.push({
+      code: "LN-BOUNDARY-001",
+      severity: "error",
+      message: "API route requires typed request validation."
+    })
+  }
+
+  if (containsForbiddenEffect(route.effects, "shell.execute")) {
+    diagnostics.push({
+      code: "LN-BOUNDARY-003",
+      severity: "error",
+      message: "shell.execute cannot cross API boundary."
+    })
+  }
+
+  return diagnostics
+}
+```
+
+### Updated File Layout (v0.2)
+
+```text
+packages-logicn/logicn-core-compiler/src/
+
+  effects/
+    effect-types.ts
+    effect-inference.ts
+    effect-propagation.ts
+    effect-graph.ts
+    effect-checker.ts
+    effect-policy.ts
+    effect-diagnostics.ts
+
+  boundaries/
+    boundary-types.ts
+    boundary-checker.ts
+    boundary-policy.ts
+    boundary-graph.ts
+    boundary-diagnostics.ts
+
+  manifests/
+    runtime-manifest.ts
+    route-manifest.ts
+    effect-manifest.ts
+    boundary-manifest.ts
+    manifest-builder.ts
+    manifest-validator.ts
+    manifest-diagnostics.ts
+
+  reports/
+    effect-report.ts
+    boundary-report.ts
+    runtime-report.ts
+```
+
+---
+
+## Layered Compute Adapter Model
+
+The compiler's compute planning uses a layered adapter model to remain
+vendor-neutral while supporting specific device profiles.
+
+```text
+LogicN source
+  → compute engine
+  → target class adapter
+  → device family adapter
+  → individual device profile
+  → runtime selection
+```
+
+Package structure:
+
+```text
+logicn-core-compute           — planning contracts and intent
+logicn-target-gpu             — generic GPU adapter
+logicn-device-nvidia          — CUDA/NVIDIA profile
+logicn-device-amd             — ROCm/AMD profile
+logicn-device-intel-gaudi     — AI accelerator profile
+logicn-device-optical-io      — optical I/O profile
+```
+
+Design rule:
+
+```text
+Device support must be profile/config/adapter based, not language syntax.
+```
+
+```ts
+interface ComputeDeviceProfile {
+  id: string
+  vendor: string
+  family: string
+  kind: "cpu" | "gpu" | "ai_accelerator" | "optical_io"
+  capabilities: string[]
+  memoryMb?: number
+  supports(effect: string): boolean
+}
+```
+
+Runtime selection:
+
+```ts
+function selectDevice(
+  plan: ComputePlan,
+  devices: ComputeDeviceProfile[]
+): ComputeDeviceProfile {
+  return devices.find(device =>
+    plan.requiredCapabilities.every(cap =>
+      device.capabilities.includes(cap)
+    )
+  ) ?? cpuFallbackDevice
+}
+```
+
+Example device profile:
+
+```ts
+const gaudi3Profile: ComputeDeviceProfile = {
+  id: "intel.gaudi3",
+  vendor: "intel",
+  family: "gaudi",
+  kind: "ai_accelerator",
+  capabilities: ["matrix.multiply", "low_precision.inference", "batch.parallel"],
+  memoryMb: 128000,
+  supports(effect) {
+    return !["network", "filesystem.write", "secret.access"].includes(effect)
+  }
+}
+```
+
+Architecture rule:
+
+```text
+Core compute decides what is needed.
+Target adapter decides what class can run it.
+Device profile decides whether this machine can run it.
+Runtime chooses safely.
+```
+
+---
+
 ## Why These Systems Are Foundational
 
 Without effect checking and boundary enforcement:

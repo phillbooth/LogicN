@@ -168,6 +168,134 @@ See `docs/Knowledge-Bases/logicn-core-logic-omni-logic.md` for the full
 specification including all state examples, unsafe vs safe patterns, audit
 requirements, and phased implementation plan.
 
+## Architecture Depth: TypeScript Contracts (v0.2 Specification)
+
+### TriState (Discriminated Union)
+
+```ts
+export type TriState =
+    | { kind: "true" }
+    | { kind: "false" }
+    | { kind: "unknown"; reason?: string }
+
+export const TRI_TRUE: TriState = { kind: "true" }
+export const TRI_FALSE: TriState = { kind: "false" }
+export function triUnknown(reason?: string): TriState {
+    return { kind: "unknown", reason }
+}
+
+export function triNot(a: TriState): TriState
+export function triAnd(a: TriState, b: TriState): TriState
+// false short-circuits: if either is false, result is false
+export function triOr(a: TriState, b: TriState): TriState
+// true short-circuits: if either is true, result is true
+export function combineUnknownReasons(a: TriState, b: TriState): string | undefined
+```
+
+### Decision (Discriminated Union)
+
+```ts
+export type Decision =
+    | { kind: "allow";         reason?: string }
+    | { kind: "deny";          reason: string  }
+    | { kind: "unknown";       reason?: string }
+    | { kind: "notApplicable"; reason?: string }
+    | { kind: "conflict";      reason: string  }
+
+export function allow(reason?: string): Decision
+export function deny(reason: string): Decision
+export function unknown(reason?: string): Decision
+export function notApplicable(reason?: string): Decision
+export function conflict(reason: string): Decision
+
+// Fails closed: deny and conflict are runtime errors; unknown is deny
+export function decisionToRuntimeBool(d: Decision): boolean
+
+// Throws if decision is not allow or deny
+export function requireDeterministicDecision(d: Decision): "allow" | "deny"
+```
+
+### Capability Evaluation
+
+```ts
+export interface CapabilityRequest {
+    capability: string
+    requestedBy: string
+    context: PolicyContext
+}
+
+export interface PolicyContext {
+    environment: string
+    trustLevel: "untrusted" | "validated" | "internal" | "privileged"
+    activeEffects: string[]
+    grantedCapabilities: string[]
+}
+
+// Deny-first: any deny rule wins over allow
+export function evaluateCapability(
+    request: CapabilityRequest
+): Decision
+
+// Priority: conflict > deny > unknown > allow > notApplicable
+export function combineDecisions(decisions: Decision[]): Decision
+```
+
+### Bool Boundary Enforcement
+
+```ts
+export interface BoolBoundaryResult {
+    safe: boolean
+    diagnostics: BoolBoundaryDiagnostic[]
+}
+
+export function validateBoolBoundary(
+    value: TriState | Decision,
+    context: BoolBoundaryContext
+): BoolBoundaryResult
+
+// Throws on non-deterministic value in deterministic context
+export function enforceDeterministicPath(
+    value: TriState | Decision,
+    context: string
+): void
+```
+
+### Practical LogicN Match Example
+
+```
+// Safe: exhaustive match on Decision
+let decision = evaluateCapability(request)
+
+match decision {
+    allow => grantAccess()
+    deny  => denyAccess(decision.reason)
+    _     => denyAccess("non-deterministic decision")
+}
+```
+
+### Internal File Layout
+
+```text
+packages-logicn/logicn-core-logic/src/
+  tri/
+    tri-state.ts          ← TriState, TRI_TRUE, TRI_FALSE, triUnknown()
+    tri-ops.ts            ← triNot(), triAnd(), triOr(), combineUnknownReasons()
+    tri-diagnostics.ts    ← LN-TRI-001–003
+  decision/
+    decision-state.ts     ← Decision, constructors
+    decision-runtime.ts   ← decisionToRuntimeBool(), requireDeterministicDecision()
+    decision-combine.ts   ← combineDecisions()
+    decision-evaluate.ts  ← CapabilityRequest, PolicyContext, evaluateCapability()
+    decision-diagnostics.ts ← LN-DECISION-001–003
+  bool-boundary/
+    bool-boundary.ts      ← BoolBoundaryResult, validateBoolBoundary()
+    bool-enforce.ts       ← enforceDeterministicPath()
+    bool-diagnostics.ts   ← LN-BOOL-BOUNDARY-001–003
+  omni/
+    omni-state.ts         ← 8-state Omni (planning only)
+    omni-diagnostics.ts   ← LN-OMNI-001–005
+```
+
 ## Boundary
 
 `Tri` is a language-level logic model. `Omni` is a wider logic model. Photonic

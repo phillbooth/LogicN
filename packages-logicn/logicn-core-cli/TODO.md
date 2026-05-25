@@ -22,16 +22,20 @@
 [ ]   - emit runtime-manifest.json, compiler-report.json, effect-report.json, capability-report.json
 [ ]   - emit audit-report.json, build-hash.txt
 [ ]   - support --target, --json, --report, --strict, --profile, --out, --audit flags
-[ ]   - implement BuildResult interface
-[ ]   - implement buildWorkspace() async function
+[ ]   - implement BuildArtefact: path, kind (manifest|bundle|report|hash|map), hash, target
+[ ]   - implement BuildResult: success, artefacts[], diagnostics[], manifestPath, duration
+[ ]   - implement BuildWorkspaceInput: workspace, target, strict, profile?, outDir
+[ ]   - implement buildWorkspace(input: BuildWorkspaceInput): Promise<BuildResult>
 [ ]   - diagnostic codes LN-BUILD-001 through LN-BUILD-005
 [ ]   - create build/ dir: build-command.ts, build-pipeline.ts, build-reporter.ts, build-artifacts.ts, build-integrity.ts
 [ ] Complete LogicN verify command — full governance verification
 [ ]   - validate manifest integrity (beyond hash-only)
 [ ]   - validate runtime compatibility, capability consistency, audit reports
 [ ]   - support --json, --strict, --manifest, --hash, --policy, --audit flags
-[ ]   - implement VerificationResult interface (valid/manifestHash/graphHash)
-[ ]   - implement verifyHash() function
+[ ]   - implement VerifiedArtefact: path, hash, verified, diagnostics[]
+[ ]   - implement VerificationResult: success, artefacts[], diagnostics[]
+[ ]   - implement verifyHash(artefact, expected): Promise<VerifiedArtefact>
+[ ]   - emit verification-report.json
 [ ]   - diagnostic codes LN-VERIFY-001 through LN-VERIFY-005
 [ ]   - create verify/ dir: verify-command.ts, verify-manifest.ts, verify-integrity.ts, verify-runtime.ts, verify-reporter.ts
 [ ] Add LogicN deploy command integration
@@ -39,25 +43,29 @@
 [ ]   - validate effects, capabilities, runtime targets, module hashes
 [ ]   - produce deployment-report.json
 [ ]   - support --dry-run, --json, --report, --audit, --strict flags
-[ ]   - implement DeploymentResult interface (approved/profile/targets/effects)
-[ ]   - implement validateEffects() function
-[ ]   - return exit codes 0–7
+[ ]   - implement DeploymentTarget union: node|wasm|native|serverless|edge|gpu|photonic
+[ ]   - implement DeploymentResult: success, target, manifestHash, diagnostics[], reportPath?
+[ ]   - implement ValidateEffectsInput: manifest, policy, target
+[ ]   - implement validateEffects(input): CompilerDiagnostic[]
+[ ]   - return exit codes 0–7 (0 success, 2 policy denial, 3 runtime incompatibility, 4 validation failure, 5 capability failure, 6 verify failure, 7 manifest integrity)
 [ ]   - diagnostic codes LN-DEPLOY-001 through LN-DEPLOY-005
 [ ]   - create deploy/ dir: deploy-command.ts, deploy-policy.ts, deploy-validator.ts, deploy-report.ts, deploy-runtime.ts
 [ ] Add LogicN explain command integration
 [ ]   - explain imports, effects, capabilities, dependency tree
 [ ]   - explain denial reasoning from deployment-denial.json
 [ ]   - support --tree, --trace, --effects, --capabilities, --runtime, --policy, --audit, --json flags
-[ ]   - implement ExplainResult interface (module/effects/capabilities)
-[ ]   - implement buildTrace() function
+[ ]   - implement ExplainTrace: step, label, input, output, diagnostics[]
+[ ]   - implement ExplainResult: traces[], effects[], capabilities[], boundaries[], diagnostics[]
+[ ]   - implement buildTrace(manifest, options): ExplainTrace[]
+[ ]   - emit explain-report.json
 [ ]   - diagnostic codes LN-EXPLAIN-001 through LN-EXPLAIN-004
 [ ]   - create explain/ dir: explain-command.ts, explain-trace.ts, explain-tree.ts, explain-runtime.ts, explain-reporter.ts
 [ ] Add LogicN plan command integration
 [ ]   - estimate CPU/GPU/accelerator suitability and memory pressure
 [ ]   - produce compute-plan.json
 [ ]   - support --json, --runtime, --memory, --parallelism, --energy, --target, --graph, --compatibility flags
-[ ]   - implement ComputePlan interface (module/recommendedTarget/fallbackTarget/parallelism/memoryPressure)
-[ ]   - implement estimateTarget() function
+[ ]   - implement ComputePlan: target, gpu (GpuPlan), optical (OpticalPlan), wasm, compatibility, estimatedMemoryMb, parallelism, diagnostics[]
+[ ]   - implement estimateTarget(workspace, options): ComputePlan
 [ ]   - diagnostic codes LN-PLAN-001 through LN-PLAN-004
 [ ]   - create plan/ dir: plan-command.ts, plan-graph.ts, plan-runtime.ts, plan-memory.ts, plan-reporter.ts
 [ ] Add LogicN verify deploy command integration (verify running version against build manifest)

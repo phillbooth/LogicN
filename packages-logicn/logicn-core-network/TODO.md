@@ -17,17 +17,32 @@ policy belongs in `logicn-framework-app-kernel`.
 [x] Add tests
 [x] Add examples
 [ ] Wire network reports into compiler/runtime reports
-[ ] Define NetworkProtocol type: "http"|"https"|"tcp"|"udp"|"grpc"|"websocket"
-[ ] Define NetworkDestinationReference interface (name/protocol/host/port?/tlsRequired)
-[ ] Define NetworkPermission interface (capability/destination/allowedOperations/runtimeProfiles)
-[ ] Define NetworkPolicy interface (allowDestinations/denyDestinations/requireTls/allowRawSockets)
-[ ] Implement GovernedNetworkRuntime class with request() validation method
-[ ] Implement safeHttpRequest() wrapper — throws on policy-denied destinations
-[ ] Implement validateDestination() function
-[ ] Implement validateTlsRequirement() function
-[ ] Implement AI provider governance (allowAiProviders, denyUnknownProviders)
+[ ] Extend NetworkProtocol to add "quic": "http"|"https"|"tcp"|"udp"|"grpc"|"websocket"|"quic"
+[ ] Upgrade NetworkDestinationReference: add provider, category, dataCategories
+[ ] Upgrade NetworkPolicy: add default (allow|deny), allowPlainHttp, aiProviders[], requireTimeouts, requireRateLimits
+[ ] Implement productionNetworkPolicy const with SSRF-safe deny list (localhost, 127.0.0.1, 0.0.0.0, 169.254.169.254, metadata.google.internal, metadata.azure.internal)
+[ ] Define AiProviderNetworkPolicy: provider, allowedEndpoints, requireApiKeyCapability, dataCategories, auditRequired
+[ ] Define OPENAI_POLICY const
+[ ] Define GovernedNetworkRuntime interface: policy, validate(), request()
+[ ] Define SafeHttpRequestInput: destination, method, headers, body?, timeoutMs, capability
+[ ] Define SafeHttpResponse: status, headers, body, destination
+[ ] Implement validateDestination(destination, policy): NetworkDiagnostic[]
+[ ] Implement validateTlsRequirement(destination, policy): NetworkDiagnostic[]
+[ ] Implement validateCapability(capability, policy): NetworkDiagnostic[]
+[ ] Implement safeHttpRequest(input, runtime): Promise<SafeHttpResponse>
+[ ] Define WebhookVerificationConfig: secret, algorithm, headerName, timestampHeader?, maxAgeSeconds
+[ ] Define WebhookVerificationResult: valid, reason?, diagnostics[]
+[ ] Implement verifyWebhookHmac(payload, signature, config): WebhookVerificationResult
+[ ] Implement validateWebhookTimestamp(timestamp, maxAgeSeconds): WebhookVerificationResult
+[ ] Define ReplayStore interface: insertOnce(), has()
+[ ] Implement validateReplayProtection(id, store): Promise<NetworkDiagnostic[]>
+[ ] Define IdempotencyStore interface: getOrSet()
+[ ] Implement validateIdempotency(key, store): Promise<NetworkDiagnostic[]>
+[ ] Implement validateAiPrompt(prompt, policy): NetworkDiagnostic[]
+[ ] Define NetworkDiagnostic: code, message, severity, destination?
+[ ] Define NetworkPolicyReport with schemaVersion "logicn.network.report.v1"
 [ ] Define LN-NETWORK-001 through LN-NETWORK-008 diagnostic codes
-[ ] Create internal dir: network-policy.ts, network-destination.ts, network-permissions.ts, network-runtime.ts, network-audit.ts, network-diagnostics.ts, network-reports.ts
+[ ] Create internal dir: policy/, runtime/, webhook/, reports/, diagnostics/
 [ ] Implement deny-by-default rule (LN-NETWORK-001 for undeclared destinations)
 [ ] Integrate with boundary checker for LN-BOUNDARY-008 (network allowlist violation)
 ```

@@ -29,23 +29,39 @@ active v1 runtime target.
 [ ] Define scheduler responsibilities (thermal balancing, queue depth, fairness, fallback)
 [ ] Define planner responsibilities (parallelism, memory, energy cost, backend suitability)
 [ ] Define compute audit event shapes for planner, scheduler, fallback, and distributed execution
-[ ] Define GpuPlan interface (module/recommendedTarget/fallbackTarget/parallelism/memoryPressure)
-[ ] Implement estimateGpuSuitability(graph: ExecutionGraph): boolean
-[ ] Implement buildGpuPlan(graph: ExecutionGraph): GpuPlan
+[ ] Define RuntimeTarget union: cpu|node|wasm|browser-wasm|wasi|gpu|optical_io|photonic|native|serverless|edge (11 values)
+[ ] Define GpuSuitability: high|medium|low|unsuitable|unknown
+[ ] Define GpuRequirements: minMemoryMb, minParallelism, precision
+[ ] Define GpuFallbackPlan: target, reason
+[ ] Define GpuPlan v0.2: schemaVersion, suitability, recommendedTarget, reasons[], requirements, fallback, diagnostics[]
+[ ] Implement estimateGpuSuitability(workload: ComputeWorkload): GpuSuitability — score-based algorithm
+[ ] Implement buildGpuPlan(workload: ComputeWorkload): GpuPlan — with advisory warning if low/unsuitable
 [ ] Create gpu/ dir: gpu-planner.ts, gpu-runtime.ts, gpu-fallback.ts, gpu-reports.ts, gpu-estimator.ts
-[ ] Define OpticalPlan interface (module/distributed/recommendedTransport/reasoning)
-[ ] Implement estimateOpticalNeed(graph: ExecutionGraph): boolean
-[ ] Implement buildOpticalPlan(graph: ExecutionGraph): OpticalPlan
+[ ] Define OpticalNeed: none|data_movement|topology_aware|high_bandwidth|unknown
+[ ] Define OpticalFallbackPlan: target (network_io|cpu|cluster_runtime), reason
+[ ] Define OpticalPlan: need, recommendedMode (none|optical_io_awareness|photonic_planning_only), fallback, diagnostics[]
+[ ] Implement estimateOpticalNeed(workload): OpticalNeed
+[ ] Implement buildOpticalPlan(workload): OpticalPlan
 [ ] Create photonic/ dir: photonic-planner.ts, optical-routing.ts, distributed-graph.ts, optical-runtime.ts, photonic-audit.ts
-[ ] Define WasmTarget interface (sandboxed/allowedEffects)
-[ ] Implement validateWasmEffect(effect: string): boolean — reject process, filesystem, unsafe memory
+[ ] Upgrade WasmTarget: sandboxed, allowedEffects, runtime (browser|wasi|edge|node-wasm|unknown), forbiddenEffects[]
+[ ] Define DEFAULT_WASM_FORBIDDEN_EFFECTS: filesystem, process, shell, native, gpu
+[ ] Define BROWSER_WASM_FORBIDDEN_EFFECTS: DEFAULT + database, secret
+[ ] Implement validateWasmEffect(effect, target): ComputeDiagnostic[]
+[ ] Implement validateWasmTarget(target): ComputeDiagnostic[]
 [ ] Create wasm/ dir: wasm-emitter.ts, wasm-runtime.ts, wasm-bindings.ts, wasm-sandbox.ts
 [ ] Define LN-WASM-001 through LN-WASM-004 diagnostic codes
-[ ] Define CompatibilityResult interface (target/compatible/reason?)
-[ ] Implement validateTarget(target: string, effects: string[]): CompatibilityResult
-[ ] Implement buildCompatibilityReport(targets: string[], effects: string[]): CompatibilityResult[]
+[ ] Define CompatibilityLevel: full|partial|degraded|incompatible
+[ ] Define CompatibilityBlocker: reason, diagnosticCode
+[ ] Define CompatibilityWarning: message, diagnosticCode
+[ ] Define CompatibilityFallback: target, reason
+[ ] Upgrade CompatibilityResult: target, level, blockers[], warnings[], fallback?
+[ ] Define TargetProfile: target, supportedEffects[], forbiddenEffects[], requiredCapabilities[], memoryLimitMb?
+[ ] Implement validateTarget(workload, profile): CompatibilityResult
+[ ] Implement buildCompatibilityReport(workload, profiles[]): CompatibilityReport
+[ ] Define CompatibilityReport: targets[], recommendedTarget, diagnostics[]
 [ ] Create compatibility/ dir: target-compatibility.ts, compatibility-report.ts, compatibility-rules.ts, target-validator.ts
 [ ] Define LN-COMPAT-001 through LN-COMPAT-004 diagnostic codes
+[ ] Define shared types: ComputeWorkload, DataShape, DeploymentShape, ComputeDiagnostic
 [ ] Define future quantum target planning rules after core compute reports stabilise
 [x] Add examples
 [x] Add tests

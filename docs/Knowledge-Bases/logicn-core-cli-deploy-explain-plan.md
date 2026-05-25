@@ -1301,6 +1301,356 @@ formal planner proof system
 
 ---
 
+## Architecture Depth: TypeScript Contracts (v0.2 Specification)
+
+### CliCommandResult
+
+```ts
+export interface CliCommandResult {
+  success: boolean
+  command: string
+  startedAt: string
+  completedAt: string
+  durationMs: number
+  diagnostics: CompilerDiagnostic[]
+  reports: string[]
+  exitCode: number
+}
+```
+
+### CompilerDiagnostic
+
+```ts
+export interface CompilerDiagnostic {
+  code: string
+  severity: "info" | "warning" | "error"
+  message: string
+  sourceLocation?: SourceLocation
+  suggestion?: string
+}
+```
+
+### Workspace
+
+```ts
+export interface Workspace {
+  rootPath: string
+  packages: WorkspacePackage[]
+  configuration: WorkspaceConfig
+  targets: RuntimeTarget[]
+}
+```
+
+### BuildResult (Extended)
+
+```ts
+export interface BuildResult {
+  success: boolean
+  workspace: Workspace
+  buildId: string
+  target: RuntimeTarget
+  artefacts: BuildArtefact[]
+  manifests: string[]
+  reports: string[]
+  diagnostics: CompilerDiagnostic[]
+  effectSummary: EffectSummary
+  boundarySummary: BoundarySummary
+  durationMs: number
+}
+```
+
+### BuildArtefact
+
+```ts
+export interface BuildArtefact {
+  id: string
+  type:
+    | "runtime"
+    | "manifest"
+    | "report"
+    | "binary"
+    | "bytecode"
+    | "cache"
+    | "source-map"
+  path: string
+  hash: string
+  sizeBytes: number
+  generatedAt: string
+}
+```
+
+### BuildWorkspaceInput
+
+```ts
+export interface BuildWorkspaceInput {
+  workspacePath: string
+  target: RuntimeTarget
+  release: boolean
+  emitReports: boolean
+  emitManifests: boolean
+  verify: boolean
+}
+```
+
+### buildWorkspace() — 14-Pass Pipeline
+
+```ts
+export async function buildWorkspace(
+  input: BuildWorkspaceInput
+): Promise<BuildResult> {
+  // Pass 1:  Workspace discovery
+  // Pass 2:  Config resolution
+  // Pass 3:  Source loading
+  // Pass 4:  Parsing
+  // Pass 5:  AST validation
+  // Pass 6:  Type checking
+  // Pass 7:  Effect inference
+  // Pass 8:  Effect propagation
+  // Pass 9:  Boundary checking
+  // Pass 10: Runtime planning
+  // Pass 11: Manifest generation
+  // Pass 12: Report generation
+  // Pass 13: Artefact emission
+  // Pass 14: Verification / finalisation
+  ...
+}
+```
+
+### VerificationResult (Extended)
+
+```ts
+export interface VerificationResult {
+  success: boolean
+  verifiedArtefacts: VerifiedArtefact[]
+  diagnostics: CompilerDiagnostic[]
+  reports: string[]
+  durationMs: number
+}
+
+export interface VerifiedArtefact {
+  path: string
+  expectedHash: string
+  actualHash: string
+  verified: boolean
+}
+```
+
+### verifyHash() (Async)
+
+```ts
+import crypto from "node:crypto"
+import fs from "node:fs/promises"
+
+export async function verifyHash(
+  path: string,
+  expectedHash: string
+): Promise<boolean> {
+  const content = await fs.readFile(path)
+  const actual = crypto.createHash("sha256").update(content).digest("hex")
+  return actual === expectedHash
+}
+```
+
+### DeploymentResult
+
+```ts
+export interface DeploymentResult {
+  success: boolean
+  target: DeploymentTarget
+  buildId: string
+  deployedAt: string
+  diagnostics: CompilerDiagnostic[]
+  reports: string[]
+  durationMs: number
+}
+
+export type DeploymentTarget =
+  | "node"
+  | "docker"
+  | "serverless"
+  | "cloudflare-workers"
+  | "kubernetes"
+  | "edge"
+  | "custom"
+```
+
+### ValidateEffectsInput / validateEffects()
+
+```ts
+export interface ValidateEffectsInput {
+  effects: string[]
+  policy: DeploymentPolicy
+}
+
+export function validateEffects(input: ValidateEffectsInput): CompilerDiagnostic[] {
+  const diagnostics: CompilerDiagnostic[] = []
+
+  for (const effect of input.effects) {
+    if (input.policy.denyEffects?.includes(effect)) {
+      diagnostics.push({
+        code: "LN-DEPLOY-004",
+        severity: "error",
+        message: `Effect ${effect} denied by deployment policy.`
+      })
+    }
+  }
+
+  return diagnostics
+}
+```
+
+### ExplainResult / ExplainTrace
+
+```ts
+export interface ExplainResult {
+  module: string
+  effects: string[]
+  capabilities: string[]
+  traces: ExplainTrace[]
+  diagnostics: CompilerDiagnostic[]
+}
+
+export interface ExplainTrace {
+  id: string
+  category: "effect" | "boundary" | "manifest" | "runtime" | "deployment"
+  message: string
+  relatedNodes: string[]
+  relatedDiagnostics: string[]
+}
+```
+
+### buildTrace() Example
+
+```ts
+export function buildTrace(
+  fn: FunctionGraph
+): ExplainTrace[] {
+  return fn.calls.map((call) => ({
+    id: call.id,
+    category: "effect",
+    message: `${call.name} performs effect ${call.effect}`,
+    relatedNodes: [call.targetFunctionId],
+    relatedDiagnostics: []
+  }))
+}
+```
+
+### ComputePlan (Extended)
+
+```ts
+export interface ComputePlan {
+  target: RuntimeTarget
+  estimatedMemoryMb: number
+  estimatedCpu: number
+  estimatedConcurrency: number
+  requiredEffects: string[]
+  requiredCapabilities: string[]
+  compatibleTargets: RuntimeTarget[]
+  incompatibleTargets: RuntimeTarget[]
+  warnings: string[]
+}
+```
+
+### estimateTarget() Implementation
+
+```ts
+export function estimateTarget(
+  graph: ExecutionGraph
+): RuntimeTarget {
+  if (graph.parallelism === "high" && graph.tensorOps) {
+    return "gpu"
+  }
+
+  if (graph.distributed && graph.opticalIO) {
+    return "optical_io"
+  }
+
+  if (graph.sandboxed) {
+    return "wasm"
+  }
+
+  return "cpu"
+}
+```
+
+### Exit Codes
+
+| Exit Code | Meaning |
+| --- | --- |
+| `0` | success |
+| `1` | compiler failure |
+| `2` | policy denial |
+| `3` | runtime incompatibility |
+| `4` | deployment validation failure |
+| `5` | capability resolution failure |
+| `6` | compute planning failure |
+| `7` | manifest integrity failure |
+
+### CLI Report Files (Extended)
+
+| File | Purpose |
+| --- | --- |
+| `build/reports/build-report.json` | build result evidence |
+| `build/reports/verify-report.json` | verification evidence |
+| `build/reports/deploy-report.json` | deployment evidence |
+| `build/reports/explain-report.json` | reasoning graph |
+| `build/reports/plan-report.json` | compute plan evidence |
+| `build/manifests/runtime-manifest.json` | runtime metadata |
+
+### CLI Directory Layout
+
+```text
+packages-logicn/logicn-core-cli/src/
+
+  commands/
+    build.ts
+    verify.ts
+    deploy.ts
+    explain.ts
+    plan.ts
+
+  build/
+    build-command.ts
+    build-pipeline.ts         (14-pass implementation)
+    build-reporter.ts
+    build-artifacts.ts
+    build-integrity.ts
+
+  verify/
+    verify-command.ts
+    verify-manifest.ts
+    verify-integrity.ts
+    verify-runtime.ts
+    verify-reporter.ts
+
+  deploy/
+    deploy-command.ts
+    deploy-policy.ts
+    deploy-validator.ts
+    deploy-report.ts
+    deploy-runtime.ts
+
+  explain/
+    explain-command.ts
+    explain-trace.ts
+    explain-tree.ts
+    explain-runtime.ts
+    explain-reporter.ts
+
+  plan/
+    plan-command.ts
+    plan-graph.ts
+    plan-runtime.ts
+    plan-memory.ts
+    plan-reporter.ts
+
+  diagnostics/
+    diagnostics-formatter.ts
+    diagnostics-reporter.ts
+```
+
+---
+
 ## Relationship to Other Systems
 
 ```text

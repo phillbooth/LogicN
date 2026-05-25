@@ -177,6 +177,214 @@ Diagnostic codes: `LN-COMPAT-001` through `LN-COMPAT-004`.
 Internal dir: `compatibility/` (target-compatibility.ts, compatibility-report.ts,
 compatibility-rules.ts, target-validator.ts).
 
+## Architecture Depth: TypeScript Contracts (v0.2 Specification)
+
+### RuntimeTarget (Extended)
+
+```ts
+export type RuntimeTarget =
+    | "cpu"
+    | "node"
+    | "wasm"
+    | "browser-wasm"
+    | "wasi"
+    | "gpu"
+    | "optical_io"
+    | "photonic"
+    | "native"
+    | "serverless"
+    | "edge"
+```
+
+### GPU Planning
+
+```ts
+export type GpuSuitability =
+    | "high"
+    | "medium"
+    | "low"
+    | "unsuitable"
+    | "unknown"
+
+export interface GpuRequirements {
+    minMemoryMb: number
+    minParallelism: number
+    precision: "fp32" | "fp16" | "bf16" | "int8" | "int4"
+}
+
+export interface GpuFallbackPlan {
+    target: RuntimeTarget
+    reason: string
+}
+
+export interface GpuPlan {
+    schemaVersion: "logicn.compute.gpu.v1"
+    suitability: GpuSuitability
+    recommendedTarget: RuntimeTarget
+    reasons: string[]
+    requirements: GpuRequirements
+    fallback: GpuFallbackPlan
+    diagnostics: ComputeDiagnostic[]
+}
+
+// Score-based algorithm: evaluates workload, data shape, deployment shape
+export function estimateGpuSuitability(
+    workload: ComputeWorkload
+): GpuSuitability
+
+// Returns advisory warning if suitability is low/unsuitable
+export function buildGpuPlan(workload: ComputeWorkload): GpuPlan
+```
+
+### Optical Planning
+
+```ts
+export type OpticalNeed =
+    | "none"
+    | "data_movement"
+    | "topology_aware"
+    | "high_bandwidth"
+    | "unknown"
+
+export interface OpticalFallbackPlan {
+    target: "network_io" | "cpu" | "cluster_runtime"
+    reason: string
+}
+
+export interface OpticalPlan {
+    need: OpticalNeed
+    recommendedMode: "none" | "optical_io_awareness" | "photonic_planning_only"
+    fallback: OpticalFallbackPlan
+    diagnostics: ComputeDiagnostic[]
+}
+
+export function estimateOpticalNeed(workload: ComputeWorkload): OpticalNeed
+export function buildOpticalPlan(workload: ComputeWorkload): OpticalPlan
+```
+
+### WASM Target (Extended)
+
+```ts
+export interface WasmTarget {
+    sandboxed: boolean
+    allowedEffects: string[]
+    runtime: "browser" | "wasi" | "edge" | "node-wasm" | "unknown"
+    forbiddenEffects: string[]
+}
+
+export const DEFAULT_WASM_FORBIDDEN_EFFECTS: string[] = [
+    "filesystem",
+    "process",
+    "shell",
+    "native",
+    "gpu"
+]
+
+export const BROWSER_WASM_FORBIDDEN_EFFECTS: string[] = [
+    ...DEFAULT_WASM_FORBIDDEN_EFFECTS,
+    "database",
+    "secret"
+]
+
+export function validateWasmEffect(
+    effect: string,
+    target: WasmTarget
+): ComputeDiagnostic[]
+
+export function validateWasmTarget(target: WasmTarget): ComputeDiagnostic[]
+```
+
+### Target Compatibility (Extended)
+
+```ts
+export type CompatibilityLevel =
+    | "full"
+    | "partial"
+    | "degraded"
+    | "incompatible"
+
+export interface CompatibilityBlocker {
+    reason: string
+    diagnosticCode: string
+}
+
+export interface CompatibilityWarning {
+    message: string
+    diagnosticCode: string
+}
+
+export interface CompatibilityFallback {
+    target: RuntimeTarget
+    reason: string
+}
+
+export interface CompatibilityResult {
+    target: RuntimeTarget
+    level: CompatibilityLevel
+    blockers: CompatibilityBlocker[]
+    warnings: CompatibilityWarning[]
+    fallback: CompatibilityFallback | null
+}
+
+export interface TargetProfile {
+    target: RuntimeTarget
+    supportedEffects: string[]
+    forbiddenEffects: string[]
+    requiredCapabilities: string[]
+    memoryLimitMb?: number
+}
+
+export function validateTarget(
+    workload: ComputeWorkload,
+    profile: TargetProfile
+): CompatibilityResult
+
+export interface CompatibilityReport {
+    targets: CompatibilityResult[]
+    recommendedTarget: RuntimeTarget
+    diagnostics: ComputeDiagnostic[]
+}
+
+export function buildCompatibilityReport(
+    workload: ComputeWorkload,
+    profiles: TargetProfile[]
+): CompatibilityReport
+```
+
+### Shared Workload Types
+
+```ts
+export interface ComputeWorkload {
+    name: string
+    effects: string[]
+    estimatedMemoryMb: number
+    parallelism: number
+    dataShape: DataShape
+    deploymentShape: DeploymentShape
+}
+
+export interface DataShape {
+    inputSizeMb: number
+    outputSizeMb: number
+    streaming: boolean
+    tensorDimensions?: number[]
+}
+
+export interface DeploymentShape {
+    target: RuntimeTarget
+    region?: string
+    replicas: number
+    edgeDistributed: boolean
+}
+
+export interface ComputeDiagnostic {
+    code: string
+    message: string
+    severity: "error" | "warning" | "info"
+    target?: RuntimeTarget
+}
+```
+
 See `docs/Knowledge-Bases/logicn-core-compute-gpu-and-photonic-backends.md`
 for the full architecture specification.
 
