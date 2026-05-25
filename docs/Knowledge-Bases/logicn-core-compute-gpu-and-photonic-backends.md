@@ -44,6 +44,35 @@ Vendor-specific support belongs in target adapters and device profiles, not Logi
 
 ---
 
+## v0.2 Completeness Contract
+
+This KB is the complete v0.2 planning contract for:
+
+```text
+GpuSuitability
+GpuPlan
+OpticalNeed
+OpticalPlan
+PhotonicPlan
+WasmTarget
+DEFAULT_WASM_FORBIDDEN_EFFECTS
+BROWSER_WASM_FORBIDDEN_EFFECTS
+CompatibilityLevel
+CompatibilityBlocker
+CompatibilityWarning
+CompatibilityResult
+TargetProfile
+CompatibilityReport
+ComputeWorkload
+DataShape
+ComputePlan
+estimateTarget
+```
+
+Any implementation of `logicn-core-compute` should treat these as the minimum public contracts for v0.2.
+
+---
+
 ## Design Goals
 
 ```text
@@ -420,10 +449,13 @@ export interface CompatibilityBlocker {
   code: string
   message: string
   effect?: string
+  capability?: string
   target?: RuntimeTarget
   sourceLocation?: SourceLocation
 }
 ```
+
+Blockers are hard failures. A target with blockers must not be selected unless the planner selects an explicit fallback instead.
 
 ---
 
@@ -433,10 +465,14 @@ export interface CompatibilityBlocker {
 export interface CompatibilityWarning {
   code: string
   message: string
+  effect?: string
+  capability?: string
   target?: RuntimeTarget
   sourceLocation?: SourceLocation
 }
 ```
+
+Warnings are explainable risk notices. They may allow selection only when policy permits warning-level compatibility.
 
 ---
 
@@ -521,6 +557,7 @@ export function checkTargetCompatibility(
       warnings.push({
         code: "LN-COMPAT-002",
         message: `Effect ${effect} is not explicitly supported on target ${profile.target}.`,
+        effect,
         target: profile.target
       })
     }
@@ -685,6 +722,8 @@ OpticalPlan
 PhotonicPlan
 WasmTarget
 TargetProfile
+CompatibilityBlocker
+CompatibilityWarning
 CompatibilityResult
 CompatibilityReport
 ComputePlan
@@ -803,6 +842,8 @@ OpticalPlan
 PhotonicPlan
 WasmTarget
 TargetProfile
+CompatibilityBlocker
+CompatibilityWarning
 CompatibilityResult
 CompatibilityReport
 ComputePlan
