@@ -1,1525 +1,861 @@
 # Runtime Audit Log Format
 
-## Definition
-
-The LogicN runtime emits structured audit logs for all security-sensitive and
-operationally significant events. Audit logs are distinct from ordinary
-application logs — they are security-relevant records that explain what
-happened, when, which artifact performed it, and whether policy allowed it.
-
 ## Status
 
 ```text
-Planned / Schema not yet finalised.
-Runtime audit logging is a required runtime capability, but the stable schema
-has not yet been finalised in logicn-core-reports.
-Once finalised, the schema will be promoted and versioned.
+Package: logicn-core-reports
+Area: runtime audit logs, execution proof, denials, evidence
+Version target: v0.2
+Format: JSONL, one RuntimeAuditEvent per line
+Implementation status: fully specified, not yet finalised in package
+Canonical diagnostic ranges:
+  - LN-AUDIT-001 through LN-AUDIT-005
+  - LN-REPORT-001 through LN-REPORT-005
+  - LN-PROOF-001 through LN-PROOF-005
+  - LN-DENIAL-001 through LN-DENIAL-005
+  - LN-EVIDENCE-001 through LN-EVIDENCE-005
 ```
+
+Runtime audit logs are security-relevant records emitted by the LogicN runtime and related governance tooling.
+
+They are distinct from normal application logs.
+
+Audit logs answer:
+
+```text
+what happened
+when it happened
+which artefact performed it
+which authority was requested
+which policy allowed or denied it
+which evidence proves the decision
+```
+
+---
 
 ## Design Goals
 
-Audit logs must be:
-
 ```text
-Structured JSON
-Immutable
-Machine-parseable
-Correlatable across systems
-Tamper-evident
-OpenTelemetry-aligned
+JSONL output
+append-only events
+deterministic schema
+machine-readable evidence
+tamper-evident proof hashes
+secret-safe report values
+clear denial reports
+runtime/CLI/deploy compatibility
 ```
 
-## Audit Log Schema
-
-Canonical event shape:
-
-```json
-{
-  "timestamp": "2026-05-24T12:00:00Z",
-  "event_id": "evt_01HXZ123",
-  "event_type": "capability.request",
-  "severity": "info",
-  "service": "payments-api",
-  "runtime_instance": "rt-01",
-  "deployment_id": "deploy_789",
-  "artifact_digest": "sha256:abc123",
-  "trace_id": "trace_456",
-  "span_id": "span_789",
-  "actor": {
-    "type": "runtime",
-    "identity": "payments-runtime"
-  },
-  "action": {
-    "operation": "network.connect",
-    "target": "https://api.example.com",
-    "result": "allowed"
-  },
-  "policy": {
-    "decision": "allowed",
-    "policy_id": "network-policy-v1"
-  },
-  "metadata": {
-    "environment": "production",
-    "region": "eu-west-1"
-  }
-}
-```
-
-## Required Fields
-
-The stable schema must require:
-
-```text
-timestamp
-event_id
-event_type
-severity
-service
-runtime_instance
-deployment_id
-artifact_digest
-actor
-action
-policy.decision  (where policy applies)
-```
-
-## Event Categories
-
-### Runtime Lifecycle
-
-```text
-runtime.start
-runtime.stop
-runtime.healthcheck.failed
-```
-
-### Deployment Events
-
-```text
-deploy.verify
-deploy.activate
-deploy.rollback
-```
-
-### Capability Events
-
-```text
-capability.request
-capability.granted
-capability.denied
-capability.violation
-```
-
-### Policy Events
-
-```text
-policy.evaluate
-policy.allowed
-policy.denied
-policy.violation
-```
-
-### Provenance and Attestation Events
-
-```text
-provenance.verified
-provenance.invalid
-attestation.verified
-attestation.failed
-```
-
-### Configuration Events
-
-```text
-config.loaded
-config.reloaded
-config.validation.failed
-```
-
-### Security Events
-
-```text
-security.boundary.violation
-security.secret.access
-security.policy.denied
-```
-
-## Correlation and Traceability
-
-Every event must support:
-
-```text
-trace_id          — distributed trace identifier
-span_id           — operation span
-deployment_id     — deployment artifact reference
-artifact_digest   — cryptographic artifact identity
-runtime_instance  — runtime node identity
-```
-
-This enables distributed audit reconstruction.
-
-## Tamper Resistance
-
-Audit logs should use:
-
-```text
-Append-only storage
-Cryptographic event chaining where required
-Immutable log streams
-Signed export for compliance purposes
-```
-
-## Retention and Compliance
-
-Audit logs should support:
-
-```text
-Configurable retention policies
-Compliance export formats
-SIEM integration
-Regulatory audit trails
-```
-
-## Storage and Forwarding
-
-Audit streams may be exported to:
-
-```text
-OpenTelemetry pipelines
-SIEM systems
-Object storage
-Immutable append-only ledgers
-Prometheus/Grafana (metrics derived from events)
-```
-
-## OpenTelemetry Alignment
-
-Audit events should align with OpenTelemetry semantics where possible:
-
-```text
-trace_id and span_id match OTel trace context
-Structured attribute names follow OTel conventions
-Log levels use OTel severity levels
-```
-
-## Relationship to Reports
-
-Audit logs feed into:
-
-```text
-security-report.json
-deployment-report.json
-capability-report.json
-audit-report.json
-```
-
-Generated by `logicn-core-reports`.
-
-## Why Audit Logs Are Not Application Logs
-
-| Application Log | Audit Log |
-| --- | --- |
-| Developer-facing debugging | Security and compliance record |
-| Optional and mutable | Required and immutable |
-| Performance diagnostic | Authority and policy evidence |
-| May be redacted in production | Must be preserved with metadata |
-| Arbitrary format | Stable versioned schema |
+Audit logs must never contain raw secrets, bearer tokens, private keys, passwords, webhook secrets, session cookies, or unredacted protected data.
 
 ---
 
-## JSONL Runtime Audit Format (LogicN-specific)
+## JSONL File Format
 
-In addition to the general schema above, LogicN runtime audit uses JSONL
-(JSON Lines) for the primary append-only event stream.
-
-### Why JSONL
+The runtime audit log is a JSON Lines file.
 
 ```text
-append-only friendly
-stream processing friendly
-large runtime friendly
-works with distributed systems
-works with SIEM systems
-works with AI tooling
-one JSON object per line, no array wrapper needed
+runtime-audit.jsonl
 ```
 
-Example JSONL stream:
+Each line is one complete JSON object:
 
-```json
-{"event":"runtime_start","timestamp":"2026-01-01T12:00:00Z"}
-{"event":"module_execute","traceId":"trace-123","module":"app/users/service"}
-{"event":"runtime_stop","timestamp":"2026-01-01T12:00:10Z"}
+```jsonl
+{"schemaVersion":"logicn.runtime.audit.v0.2","eventId":"evt_001","status":"allowed"}
+{"schemaVersion":"logicn.runtime.audit.v0.2","eventId":"evt_002","status":"denied"}
 ```
 
-### Audit Layers
-
-| Layer | Purpose |
-| --- | --- |
-| Compiler reports | compile-time metadata |
-| Deployment reports | deployment validation |
-| Runtime audit logs | execution events (JSONL) |
-| Execution proofs | integrity and evidence |
-| Runtime health reports | runtime status |
-| Denial reports | blocked execution evidence |
-| Capability reports | granted authorities |
-| Effect reports | observable effects |
-
-### Runtime Event Files
-
-| File | Purpose |
-| --- | --- |
-| `runtime-audit.jsonl` | append-only runtime events |
-| `execution-proof.json` | execution integrity proof |
-| `deployment-report.json` | deployment evidence |
-| `capability-report.json` | capability usage summary |
-| `effect-report.json` | effect usage summary |
-| `runtime-health.json` | runtime metrics |
-| `denial-report.json` | blocked execution |
-| `runtime-trace.json` | execution trace graph |
-
-### Core Runtime Audit Event Schema
-
-Recommended minimum fields for every runtime event:
-
-```json
-{
-  "timestamp": "2026-01-01T12:00:00Z",
-  "traceId": "trace-123",
-  "runtime": "logicn-runtime",
-  "runtimeVersion": "0.1.0-beta",
-  "workspace": "app-main",
-  "package": "app-users",
-  "module": "app/users/service",
-  "function": "get_profile",
-  "status": "success",
-  "durationMs": 14,
-  "effects": ["storage"],
-  "capabilities": ["Database"],
-  "target": "cpu",
-  "policy": "production-runtime-policy",
-  "manifestHash": "sha256:manifest",
-  "moduleHash": "sha256:module",
-  "executionHash": "sha256:execution"
-}
-```
-
-### Required Core Fields
-
-| Field | Purpose |
-| --- | --- |
-| `timestamp` | when execution occurred |
-| `traceId` | correlates execution chain |
-| `runtimeVersion` | runtime identity |
-| `module` | module identity |
-| `function` | function identity |
-| `effects` | observable actions |
-| `capabilities` | granted authority |
-| `target` | runtime backend used |
-| `status` | success, failure, denied, fallback |
-| `durationMs` | runtime timing |
-| `manifestHash` | compiler/runtime integrity |
-
-### Status Values
-
-| Status | Meaning |
-| --- | --- |
-| `success` | execution completed |
-| `failure` | execution failed |
-| `denied` | runtime denied execution |
-| `fallback` | runtime changed backend |
-| `cancelled` | execution cancelled |
-| `timeout` | execution timed out |
-| `degraded` | runtime reduced capability |
-
-### Event Examples
-
-**Success:**
-
-```json
-{
-  "timestamp": "2026-01-01T12:00:00Z",
-  "traceId": "trace-123",
-  "module": "app/users/service",
-  "function": "get_profile",
-  "status": "success",
-  "effects": ["storage"],
-  "capabilities": ["Database"],
-  "target": "cpu",
-  "durationMs": 14
-}
-```
-
-**Failure:**
-
-```json
-{
-  "traceId": "trace-124",
-  "module": "app/users/service",
-  "function": "get_profile",
-  "status": "failure",
-  "errorCode": "USER_NOT_FOUND",
-  "effects": ["storage"],
-  "target": "cpu"
-}
-```
-
-**Runtime denial:**
-
-```json
-{
-  "traceId": "trace-125",
-  "module": "app/debug/debug-client",
-  "function": "ping_debug_server",
-  "status": "denied",
-  "reason": "network effect denied by policy",
-  "policy": "production-runtime-policy"
-}
-```
-
-**Runtime fallback:**
-
-```json
-{
-  "traceId": "trace-126",
-  "module": "app/ai/inference",
-  "status": "fallback",
-  "plannedTarget": "gpu",
-  "actualTarget": "cpu",
-  "reason": "gpu thermal pressure"
-}
-```
-
-### Event Categories
-
-| Category | Example |
-| --- | --- |
-| runtime | runtime start/stop |
-| execution | function execution |
-| effect | storage/network usage |
-| capability | authority grant |
-| denial | blocked execution |
-| fallback | backend change |
-| scheduler | runtime scheduling |
-| deployment | deployment approval |
-| health | runtime metrics |
-| integrity | signature/hash validation |
-
-### Trace IDs
-
-Every execution chain shares a trace ID:
+Rules:
 
 ```text
-HTTP request
-  → route handler
-    → service call
-      → repository call
+one event per line
+no trailing commas
+UTF-8 encoded
+append-only
+newline terminated
+stable field names
+no raw secrets
 ```
-
-All emit `{ "traceId": "trace-123" }`, enabling distributed correlation,
-security investigation, and AI analysis.
 
 ---
 
-## TypeScript Contracts
-
-### RuntimeAuditEvent Type
-
-```ts
-export interface RuntimeAuditEvent {
-  /**
-   * Stable event identifier.
-   */
-  id: string
-
-  /**
-   * ISO timestamp.
-   */
-  timestamp: string
-
-  /**
-   * Trace identifier.
-   */
-  traceId: string
-
-  /**
-   * Event category.
-   */
-  category: string
-
-  /**
-   * Event name.
-   */
-  event: string
-
-  /**
-   * Runtime status.
-   */
-  status: RuntimeAuditStatus
-
-  /**
-   * Module or runtime scope.
-   */
-  module?: string
-
-  /**
-   * Structured metadata.
-   */
-  metadata?: Record<string, unknown>
-}
-```
-
-### RuntimeAuditStatus Type
-
-Canonical TypeScript type (implementation target):
+## RuntimeAuditStatus v0.2
 
 ```ts
 export type RuntimeAuditStatus =
   | "started"
-  | "running"
-  | "completed"
-  | "denied"
-  | "failed"
-  | "fallback"
-  | "deferred"
-```
-
-The earlier JSON schema examples use `success`, `failure`, `cancelled`,
-`timeout`, `degraded` as status values. These should be considered
-equivalent aliases until the canonical TypeScript type is finalised in
-`logicn-core-reports`.
-
-### JSONL Serializer
-
-```ts
-export function serializeAuditEvent(
-  event: RuntimeAuditEvent
-): string {
-  return JSON.stringify(event)
-}
-```
-
-### Append Writer
-
-```ts
-export function appendAuditEvent(
-  event: RuntimeAuditEvent
-): string {
-  return serializeAuditEvent(event) + "\n"
-}
-```
-
-### Internal Structure (audit/)
-
-```text
-packages-logicn/logicn-core-reports/src/audit/
-```
-
-Suggested files:
-
-```text
-audit-events.ts
-audit-jsonl.ts
-audit-runtime.ts
-audit-validator.ts
-audit-redaction.ts
-```
-
-### Diagnostic Codes (LN-REPORT series)
-
-| Code | Meaning |
-| --- | --- |
-| `LN-REPORT-001` | invalid audit event |
-| `LN-REPORT-002` | missing trace identifier |
-| `LN-REPORT-003` | invalid audit status |
-| `LN-REPORT-004` | secret leakage detected |
-| `LN-REPORT-005` | malformed JSONL event |
-
----
-
-## Execution Proof
-
-### Purpose
-
-Execution proof is stronger than logging. It attempts to prove:
-
-```text
-what code executed
-under which policy
-with which runtime manifest
-with which integrity hashes
-on which runtime target
-under which capability grants
-```
-
-It helps answer:
-
-```text
-Was the approved code actually executed?
-Was the runtime manifest altered?
-Did runtime policy approve execution?
-Did runtime fallback occur?
-Did execution stay within approved effects?
-```
-
-### Execution Proof Schema
-
-```json
-{
-  "traceId": "trace-123",
-  "timestamp": "2026-01-01T12:00:00Z",
-  "runtime": {
-    "name": "logicn-runtime",
-    "version": "0.1.0-beta"
-  },
-  "workspace": "app-main",
-  "module": "app/users/service",
-  "function": "get_profile",
-  "manifestHash": "sha256:manifest",
-  "moduleHash": "sha256:module",
-  "policyHash": "sha256:policy",
-  "executionHash": "sha256:execution",
-  "resultHash": "sha256:result",
-  "target": "cpu",
-  "effects": ["storage"],
-  "capabilities": ["Database"],
-  "status": "success"
-}
-```
-
-### Five Hashes
-
-| Hash | Purpose |
-| --- | --- |
-| `manifestHash` | compiler manifest integrity |
-| `graphHash` | execution graph integrity |
-| `policyHash` | policy version integrity |
-| `auditHash` | runtime audit stream integrity |
-| `runtimeHash` | runtime binary/runtime integrity |
-
-Note: earlier schema examples also use `moduleHash` (module source
-integrity), `executionHash` (combined execution proof), and `resultHash`
-(result integrity). The canonical TypeScript `ExecutionProof` interface uses
-the five-hash set above. Both sets may coexist until reconciled.
-
-### Execution Proof TypeScript Type
-
-```ts
-export interface ExecutionProof {
-  executionProofVersion: string
-  manifestHash: string
-  graphHash: string
-  policyHash: string
-  auditHash: string
-  runtimeHash: string
-}
-```
-
-### Hash Generator
-
-```ts
-import crypto from "crypto"
-
-export function sha256(
-  input: string
-): string {
-  return crypto
-    .createHash("sha256")
-    .update(input)
-    .digest("hex")
-}
-```
-
-### Proof Builder Function
-
-```ts
-export function buildExecutionProof(): ExecutionProof {
-  return {
-    executionProofVersion: "0.1",
-    manifestHash: "sha256:manifest",
-    graphHash: "sha256:graph",
-    policyHash: "sha256:policy",
-    auditHash: "sha256:audit",
-    runtimeHash: "sha256:runtime"
-  }
-}
-```
-
-### Proof Validator Function
-
-```ts
-export function validateExecutionProof(
-  proof: ExecutionProof
-): boolean {
-  return (
-    proof.manifestHash.length > 0 &&
-    proof.graphHash.length > 0 &&
-    proof.policyHash.length > 0 &&
-    proof.auditHash.length > 0 &&
-    proof.runtimeHash.length > 0
-  )
-}
-```
-
-### Internal Structure (proofs/)
-
-```text
-packages-logicn/logicn-core-reports/src/proofs/
-```
-
-Suggested files:
-
-```text
-execution-proof.ts
-proof-hashing.ts
-proof-validator.ts
-proof-runtime.ts
-proof-report.ts
-```
-
-### Diagnostic Codes (LN-PROOF series)
-
-| Code | Meaning |
-| --- | --- |
-| `LN-PROOF-001` | execution proof missing |
-| `LN-PROOF-002` | execution proof hash mismatch |
-| `LN-PROOF-003` | invalid proof schema |
-| `LN-PROOF-004` | runtime integrity mismatch |
-| `LN-PROOF-005` | audit integrity mismatch |
-
-### Execution Hash Strategy
-
-```text
-SHA256(runtime + module + manifest + policy + target + traceId)
-```
-
-Inputs:
-
-```text
-runtime version
-module hash
-manifest hash
-policy hash
-target backend
-capability grants
-effect approvals
-trace id
-```
-
-### Result Hash Safety
-
-Result hashes must never expose secret output:
-
-```json
-{ "resultHash": "sha256:result" }
-```
-
-Not:
-
-```json
-{ "result": "password123" }
-```
-
----
-
-## Denial Reports
-
-### Purpose
-
-Denial reports explain why execution, deployment, or runtime operations were
-rejected. Every denial must remain explainable.
-
-### Denial Categories
-
-```text
-deployment policy
-capability restriction
-runtime incompatibility
-effect restriction
-target incompatibility
-secret policy
-network policy
-```
-
-### DenialReport Type
-
-```ts
-export interface DenialReport {
-  status: "denied"
-  category: string
-  reason: string
-  module?: string
-}
-```
-
-### Denial Builder Function
-
-```ts
-export function buildDenialReport(
-  reason: string
-): DenialReport {
-  return {
-    status: "denied",
-    category: "deployment",
-    reason
-  }
-}
-```
-
-### Example Denial Report
-
-```json
-{
-  "status": "denied",
-  "category": "deployment",
-  "reason": "accelerator effect denied by policy",
-  "module": "app/ai/inference"
-}
-```
-
-### Internal Structure (denials/)
-
-```text
-packages-logicn/logicn-core-reports/src/denials/
-```
-
-Suggested files:
-
-```text
-denial-report.ts
-denial-runtime.ts
-denial-validator.ts
-denial-serializer.ts
-```
-
-### Diagnostic Codes (LN-DENIAL series)
-
-| Code | Meaning |
-| --- | --- |
-| `LN-DENIAL-001` | denial reason missing |
-| `LN-DENIAL-002` | invalid denial category |
-| `LN-DENIAL-003` | unsafe denial payload |
-| `LN-DENIAL-004` | denial report generation failed |
-
----
-
-## Runtime Evidence
-
-### Purpose
-
-Capability and effect evidence reports explain which authorities were used
-and which effects occurred during execution.
-
-### CapabilityEvidence Type
-
-```ts
-export interface CapabilityEvidence {
-  module: string
-  capabilities: string[]
-}
-```
-
-### EffectEvidence Type
-
-```ts
-export interface EffectEvidence {
-  module: string
-  effects: string[]
-}
-```
-
-### RuntimeEvidence Type
-
-```ts
-export interface RuntimeEvidence {
-  module: string
-  effects: string[]
-  capabilities: string[]
-  runtimeTarget?: string
-}
-```
-
-### Evidence Builder Function
-
-```ts
-export function buildRuntimeEvidence(
-  module: string
-): RuntimeEvidence {
-  return {
-    module,
-    effects: ["network"],
-    capabilities: ["HttpClient"],
-    runtimeTarget: "cpu"
-  }
-}
-```
-
-### Example Combined Evidence Report
-
-```json
-{
-  "module": "app/payments/service",
-  "effects": ["network", "secret"],
-  "capabilities": ["HttpClient", "SecretRead"],
-  "runtimeTarget": "cpu"
-}
-```
-
-### Internal Structure (evidence/)
-
-```text
-packages-logicn/logicn-core-reports/src/evidence/
-```
-
-Suggested files:
-
-```text
-capability-report.ts
-effect-report.ts
-evidence-aggregator.ts
-evidence-validator.ts
-```
-
-### Diagnostic Codes (LN-EVIDENCE series)
-
-| Code | Meaning |
-| --- | --- |
-| `LN-EVIDENCE-001` | capability evidence missing |
-| `LN-EVIDENCE-002` | effect evidence missing |
-| `LN-EVIDENCE-003` | invalid runtime evidence |
-| `LN-EVIDENCE-004` | evidence aggregation failed |
-
----
-
-## Secret Safety Rules
-
-Audit logs must never store:
-
-```text
-API keys
-passwords
-authentication tokens
-private certificates
-raw secret payloads
-```
-
-Allowed in audit logs:
-
-```text
-hashes
-status flags
-presence checks
-capability names
-secret reference names (not values)
-```
-
-Example (correct):
-
-```json
-{
-  "category": "secret",
-  "event": "secret_access",
-  "traceId": "trace-300",
-  "secret": "PAYMENT_API_KEY",
-  "status": "granted"
-}
-```
-
----
-
-## Capability and Effect Evidence
-
-### Capability Grant
-
-```json
-{
-  "category": "capability",
-  "event": "capability_granted",
-  "traceId": "trace-400",
-  "capability": "Database",
-  "module": "app/users/service",
-  "policy": "production-runtime-policy"
-}
-```
-
-### Capability Denial
-
-```json
-{
-  "category": "capability",
-  "event": "capability_denied",
-  "traceId": "trace-401",
-  "capability": "Shell",
-  "module": "app/tools/admin-shell",
-  "reason": "Shell capability denied by runtime policy"
-}
-```
-
-### Effect Observed
-
-```json
-{
-  "category": "effect",
-  "event": "effect_observed",
-  "traceId": "trace-500",
-  "effect": "storage",
-  "module": "app/users/service",
-  "target": "cpu"
-}
-```
-
-### Effect Violation
-
-```json
-{
-  "category": "effect",
-  "event": "effect_violation",
-  "traceId": "trace-501",
-  "effect": "network",
-  "module": "app/debug/debug-client",
-  "reason": "effect denied by runtime policy"
-}
-```
-
----
-
-## Runtime Health Schema
-
-```json
-{
-  "timestamp": "2026-01-01T12:00:00Z",
-  "runtime": "logicn-runtime",
-  "cpuLoad": 0.52,
-  "memoryUsageMb": 512,
-  "schedulerQueueDepth": 4,
-  "activeExecutions": 12,
-  "fallbackCount": 1,
-  "denialCount": 0
-}
-```
-
----
-
-## Integrity Chain
-
-```text
-compiler
-  ↓
-module graph
-  ↓
-runtime manifest
-  ↓
-deployment validation
-  ↓
-runtime execution
-  ↓
-audit logs
-  ↓
-execution proof
-```
-
-Runtime manifest integration:
-
-```json
-{
-  "deploymentHash": "sha256:deployment",
-  "runtimeProof": "sha256:execution"
-}
-```
-
-This creates:
-
-```text
-compiler → deployment → runtime → audit chain
-```
-
----
-
-## Diagnostic Codes (LN-AUDIT series)
-
-| Code | Meaning |
-| --- | --- |
-| `LN-AUDIT-001` | runtime audit write failed |
-| `LN-AUDIT-002` | execution proof hash mismatch |
-| `LN-AUDIT-003` | runtime manifest hash mismatch |
-| `LN-AUDIT-004` | denied effect execution observed |
-| `LN-AUDIT-005` | secret leakage detected in audit payload |
-| `LN-AUDIT-006` | runtime capability evidence missing |
-| `LN-AUDIT-007` | distributed trace correlation failed |
-
----
-
-## Implementation Order
-
-### Phase 1
-
-```text
-JSONL audit serializer
-basic runtime events
-basic denial reports
-```
-
-### Phase 2
-
-```text
-capability/effect reports
-runtime evidence aggregation
-```
-
-### Phase 3
-
-```text
-execution proof generation
-five-hash validation
-```
-
-### Phase 4
-
-```text
-distributed audit streams
-advanced replay verification
-cluster-scale evidence aggregation
-```
-
----
-
-## v0.1 Scope
-
-Implement first:
-
-```text
-runtime-audit.jsonl
-trace IDs
-manifest hashes
-module hashes
-capability evidence
-effect evidence
-denial reports
-fallback reports
-execution proof schema
-```
-
-Defer:
-
-```text
-cryptographic signing infrastructure
-remote audit federation
-live distributed trace visualisation
-formal runtime proof engine
-photonic distributed runtime proofing
-```
-
----
-
-## Architecture Depth: TypeScript Contracts (v0.2 Specification)
-
-### RuntimeAuditStatus (Canonical v0.2)
-
-```ts
-export type RuntimeAuditStatus =
   | "allowed"
   | "denied"
-  | "warning"
-  | "error"
-  | "executed"
-  | "verified"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "skipped"
 ```
 
-Note: The v0.1 forms use different values:
-- Earlier JSON examples use: `success | failure | denied | fallback | cancelled | timeout | degraded`
-- The v0.1 TypeScript type uses: `started | running | completed | denied | failed | fallback | deferred`
+---
 
-The v0.2 canonical set above is the target for `logicn-core-reports`. The earlier
-sets should be considered aliases until reconciliation is complete.
-
-### RuntimeAuditEvent (v0.2)
+## RuntimeAuditEvent v0.2
 
 ```ts
 export interface RuntimeAuditEvent {
-  schemaVersion: "logicn.runtime.audit.v1"
+  schemaVersion: "logicn.runtime.audit.v0.2"
 
-  /** Stable event ID. */
+  /** Stable event id generated by the runtime or CLI. */
   eventId: string
+
+  /** Correlates all events for one execution attempt. */
+  executionId: string
+
+  /** Optional distributed trace id. */
+  traceId?: string
+
+  /** Optional span id for nested runtime work. */
+  spanId?: string
 
   /** ISO timestamp. */
   timestamp: string
 
-  /** Event category. */
-  category:
-    | "runtime"
-    | "network"
-    | "capability"
-    | "effect"
-    | "secret"
-    | "deployment"
-    | "webhook"
-    | "verification"
-
-  /** Event status. */
+  /** Runtime status for this audit event. */
   status: RuntimeAuditStatus
 
-  /** Human-readable summary. */
-  message: string
+  /** Machine-readable event type. */
+  eventType:
+    | "execution.started"
+    | "capability.requested"
+    | "capability.allowed"
+    | "capability.denied"
+    | "effect.performed"
+    | "boundary.crossed"
+    | "boundary.denied"
+    | "manifest.verified"
+    | "deployment.denied"
+    | "execution.completed"
+    | "execution.failed"
 
-  /** Optional runtime identifiers. */
-  runtime?: RuntimeAuditRuntime
+  /** Build/deploy artefact that produced the event. */
+  artefact: AuditArtefactReference
 
-  /** Optional effect reference. */
-  effect?: string
+  /** Actor that attempted the operation. */
+  actor: AuditActor
 
-  /** Optional capability reference. */
-  capability?: string
+  /** Operation that happened or was attempted. */
+  action: AuditAction
 
-  /** Optional destination. */
-  destination?: string
+  /** Policy decision metadata. */
+  policy?: AuditPolicyDecision
 
-  /** Optional denial/proof references. */
-  references?: RuntimeAuditReference[]
+  /** Execution proof hashes associated with this event. */
+  proof?: ExecutionProofHashes
 
-  /** Safe metadata only — never raw secrets. */
-  metadata?: Record<string, unknown>
+  /** Denial report when status is denied or failed. */
+  denial?: DenialReport
+
+  /** Evidence entries supporting the event. */
+  evidence: RuntimeEvidence[]
+
+  /** Secret-safe metadata only. */
+  metadata: Record<string, AuditReportValue>
 }
 ```
 
-### RuntimeAuditRuntime
+---
+
+## AuditArtefactReference
 
 ```ts
-export interface RuntimeAuditRuntime {
-  runtimeId: string
-  environment: "development" | "test" | "staging" | "production"
-  target: "node" | "wasm" | "serverless" | "edge" | "gpu" | "cpu"
-  processId?: number
-  region?: string
+export interface AuditArtefactReference {
+  buildId: string
+  manifestHash: string
+  deploymentId?: string
+  target?: string
 }
 ```
 
-### RuntimeAuditReference
+---
+
+## AuditActor
 
 ```ts
-export interface RuntimeAuditReference {
-  type: "proof" | "denial" | "evidence" | "manifest" | "policy"
+export interface AuditActor {
+  type:
+    | "runtime"
+    | "user"
+    | "service"
+    | "cli"
+    | "scheduler"
+    | "worker"
+    | "webhook"
+
   id: string
+
+  displayName?: string
 }
 ```
 
-### serializeAuditEvent()
+---
+
+## AuditAction
 
 ```ts
-export function serializeAuditEvent(
-  event: RuntimeAuditEvent
-): string {
-  // Redaction must happen before serialization.
-  return JSON.stringify(event)
+export interface AuditAction {
+  operation: string
+  target?: string
+  effect?: string
+  capability?: string
+  boundary?: string
+  result: RuntimeAuditStatus
 }
 ```
 
-### appendAuditEvent() (Async File-Based)
+---
+
+## AuditPolicyDecision
 
 ```ts
-import fs from "node:fs/promises"
-
-export async function appendAuditEvent(input: {
-  file: string
-  event: RuntimeAuditEvent
-}): Promise<void> {
-  const line = serializeAuditEvent(input.event) + "\n"
-  await fs.appendFile(input.file, line, "utf8")
+export interface AuditPolicyDecision {
+  decision: "allow" | "deny" | "review" | "not_applicable"
+  policyId: string
+  reason: string
+  matchedRules: string[]
 }
 ```
 
-Note: The v0.1 `appendAuditEvent()` returned `string`. The v0.2 version is
-async and writes to disk directly.
+---
 
-### ExecutionProof (v0.2 — Structured Hashes)
+## ExecutionProofHashes
 
-```ts
-export interface ExecutionProof {
-  schemaVersion: "logicn.execution.proof.v1"
-  proofId: string
-  generatedAt: string
-  hashes: ExecutionProofHashes
-  metadata?: Record<string, unknown>
-}
-```
-
-### ExecutionProofHashes (v0.2 — SHA256 Suffix Naming)
+Execution proof uses five hashes.
 
 ```ts
 export interface ExecutionProofHashes {
-  /** Hash of runtime manifest. */
-  manifestSha256: string
+  /** Hash of runtime-manifest.json. */
+  manifestHash: string
 
-  /** Hash of runtime audit log segment. */
-  auditSha256: string
+  /** Hash of effect graph or effect manifest. */
+  effectGraphHash: string
 
-  /** Hash of runtime evidence. */
-  evidenceSha256: string
+  /** Hash of boundary graph or boundary manifest. */
+  boundaryGraphHash: string
 
-  /** Hash of denial report set. */
-  denialSha256: string
+  /** Hash of capability/permission metadata. */
+  capabilityGraphHash: string
 
-  /** Hash of compiled/runtime artefact. */
-  artefactSha256: string
+  /** Hash of audit event chain up to this event. */
+  auditChainHash: string
 }
 ```
 
-Note: The v0.1 `ExecutionProof` interface uses flat fields:
-`executionProofVersion, manifestHash, graphHash, policyHash, auditHash, runtimeHash`.
-The v0.2 form uses a nested `hashes` sub-object with `Sha256` suffix naming.
-Both forms should be supported until the canonical v0.2 is finalised.
+The five hashes are used by:
 
-### buildExecutionProof() (Async)
+```text
+logicn verify
+logicn deploy
+logicn explain
+runtime audit reports
+execution proof reports
+```
+
+---
+
+## ExecutionProof v0.2
 
 ```ts
-export async function buildExecutionProof(input: {
-  manifestContents: string
-  auditContents: string
-  evidenceContents: string
-  denialContents: string
-  artefactContents: Buffer
-}): Promise<ExecutionProof> {
-  return {
-    schemaVersion: "logicn.execution.proof.v1",
-    proofId: createProofId(),
-    generatedAt: new Date().toISOString(),
-    hashes: {
-      manifestSha256: sha256(input.manifestContents),
-      auditSha256:    sha256(input.auditContents),
-      evidenceSha256: sha256(input.evidenceContents),
-      denialSha256:   sha256(input.denialContents),
-      artefactSha256: sha256(input.artefactContents)
-    }
-  }
+export interface ExecutionProof {
+  schemaVersion: "logicn.execution.proof.v0.2"
+  executionId: string
+  buildId: string
+  deploymentId?: string
+  hashes: ExecutionProofHashes
+  startedAt: string
+  completedAt?: string
+  status: RuntimeAuditStatus
+  diagnostics: CompilerDiagnostic[]
 }
 ```
 
-### validateExecutionProof() (Async)
+---
 
-```ts
-export async function validateExecutionProof(input: {
-  proof: ExecutionProof
-  manifestContents: string
-  auditContents: string
-  evidenceContents: string
-  denialContents: string
-  artefactContents: Buffer
-}): Promise<boolean> {
-  return (
-    input.proof.hashes.manifestSha256 === sha256(input.manifestContents) &&
-    input.proof.hashes.auditSha256    === sha256(input.auditContents) &&
-    input.proof.hashes.evidenceSha256 === sha256(input.evidenceContents) &&
-    input.proof.hashes.denialSha256   === sha256(input.denialContents) &&
-    input.proof.hashes.artefactSha256 === sha256(input.artefactContents)
-  )
-}
-```
-
-### DenialReport (v0.2 Extended)
+## DenialReport v0.2
 
 ```ts
 export interface DenialReport {
-  schemaVersion: "logicn.denial.report.v1"
+  schemaVersion: "logicn.denial.report.v0.2"
+
   denialId: string
-  timestamp: string
+
+  /** Audit event that produced the denial. */
+  eventId: string
+
+  /** Why execution was denied. */
+  reason: string
+
+  /** Governance area that denied execution. */
   category:
-    | "network"
-    | "secret"
     | "effect"
+    | "boundary"
     | "capability"
-    | "deployment"
-    | "webhook"
-  reason: string
-  policyId?: string
-  runtimeId?: string
-  effect?: string
-  capability?: string
-  destination?: string
-  diagnostics: string[]
-  references?: RuntimeAuditReference[]
+    | "manifest"
+    | "policy"
+    | "target"
+    | "secret"
+    | "network"
+    | "filesystem"
+    | "ai"
+
+  /** Diagnostic code associated with the denial. */
+  diagnosticCode: string
+
+  /** Safe remediation hint. */
+  suggestedFix?: string
+
+  evidence: RuntimeEvidence[]
 }
 ```
 
-### buildDenialReport() (v0.2)
+---
+
+## Runtime Evidence Types v0.2
 
 ```ts
-export function buildDenialReport(input: {
-  category: DenialReport["category"]
-  reason: string
-  diagnostics: string[]
-}): DenialReport {
-  return {
-    schemaVersion: "logicn.denial.report.v1",
-    denialId: createDenialId(),
-    timestamp: new Date().toISOString(),
-    category: input.category,
-    reason: input.reason,
-    diagnostics: input.diagnostics
-  }
-}
+export type RuntimeEvidence =
+  | ManifestEvidence
+  | EffectEvidence
+  | BoundaryEvidence
+  | CapabilityEvidence
+  | PolicyEvidence
+  | TargetEvidence
+  | SecretEvidence
+  | NetworkEvidence
+  | FilesystemEvidence
+  | AiEvidence
+  | HashEvidence
 ```
 
-### CapabilityEvidence (v0.2)
+---
+
+## ManifestEvidence
 
 ```ts
-export interface CapabilityEvidence {
-  schemaVersion: "logicn.capability.evidence.v1"
-  evidenceId: string
-  generatedAt: string
-  capability: string
-  decision: "allow" | "deny"
-  policyId?: string
-  reason: string
-  references?: RuntimeAuditReference[]
+export interface ManifestEvidence {
+  type: "manifest"
+  manifestPath: string
+  manifestHash: string
+  schemaVersion: string
 }
 ```
 
-### EffectEvidence (v0.2)
+---
+
+## EffectEvidence
 
 ```ts
 export interface EffectEvidence {
-  schemaVersion: "logicn.effect.evidence.v1"
-  evidenceId: string
-  generatedAt: string
+  type: "effect"
   effect: string
   declared: boolean
   inferred: boolean
   transitive: boolean
+  requiredCapability?: string
+}
+```
+
+---
+
+## BoundaryEvidence
+
+```ts
+export interface BoundaryEvidence {
+  type: "boundary"
+  boundaryId: string
+  boundaryType: string
+  allowedEffects: string[]
+  deniedEffects: string[]
+  requiredPolicies: string[]
+}
+```
+
+---
+
+## CapabilityEvidence
+
+```ts
+export interface CapabilityEvidence {
+  type: "capability"
+  capability: string
+  required: boolean
+  granted: boolean
+  source: "manifest" | "policy" | "runtime"
+}
+```
+
+---
+
+## PolicyEvidence
+
+```ts
+export interface PolicyEvidence {
+  type: "policy"
+  policyId: string
+  decision: "allow" | "deny" | "review"
+  matchedRules: string[]
+}
+```
+
+---
+
+## TargetEvidence
+
+```ts
+export interface TargetEvidence {
+  type: "target"
+  target: string
+  compatible: boolean
+  blockers: string[]
+  warnings: string[]
+}
+```
+
+---
+
+## SecretEvidence
+
+```ts
+export interface SecretEvidence {
+  type: "secret"
+  secretReferenceId: string
+  redacted: true
+  sink: string
   allowed: boolean
-  reason: string
 }
 ```
 
-### RuntimeEvidence (v0.2)
+Secret evidence must use references only. Raw secret values are forbidden.
+
+---
+
+## NetworkEvidence
 
 ```ts
-export interface RuntimeEvidence {
-  schemaVersion: "logicn.runtime.evidence.v1"
-  runtimeId: string
-  generatedAt: string
-  target: "node" | "wasm" | "serverless" | "edge" | "gpu" | "cpu"
-  environment: "development" | "test" | "staging" | "production"
-  capabilityEvidence: CapabilityEvidence[]
-  effectEvidence: EffectEvidence[]
-  denialReferences: string[]
-  proofReferences: string[]
-  diagnostics: string[]
+export interface NetworkEvidence {
+  type: "network"
+  destination: string
+  protocol: string
+  allowed: boolean
+  policyId?: string
 }
 ```
 
-### buildRuntimeEvidence() (v0.2 Full Implementation)
+---
+
+## FilesystemEvidence
 
 ```ts
-export function buildRuntimeEvidence(input: {
-  runtimeId: string
-  target: RuntimeEvidence["target"]
-  environment: RuntimeEvidence["environment"]
-  capabilityEvidence: CapabilityEvidence[]
-  effectEvidence: EffectEvidence[]
-  denialReferences: string[]
-  proofReferences: string[]
-}): RuntimeEvidence {
-  return {
-    schemaVersion: "logicn.runtime.evidence.v1",
-    runtimeId: input.runtimeId,
-    generatedAt: new Date().toISOString(),
-    target: input.target,
-    environment: input.environment,
-    capabilityEvidence: input.capabilityEvidence,
-    effectEvidence: input.effectEvidence,
-    denialReferences: input.denialReferences,
-    proofReferences: input.proofReferences,
-    diagnostics: []
+export interface FilesystemEvidence {
+  type: "filesystem"
+  path: string
+  operation: "read" | "write" | "delete" | "list"
+  allowed: boolean
+  policyId?: string
+}
+```
+
+---
+
+## AiEvidence
+
+```ts
+export interface AiEvidence {
+  type: "ai"
+  provider?: string
+  model?: string
+  promptValidated: boolean
+  outputBoundaryChecked: boolean
+  allowed: boolean
+}
+```
+
+---
+
+## HashEvidence
+
+```ts
+export interface HashEvidence {
+  type: "hash"
+  name: string
+  hash: string
+  algorithm: "sha256"
+}
+```
+
+---
+
+## AuditReportValue
+
+Only safe values may appear in audit metadata.
+
+```ts
+export type AuditReportValue =
+  | string
+  | number
+  | boolean
+  | null
+  | AuditReportValue[]
+  | { [key: string]: AuditReportValue }
+```
+
+Raw secret types must never be assignable to `AuditReportValue`.
+
+---
+
+## Example Allowed Audit Event
+
+```json
+{
+  "schemaVersion": "logicn.runtime.audit.v0.2",
+  "eventId": "evt_001",
+  "executionId": "exec_001",
+  "timestamp": "2026-05-25T12:00:00.000Z",
+  "status": "allowed",
+  "eventType": "capability.allowed",
+  "artefact": {
+    "buildId": "build_001",
+    "manifestHash": "sha256:manifest"
+  },
+  "actor": {
+    "type": "runtime",
+    "id": "logicn-runtime"
+  },
+  "action": {
+    "operation": "network.http.request",
+    "target": "https://api.example.com",
+    "effect": "network.http.request",
+    "capability": "NetworkRequest",
+    "result": "allowed"
+  },
+  "policy": {
+    "decision": "allow",
+    "policyId": "network-policy-production",
+    "reason": "Destination is allowlisted.",
+    "matchedRules": ["network.allow.api-example"]
+  },
+  "proof": {
+    "manifestHash": "sha256:manifest",
+    "effectGraphHash": "sha256:effects",
+    "boundaryGraphHash": "sha256:boundaries",
+    "capabilityGraphHash": "sha256:capabilities",
+    "auditChainHash": "sha256:audit-chain"
+  },
+  "evidence": [
+    {
+      "type": "effect",
+      "effect": "network.http.request",
+      "declared": true,
+      "inferred": true,
+      "transitive": false,
+      "requiredCapability": "NetworkRequest"
+    },
+    {
+      "type": "network",
+      "destination": "https://api.example.com",
+      "protocol": "https",
+      "allowed": true,
+      "policyId": "network-policy-production"
+    }
+  ],
+  "metadata": {
+    "environment": "production"
   }
 }
 ```
 
-### validateAuditSafety()
+---
 
-```ts
-export function validateAuditSafety(input: {
-  serialized: string
-}): string[] {
-  const findings: string[] = []
+## Example Denied Audit Event
 
-  if (input.serialized.includes("sk_live_")) {
-    findings.push("Potential Stripe secret leaked.")
-  }
-
-  if (input.serialized.includes("Bearer ")) {
-    findings.push("Potential Authorization token leaked.")
-  }
-
-  return findings
+```json
+{
+  "schemaVersion": "logicn.runtime.audit.v0.2",
+  "eventId": "evt_002",
+  "executionId": "exec_002",
+  "timestamp": "2026-05-25T12:05:00.000Z",
+  "status": "denied",
+  "eventType": "boundary.denied",
+  "artefact": {
+    "buildId": "build_001",
+    "manifestHash": "sha256:manifest"
+  },
+  "actor": {
+    "type": "runtime",
+    "id": "logicn-runtime"
+  },
+  "action": {
+    "operation": "secret.write_to_log",
+    "boundary": "runtime.log",
+    "result": "denied"
+  },
+  "policy": {
+    "decision": "deny",
+    "policyId": "secret-boundary-policy",
+    "reason": "Secrets cannot cross runtime log boundary.",
+    "matchedRules": ["secret.deny.runtime-log"]
+  },
+  "denial": {
+    "schemaVersion": "logicn.denial.report.v0.2",
+    "denialId": "deny_001",
+    "eventId": "evt_002",
+    "reason": "Secret value attempted to cross runtime log boundary.",
+    "category": "secret",
+    "diagnosticCode": "LN-DENIAL-003",
+    "suggestedFix": "Use a SecretReference or redacted value before logging.",
+    "evidence": [
+      {
+        "type": "secret",
+        "secretReferenceId": "secret_ref_001",
+        "redacted": true,
+        "sink": "runtime.log",
+        "allowed": false
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "type": "secret",
+      "secretReferenceId": "secret_ref_001",
+      "redacted": true,
+      "sink": "runtime.log",
+      "allowed": false
+    }
+  ],
+  "metadata": {}
 }
 ```
 
-### Updated Internal Structure (v0.2)
+---
+
+## validateAuditSafety()
+
+```ts
+export function validateAuditSafety(
+  event: RuntimeAuditEvent
+): CompilerDiagnostic[] {
+  const diagnostics: CompilerDiagnostic[] = []
+
+  if (event.schemaVersion !== "logicn.runtime.audit.v0.2") {
+    diagnostics.push({
+      code: "LN-AUDIT-001",
+      severity: "error",
+      message: `Unsupported audit schema version: ${event.schemaVersion}.`
+    })
+  }
+
+  if (!event.eventId || !event.executionId || !event.timestamp) {
+    diagnostics.push({
+      code: "LN-AUDIT-002",
+      severity: "error",
+      message: "Audit event is missing required identity or timestamp fields."
+    })
+  }
+
+  if (containsUnsafeSecretValue(event.metadata)) {
+    diagnostics.push({
+      code: "LN-AUDIT-003",
+      severity: "error",
+      message: "Audit event metadata contains an unsafe secret value."
+    })
+  }
+
+  if (event.status === "denied" && !event.denial) {
+    diagnostics.push({
+      code: "LN-DENIAL-001",
+      severity: "error",
+      message: "Denied audit event must include a DenialReport."
+    })
+  }
+
+  if (event.proof && !hasFiveExecutionProofHashes(event.proof)) {
+    diagnostics.push({
+      code: "LN-PROOF-001",
+      severity: "error",
+      message: "Execution proof must include all five proof hashes."
+    })
+  }
+
+  return diagnostics
+}
+```
+
+---
+
+## Diagnostic Codes
+
+### LN-AUDIT
+
+| Code | Meaning |
+| --- | --- |
+| `LN-AUDIT-001` | Unsupported audit schema version |
+| `LN-AUDIT-002` | Missing required audit event field |
+| `LN-AUDIT-003` | Unsafe secret value in audit metadata |
+| `LN-AUDIT-004` | Invalid audit status transition |
+| `LN-AUDIT-005` | Audit event ordering or chain failure |
+
+### LN-REPORT
+
+| Code | Meaning |
+| --- | --- |
+| `LN-REPORT-001` | Report schema version missing or unsupported |
+| `LN-REPORT-002` | Report contains unsafe raw value |
+| `LN-REPORT-003` | Report references missing artefact |
+| `LN-REPORT-004` | Report hash mismatch |
+| `LN-REPORT-005` | Report output path is unsafe |
+
+### LN-PROOF
+
+| Code | Meaning |
+| --- | --- |
+| `LN-PROOF-001` | Execution proof missing one or more of the five hashes |
+| `LN-PROOF-002` | Proof hash format invalid |
+| `LN-PROOF-003` | Manifest hash mismatch |
+| `LN-PROOF-004` | Audit chain hash mismatch |
+| `LN-PROOF-005` | Proof references missing execution id |
+
+### LN-DENIAL
+
+| Code | Meaning |
+| --- | --- |
+| `LN-DENIAL-001` | Denied event missing denial report |
+| `LN-DENIAL-002` | Denial report missing evidence |
+| `LN-DENIAL-003` | Secret boundary denial |
+| `LN-DENIAL-004` | Policy denial |
+| `LN-DENIAL-005` | Target compatibility denial |
+
+### LN-EVIDENCE
+
+| Code | Meaning |
+| --- | --- |
+| `LN-EVIDENCE-001` | Unknown evidence type |
+| `LN-EVIDENCE-002` | Evidence missing required field |
+| `LN-EVIDENCE-003` | Evidence contains unsafe raw secret |
+| `LN-EVIDENCE-004` | Evidence hash mismatch |
+| `LN-EVIDENCE-005` | Evidence references missing event or artefact |
+
+---
+
+## Output Files
+
+```text
+build/
+  reports/
+    runtime-audit.jsonl
+    execution-proof.json
+    denial-report.json
+    evidence-report.json
+    audit-safety-report.json
+```
+
+---
+
+## Recommended Package File Layout
 
 ```text
 packages-logicn/logicn-core-reports/src/
 
   audit/
-    runtime-audit-event.ts      (RuntimeAuditEvent, RuntimeAuditStatus v0.2)
+    runtime-audit-event.ts
     runtime-audit-status.ts
-    serialize-audit-event.ts
-    append-audit-event.ts       (async file-based)
-    audit-diagnostics.ts
+    runtime-audit-writer.ts
+    runtime-audit-reader.ts
+    validate-audit-safety.ts
 
-  proofs/
-    execution-proof.ts          (ExecutionProof, ExecutionProofHashes v0.2)
-    sha256.ts
-    build-execution-proof.ts    (async)
-    validate-execution-proof.ts (async)
-    proof-diagnostics.ts
+  proof/
+    execution-proof.ts
+    execution-proof-hashes.ts
+    proof-hash.ts
 
   denials/
-    denial-report.ts            (DenialReport v0.2 with extended fields)
-    build-denial-report.ts
+    denial-report.ts
     denial-diagnostics.ts
 
   evidence/
-    capability-evidence.ts      (CapabilityEvidence v0.2)
-    effect-evidence.ts          (EffectEvidence v0.2)
-    runtime-evidence.ts         (RuntimeEvidence v0.2)
-    build-runtime-evidence.ts   (full implementation)
+    runtime-evidence.ts
     evidence-diagnostics.ts
 
-  shared/
-    report-ids.ts               (createProofId, createDenialId)
-    timestamps.ts
-    redact-report-values.ts
-```
-
-### Updated Output Layout (v0.2)
-
-```text
-build/
   reports/
-    audit/
-      runtime-audit.jsonl
-
-    proofs/
-      execution-proof.json
-
-    denials/
-      denials.json
-
-    evidence/
-      capability-evidence.json
-      effect-evidence.json
-      runtime-evidence.json
+    report-value.ts
+    report-safety.ts
 ```
 
 ---
 
-## Relationship to Other Systems
+## Testing Strategy
 
-```text
-logicn-core-reports   → owns report shapes and writer contracts
-logicn-core-runtime   → produces runtime audit events
-logicn deploy         → reads deployment report
-logicn explain --audit → reads capability and effect evidence
+```ts
+describe("validateAuditSafety", () => {
+  it("rejects denied events without denial reports", () => {
+    const diagnostics = validateAuditSafety({
+      ...fixtureAuditEvent,
+      status: "denied",
+      denial: undefined
+    })
+
+    expect(diagnostics.some(d => d.code === "LN-DENIAL-001")).toBe(true)
+  })
+
+  it("rejects execution proof missing hashes", () => {
+    const diagnostics = validateAuditSafety({
+      ...fixtureAuditEvent,
+      proof: {
+        manifestHash: "sha256:manifest"
+      } as ExecutionProofHashes
+    })
+
+    expect(diagnostics.some(d => d.code === "LN-PROOF-001")).toBe(true)
+  })
+})
 ```
 
-See also: `logicn-core-cli-deploy-explain-plan.md`,
-`package-completion-status.md`, `cicd-integration-and-provenance.md`.
+---
+
+## Fail-Closed Rules
+
+The audit/report layer must never:
+
+```text
+write raw secrets
+write unsafe token values
+write denial events without denial reports
+write proof records without all five hashes
+accept unknown evidence types silently
+mark incomplete audit chains as verified
+```
+
+If audit safety validation fails, reports may be written only as failed safety reports and must not be marked verified.
+
+---
+
+## Summary
+
+The v0.2 runtime audit model defines:
+
+```text
+RuntimeAuditStatus
+RuntimeAuditEvent
+ExecutionProofHashes
+ExecutionProof
+DenialReport
+RuntimeEvidence
+validateAuditSafety
+```
+
+The canonical runtime audit format is JSONL.
+
+The canonical execution proof contains five hashes:
+
+```text
+manifestHash
+effectGraphHash
+boundaryGraphHash
+capabilityGraphHash
+auditChainHash
+```
+
+These contracts allow LogicN runtime, CLI, deploy, verify, explain, and audit tooling to produce safe, tamper-evident, machine-readable execution evidence.
