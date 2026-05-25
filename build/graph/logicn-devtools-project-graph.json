@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-05-25T11:43:17.640Z",
+  "generatedAt": "2026-05-25T20:05:39.528Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -1875,6 +1875,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-network-webhook.md",
+      "kind": "Document",
+      "label": "logicn-core-network-webhook.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-network-webhook.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md",
       "kind": "Document",
       "label": "logicn-core-photonic-backend-architecture.md",
@@ -1933,6 +1942,15 @@
       "kind": "Document",
       "label": "logicn-core-security-v02.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-core-security-v02.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md",
+      "kind": "Document",
+      "label": "logicn-core-vector-photonic-governance.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md",
       "tags": [
         "document"
       ]
@@ -14059,6 +14077,13 @@
     },
     {
       "from": "doc:docs/COVERAGE.md",
+      "to": "package:logicn-target-cpu",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/COVERAGE.md"
+    },
+    {
+      "from": "doc:docs/COVERAGE.md",
       "to": "package:logicn-target-photonic",
       "kind": "documents",
       "confidence": "INFERRED",
@@ -14849,6 +14874,20 @@
       "evidencePath": "docs/Knowledge-Bases/logicn-core-network-v02.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-network-webhook.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-network-webhook.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-network-webhook.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-network-webhook.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -15001,6 +15040,34 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/Knowledge-Bases/logicn-core-security-v02.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md",
+      "to": "package:logicn-core-vector",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md",
+      "to": "package:logicn-core-photonic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md",
+      "to": "package:logicn-target-photonic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md"
     },
     {
       "from": "doc:docs/Knowledge-Bases/logicn-design-primitive-obsession.md",
@@ -18035,6 +18102,13 @@
     },
     {
       "from": "doc:packages-logicn/logicn-core/docs/backend-compute-support-targets.md",
+      "to": "package:logicn-core-vector",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "packages-logicn/logicn-core/docs/backend-compute-support-targets.md"
+    },
+    {
+      "from": "doc:packages-logicn/logicn-core/docs/backend-compute-support-targets.md",
       "to": "package:logicn-core-compute",
       "kind": "documents",
       "confidence": "INFERRED",
@@ -18050,6 +18124,13 @@
     {
       "from": "doc:packages-logicn/logicn-core/docs/backend-compute-support-targets.md",
       "to": "package:logicn-ai-lowbit",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "packages-logicn/logicn-core/docs/backend-compute-support-targets.md"
+    },
+    {
+      "from": "doc:packages-logicn/logicn-core/docs/backend-compute-support-targets.md",
+      "to": "package:logicn-core-photonic",
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "packages-logicn/logicn-core/docs/backend-compute-support-targets.md"
@@ -19330,6 +19411,13 @@
     },
     {
       "from": "doc:packages-logicn/logicn-core/docs/README.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "packages-logicn/logicn-core/docs/README.md"
+    },
+    {
+      "from": "doc:packages-logicn/logicn-core/docs/README.md",
       "to": "package:logicn-core-security",
       "kind": "documents",
       "confidence": "INFERRED",
@@ -19970,6 +20058,20 @@
       "to": "doc:packages-logicn/logicn-core/docs/webhooks.md",
       "kind": "owns",
       "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core/docs/webhooks.md"
+    },
+    {
+      "from": "doc:packages-logicn/logicn-core/docs/webhooks.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "packages-logicn/logicn-core/docs/webhooks.md"
+    },
+    {
+      "from": "doc:packages-logicn/logicn-core/docs/webhooks.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
       "evidencePath": "packages-logicn/logicn-core/docs/webhooks.md"
     },
     {
@@ -23067,6 +23169,13 @@
       "evidencePath": "packages-logicn/logicn-core-vector/TODO.md"
     },
     {
+      "from": "doc:packages-logicn/logicn-core-vector/TODO.md",
+      "to": "package:logicn-core-photonic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "packages-logicn/logicn-core-vector/TODO.md"
+    },
+    {
       "from": "package:logicn-core-vector",
       "to": "doc:packages-logicn/logicn-core-vector/tsconfig.json",
       "kind": "owns",
@@ -25441,6 +25550,20 @@
     },
     {
       "from": "doc:packages-logicn/logicn-core-photonic/TODO.md",
+      "to": "package:logicn-core-vector",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "packages-logicn/logicn-core-photonic/TODO.md"
+    },
+    {
+      "from": "doc:packages-logicn/logicn-core-photonic/TODO.md",
+      "to": "package:logicn-core-compute",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "packages-logicn/logicn-core-photonic/TODO.md"
+    },
+    {
+      "from": "doc:packages-logicn/logicn-core-photonic/TODO.md",
       "to": "package:logicn-core-photonic",
       "kind": "documents",
       "confidence": "INFERRED",
@@ -26809,6 +26932,20 @@
       "to": "doc:packages-logicn/logicn-framework-api-server/TODO.md",
       "kind": "owns",
       "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-framework-api-server/TODO.md"
+    },
+    {
+      "from": "doc:packages-logicn/logicn-framework-api-server/TODO.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "packages-logicn/logicn-framework-api-server/TODO.md"
+    },
+    {
+      "from": "doc:packages-logicn/logicn-framework-api-server/TODO.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
       "evidencePath": "packages-logicn/logicn-framework-api-server/TODO.md"
     },
     {

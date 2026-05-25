@@ -4,6 +4,12 @@
 This document is the v0.2 developer guide for Tri Logic runtime behaviour,
 safe conditional handling, operator semantics, and Decision conversion.
 
+Update status: this guide predates the current package README shape in a few
+places. When it conflicts, use `packages-logicn/logicn-core-logic/README.md`
+and `logicn-core-logic-tri-decision-bool.md`: `TriState` has `kind` plus
+`value` for known states, `triUnknown()` takes an `UnknownReason`, `Decision`
+has `allow|deny|review|unknown`, and each decision carries evidence.
+
 See also: `logicn-core-logic-tri-decision-bool.md` (formal type spec),
 `logicn-core-logic-v02.md` (v0.2 runtime types).
 

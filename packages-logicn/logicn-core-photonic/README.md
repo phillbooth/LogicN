@@ -2,6 +2,22 @@
 
 `logicn-core-photonic` is the package for photonic concepts, types, models and APIs.
 
+## Coverage Reconciliation Status
+
+`docs/COVERAGE.md` currently records unresolved photonic documentation conflicts.
+This package remains the owner for photonic runtime target semantics, photonic
+execution plan semantics and eventual `LN-PHOTONIC-*` diagnostic meanings, but
+the following are not implementation-ready yet:
+
+- one canonical `OpticalTransportMode` enum
+- one canonical `LN-PHOTONIC-001` through `LN-PHOTONIC-006` diagnostic table
+- final boundary between `logicn-core-photonic`, `logicn-core-vector`,
+  `logicn-core-compute` and `logicn-target-photonic`
+
+Until those are reconciled, older three-value transport examples, v0.2 enum
+examples and governance-layer enum examples are documentation candidates, not
+stable public contracts.
+
 It belongs in:
 
 ```text

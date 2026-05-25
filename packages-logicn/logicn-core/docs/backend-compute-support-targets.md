@@ -543,6 +543,13 @@ model FraudModel {
 Photonic chips should be treated as specialised accelerators, not
 general-purpose CPUs.
 
+Documentation status: `docs/COVERAGE.md` records unresolved photonic conflicts
+between `logicn-core-photonic`, `logicn-core-vector` and governance KB files.
+Until reconciled, this document may describe broad target planning only. Do not
+derive implementation contracts for `OpticalTransportMode`,
+`PhotonicRuntimeTarget`, `PhotonicExecutionPlan` or `LN-PHOTONIC-*` diagnostics
+from this language-core compute overview.
+
 LogicN may support broad photonic target planning:
 
 ```text

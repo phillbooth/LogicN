@@ -4,6 +4,12 @@
 
 This document is the v0.2 canonical specification for `logicn-core-security`.
 
+Update status: this formal v0.2 file still uses
+`ProtectedSecret<T>.reveal()`. `docs/COVERAGE.md` records an unresolved conflict
+with the architecture spec, which uses
+`ProtectedSecret<T>.unwrapForApprovedSink(sink)`. Do not implement secret
+unwrapping until `logicn-core-security` chooses one canonical public shape.
+
 See also: `model-security-contracts.md`, `data-in-motion-security.md`.
 
 ---

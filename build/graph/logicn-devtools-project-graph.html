@@ -7,7 +7,7 @@
 </head>
 <body>
 <h1>LogicN Project Graph</h1>
-<p>1316 nodes, 2159 relationships.</p>
+<p>1318 nodes, 2176 relationships.</p>
 <h2>Nodes</h2>
 <ul><li><strong>logicn-core</strong> <span>Package</span></li>
 <li><strong>logicn-core-compiler</strong> <span>Package</span></li>
@@ -211,6 +211,7 @@
 <li><strong>logicn-core-manifest-generation-v02.md</strong> <span>Document</span></li>
 <li><strong>logicn-core-network-governance.md</strong> <span>Document</span></li>
 <li><strong>logicn-core-network-v02.md</strong> <span>Document</span></li>
+<li><strong>logicn-core-network-webhook.md</strong> <span>Document</span></li>
 <li><strong>logicn-core-photonic-backend-architecture.md</strong> <span>Document</span></li>
 <li><strong>logicn-core-photonic-governance-architecture.md</strong> <span>Document</span></li>
 <li><strong>logicn-core-photonic-v02.md</strong> <span>Document</span></li>
@@ -218,6 +219,7 @@
 <li><strong>logicn-core-reports-v02.md</strong> <span>Document</span></li>
 <li><strong>logicn-core-security-secret-reference-model.md</strong> <span>Document</span></li>
 <li><strong>logicn-core-security-v02.md</strong> <span>Document</span></li>
+<li><strong>logicn-core-vector-photonic-governance.md</strong> <span>Document</span></li>
 <li><strong>logicn-design-primitive-obsession.md</strong> <span>Document</span></li>
 <li><strong>logicn-framework-api-server-implementation.md</strong> <span>Document</span></li>
 <li><strong>logicn-framework-api-server-v02.md</strong> <span>Document</span></li>
@@ -1496,6 +1498,7 @@
 <li>doc:docs/COVERAGE.md <code>documents</code> package:logicn-core-vector</li>
 <li>doc:docs/COVERAGE.md <code>documents</code> package:logicn-core-compute</li>
 <li>doc:docs/COVERAGE.md <code>documents</code> package:logicn-core-photonic</li>
+<li>doc:docs/COVERAGE.md <code>documents</code> package:logicn-target-cpu</li>
 <li>doc:docs/COVERAGE.md <code>documents</code> package:logicn-target-photonic</li>
 <li>doc:docs/COVERAGE.md <code>documents</code> package:logicn-framework-api-server</li>
 <li>doc:docs/COVERAGE.md <code>documents</code> package:logicn-core-cli</li>
@@ -1609,6 +1612,8 @@
 <li>doc:docs/Knowledge-Bases/logicn-core-network-governance.md <code>documents</code> package:logicn-tools-benchmark</li>
 <li>doc:docs/Knowledge-Bases/logicn-core-network-v02.md <code>documents</code> package:logicn-core</li>
 <li>doc:docs/Knowledge-Bases/logicn-core-network-v02.md <code>documents</code> package:logicn-core-network</li>
+<li>doc:docs/Knowledge-Bases/logicn-core-network-webhook.md <code>documents</code> package:logicn-core</li>
+<li>doc:docs/Knowledge-Bases/logicn-core-network-webhook.md <code>documents</code> package:logicn-core-network</li>
 <li>doc:docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md <code>documents</code> package:logicn-core</li>
 <li>doc:docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md <code>documents</code> package:logicn-core-runtime</li>
 <li>doc:docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md <code>documents</code> package:logicn-core-network</li>
@@ -1631,6 +1636,10 @@
 <li>doc:docs/Knowledge-Bases/logicn-core-security-secret-reference-model.md <code>documents</code> package:logicn-core-security</li>
 <li>doc:docs/Knowledge-Bases/logicn-core-security-v02.md <code>documents</code> package:logicn-core</li>
 <li>doc:docs/Knowledge-Bases/logicn-core-security-v02.md <code>documents</code> package:logicn-core-security</li>
+<li>doc:docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md <code>documents</code> package:logicn-core</li>
+<li>doc:docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md <code>documents</code> package:logicn-core-vector</li>
+<li>doc:docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md <code>documents</code> package:logicn-core-photonic</li>
+<li>doc:docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md <code>documents</code> package:logicn-target-photonic</li>
 <li>doc:docs/Knowledge-Bases/logicn-design-primitive-obsession.md <code>documents</code> package:logicn-core</li>
 <li>doc:docs/Knowledge-Bases/logicn-design-primitive-obsession.md <code>documents</code> package:logicn-core-compiler</li>
 <li>doc:docs/Knowledge-Bases/logicn-design-primitive-obsession.md <code>documents</code> package:logicn-core-network</li>
@@ -1818,13 +1827,6 @@
 <li>doc:docs/PACKAGE_NAMING.md <code>documents</code> package:logicn-core-photonic</li>
 <li>doc:docs/PACKAGE_NAMING.md <code>documents</code> package:logicn-target-cpu</li>
 <li>doc:docs/PACKAGE_NAMING.md <code>documents</code> package:logicn-cpu-kernels</li>
-<li>doc:docs/PACKAGE_NAMING.md <code>documents</code> package:logicn-target-native</li>
-<li>doc:docs/PACKAGE_NAMING.md <code>documents</code> package:logicn-target-js</li>
-<li>doc:docs/PACKAGE_NAMING.md <code>documents</code> package:logicn-target-wasm</li>
-<li>doc:docs/PACKAGE_NAMING.md <code>documents</code> package:logicn-target-gpu</li>
-<li>doc:docs/PACKAGE_NAMING.md <code>documents</code> package:logicn-target-ai-accelerator</li>
-<li>doc:docs/PACKAGE_NAMING.md <code>documents</code> package:logicn-target-photonic</li>
-<li>doc:docs/PACKAGE_NAMING.md <code>documents</code> package:logicn-framework-app-kernel</li>
-<li>doc:docs/PACKAGE_NAMING.md <code>documents</code> package:logicn-framework-api-server</li></ul>
+<li>doc:docs/PACKAGE_NAMING.md <code>documents</code> package:logicn-target-native</li></ul>
 </body>
 </html>

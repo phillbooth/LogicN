@@ -9,6 +9,10 @@ language.
 
 It should not absorb every future LogicN package.
 
+If `docs/COVERAGE.md` records conflicting public contract shapes, do not treat
+the conflict as implementable. Update the owning package docs to either choose
+one canonical shape or mark the conflict as unresolved.
+
 ## Package Ownership
 
 ```text
@@ -140,6 +144,9 @@ packages-logicn/logicn-core-photonic
   OpticalChannel
   photonic simulation concepts
   logic-to-light vocabulary
+  photonic runtime target semantics
+  photonic execution plan semantics
+  LN-PHOTONIC diagnostics after reconciliation
 
 packages-logicn/logicn-target-cpu
   CPU architecture metadata

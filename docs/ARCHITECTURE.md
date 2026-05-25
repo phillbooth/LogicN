@@ -40,6 +40,35 @@ requirements.
 The concept lives in
 `docs/Knowledge-Bases/security-invariants-and-policy-proof.md`.
 
+## Documentation Coverage And Conflict Register
+
+`docs/COVERAGE.md` is the current index for language, runtime and package
+documentation coverage. When it marks a package or Knowledge Base topic as
+updated, package-owned documentation must be checked before workspace-level docs
+are treated as current.
+
+Coverage currently records several unresolved documentation conflicts that must
+not be implemented until reconciled:
+
+- photonic ownership and naming: `logicn-core-photonic` owns photonic runtime
+  target and execution plan semantics; `logicn-core-vector` may reference vector
+  suitability only, and the conflicting `OpticalTransportMode` enums and
+  `LN-PHOTONIC-001` through `LN-PHOTONIC-006` meanings remain unresolved.
+- logic semantics: `logicn-core-logic` README and
+  `logicn-core-logic-tri-decision-bool.md` are the current v0.2 canonical
+  developer-facing shape for `TriState`, `Decision`, `BoolBoundaryResult` and
+  Omni conversion; older `type:`/three-state Decision examples are historical.
+- webhook security: `logicn-core-network-webhook.md` is the canonical v0.2
+  contract for webhook HMAC, replay and idempotency. API-server docs may expose
+  adapter-level names, but must map to the network package semantics.
+- secret references: `logicn-core-security` owns protected secret references and
+  safe sink decisions. The `reveal()` versus `unwrapForApprovedSink(sink)` shape
+  is still a documentation conflict and should not be implemented without a
+  package decision.
+- network protocols: the current network package direction is
+  `http`, `https`, `tcp`, `udp`, `grpc`, `websocket` and `quic`; older
+  `ws`/`wss` wording is legacy.
+
 
 Language documentation, compiler notes, examples and schemas live in
 `packages-logicn/logicn-core/`

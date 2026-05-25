@@ -5,6 +5,25 @@ LogicN core defines the webhook contract and reports. The optional LogicN Secure
 Kernel enforces verification, replay protection, idempotency and typed decode at
 runtime when an application uses a kernel-backed adapter.
 
+## Current Canonical Package Contract
+
+The package-owned v0.2 webhook contract lives in
+`../../../docs/Knowledge-Bases/logicn-core-network-webhook.md` and
+`../../logicn-core-network/README.md`.
+
+Use these canonical names unless an adapter explicitly maps local names:
+
+```text
+WebhookVerificationConfig.secret: string | Uint8Array
+ReplayStore.has(key)
+ReplayStore.put(key, ttlSeconds)
+IdempotencyStore.get(key)
+IdempotencyStore.put(IdempotencyRecord, ttlSeconds?)
+```
+
+Older `sharedSecret`, `exists/save` and `has/store` wording is legacy or
+adapter-specific and must not be treated as the canonical network package API.
+
 ## Required Defaults
 
 ```text

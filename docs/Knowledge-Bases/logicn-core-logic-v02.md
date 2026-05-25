@@ -4,6 +4,12 @@
 
 This document is the v0.2 canonical specification for `logicn-core-logic`.
 
+Update status: this file preserves the formal-spec form that used `type:`
+discriminants and a three-state `Decision`. The current package README and
+`logicn-core-logic-tri-decision-bool.md` supersede that for runtime-facing docs:
+use `kind`, `Decision` states `allow|deny|review|unknown`, evidence arrays, and
+fail-closed `decisionToRuntimeBool()`.
+
 See also: `logicn-core-logic-tri-decision-bool.md` (prior KB),
 `logicn-core-logic-omni-logic.md` (prior Omni KB),
 `logicn-core-logic-tristate-developer-guide.md` (developer guide).

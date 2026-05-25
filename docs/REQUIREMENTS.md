@@ -118,6 +118,21 @@ must not be treated as implemented app functionality.
   requests, responses/views, secure flows, models, contracts, policies,
   effects, capabilities, classification, context, scopes/lifetimes, errors,
   reports, packages and tests.
+- Coverage-driven package documentation updates must resolve package ownership
+  and canonical contract conflicts before implementation begins. If
+  `docs/COVERAGE.md` lists multiple incompatible forms for the same public
+  contract, the owning package README/TODO and Knowledge Base file must state
+  which form is canonical or explicitly mark the conflict unresolved.
+- Photonic public contracts must not be implemented from conflicting docs until
+  `OpticalTransportMode`, `PhotonicRuntimeTarget`, `PhotonicExecutionPlan` and
+  `LN-PHOTONIC-001` through `LN-PHOTONIC-006` have one package-owned canonical
+  definition.
+- Webhook HMAC, replay protection and idempotency contracts must use the
+  `logicn-core-network` v0.2 canonical model unless an adapter explicitly maps
+  its local names to that model.
+- Logic-state contracts must use the `logicn-core-logic` v0.2 canonical model
+  for runtime-facing docs: `TriState` with `kind`, `Decision` with
+  `allow|deny|review|unknown`, evidence arrays and fail-closed Bool conversion.
 - LogicN should expose `permission` as the main developer-facing authority
   concept while preserving capabilities, effects, policies, audit and reports as
   precise internal/effective concepts.

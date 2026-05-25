@@ -2,6 +2,23 @@
 
 `logicn-core-network` is the package for LogicN network governance, destination policy, transport validation, AI-provider network control and audit-safe network contracts.
 
+## Coverage Reconciliation Status
+
+This package owns the canonical v0.2 network and webhook contracts referenced by
+`docs/COVERAGE.md`.
+
+Current canonical choices:
+
+```text
+NetworkProtocol = "http" | "https" | "tcp" | "udp" | "grpc" | "websocket" | "quic"
+WebhookVerificationConfig.secret: string | Uint8Array
+ReplayStore.has(key) / put(key, ttlSeconds)
+IdempotencyStore.get(key) / put(IdempotencyRecord, ttlSeconds?)
+```
+
+Older `ws`/`wss`, `sharedSecret`, `exists/save` and `has/store` wording is
+legacy or adapter-specific unless explicitly mapped to these package contracts.
+
 It belongs in:
 
 ```text

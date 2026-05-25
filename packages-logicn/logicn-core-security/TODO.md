@@ -1,6 +1,7 @@
 # LogicN Security TODO
 
 ```text
+[ ] Decide canonical ProtectedSecret<T> unwrap API: reveal() or unwrapForApprovedSink(sink)
 [x] Create /packages-logicn/logicn-core-security
 [x] Add README.md
 [x] Add TODO.md

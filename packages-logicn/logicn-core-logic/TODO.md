@@ -1,6 +1,7 @@
 # LogicN Logic TODO
 
 ```text
+[ ] Align older v0.2 KB/developer-guide examples with current README canonical kind/evidence/review shape
 [x] Create /packages-logicn/logicn-core-logic
 [x] Document package boundary
 [x] Add package metadata

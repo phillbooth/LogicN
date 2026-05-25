@@ -7,6 +7,24 @@ Root files such as `README.md`, `SPEC.md`, `DESIGN.md`, `ARCHITECTURE.md` and `O
 For the runnable v0.1 prototype, start with the repository-root
 `GETTING_STARTED.md`, `compiler/README.md` and `examples/README.md`.
 
+## Coverage Update Status
+
+`../../../docs/COVERAGE.md` is the active coverage tracker for package docs and
+Knowledge Base files. When coverage notes conflict with this directory, prefer
+the owning package README/TODO and the newest canonical KB before changing
+language-core docs.
+
+Current canonical notes:
+
+- `logicn-core-logic` owns the v0.2 `TriState`, `Decision`,
+  `BoolBoundaryResult` and Omni contracts.
+- `logicn-core-network` owns webhook HMAC, replay and idempotency contracts.
+- `logicn-core-security` owns protected secret references and safe sink policy.
+- `logicn-core-photonic` owns photonic runtime target semantics; photonic/vector
+  ownership and diagnostic-code conflicts are unresolved.
+- `logicn-core` docs may reference these packages, but should not make package
+  implementation details look like language-core syntax.
+
 ## Core Language
 
 ```text

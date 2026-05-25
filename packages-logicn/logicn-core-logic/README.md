@@ -2,6 +2,22 @@
 
 `logicn-core-logic` is the governance logic package for LogicN.
 
+## Coverage Reconciliation Status
+
+This README is the current package-level v0.2 contract for runtime-facing logic
+docs. Older KB files may still contain the historical `type:` discriminant,
+three-state `Decision`, or string-array `triUnknown()` examples. Use the current
+shape here and in `docs/Knowledge-Bases/logicn-core-logic-tri-decision-bool.md`
+when updating dependent docs:
+
+```text
+TriState.kind: "true" | "false" | "unknown"
+Decision.kind: "allow" | "deny" | "review" | "unknown"
+Decision.evidence: DecisionEvidence[]
+Unknown/review -> runtime Bool false
+Omni uncertainty -> review()
+```
+
 It belongs in:
 
 ```text

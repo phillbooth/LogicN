@@ -6,6 +6,11 @@ All notable changes to this app should be documented here.
 
 ### Added
 
+- Added coverage-driven documentation reconciliation notes across architecture,
+  requirements, tasks and package docs, including explicit warnings for
+  photonic enum/code conflicts, webhook canonical contracts, Tri/Decision v0.2
+  shape, secret unwrap semantics and network protocol naming.
+
 - Added the Runtime Context (Not Superglobals) Knowledge Base concept, defining
   `Runtime.Context` as the runtime-owned, read-controlled execution context that
   replaces PHP-style superglobals, with session and shared mutable state in

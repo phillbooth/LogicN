@@ -1,6 +1,7 @@
 # LogicN Vector TODO
 
 ```text
+[ ] Treat vector photonic governance notes as proposal-only until logicn-core-photonic reconciles ownership
 [x] Create /packages-logicn/logicn-core-vector
 [x] Document package boundary
 [x] Add package metadata

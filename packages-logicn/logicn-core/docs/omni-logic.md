@@ -4,6 +4,12 @@ Ownership note: `logicn-core` may document syntax and compatibility constraints 
 Omni logic, but detailed Omni logic semantics, widths, truth tables and reports
 belong in `packages-logicn/logicn-core-logic/`.
 
+Current v0.2 package contract: Omni states are documented in
+`packages-logicn/logicn-core-logic/README.md` and
+`docs/Knowledge-Bases/logicn-core-logic-omni-logic.md`. Uncertain Omni states
+must map to `review()` rather than directly to runtime Bool, and Omni output is
+advisory until converted through `Decision`.
+
 LogicN should be Omni-logic compatible from the start.
 
 Omni-logic means LogicN can describe and report logic behaviour through a general logic-width abstraction instead of hard-coding every system as ternary-only.

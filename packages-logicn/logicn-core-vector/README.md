@@ -2,6 +2,15 @@
 
 `logicn-core-vector` is the package for LogicN vector value and vector operation concepts.
 
+## Coverage Reconciliation Status
+
+`logicn-core-vector` may document vector suitability for photonic planning, but
+it does not own photonic runtime target semantics. `docs/COVERAGE.md` records a
+boundary conflict where vector photonic notes proposed `PhotonicRuntimeTarget`,
+`PhotonicExecutionPlan`, `OpticalTransportMode` and `LN-PHOTONIC-*` contracts in
+this package. Treat that material as proposal/reference only until the photonic
+owner package reconciles the public contract.
+
 It belongs in:
 
 ```text

@@ -143,6 +143,19 @@
   compute target planning later
 - [ ] Complete `docs/ARCHITECTURE.md`
 - [ ] Complete `docs/SECURITY.md`
+- [ ] Reconcile coverage-driven documentation conflicts before implementing the
+  affected public package contracts
+  - [ ] Choose one canonical `OpticalTransportMode` enum and one
+    `LN-PHOTONIC-001` through `LN-PHOTONIC-006` diagnostic table
+  - [ ] Confirm photonic ownership between `logicn-core-photonic`,
+    `logicn-core-vector`, `logicn-core-compute` and `logicn-target-photonic`
+  - [ ] Align API-server webhook/replay/idempotency adapter docs with
+    `logicn-core-network-webhook.md`
+  - [ ] Align older Tri/Decision/Omni KB files with the current
+    `logicn-core-logic` v0.2 README and `logicn-core-logic-tri-decision-bool.md`
+  - [ ] Decide `ProtectedSecret<T>` reveal semantics before implementation
+  - [ ] Remove or mark legacy `ws`/`wss` protocol wording in favor of
+    `websocket`
 
 ## Phase 2: App Setup
 

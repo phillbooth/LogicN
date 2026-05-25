@@ -2,6 +2,22 @@
 
 `logicn-framework-api-server` is the first concrete HTTP API-serving package for LogicN.
 
+## Coverage Reconciliation Status
+
+This package may expose adapter-level request handling names, but webhook HMAC,
+replay and idempotency semantics must map to the canonical
+`logicn-core-network` v0.2 contract:
+
+```text
+WebhookVerificationConfig.secret: string | Uint8Array
+ReplayStore.has(key) / put(key, ttlSeconds)
+IdempotencyStore.get(key) / put(IdempotencyRecord, ttlSeconds?)
+```
+
+Existing `ReplayStore.exists/save` wording is an API-server adapter shape, not
+the canonical network package API. Implementation docs should either adopt the
+network names or document the adapter mapping explicitly.
+
 In the current prototype/runtime phase, this package is expected to be
 Node-hosted for practical web/API serving. Future implementations may use
 native, WASM, serverless or other checked runtime adapters, but those are later

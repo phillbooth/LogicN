@@ -4,6 +4,12 @@
 
 This document is the v0.2 canonical specification for `logicn-core-photonic`.
 
+Update status: `docs/COVERAGE.md` records unresolved conflicts between this
+formal v0.2 spec, the governance overlay and the vector photonic proposal. This
+file is not implementation-ready for `OpticalTransportMode` or
+`LN-PHOTONIC-*` until the owner package reconciles one canonical enum and one
+diagnostic table.
+
 See also: `logicn-core-photonic-backend-architecture.md` (prior KB),
 `native-photonic-compute-future.md`, `photonic-resolution-boundary.md`.
 

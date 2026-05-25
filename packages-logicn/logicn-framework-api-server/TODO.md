@@ -1,5 +1,12 @@
 # LogicN API Server TODO
 
+## Coverage Reconciliation
+
+```text
+[ ] Map API-server ReplayStore.exists/save adapter names to logicn-core-network has/put or adopt network names
+[ ] Align webhook/idempotency implementation docs with logicn-core-network-webhook.md
+```
+
 ## Architecture Depth (v0.2) — Completed
 
 ```text

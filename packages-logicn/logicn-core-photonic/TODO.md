@@ -4,6 +4,9 @@ Post-v1 status: photonic concept work is preserved as planning only unless a
 piece is required to clarify core `Tri` or `LogicN` semantics.
 
 ```text
+[ ] Reconcile coverage conflict: choose one canonical OpticalTransportMode enum
+[ ] Reconcile coverage conflict: choose one canonical LN-PHOTONIC-001..006 table
+[ ] Confirm photonic ownership with logicn-core-vector, logicn-core-compute and logicn-target-photonic before implementation
 [x] Create /packages-logicn/logicn-core-photonic
 [x] Document package boundary
 [x] Add package metadata

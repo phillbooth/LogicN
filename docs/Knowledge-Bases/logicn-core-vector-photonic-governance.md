@@ -6,6 +6,11 @@ Status: **fully specified (prior + v0.2), not yet implemented**
 
 > **Boundary conflict note**: The `logicn-core-vector` README (boundary rules) states that photonic representation belongs in `logicn-core-photonic` and `logicn-target-photonic`, not in `logicn-core-vector`. This specification documents what has been proposed for `logicn-core-vector` in the notes files. The conflict must be resolved before implementation. See [Boundary Conflict](#boundary-conflict) section below.
 
+Update status: this file is a proposal/reference note, not the canonical owner
+of photonic runtime contracts. `logicn-core-photonic` owns final
+`OpticalTransportMode`, `PhotonicRuntimeTarget`, `PhotonicExecutionPlan` and
+`LN-PHOTONIC-*` definitions after reconciliation.
+
 ---
 
 ## Prior Governance Architecture

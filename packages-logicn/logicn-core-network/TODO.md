@@ -5,6 +5,7 @@ HTTP serving belongs in `logicn-framework-api-server`; application request
 policy belongs in `logicn-framework-app-kernel`.
 
 ```text
+[ ] Audit docs for legacy ws/wss, sharedSecret, exists/save and has/store wording and map or replace with canonical v0.2 names
 [x] Create /packages-logicn/logicn-core-network
 [x] Add README.md
 [x] Add package metadata

@@ -9,6 +9,12 @@ Depends On: `logicn-framework-app-kernel`, `logicn-core-runtime`,
 See also: `logicn-framework-api-server-v02.md` (formal type spec),
 `logicn-api-boundary-architecture.md` (prior boundary architecture).
 
+Update status: webhook HMAC, replay and idempotency semantics must map to
+`logicn-core-network-webhook.md`. Any local API-server names such as
+`ReplayStore.exists/save` are adapter-level names unless this document
+explicitly defines a mapping to network `has/put` and idempotency
+`get/put(IdempotencyRecord)`.
+
 ---
 
 ## Architecture Position

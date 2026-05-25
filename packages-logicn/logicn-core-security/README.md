@@ -3,6 +3,21 @@
 `logicn-core-security` is the package for reusable LogicN security primitives and security
 report contracts.
 
+## Coverage Reconciliation Status
+
+`docs/COVERAGE.md` records a documentation conflict for protected secret
+unwrapping. This package owns the final decision, but implementation should not
+proceed from conflicting examples until the shape is chosen:
+
+```text
+v0.2 formal spec: ProtectedSecret<T>.reveal()
+architecture spec: ProtectedSecret<T>.unwrapForApprovedSink(sink)
+```
+
+The stronger sink-aware form is preferred by the architecture notes, while the
+formal v0.2 KB still records `reveal()`. Keep package docs and KB files aligned
+before adding code that reveals protected values.
+
 LogicN's strongest honest security position is application security policy. This
 package helps make permissions, typed API boundaries, package effects, secrets,
 interop, production rules and AI-readable reports visible and enforceable before

@@ -1,5 +1,10 @@
 # LogicN Core Photonic: Backend Architecture and Governance Model
 
+Update status: this is a legacy/backend architecture note. It contains older
+three-value `OpticalTransportMode` and older `LN-PHOTONIC-*` meanings. Use it as
+historical context only until `logicn-core-photonic` reconciles the current
+coverage conflicts.
+
 ## Definition
 
 `logicn-core-photonic` is the governance-first runtime coordination architecture
