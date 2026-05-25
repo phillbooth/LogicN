@@ -1,11 +1,4 @@
-# LogicN Core Network: Governance Model, Policy Contracts and Runtime Enforcement
-
-## Definition
-
-The LogicN network layer is a governance-first runtime system. It is not a
-generic networking library. Its purpose is to provide explicit network
-permissions, runtime-aware destination validation, safe secret transmission,
-and audit-grade network evidence.
+# LogicN Core Network: Governance Model
 
 ## Package
 
@@ -13,739 +6,85 @@ and audit-grade network evidence.
 packages-logicn/logicn-core-network
 ```
 
-## Status
+`logicn-core-network` defines the governance-first network policy model for LogicN. It does not implement a full HTTP framework, TLS stack, DNS resolver, socket driver, firewall, vendor SDK or API server. Its job is to describe and validate whether network communication is allowed before traffic occurs.
+
+The core rule is:
 
 ```text
-Network package:           mostly stubs
-Network governance model:  conceptually documented
-Runtime enforcement:       planned
-Audit integration:         planned
+network request -> declared capability -> destination validation -> TLS and policy checks -> governed request -> audit/report evidence
 ```
 
----
+Network I/O is treated as a governed capability, not an ambient runtime privilege.
 
-## Philosophy
+## Governance Principles
 
-LogicN does not treat networking as unrestricted runtime behavior.
-
-Networking is a governed capability.
-
-The runtime must always know:
-
-```text
-who is allowed to communicate
-where traffic may go
-why traffic is allowed
-which capability enabled it
-which policy approved it
-which audit trail records it
-```
-
-Governance rules:
+Network behavior must be:
 
 ```text
 policy-governed
 capability-controlled
-auditable
-explicit
 deny-by-default
 runtime-validated
+secret-safe
+audit-ready
+AI-aware
+SSRF-resistant
+```
+
+The runtime must be able to answer:
+
+```text
+who initiated the request
+which capability allowed it
+which destination was contacted
+which policy approved it
+which data categories were sent
+whether TLS was required
+whether the request was denied
+which diagnostic explains the decision
 ```
 
 The runtime must never allow:
 
 ```text
-silent outbound access
+silent outbound traffic
 undeclared network effects
-wildcard production permissions
-hidden AI traffic
-unapproved raw socket access
+wildcard production egress
+hidden AI provider calls
+plaintext fallback in production
+raw socket access by default
+secrets in URLs or logs
+metadata-service SSRF
 ```
-
----
-
-## Package Boundary
-
-`logicn-core-network` owns:
-
-```text
-network permission contracts
-network policy definitions
-destination allowlists
-transport policy metadata
-runtime network reports
-network diagnostics
-safe destination references
-```
-
-It does not own:
-
-```text
-HTTP parsing
-application auth
-TLS implementation
-socket drivers
-routing frameworks
-API server behavior
-```
-
----
 
 ## Relationship to Other Packages
 
 ```text
 logicn-core-network
-    → network policy contracts
+  network policy contracts, destination allowlists, governed request types, network diagnostics and reports
 
 logicn-core-security
-    → capability + permission primitives
+  capability decisions, permission primitives, secret redaction, secret-safe sink policy
 
 logicn-core-config
-    → environment/runtime config
+  environment-aware policy loading and runtime configuration
 
 logicn-core-runtime
-    → runtime network enforcement
+  runtime execution and enforcement hooks
 
 logicn-core-compiler
-    → effect + boundary validation
+  network effect and boundary validation
 
 logicn-framework-api-server
-    → HTTP implementation details
+  HTTP server implementation and request parsing
+
+logicn-framework-app-kernel
+  application request lifecycle and app policy enforcement
 ```
 
----
+## NetworkProtocol
 
-## Core Network Types
-
-### NetworkProtocol
-
-```ts
-export type NetworkProtocol =
-  | "http"
-  | "https"
-  | "tcp"
-  | "udp"
-  | "grpc"
-  | "websocket"
-```
-
-### NetworkDestinationReference
-
-```ts
-export interface NetworkDestinationReference {
-  /**
-   * Stable destination identifier.
-   */
-  name: string
-
-  /**
-   * Protocol used for communication.
-   */
-  protocol: NetworkProtocol
-
-  /**
-   * Allowed hostname or service identifier.
-   */
-  host: string
-
-  /**
-   * Optional port restriction.
-   */
-  port?: number
-
-  /**
-   * Whether TLS is required.
-   */
-  tlsRequired: boolean
-}
-```
-
-Example destination reference:
-
-```json
-{
-  "name": "payments-api",
-  "protocol": "https",
-  "host": "payments.example.com",
-  "port": 443,
-  "tlsRequired": true
-}
-```
-
-### NetworkPermission
-
-```ts
-export interface NetworkPermission {
-  capability: string
-  destination: NetworkDestinationReference
-  allowedOperations: string[]
-  runtimeProfiles: string[]
-}
-```
-
-Example permission:
-
-```json
-{
-  "capability": "HttpClient",
-  "destination": {
-    "name": "payments-api",
-    "protocol": "https",
-    "host": "payments.example.com",
-    "port": 443,
-    "tlsRequired": true
-  },
-  "allowedOperations": ["GET", "POST"],
-  "runtimeProfiles": ["staging", "production"]
-}
-```
-
-### NetworkPolicy
-
-```ts
-export interface NetworkPolicy {
-  allowDestinations: NetworkDestinationReference[]
-  denyDestinations: string[]
-  requireTls: boolean
-  allowRawSockets: boolean
-}
-```
-
-Example production policy:
-
-```json
-{
-  "allowDestinations": [
-    {
-      "name": "payments-api",
-      "protocol": "https",
-      "host": "payments.example.com",
-      "port": 443,
-      "tlsRequired": true
-    }
-  ],
-  "denyDestinations": ["*"],
-  "requireTls": true,
-  "allowRawSockets": false
-}
-```
-
----
-
-## Deny-By-Default Rule
-
-Network access must default to denied.
-
-Forbidden defaults:
-
-```text
-network.any
-rawSocket
-packetCapture
-promiscuousMode
-```
-
-These require explicit governance approval.
-
-Example denial diagnostic:
-
-```text
-LN-NETWORK-001
-undeclared network destination
-```
-
----
-
-## Runtime Destination Validation
-
-The runtime must validate before network traffic occurs:
-
-```text
-destination host
-protocol
-port
-TLS requirement
-runtime profile
-capability grants
-deployment policy
-```
-
-### validateDestination Example
-
-```ts
-export function validateDestination(
-  requested: NetworkDestinationReference,
-  allowed: NetworkDestinationReference[]
-): boolean {
-  return allowed.some((entry) => {
-    return (
-      entry.protocol === requested.protocol &&
-      entry.host === requested.host &&
-      entry.port === requested.port
-    )
-  })
-}
-```
-
-### validateTlsRequirement Example
-
-```ts
-export function validateTlsRequirement(
-  destination: NetworkDestinationReference
-): boolean {
-  if (
-    destination.protocol === "https" &&
-    destination.tlsRequired
-  ) {
-    return true
-  }
-
-  return false
-}
-```
-
-### Why TLS Enforcement Matters
-
-Production runtimes should reject:
-
-```text
-plaintext HTTP
-unencrypted TCP
-insecure websocket traffic
-```
-
-unless explicitly approved.
-
----
-
-## GovernedNetworkRuntime
-
-```ts
-export class GovernedNetworkRuntime {
-  constructor(
-    private readonly policy: NetworkPolicy
-  ) {}
-
-  request(
-    destination: NetworkDestinationReference
-  ): boolean {
-    return validateDestination(
-      destination,
-      this.policy.allowDestinations
-    )
-  }
-}
-```
-
-### safeHttpRequest Wrapper
-
-```ts
-export async function safeHttpRequest(
-  runtime: GovernedNetworkRuntime,
-  destination: NetworkDestinationReference
-): Promise<void> {
-  const approved = runtime.request(destination)
-
-  if (!approved) {
-    throw new Error(
-      "Network destination denied by runtime policy"
-    )
-  }
-
-  // Future runtime transport integration occurs here.
-}
-```
-
----
-
-## Network Effect Declaration
-
-Network access must be explicit in LogicN source:
-
-```logicn
-fn fetch_user(id: UserId)
-    effect network
-{
-    return http.get("/users/" + id)
-}
-```
-
-With capability:
-
-```logicn
-fn fetch_user(id: UserId)
-    effect network
-    capability HttpClient
-{
-    return http.get("/users/" + id)
-}
-```
-
-This means:
-
-```text
-network effect declared
-runtime capability explicitly granted
-```
-
----
-
-## Secret and Network Integration
-
-Secrets may only flow to approved destinations.
-
-Allowed:
-
-```text
-approved payment API
-approved auth provider
-approved cryptographic sink
-```
-
-Forbidden:
-
-```text
-logs
-unknown external hosts
-AI prompts
-telemetry dumps
-```
-
-Example safe declaration:
-
-```logicn
-fn send_payment(secret: SecretReference)
-    effect network, secret
-{
-    payments.send(secret)
-}
-```
-
-The runtime validates:
-
-```text
-secret effect declared
-network effect declared
-destination approved
-capability granted
-```
-
-### Unsafe Secret Flow Example
-
-```logicn
-fn upload_secret(secret: SecretReference)
-    effect network
-{
-    http.post("http://random-site.com", secret)
-}
-```
-
-Expected result:
-
-```text
-LN-NETWORK-006
-secret attempted to flow to unapproved destination
-```
-
----
-
-## AI Networking Governance
-
-AI systems must not silently exfiltrate data.
-
-The runtime must always know:
-
-```text
-which AI provider is contacted
-which capability allowed it
-which data categories were transmitted
-which policy approved it
-```
-
-Example AI provider policy:
-
-```json
-{
-  "allowAiProviders": [
-    "openai",
-    "anthropic"
-  ],
-  "denyUnknownProviders": true
-}
-```
-
-Example safe AI destination:
-
-```json
-{
-  "name": "openai-api",
-  "protocol": "https",
-  "host": "api.openai.com",
-  "port": 443,
-  "tlsRequired": true
-}
-```
-
-Unsafe pattern that must be rejected:
-
-```text
-runtime AI silently sends prompts to unknown host
-```
-
----
-
-## Runtime Audit Integration
-
-All network activity should produce structured audit metadata.
-
-Example approved audit event:
-
-```json
-{
-  "traceId": "trace-300",
-  "module": "app/payments/service",
-  "destination": "payments.example.com",
-  "protocol": "https",
-  "capability": "HttpClient",
-  "approved": true
-}
-```
-
-Example denied audit event:
-
-```json
-{
-  "traceId": "trace-301",
-  "module": "app/ai/runtime",
-  "destination": "unknown-ai-host.com",
-  "approved": false,
-  "reason": "destination not allowlisted"
-}
-```
-
----
-
-## Runtime Network Report
-
-```json
-{
-  "module": "app/payments/service",
-  "effects": ["network"],
-  "destinations": [
-    {
-      "host": "payments.example.com",
-      "protocol": "https"
-    }
-  ],
-  "capabilities": ["HttpClient"]
-}
-```
-
----
-
-## Compiler Integration
-
-The compiler validates:
-
-```text
-network effect declarations
-network capability usage
-unsafe network boundaries
-secret-to-network flows
-undeclared destinations
-```
-
-Example compiler rule:
-
-```ts
-export function validateNetworkEffect(
-  effects: string[]
-): boolean {
-  return effects.includes("network")
-}
-```
-
-Boundary checker integration:
-
-```logicn
-pub fn expose_internal_network() {
-    raw_socket.connect("*")
-}
-```
-
-Expected diagnostic:
-
-```text
-LN-BOUNDARY-008
-network allowlist violation
-```
-
----
-
-## Runtime Manifest Integration
-
-Runtime manifests should contain:
-
-```json
-{
-  "effects": ["network"],
-  "destinations": [
-    {
-      "host": "payments.example.com",
-      "protocol": "https"
-    }
-  ],
-  "capabilities": ["HttpClient"]
-}
-```
-
----
-
-## Deployment Integration
-
-Deployment policy validates:
-
-```text
-destination allowlists
-environment restrictions
-production TLS requirements
-AI provider restrictions
-```
-
-Example deployment denial:
-
-```text
-Deployment denied.
-
-Reason:
-network destination not approved for production
-```
-
----
-
-## Network Compatibility Reporting
-
-The runtime should explain:
-
-```text
-why a destination is allowed
-why traffic was denied
-which capability approved it
-which policy enforced it
-```
-
-Example:
-
-```text
-Destination: payments.example.com
-
-Status:
-    allowed
-
-Reason:
-    production allowlist match
-```
-
----
-
-## Suggested Internal Structure
-
-```text
-packages-logicn/logicn-core-network/src/
-```
-
-Suggested files:
-
-```text
-network-policy.ts
-network-destination.ts
-network-permissions.ts
-network-runtime.ts
-network-audit.ts
-network-diagnostics.ts
-network-reports.ts
-```
-
----
-
-## Diagnostic Codes (LN-NETWORK series)
-
-| Code | Meaning |
-| --- | --- |
-| `LN-NETWORK-001` | undeclared network destination |
-| `LN-NETWORK-002` | capability missing for network operation |
-| `LN-NETWORK-003` | insecure transport denied |
-| `LN-NETWORK-004` | raw socket denied |
-| `LN-NETWORK-005` | destination not allowlisted |
-| `LN-NETWORK-006` | secret flow to unapproved destination |
-| `LN-NETWORK-007` | AI provider not approved |
-| `LN-NETWORK-008` | runtime network policy unavailable |
-
----
-
-## Recommended Implementation Order
-
-### Phase 1
-
-```text
-network destination references
-network policy contracts
-basic capability integration
-```
-
-### Phase 2
-
-```text
-runtime validation
-TLS enforcement
-destination allowlists
-```
-
-### Phase 3
-
-```text
-audit events
-runtime network reports
-compiler integration
-```
-
-### Phase 4
-
-```text
-AI provider governance
-advanced secret flow validation
-distributed network policy
-```
-
----
-
-## v0.1 Scope
-
-Implement first:
-
-```text
-network policy contracts
-destination references
-basic runtime validation
-compiler effect integration
-simple audit reports
-```
-
-Defer:
-
-```text
-distributed runtime networking
-advanced AI governance
-deep packet inspection
-formal flow verification
-photonic network coordination
-```
-
----
-
-## Architecture Depth: TypeScript Contracts (v0.2 Specification)
-
-### NetworkProtocol (Extended Closed Type)
+`quic` is included as a governed protocol option for HTTP/3 and modern edge transport planning.
 
 ```ts
 export type NetworkProtocol =
@@ -758,9 +97,9 @@ export type NetworkProtocol =
   | "quic"
 ```
 
-Note: `quic` is added in v0.2. The v0.1 form ends at `websocket`.
+## NetworkDestinationReference
 
-### NetworkDestinationReference (Extended)
+A network destination is a stable governance reference, not an arbitrary URL string.
 
 ```ts
 export interface NetworkDestinationReference {
@@ -769,80 +108,113 @@ export interface NetworkDestinationReference {
   host: string
   port?: number
   tlsRequired: boolean
-
-  /** Optional provider reference. */
   provider?: string
-
-  /** Optional category for governance grouping. */
-  category?:
-    | "payment"
-    | "ai"
-    | "database"
-    | "webhook"
-    | "internal"
-    | "custom"
-
-  /** Optional data categories for AI governance. */
+  category?: "ai" | "payment" | "analytics" | "internal" | "public" | "webhook" | "database" | "custom"
   dataCategories?: string[]
 }
 ```
 
-### NetworkPolicy (Extended)
+Example:
+
+```json
+{
+  "name": "openai-api",
+  "protocol": "https",
+  "host": "api.openai.com",
+  "port": 443,
+  "tlsRequired": true,
+  "provider": "openai",
+  "category": "ai",
+  "dataCategories": ["prompt", "metadata"]
+}
+```
+
+## NetworkPolicy
+
+`NetworkPolicy` is the central allow/deny contract.
 
 ```ts
 export interface NetworkPolicy {
-  default: "deny" | "allow"
+  default: "allow" | "deny"
   allowDestinations: NetworkDestinationReference[]
   denyDestinations: string[]
   requireTls: boolean
   allowRawSockets: boolean
   allowPlainHttp: boolean
-  aiProviders?: AiProviderNetworkPolicy[]
-  requireTimeouts?: boolean
-  requireRateLimits?: boolean
+  aiProviders: AiProviderNetworkPolicy[]
+  requireTimeouts: boolean
+  requireRateLimits: boolean
 }
 ```
 
-### productionNetworkPolicy Example (SSRF-safe)
+Production policy should always use deny-by-default behavior.
 
 ```ts
 export const productionNetworkPolicy: NetworkPolicy = {
   default: "deny",
-
-  allowDestinations: [STRIPE_DESTINATION],
-
-  // SSRF-safe deny list — always included:
-  denyDestinations: [
-    "localhost",
-    "127.0.0.1",
-    "0.0.0.0",
-    "169.254.169.254",          // AWS metadata
-    "metadata.google.internal", // GCP metadata
-    "metadata.azure.internal"   // Azure metadata
-  ],
-
   requireTls: true,
   allowRawSockets: false,
   allowPlainHttp: false,
   requireTimeouts: true,
-  requireRateLimits: true
+  requireRateLimits: true,
+  denyDestinations: [
+    "localhost",
+    "127.0.0.1",
+    "0.0.0.0",
+    "::1",
+    "169.254.169.254",
+    "metadata.google.internal",
+    "metadata.azure.internal"
+  ],
+  allowDestinations: [],
+  aiProviders: []
 }
 ```
 
-### AiProviderNetworkPolicy
+## SSRF-Safe Defaults
+
+Always deny these destinations unless a specialised non-production test policy explicitly overrides them:
+
+```text
+localhost
+127.0.0.1
+0.0.0.0
+::1
+169.254.169.254
+metadata.google.internal
+metadata.azure.internal
+internal admin endpoints
+unknown wildcard destinations
+```
+
+This protects cloud metadata services, loopback services and internal-only administrative endpoints from accidental server-side request forgery.
+
+## AiProviderNetworkPolicy
+
+AI provider traffic must be explicit and auditable.
 
 ```ts
 export interface AiProviderNetworkPolicy {
-  provider: "openai" | "anthropic" | "google" | "azure-openai" | "custom"
+  provider: string
+  allowedEndpoints: string[]
+  requireApiKeyCapability: string
+  dataCategories: string[]
+  auditRequired: boolean
   allowSecretsInPrompt: boolean
   allowPii: boolean
   allowedRegions?: string[]
   maxPromptBytes?: number
   requireRedaction: boolean
 }
+```
 
+```ts
 export const OPENAI_POLICY: AiProviderNetworkPolicy = {
   provider: "openai",
+  allowedEndpoints: ["api.openai.com"],
+  requireApiKeyCapability: "OpenAiApiKey",
+  dataCategories: [],
+  auditRequired: true,
   allowSecretsInPrompt: false,
   allowPii: false,
   allowedRegions: ["eu-west"],
@@ -851,330 +223,257 @@ export const OPENAI_POLICY: AiProviderNetworkPolicy = {
 }
 ```
 
-### GovernedNetworkRuntime Interface (v0.2)
+AI calls must not silently send prompts, secrets, credentials or personal data to unknown providers.
+
+## GovernedNetworkRuntime
+
+The governed runtime validates destination, TLS, capability and request shape before allowing network I/O.
 
 ```ts
 export interface GovernedNetworkRuntime {
   policy: NetworkPolicy
-
-  validateDestination(
-    destination: NetworkDestinationReference
-  ): NetworkDiagnostic[]
-
-  validateTlsRequirement(
-    destination: NetworkDestinationReference
-  ): NetworkDiagnostic[]
-
-  validateCapability(
-    capability: string
-  ): NetworkDiagnostic[]
-
-  safeHttpRequest(
-    input: SafeHttpRequestInput
-  ): Promise<SafeHttpResponse>
+  validate(destination: NetworkDestinationReference): NetworkDiagnostic[]
+  validateDestination(destination: NetworkDestinationReference): NetworkDiagnostic[]
+  validateTlsRequirement(destination: NetworkDestinationReference): NetworkDiagnostic[]
+  validateCapability(capability: string): NetworkDiagnostic[]
+  request(input: SafeHttpRequestInput): Promise<SafeHttpResponse>
 }
 ```
 
-### SafeHttpRequestInput / SafeHttpResponse
+## SafeHttpRequest Types
 
 ```ts
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
+
 export interface SafeHttpRequestInput {
   destination: NetworkDestinationReference
-  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
+  method: HttpMethod
   path: string
   headers?: Record<string, string>
   body?: unknown
-  timeoutMs?: number
-  capability?: string
+  timeoutMs: number
+  capability: string
 }
 
 export interface SafeHttpResponse {
   status: number
   headers: Record<string, string>
   body: unknown
+  destination: NetworkDestinationReference
   receivedAt: string
   durationMs: number
 }
 ```
 
-### validateDestination() Implementation
+## validateDestination()
 
 ```ts
-export function validateDestination(input: {
-  destination: NetworkDestinationReference
+export function validateDestination(
+  destination: NetworkDestinationReference,
   policy: NetworkPolicy
-}): NetworkDiagnostic[] {
-  const diagnostics: NetworkDiagnostic[] = []
-
-  const denied = input.policy.denyDestinations.includes(input.destination.host)
-  if (denied) {
-    diagnostics.push({
-      code: "LN-NETWORK-001",
-      severity: "error",
-      message: `Destination ${input.destination.host} is explicitly denied.`
-    })
-    return diagnostics
-  }
-
-  const allowed = input.policy.allowDestinations.some(
-    d => d.host === input.destination.host &&
-         d.protocol === input.destination.protocol
-  )
-
-  if (!allowed && input.policy.default === "deny") {
-    diagnostics.push({
-      code: "LN-NETWORK-002",
-      severity: "error",
-      message: `Destination ${input.destination.host} is not allowlisted.`
-    })
-  }
-
-  return diagnostics
-}
+): NetworkDiagnostic[]
 ```
 
-### validateTlsRequirement() Implementation
-
-```ts
-export function validateTlsRequirement(input: {
-  destination: NetworkDestinationReference
-  policy: NetworkPolicy
-}): NetworkDiagnostic[] {
-  const diagnostics: NetworkDiagnostic[] = []
-
-  if (input.policy.requireTls && !input.destination.tlsRequired) {
-    diagnostics.push({
-      code: "LN-NETWORK-003",
-      severity: "error",
-      message: `TLS is required for destination ${input.destination.host}.`
-    })
-  }
-
-  if (input.destination.protocol === "http" && !input.policy.allowPlainHttp) {
-    diagnostics.push({
-      code: "LN-NETWORK-004",
-      severity: "error",
-      message: `Plain HTTP is forbidden by policy.`
-    })
-  }
-
-  return diagnostics
-}
-```
-
-### validateCapability() Implementation
-
-```ts
-export function validateCapability(input: {
-  capability?: string
-  allowedCapabilities: string[]
-}): NetworkDiagnostic[] {
-  if (!input.capability) {
-    return [{ code: "LN-NETWORK-005", severity: "error", message: "Network capability is missing." }]
-  }
-
-  if (!input.allowedCapabilities.includes(input.capability)) {
-    return [{ code: "LN-NETWORK-006", severity: "error", message: `Capability ${input.capability} is not allowed.` }]
-  }
-
-  return []
-}
-```
-
-### safeHttpRequest() — Combining All Validations
-
-```ts
-export async function safeHttpRequest(input: {
-  runtime: GovernedNetworkRuntime
-  request: SafeHttpRequestInput
-}): Promise<SafeHttpResponse> {
-  const diagnostics = [
-    ...input.runtime.validateDestination(input.request.destination),
-    ...input.runtime.validateTlsRequirement(input.request.destination),
-    ...input.runtime.validateCapability(input.request.capability ?? "network")
-  ]
-
-  const errors = diagnostics.filter(d => d.severity === "error")
-  if (errors.length > 0) {
-    throw new GovernedNetworkError("LN-NETWORK-007", "Network request denied by policy.", diagnostics)
-  }
-
-  const response = await performHttpRequest(input.request)
-
-  return {
-    status: response.status,
-    headers: response.headers,
-    body: response.body,
-    receivedAt: new Date().toISOString(),
-    durationMs: response.durationMs
-  }
-}
-```
-
-### Forbidden SSRF Destinations
-
-Always deny:
+Validation rules:
 
 ```text
-localhost
-127.0.0.1
-0.0.0.0
-169.254.169.254           — AWS instance metadata
-metadata.google.internal  — GCP instance metadata
-metadata.azure.internal   — Azure instance metadata
-internal admin endpoints
-unknown wildcard destinations
+explicit deny list wins
+host must not be an SSRF-protected destination
+allowlist must match host and protocol when default is deny
+wildcard production egress is forbidden
+unknown AI providers are denied
 ```
 
-### Webhook Contracts
+## validateTlsRequirement()
+
+```ts
+export function validateTlsRequirement(
+  destination: NetworkDestinationReference,
+  policy: NetworkPolicy
+): NetworkDiagnostic[]
+```
+
+Validation rules:
+
+```text
+production policy requires TLS
+plain HTTP is denied unless explicitly allowed
+TLS-required destinations must use TLS-capable protocols
+plaintext fallback is denied
+```
+
+## validateCapability()
+
+```ts
+export function validateCapability(
+  capability: string,
+  policy: NetworkPolicy
+): NetworkDiagnostic[]
+```
+
+A network request must declare the capability that allows it. The capability can be evaluated against the surrounding `logicn-core-security` permission model and the runtime policy.
+
+## safeHttpRequest()
+
+```ts
+export async function safeHttpRequest(
+  input: SafeHttpRequestInput,
+  runtime: GovernedNetworkRuntime
+): Promise<SafeHttpResponse>
+```
+
+`safeHttpRequest()` must combine:
+
+```text
+destination validation
+TLS validation
+capability validation
+timeout validation
+rate-limit requirement checks
+secret-safe header handling
+audit evidence creation
+```
+
+If any validation emits an error, the request is denied before transport is attempted.
+
+## WebhookVerificationConfig
+
+Webhook verification belongs to the network governance boundary because inbound webhook traffic is a network trust transition.
 
 ```ts
 export interface WebhookVerificationConfig {
   provider: "stripe" | "github" | "clerk" | "custom"
   signatureHeader: string
-  algorithm: "sha256" | "sha512"
+  algorithm: "sha256" | "sha512" | "hmac-sha256"
+  headerName?: string
+  timestampHeader?: string
+  maxAgeSeconds?: number
   maxTimestampAgeSeconds?: number
-  requireTimestamp?: boolean
+  requireTimestamp: boolean
   requireRawBody: boolean
   requireReplayProtection: boolean
 }
 
 export interface WebhookVerificationResult {
   verified: boolean
+  valid?: boolean
   timestampValid: boolean
   signatureValid: boolean
   replayDetected: boolean
+  reason?: string
   diagnostics: NetworkDiagnostic[]
 }
 ```
 
-### verifyWebhookHmac()
+Webhook verification must use constant-time signature comparison when comparing HMAC values.
 
-```ts
-export function verifyWebhookHmac(input: {
-  rawBody: string
-  signature: string
-  secret: string
-  algorithm: "sha256" | "sha512"
-}): boolean {
-  const digest = crypto
-    .createHmac(input.algorithm, input.secret)
-    .update(input.rawBody)
-    .digest("hex")
-
-  // Constant-time compare required to prevent timing side-channel attacks.
-  return crypto.timingSafeEqual(
-    Buffer.from(digest),
-    Buffer.from(input.signature)
-  )
-}
-```
-
-### validateWebhookTimestamp()
-
-```ts
-export function validateWebhookTimestamp(input: {
-  timestamp: number
-  maxAgeSeconds: number
-}): boolean {
-  const now = Math.floor(Date.now() / 1000)
-  return Math.abs(now - input.timestamp) <= input.maxAgeSeconds
-}
-```
-
-### ReplayStore / validateReplayProtection()
+## ReplayStore
 
 ```ts
 export interface ReplayStore {
   has(key: string): Promise<boolean>
   put(key: string, ttlSeconds: number): Promise<void>
+  insertOnce?(id: string, expiresAt: Date): Promise<boolean>
 }
 
 export async function validateReplayProtection(input: {
   replayStore: ReplayStore
   replayKey: string
   ttlSeconds: number
-}): Promise<NetworkDiagnostic[]> {
-  const exists = await input.replayStore.has(input.replayKey)
-  if (exists) {
-    return [{ code: "LN-NETWORK-008", severity: "error", message: "Webhook replay detected." }]
-  }
-
-  await input.replayStore.put(input.replayKey, input.ttlSeconds)
-  return []
-}
+}): Promise<NetworkDiagnostic[]>
 ```
 
-### IdempotencyStore / validateIdempotency()
+Replay protection should reject duplicate webhook or callback events within the configured time window.
+
+## IdempotencyStore
 
 ```ts
 export interface IdempotencyStore {
   has(idempotencyKey: string): Promise<boolean>
   put(idempotencyKey: string, ttlSeconds: number): Promise<void>
+  getOrSet?(key: string, value: string): Promise<string>
 }
 
 export async function validateIdempotency(input: {
   store: IdempotencyStore
   key: string
   ttlSeconds: number
-}): Promise<NetworkDiagnostic[]> {
-  const exists = await input.store.has(input.key)
-  if (exists) {
-    return [{ code: "LN-NETWORK-008", severity: "warning", message: "Duplicate idempotent request detected." }]
-  }
-
-  await input.store.put(input.key, input.ttlSeconds)
-  return []
-}
+}): Promise<NetworkDiagnostic[]>
 ```
 
-### validateAiPrompt()
+Idempotency protects retry-safe outbound and inbound request handling.
+
+## validateAiPrompt()
 
 ```ts
-export function validateAiPrompt(input: {
-  prompt: string
+export function validateAiPrompt(
+  prompt: string,
   policy: AiProviderNetworkPolicy
-}): NetworkDiagnostic[] {
-  const diagnostics: NetworkDiagnostic[] = []
-  const size = Buffer.byteLength(input.prompt)
-
-  if (input.policy.maxPromptBytes && size > input.policy.maxPromptBytes) {
-    diagnostics.push({
-      code: "LN-NETWORK-008",
-      severity: "error",
-      message: "AI prompt exceeds policy size limit."
-    })
-  }
-
-  return diagnostics
-}
+): NetworkDiagnostic[]
 ```
 
-### NetworkDiagnostic Type
+Validation rules:
+
+```text
+prompt size must respect maxPromptBytes
+secrets are denied unless explicitly allowed
+PII is denied unless explicitly allowed
+redaction is required when policy requires it
+provider endpoint must be approved
+AI traffic must be auditable when auditRequired is true
+```
+
+## NetworkDiagnostic
 
 ```ts
 export interface NetworkDiagnostic {
-  code: string
-  severity: "info" | "warning" | "error"
+  code:
+    | "LN-NETWORK-001"
+    | "LN-NETWORK-002"
+    | "LN-NETWORK-003"
+    | "LN-NETWORK-004"
+    | "LN-NETWORK-005"
+    | "LN-NETWORK-006"
+    | "LN-NETWORK-007"
+    | "LN-NETWORK-008"
+  severity: "error" | "warning" | "info"
   message: string
+  destination?: string
+  capability?: string
   suggestion?: string
 }
 ```
 
-### NetworkPolicyReport
+## Diagnostic Codes
+
+| Code | Meaning |
+| --- | --- |
+| `LN-NETWORK-001` | undeclared network destination |
+| `LN-NETWORK-002` | capability missing for network operation |
+| `LN-NETWORK-003` | insecure transport denied |
+| `LN-NETWORK-004` | raw socket denied |
+| `LN-NETWORK-005` | destination not allowlisted |
+| `LN-NETWORK-006` | secret flow to unapproved destination |
+| `LN-NETWORK-007` | AI provider not approved |
+| `LN-NETWORK-008` | runtime network policy unavailable, replay/idempotency violation or governance metadata missing |
+
+## NetworkPolicyReport
 
 ```ts
 export interface NetworkPolicyReport {
   schemaVersion: "logicn.network.policy.report.v1"
   generatedAt: string
   policy: NetworkPolicy
+  validatedDestinations: NetworkDestinationReference[]
+  deniedDestinations: string[]
   diagnostics: NetworkDiagnostic[]
-  destinations: NetworkDestinationReference[]
   webhookPolicies: WebhookVerificationConfig[]
 }
 ```
 
-### Updated File Layout (v0.2)
+Reports should be safe for logs, build artefacts and AI-readable project context. They must not contain raw secrets, credentials, tokens or unredacted request bodies.
+
+## Internal File Layout
 
 ```text
 packages-logicn/logicn-core-network/src/
@@ -1208,19 +507,12 @@ packages-logicn/logicn-core-network/src/
     network-diagnostics.ts
 ```
 
----
-
-## Relationship to Other Systems
+## Final Rule
 
 ```text
-logicn-core-network    → network policy contracts, destination allowlists, audit events
-logicn-core-security   → capability + permission decisions, secret taint tracking
-logicn-core-config     → environment-aware network profiles
-logicn-core-compiler   → validates network effects, boundary violations (LN-BOUNDARY-008)
-logicn-core-runtime    → runtime enforcement of network governance
-logicn-core-reports    → network audit evidence, network report shapes
+logicn-core-network defines network contracts.
+logicn-core-security decides permissions and secret safety.
+logicn-framework-app-kernel enforces application policy.
+logicn-framework-api-server serves HTTP.
+logicn-tools-benchmark measures network behavior.
 ```
-
-See also: `network-boundary-policy.md`, `layered-rate-limits.md`,
-`effect-checker-and-boundary-checker.md`, `runtime-audit-log-format.md`,
-`package-completion-status.md`.
