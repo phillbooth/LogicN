@@ -33,6 +33,31 @@ Runtime and deployment policy decide execution.
 
 ---
 
+# Public v0.2 Contracts
+
+```text
+ComputeWorkload
+DataShape
+GpuSuitability
+GpuPlan
+OpticalNeed
+OpticalPlan
+PhotonicPlan
+WasmTarget
+DEFAULT_WASM_FORBIDDEN_EFFECTS
+BROWSER_WASM_FORBIDDEN_EFFECTS
+CompatibilityLevel
+CompatibilityBlocker
+CompatibilityWarning
+CompatibilityResult
+TargetProfile
+CompatibilityReport
+ComputePlan
+estimateTarget
+```
+
+---
+
 # Package Boundary
 
 `logicn-core-compute` owns:
@@ -47,6 +72,8 @@ OpticalPlan
 PhotonicPlan
 WasmTarget
 TargetProfile
+CompatibilityBlocker
+CompatibilityWarning
 CompatibilityResult
 CompatibilityReport
 ComputePlan
@@ -348,6 +375,36 @@ export type CompatibilityLevel =
   | "compatible_with_warnings"
   | "requires_fallback"
   | "incompatible"
+```
+
+---
+
+## CompatibilityBlocker
+
+```ts
+export interface CompatibilityBlocker {
+  code: string
+  message: string
+  effect?: string
+  capability?: string
+  target?: RuntimeTarget
+  sourceLocation?: SourceLocation
+}
+```
+
+---
+
+## CompatibilityWarning
+
+```ts
+export interface CompatibilityWarning {
+  code: string
+  message: string
+  effect?: string
+  capability?: string
+  target?: RuntimeTarget
+  sourceLocation?: SourceLocation
+}
 ```
 
 ---
