@@ -1,6 +1,6 @@
 # LogicN Compute
 
-`logicn-core-compute` is the package for LogicN compute planning concepts.
+`logicn-core-compute` is the governed compute planning package for LogicN.
 
 It belongs in:
 
@@ -8,394 +8,554 @@ It belongs in:
 /packages-logicn/logicn-core-compute
 ```
 
-Use this package for:
+The package defines planning contracts for:
 
 ```text
-compute plans
-compute capabilities
-compute budgets
-compute effects
-target selection
-offload planning
+CPU targets
+GPU targets
+WASM targets
+AI accelerator planning
+optical I/O planning
+photonic planning
+compatibility reports
+compute workload analysis
 fallback planning
-AI accelerator selection
-specialist AI hardware target planning
-low-bit AI fallback planning
-optical I/O data-movement planning
-topology-aware placement planning
-compute reports
+runtime target estimation
 ```
 
-## Boundary
+It is governance-first and hardware-neutral.
 
-`logicn-core-compute` should describe how work can be planned across targets. It should
-not own target-specific binary output, AI model formats, CPU kernels or
-photonic mapping.
+LogicN source code declares intent.
 
-Quantum compute, if supported later, is target planning rather than normal
-application runtime behaviour. Ordinary LogicN routes do not run on quantum
-computers. Future quantum compute blocks must use isolated quantum types,
-explicit measurement, declared fallback and reports.
+The compute layer recommends safe targets.
 
-`optical_io` is a data-movement and interconnect target, not a compute device
-that runs application code by itself. LogicN uses it to estimate transfer cost,
-prefer data locality, choose efficient transfer formats and report fallback to
-PCIe, Ethernet or standard network paths.
+Runtime and deployment policy decide execution.
 
-For AI inference, `logicn-core-compute` may express preference and fallback order such
-as:
+---
+
+# Package Boundary
+
+`logicn-core-compute` owns:
 
 ```text
-prefer gpu
-prefer ai_accelerator
-prefer tpu
-fallback npu
-fallback vpu
-fallback low_bit_ai
-fallback cpu.generic
+ComputeWorkload
+DataShape
+GpuSuitability
+GpuPlan
+OpticalNeed
+OpticalPlan
+PhotonicPlan
+WasmTarget
+TargetProfile
+CompatibilityResult
+CompatibilityReport
+ComputePlan
+estimateTarget
 ```
 
-Specialist target terminology:
+It does NOT own:
 
 ```text
-cpu            general compute
-gpu            parallel graphics/general accelerator compute
-npu            neural processing unit
-tpu            tensor processing unit / AI ASIC
-vpu            vision processing unit
-fpga           field-programmable gate array
-asic           application-specific integrated circuit
-ai_accelerator generic governed AI accelerator
+GPU kernels
+CUDA/ROCm/Metal source
+WASM code generation
+AI model formats
+runtime driver bindings
+vendor SDK integration
+photonic device drivers
 ```
 
-Every specialist target must declare hardware type, provider, runtime/driver,
-supported precision, supported model formats, memory limits, isolation level,
-data sensitivity allowed, fallback target and audit requirements.
+Vendor-specific logic belongs in adapters and runtime backends.
 
-For distributed tensor or AI workloads, `logicn-core-compute` may express interconnect
-preference:
+Correct:
 
 ```text
-prefer gpu
-prefer optical_io for large tensor transfer
-fallback ethernet
-fallback cpu.generic
+target gpu
+target photonic
+target wasm
 ```
 
-The actual AI model contracts belong in `logicn-ai`, low-bit AI backend support
-belongs in `logicn-ai-lowbit`, CPU capability planning belongs in `logicn-target-cpu`,
-and optimized CPU kernel contracts belong in `logicn-cpu-kernels`.
-
-## Contracts
-
-The package includes typed contracts for compute capabilities, budgets, target
-selection, compute-auto fallback reports, offload stages, data movement totals
-and aggregate compute reports.
-
-## Compute Architecture Layers
+Incorrect:
 
 ```text
-LogicN source
-    ↓ compiler
-    ↓ execution graph
-    ↓ compute planner
-    ↓ runtime scheduler
-    ↓ backend adapter layer
-    ↓ CPU / GPU / accelerator / optical transport
+target cuda
+target nvidia
+target metal
 ```
 
-The compute layer is hardware-neutral. Application code declares intent
-(`target gpu`, `effect accelerator`); the runtime resolves actual backend.
+---
 
-## Compute Effects
+# Shared Types
 
-| Effect | Meaning |
-| --- | --- |
-| `accelerator` | GPU or AI accelerator execution |
-| `optical_io` | optical transport planning |
-| `distributed_compute` | distributed execution |
-| `high_memory` | elevated memory pressure |
-| `parallel_compute` | high parallel execution |
-
-## Compute Capabilities
-
-| Capability | Meaning |
-| --- | --- |
-| `ComputeRuntime` | runtime compute coordination |
-| `GpuRuntime` | GPU execution access |
-| `AcceleratorRuntime` | AI accelerator access |
-| `OpticalTransport` | optical data movement |
-| `DistributedScheduler` | distributed execution planning |
-
-## GPU and Photonic Status
-
-GPU and photonic support are planning-only for v0.1. The CPU runtime is the
-primary stable target. GPU planning metadata and fallback design are specified;
-real kernel execution and optical transport are deferred.
-
-Fallback rules: GPU unavailable / overheating / policy denied / memory exhausted
-→ all fall back to CPU and record an audit event.
-
-Diagnostic codes: `LN-COMPUTE-001` through `LN-COMPUTE-007`.
-
-TypeScript types: `GpuPlan` interface, `OpticalPlan` interface.
-
-Internal dirs: `gpu/` (gpu-planner.ts, gpu-runtime.ts, gpu-fallback.ts,
-gpu-reports.ts, gpu-estimator.ts), `photonic/` (photonic-planner.ts,
-optical-routing.ts, distributed-graph.ts, optical-runtime.ts, photonic-audit.ts).
-
-## WASM Target
-
-WASM target is not yet implemented. When implemented it will allow LogicN
-execution in sandboxed environments (browsers, edge runtimes).
-
-WASM governance constraints: capability rules, effect declarations, deployment
-policy, runtime manifests, and audit generation remain enforced.
-
-Sandbox restrictions (forbidden effects): `filesystem`, `process`, unsafe memory.
-
-TypeScript type: `WasmTarget { sandboxed: boolean; allowedEffects: string[] }`.
-
-Diagnostic codes: `LN-WASM-001` through `LN-WASM-004`.
-
-Internal dir: `wasm/` (wasm-emitter.ts, wasm-runtime.ts, wasm-bindings.ts,
-wasm-sandbox.ts).
-
-## Target Compatibility Reports
-
-Target compatibility reports explain whether workloads are compatible with
-available runtime targets. Accessed via `logicn plan --compatibility`.
-
-Output explains CPU/GPU/WASM/optical compatibility and incompatibility reasons.
-
-TypeScript types: `CompatibilityResult { target: string; compatible: boolean; reason?: string }`.
-
-Functions: `validateTarget()`, `buildCompatibilityReport()`.
-
-Diagnostic codes: `LN-COMPAT-001` through `LN-COMPAT-004`.
-
-Internal dir: `compatibility/` (target-compatibility.ts, compatibility-report.ts,
-compatibility-rules.ts, target-validator.ts).
-
-## Architecture Depth: TypeScript Contracts (v0.2 Specification)
-
-### RuntimeTarget (Extended)
+## DataShape
 
 ```ts
-export type RuntimeTarget =
-    | "cpu"
-    | "node"
-    | "wasm"
-    | "browser-wasm"
-    | "wasi"
-    | "gpu"
-    | "optical_io"
-    | "photonic"
-    | "native"
-    | "serverless"
-    | "edge"
+export interface DataShape {
+  rank: number
+  dimensions: number[]
+  elementType: string
+  byteSize: number
+  sensitive: boolean
+  streamable: boolean
+}
 ```
 
-### GPU Planning
+---
 
-```ts
-export type GpuSuitability =
-    | "high"
-    | "medium"
-    | "low"
-    | "unsuitable"
-    | "unknown"
-
-export interface GpuRequirements {
-    minMemoryMb: number
-    minParallelism: number
-    precision: "fp32" | "fp16" | "bf16" | "int8" | "int4"
-}
-
-export interface GpuFallbackPlan {
-    target: RuntimeTarget
-    reason: string
-}
-
-export interface GpuPlan {
-    schemaVersion: "logicn.compute.gpu.v1"
-    suitability: GpuSuitability
-    recommendedTarget: RuntimeTarget
-    reasons: string[]
-    requirements: GpuRequirements
-    fallback: GpuFallbackPlan
-    diagnostics: ComputeDiagnostic[]
-}
-
-// Score-based algorithm: evaluates workload, data shape, deployment shape
-export function estimateGpuSuitability(
-    workload: ComputeWorkload
-): GpuSuitability
-
-// Returns advisory warning if suitability is low/unsuitable
-export function buildGpuPlan(workload: ComputeWorkload): GpuPlan
-```
-
-### Optical Planning
-
-```ts
-export type OpticalNeed =
-    | "none"
-    | "data_movement"
-    | "topology_aware"
-    | "high_bandwidth"
-    | "unknown"
-
-export interface OpticalFallbackPlan {
-    target: "network_io" | "cpu" | "cluster_runtime"
-    reason: string
-}
-
-export interface OpticalPlan {
-    need: OpticalNeed
-    recommendedMode: "none" | "optical_io_awareness" | "photonic_planning_only"
-    fallback: OpticalFallbackPlan
-    diagnostics: ComputeDiagnostic[]
-}
-
-export function estimateOpticalNeed(workload: ComputeWorkload): OpticalNeed
-export function buildOpticalPlan(workload: ComputeWorkload): OpticalPlan
-```
-
-### WASM Target (Extended)
-
-```ts
-export interface WasmTarget {
-    sandboxed: boolean
-    allowedEffects: string[]
-    runtime: "browser" | "wasi" | "edge" | "node-wasm" | "unknown"
-    forbiddenEffects: string[]
-}
-
-export const DEFAULT_WASM_FORBIDDEN_EFFECTS: string[] = [
-    "filesystem",
-    "process",
-    "shell",
-    "native",
-    "gpu"
-]
-
-export const BROWSER_WASM_FORBIDDEN_EFFECTS: string[] = [
-    ...DEFAULT_WASM_FORBIDDEN_EFFECTS,
-    "database",
-    "secret"
-]
-
-export function validateWasmEffect(
-    effect: string,
-    target: WasmTarget
-): ComputeDiagnostic[]
-
-export function validateWasmTarget(target: WasmTarget): ComputeDiagnostic[]
-```
-
-### Target Compatibility (Extended)
-
-```ts
-export type CompatibilityLevel =
-    | "full"
-    | "partial"
-    | "degraded"
-    | "incompatible"
-
-export interface CompatibilityBlocker {
-    reason: string
-    diagnosticCode: string
-}
-
-export interface CompatibilityWarning {
-    message: string
-    diagnosticCode: string
-}
-
-export interface CompatibilityFallback {
-    target: RuntimeTarget
-    reason: string
-}
-
-export interface CompatibilityResult {
-    target: RuntimeTarget
-    level: CompatibilityLevel
-    blockers: CompatibilityBlocker[]
-    warnings: CompatibilityWarning[]
-    fallback: CompatibilityFallback | null
-}
-
-export interface TargetProfile {
-    target: RuntimeTarget
-    supportedEffects: string[]
-    forbiddenEffects: string[]
-    requiredCapabilities: string[]
-    memoryLimitMb?: number
-}
-
-export function validateTarget(
-    workload: ComputeWorkload,
-    profile: TargetProfile
-): CompatibilityResult
-
-export interface CompatibilityReport {
-    targets: CompatibilityResult[]
-    recommendedTarget: RuntimeTarget
-    diagnostics: ComputeDiagnostic[]
-}
-
-export function buildCompatibilityReport(
-    workload: ComputeWorkload,
-    profiles: TargetProfile[]
-): CompatibilityReport
-```
-
-### Shared Workload Types
+## ComputeWorkload
 
 ```ts
 export interface ComputeWorkload {
-    name: string
-    effects: string[]
-    estimatedMemoryMb: number
-    parallelism: number
-    dataShape: DataShape
-    deploymentShape: DeploymentShape
-}
+  id: string
 
-export interface DataShape {
-    inputSizeMb: number
-    outputSizeMb: number
-    streaming: boolean
-    tensorDimensions?: number[]
-}
+  kind:
+    | "scalar"
+    | "vector"
+    | "matrix"
+    | "tensor"
+    | "image"
+    | "ai_inference"
+    | "batch"
+    | "stream"
+    | "route"
 
-export interface DeploymentShape {
-    target: RuntimeTarget
-    region?: string
-    replicas: number
-    edgeDistributed: boolean
-}
+  dataShape: DataShape
 
-export interface ComputeDiagnostic {
-    code: string
-    message: string
-    severity: "error" | "warning" | "info"
-    target?: RuntimeTarget
+  operationCount: number
+  memoryMb: number
+  deterministic: boolean
+
+  effects: string[]
+  requiredCapabilities: string[]
+
+  preferredTargets: RuntimeTarget[]
+  fallbackTargets: RuntimeTarget[]
 }
 ```
 
-See `docs/Knowledge-Bases/logicn-core-compute-gpu-and-photonic-backends.md`
-for the full architecture specification.
+---
 
-Final rule:
+# Runtime Targets
+
+```ts
+export type RuntimeTarget =
+  | "cpu"
+  | "server"
+  | "edge"
+  | "browser"
+  | "worker"
+  | "wasm"
+  | "gpu"
+  | "ai_accelerator"
+  | "optical_io"
+  | "photonic"
+```
+
+---
+
+# GPU Planning
+
+## GpuSuitability
+
+```ts
+export interface GpuSuitability {
+  suitable: boolean
+  score: number
+  reasons: string[]
+  blockers: string[]
+  warnings: string[]
+  cpuFallbackAvailable: boolean
+}
+```
+
+---
+
+## GpuPlan v0.2
+
+```ts
+export interface GpuPlan {
+  target: "gpu"
+
+  workloadId: string
+
+  suitability: GpuSuitability
+
+  precision: string
+
+  transferBytes: number
+
+  estimatedVramMb: number
+
+  requiredCapabilities: string[]
+
+  fallbackTargets: RuntimeTarget[]
+
+  explanation: string[]
+}
+```
+
+GPU planning is suitability-based.
+
+The planner must consider:
 
 ```text
-logicn-core-compute plans work.
-logicn-ai describes AI inference.
-logicn-ai-lowbit describes low-bit AI backend inference.
-logicn-target-ai-accelerator describes passive accelerator backend profiles.
-logicn-target-native emits future native executable target plans.
-logicn-target-photonic emits photonic target plans and optical I/O reports.
-future quantum target support must remain explicit, measured and reportable.
+parallelism
+transfer cost
+VRAM limits
+sensitive data policy
+determinism requirements
+fallback availability
+```
+
+---
+
+# Optical and Photonic Planning
+
+LogicN distinguishes:
+
+```text
+optical_io -> interconnect/data movement planning
+photonic   -> future photonic compute planning
+```
+
+Photonic planning is planning-only until a real runtime backend exists.
+
+---
+
+## OpticalNeed
+
+```ts
+export interface OpticalNeed {
+  required: boolean
+  reasons: string[]
+  transferBytes: number
+  fallbackAvailable: boolean
+}
+```
+
+---
+
+## OpticalPlan
+
+```ts
+export interface OpticalPlan {
+  target: "optical_io"
+
+  workloadId: string
+
+  need: OpticalNeed
+
+  topology:
+    | "single_node"
+    | "multi_device"
+    | "rack_scale"
+    | "cluster"
+    | "unknown"
+
+  transportProfile?: string
+
+  fallbackTargets: RuntimeTarget[]
+
+  explanation: string[]
+}
+```
+
+---
+
+## PhotonicPlan
+
+```ts
+export interface PhotonicPlan {
+  target: "photonic"
+
+  workloadId: string
+
+  planningOnly: boolean
+
+  blockers: string[]
+  warnings: string[]
+
+  fallbackTargets: RuntimeTarget[]
+
+  explanation: string[]
+}
+```
+
+---
+
+# WASM Target
+
+## WasmTarget
+
+```ts
+export interface WasmTarget {
+  target: "wasm"
+
+  runtime:
+    | "browser"
+    | "edge"
+    | "server"
+    | "embedded"
+    | "wasi"
+
+  forbiddenEffects: string[]
+
+  allowHostImports: boolean
+
+  allowWasiFilesystem: boolean
+
+  allowHostNetwork: boolean
+}
+```
+
+---
+
+## Default WASM Forbidden Effects
+
+```ts
+export const DEFAULT_WASM_FORBIDDEN_EFFECTS = [
+  "process.spawn",
+  "native.call",
+  "ffi.call",
+  "filesystem.raw",
+  "secret.raw"
+]
+```
+
+---
+
+## Browser WASM Forbidden Effects
+
+```ts
+export const BROWSER_WASM_FORBIDDEN_EFFECTS = [
+  ...DEFAULT_WASM_FORBIDDEN_EFFECTS,
+  "filesystem.read",
+  "filesystem.write",
+  "environment.read",
+  "network.raw_socket"
+]
+```
+
+---
+
+# Compatibility
+
+## CompatibilityLevel
+
+```ts
+export type CompatibilityLevel =
+  | "compatible"
+  | "compatible_with_warnings"
+  | "requires_fallback"
+  | "incompatible"
+```
+
+---
+
+## CompatibilityResult
+
+```ts
+export interface CompatibilityResult {
+  target: RuntimeTarget
+  level: CompatibilityLevel
+  blockers: CompatibilityBlocker[]
+  warnings: CompatibilityWarning[]
+  fallbackTargets: RuntimeTarget[]
+}
+```
+
+---
+
+## TargetProfile
+
+```ts
+export interface TargetProfile {
+  target: RuntimeTarget
+
+  supportedEffects: string[]
+  forbiddenEffects: string[]
+  requiredCapabilities: string[]
+
+  memoryLimitMb?: number
+
+  allowsSensitiveData: boolean
+
+  fallbackTargets: RuntimeTarget[]
+}
+```
+
+---
+
+## CompatibilityReport
+
+```ts
+export interface CompatibilityReport {
+  schemaVersion: "logicn.compatibility.report.v0.2"
+
+  workloadId: string
+
+  selectedTarget: RuntimeTarget
+
+  results: CompatibilityResult[]
+
+  selectedFallback?: RuntimeTarget
+
+  diagnostics: CompilerDiagnostic[]
+}
+```
+
+---
+
+# ComputePlan
+
+```ts
+export interface ComputePlan {
+  schemaVersion: "logicn.compute.plan.v0.2"
+
+  workload: ComputeWorkload
+
+  selectedTarget: RuntimeTarget
+
+  gpuPlan?: GpuPlan
+
+  opticalPlan?: OpticalPlan
+
+  photonicPlan?: PhotonicPlan
+
+  wasmTarget?: WasmTarget
+
+  compatibilityReport: CompatibilityReport
+
+  fallbackTargets: RuntimeTarget[]
+
+  explanation: string[]
+}
+```
+
+---
+
+# estimateTarget()
+
+```ts
+export function estimateTarget(
+  workload: ComputeWorkload,
+  profiles: TargetProfile[]
+): ComputePlan
+```
+
+The planner should consider:
+
+```text
+memory pressure
+parallelism
+target policy
+sensitive data rules
+forbidden effects
+WASM restrictions
+fallback availability
+```
+
+---
+
+# Compatibility Rules
+
+The compute layer must reject incompatible workloads.
+
+Examples:
+
+```text
+filesystem.read in browser WASM
+sensitive data on forbidden accelerators
+memory beyond target limits
+missing runtime capabilities
+```
+
+Compatibility must remain explainable.
+
+---
+
+# Diagnostic Codes
+
+## LN-COMPUTE
+
+```text
+LN-COMPUTE-001 through LN-COMPUTE-005
+```
+
+## LN-WASM
+
+```text
+LN-WASM-001 through LN-WASM-005
+```
+
+## LN-COMPAT
+
+```text
+LN-COMPAT-001 through LN-COMPAT-005
+```
+
+---
+
+# Reports
+
+Generated reports may include:
+
+```text
+compute-plan.json
+compatibility-report.json
+gpu-plan.json
+optical-plan.json
+wasm-target-report.json
+```
+
+---
+
+# Core Principles
+
+The compute layer must be:
+
+```text
+backend-neutral
+runtime-controlled
+policy-governed
+portable
+explainable
+fallback-safe
+future-compatible
+```
+
+It must avoid:
+
+```text
+vendor lock-in
+hardcoded backend syntax
+unsafe memory assumptions
+hidden runtime switching
+magic acceleration
+unsafe fallback behaviour
+```
+
+---
+
+# Summary
+
+`logicn-core-compute` provides governed compute planning for LogicN.
+
+The package defines:
+
+```text
+GPU planning
+WASM restrictions
+photonic planning
+compatibility analysis
+runtime target estimation
+fallback planning
+```
+
+It is intentionally:
+
+```text
+hardware-neutral
+governance-first
+future-compatible
 ```
