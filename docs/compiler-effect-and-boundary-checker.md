@@ -246,7 +246,7 @@ pub fn fetch_profile(
 Compiler diagnostic:
 
 ```text
-LN-EFFECT-001: undeclared effect
+LLN-EFFECT-001: undeclared effect
 function: fetch_profile
 operation: HttpClient.get
 required effect: network
@@ -307,7 +307,7 @@ pub fn get_user_page(
 Diagnostic:
 
 ```text
-LN-EFFECT-002: missing propagated effect
+LLN-EFFECT-002: missing propagated effect
 function: get_user_page
 called function: find_user
 required effect: storage
@@ -355,7 +355,7 @@ Production policy:
 Deployment diagnostic:
 
 ```text
-LN-POLICY-001: effect denied by deployment policy
+LLN-POLICY-001: effect denied by deployment policy
 module: app/debug/ping
 function: debug_ping
 effect: network
@@ -427,7 +427,7 @@ check_effects(function):
     missing = observed - declared
 
     if missing is not empty:
-        error(LN-EFFECT-001, missing)
+        error(LLN-EFFECT-001, missing)
 
     return EffectSummary(declared, observed)
 ```
@@ -524,7 +524,7 @@ import { to_profile } from "app/users/service"
 Diagnostic:
 
 ```text
-LN-BOUNDARY-001: cannot import private symbol
+LLN-BOUNDARY-001: cannot import private symbol
 symbol: to_profile
 module: app/users/service
 visibility: private
@@ -563,7 +563,7 @@ import type { UserRecord } from "app/users/types"
 Diagnostic:
 
 ```text
-LN-BOUNDARY-002: package-visible symbol imported outside owning package
+LLN-BOUNDARY-002: package-visible symbol imported outside owning package
 symbol: UserRecord
 owner package: app/users
 current package: app/admin
@@ -586,7 +586,7 @@ pub fn get_api_secret() -> ApiSecret effect secret {
 Diagnostic:
 
 ```text
-LN-BOUNDARY-003: public API exposes secret-bearing private type
+LLN-BOUNDARY-003: public API exposes secret-bearing private type
 function: get_api_secret
 return type: ApiSecret
 ```
@@ -620,7 +620,7 @@ import { env } from "../../.env"
 Diagnostic:
 
 ```text
-LN-BOUNDARY-004: import path escapes package source root
+LLN-BOUNDARY-004: import path escapes package source root
 import: ../../.env
 ```
 
@@ -651,7 +651,7 @@ pub fn run() -> ModuleDescriptor {
 Diagnostic:
 
 ```text
-LN-BOUNDARY-005: runtime-only symbol used by normal application code
+LLN-BOUNDARY-005: runtime-only symbol used by normal application code
 symbol: __runtime_register_module
 ```
 
@@ -670,7 +670,7 @@ pub fn make_database() -> Database {
 Diagnostic:
 
 ```text
-LN-BOUNDARY-006: capability object cannot be constructed by normal code
+LLN-BOUNDARY-006: capability object cannot be constructed by normal code
 capability: Database
 help: request Database through runtime capability injection
 ```
@@ -715,7 +715,7 @@ pub route GET "/users/{id}" requires [Database] {
 Diagnostic:
 
 ```text
-LN-BOUNDARY-007: public route exposes package-internal type
+LLN-BOUNDARY-007: public route exposes package-internal type
 route: GET /users/{id}
 type: UserRecord
 field risk: password_hash
@@ -770,26 +770,26 @@ check_boundaries(module):
         target = resolve(import.path)
 
         if target outside allowed package graph:
-            error(LN-BOUNDARY-004)
+            error(LLN-BOUNDARY-004)
 
         for symbol in import.symbols:
             visibility = resolve_visibility(symbol)
 
             if visibility == private and target.module != module:
-                error(LN-BOUNDARY-001)
+                error(LLN-BOUNDARY-001)
 
             if visibility == package and target.package != package:
-                error(LN-BOUNDARY-002)
+                error(LLN-BOUNDARY-002)
 
             if visibility == runtime and not module.is_runtime_authorized:
-                error(LN-BOUNDARY-005)
+                error(LLN-BOUNDARY-005)
 
     for public_symbol in module.public_symbols:
         if exposes_private_type(public_symbol):
-            error(LN-BOUNDARY-003)
+            error(LLN-BOUNDARY-003)
 
         if exposes_package_type_outside_package(public_symbol):
-            error(LN-BOUNDARY-007)
+            error(LLN-BOUNDARY-007)
 ```
 
 ---
@@ -902,12 +902,12 @@ route leaks password_hash
 Diagnostics:
 
 ```text
-LN-EFFECT-002: missing propagated effect
+LLN-EFFECT-002: missing propagated effect
 route: GET /users/{id}
 handler: handle
 required effect: storage
 
-LN-BOUNDARY-007: public route exposes package-internal type
+LLN-BOUNDARY-007: public route exposes package-internal type
 route: GET /users/{id}
 type: UserRecord
 ```
@@ -970,20 +970,20 @@ reason: effect denied by runtime policy
 
 | Code | Meaning |
 |---|---|
-| `LN-EFFECT-001` | Function performs undeclared effect |
-| `LN-EFFECT-002` | Caller missing propagated callee effect |
-| `LN-EFFECT-003` | Effect not allowed in current package policy |
-| `LN-EFFECT-004` | Runtime intrinsic requires undeclared effect |
-| `LN-EFFECT-005` | Effect declared but capability missing |
-| `LN-BOUNDARY-001` | Private symbol imported outside module |
-| `LN-BOUNDARY-002` | Package symbol imported outside package |
-| `LN-BOUNDARY-003` | Public API exposes private or secret-bearing type |
-| `LN-BOUNDARY-004` | Import path escapes package source root |
-| `LN-BOUNDARY-005` | Runtime-only symbol used by normal code |
-| `LN-BOUNDARY-006` | Capability object constructed directly |
-| `LN-BOUNDARY-007` | Public route exposes package-internal type |
-| `LN-BOUNDARY-008` | Public API exposes denied dependency |
-| `LN-BOUNDARY-009` | Module declaration does not match package manifest |
+| `LLN-EFFECT-001` | Function performs undeclared effect |
+| `LLN-EFFECT-002` | Caller missing propagated callee effect |
+| `LLN-EFFECT-003` | Effect not allowed in current package policy |
+| `LLN-EFFECT-004` | Runtime intrinsic requires undeclared effect |
+| `LLN-EFFECT-005` | Effect declared but capability missing |
+| `LLN-BOUNDARY-001` | Private symbol imported outside module |
+| `LLN-BOUNDARY-002` | Package symbol imported outside package |
+| `LLN-BOUNDARY-003` | Public API exposes private or secret-bearing type |
+| `LLN-BOUNDARY-004` | Import path escapes package source root |
+| `LLN-BOUNDARY-005` | Runtime-only symbol used by normal code |
+| `LLN-BOUNDARY-006` | Capability object constructed directly |
+| `LLN-BOUNDARY-007` | Public route exposes package-internal type |
+| `LLN-BOUNDARY-008` | Public API exposes denied dependency |
+| `LLN-BOUNDARY-009` | Module declaration does not match package manifest |
 
 ---
 

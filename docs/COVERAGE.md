@@ -273,6 +273,9 @@ Execution, scheduling, trust verification, identity, memory, hardware targets.
 | Effect and boundary checker (expanded) | ✅ | `effect-checker-and-boundary-checker.md` (extended boundary types, runtime manifest JSON, foundational context) |
 | Tri / Decision / Bool logic systems | ✅ | `logicn-core-logic-tri-decision-bool.md` |
 | Environment config and secret reference model | ✅ | `logicn-core-config-environment-secrets.md` |
+| .env trust model (source vs trust level; security levels; compiler warnings) | ✅ | `logicn-core-config-dotenv-trust-model.md` |
+| Config Vault (typed non-secret shared config; LLN-VAULT-001–005; vault global block) | ✅ | `logicn-core-config-vault.md` |
+| Flow Trace API (FlowTraceEvent; governed trace; JSONL; LLN-TRACE-001–005; redaction) | ✅ | `logicn-core-flow-trace.md` |
 | Network governance model | ✅ | `logicn-core-network-governance.md` |
 | Effect checker — v0.2 formal spec | ✅ | `logicn-core-effect-checker-v02.md` |
 | Manifest generation — v0.2 formal spec | ✅ | `logicn-core-manifest-generation-v02.md` |
@@ -286,9 +289,9 @@ Execution, scheduling, trust verification, identity, memory, hardware targets.
 | Online Safety Act age assurance policy | ✅ | `logicn-core-policy-online-safety-act.md` |
 | Security secret reference model — architecture spec | ✅ | `logicn-core-security-secret-reference-model.md` |
 | Photonic governance architecture | ✅ | `logicn-core-photonic-governance-architecture.md` |
-| Photonic backend architecture | ⚠️ | `logicn-core-photonic-backend-architecture.md` ⚠️ **Update status: legacy/historical** — contains prior 3-value OpticalTransportMode string union and original LN-PHOTONIC-001–006 meanings; use as historical context only until logicn-core-photonic reconciles the canonical enum and diagnostic table across all specs |
+| Photonic backend architecture | ⚠️ | `logicn-core-photonic-backend-architecture.md` ⚠️ **Update status: legacy/historical** — contains prior 3-value OpticalTransportMode string union and original LLN-PHOTONIC-001–006 meanings; use as historical context only until logicn-core-photonic reconciles the canonical enum and diagnostic table across all specs |
 | Logic types — v0.2 formal spec | ⚠️ | `logicn-core-logic-v02.md` ⚠️ **Update status: formal spec (type: discriminant, 3-state Decision)** — superseded for runtime-facing docs by package README and `logicn-core-logic-tri-decision-bool.md`; current canonical uses kind: discriminant and 4-state Decision (allow\|deny\|review\|unknown) |
-| Security — v0.2 formal spec | ⚠️ | `logicn-core-security-v02.md` ⚠️ **Update status: ProtectedSecret<T> uses reveal()** — conflicts with `logicn-core-security-secret-reference-model.md` which requires unwrapForApprovedSink(sink); do not implement either form until resolved |
+| Security — v0.2 formal spec | ✅ | `logicn-core-security-v02.md` **Update status: conflict resolved (2026-05-26)** — canonical public API is `unwrapForApprovedSink(sink)`; `revealUnsafeForRuntimeOnly()` is private internal only; KB updated to match |
 | Photonic — v0.2 formal spec | ⚠️ | `logicn-core-photonic-v02.md` ⚠️ **Update status: not implementation-ready** — OpticalTransportMode enum (Waveguide\|Coherent\|Mesh\|FreeSpace\|Hybrid\|Experimental) conflicts with governance spec (DIRECT\|WAVELENGTH\|PACKETIZED\|HYBRID\|EMULATED\|SIMULATED) and vector spec (electrical\|hybrid\|photonic\|waveguide\|plasmonic\|coherent); reconciliation required before any implementation |
 | Tri Logic developer guide — v0.2 | ⚠️ | `logicn-core-logic-tristate-developer-guide.md` ⚠️ **Update status: predates current v0.2 shape** — Decision shown as 3-state (allow/deny/unknown), BoolBoundaryResult lacks diagnostics[]; use package README and `logicn-core-logic-tri-decision-bool.md` as canonical; kind: discriminant is standard |
 | API server full implementation spec | ⚠️ | `logicn-framework-api-server-implementation.md` ⚠️ **Update status: adapter-level names** — `ReplayStore.exists()/save()` are adapter-level; canonical network contract is `has()/put(ttlSeconds)` from `logicn-core-network-webhook.md`; mapping or name adoption required before implementation |
@@ -340,7 +343,8 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | docs/backend-compute-support-targets.md | ✅ | Ownership note: compute planning in `logicn-core-compute`, target selection in `logicn-target-cpu/native/gpu/photonic` |
 | ARCHITECTURE.md | ✅ | References COVERAGE.md as workspace conflict register; names photonic enum and logic discriminant as unresolved conflicts; as-documented conflicts must not be implemented until reconciled |
 | examples/ | ✅ | hello, option, result, decision, payment-webhook, benchmarks |
-| compiler/logicn.js | ✅ | Node.js prototype compiler with parser, type checker, formatter |
+| compiler/logicn.js | ✅ | **Stage 1 runtime foundation** — plain JavaScript file, runs directly in Node.js with no build step; parser, type checker, formatter prototype; the model for all Stage 1 runtime additions |
+| src/ | ❌ | No src/ directory — not needed for Stage 1; runtime engine grows outward from compiler/logicn.js; shared base contracts deferred until Stage 1 runtime scope is settled |
 
 ### logicn-core-runtime
 
@@ -362,8 +366,8 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Scope, boundary, contracts fully documented — Architecture Depth section added; **Coverage Reconciliation Status**: ProtectedSecret<T> conflict — v0.2 formal spec uses `reveal()`, architecture spec requires `unwrapForApprovedSink(sink)`; stronger sink-aware form preferred; do not implement until resolved |
-| TODO.md | ✅ | Work tracking — all v0.2 items added; **first item**: "Decide canonical ProtectedSecret<T> unwrap API: reveal() or unwrapForApprovedSink(sink)" |
+| README.md | ✅ | Scope, boundary, contracts fully documented — Architecture Depth section added; **Coverage Reconciliation Status**: ProtectedSecret<T> conflict **resolved (2026-05-26)** — canonical `unwrapForApprovedSink(sink)`; SecretSource canonical names updated (`env\|vault\|kms\|runtime\|oauth\|token`) |
+| TODO.md | ✅ | Work tracking — all v0.2 items added; **first item checked off**: ProtectedSecret<T> unwrap API resolved (2026-05-26); SecretSource item updated to canonical names |
 | src/ | ⚠️ | Implementation stubs |
 | SecureString / Secret<T> | ✅ | Contracts documented |
 | Redaction primitives | ✅ | Contracts documented |
@@ -386,8 +390,8 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | Type checker | ✅ | Implemented prototype in logicn-core/compiler/ |
 | Formatter | ✅ | Implemented prototype in logicn-core/compiler/ |
 | AST / source map | ✅ | Implemented prototype in logicn-core/compiler/ |
-| Effect checker | ⚠️ | Fully specified (Effect interface, EffectCategory, CheckedFunction, EffectGraphNode, EffectGraph, inferExpressionEffects, propagateEffects, LN-EFFECT-001–004); not yet implemented |
-| Boundary checker | ⚠️ | Fully specified (Boundary, BoundaryRequirement, BoundaryEdge, BoundaryGraph, CheckedCallExpression, LN-BOUNDARY-001–004); not yet implemented |
+| Effect checker | ⚠️ | Fully specified (Effect interface, EffectCategory, CheckedFunction, EffectGraphNode, EffectGraph, inferExpressionEffects, propagateEffects, LLN-EFFECT-001–004); not yet implemented |
+| Boundary checker | ⚠️ | Fully specified (Boundary, BoundaryRequirement, BoundaryEdge, BoundaryGraph, CheckedCallExpression, LLN-BOUNDARY-001–004); not yet implemented |
 | Compiler pass pipeline | ✅ | 14-pass pipeline — pass 14 (Runtime manifest generator) added |
 | Manifest generation (pass 14) | ⚠️ | Fully specified v0.2 + pass-14 updates (RuntimeManifest with permissions[], reports[], ManifestIntegrity 5-hash type, serializeManifestStable()); not yet implemented |
 
@@ -398,25 +402,26 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | README.md | ✅ | Scope documented — Architecture Depth section added (all command types, exit codes 0–7, CLI report files table, CLI dir layout) |
 | TODO.md | ✅ | Work tracking — all v0.2 items added |
 | dist/ | ⚠️ | Compiled output present |
+| src/ | ⚠️ | 10 TypeScript files present — CLI framework operational (`types.ts`, `cli.ts`, `commands.ts`); check and fmt working; build/verify/deploy/explain/plan command bodies are the remaining implementation gaps |
 | logicn check | ✅ | Prototype implemented |
-| logicn build | ⚠️ | Partial — artefact generation not complete; fully specified (BuildArtefact, BuildResult, buildWorkspace, 14-pass pipeline, LN-BUILD-001–005) |
+| logicn build | ⚠️ | Partial — artefact generation not complete; fully specified (BuildArtefact, BuildResult, buildWorkspace, 14-pass pipeline, LLN-BUILD-001–005) |
 | logicn fmt | ✅ | Prototype implemented |
-| logicn verify | ⚠️ | Partial — hash checks only; fully specified (VerifiedArtefact, VerificationResult, verifyHash, LN-VERIFY-001–005) |
-| logicn deploy | ⚠️ | Not yet implemented — fully specified (DeploymentTarget 7 values, DeploymentResult, ValidateEffectsInput, validateEffects, exit codes 0–7, LN-DEPLOY-001–005) |
-| logicn explain | ⚠️ | Not yet implemented — fully specified (ExplainTrace, ExplainResult, buildTrace, LN-EXPLAIN-001–004) |
-| logicn plan | ⚠️ | Not yet implemented — fully specified (ComputePlan with GpuPlan/OpticalPlan/CompatibilityReport, estimateTarget, LN-PLAN-001–004) |
+| logicn verify | ⚠️ | Partial — hash checks only; fully specified (VerifiedArtefact, VerificationResult, verifyHash, LLN-VERIFY-001–005) |
+| logicn deploy | ⚠️ | Not yet implemented — fully specified (DeploymentTarget 7 values, DeploymentResult, ValidateEffectsInput, validateEffects, exit codes 0–7, LLN-DEPLOY-001–005) |
+| logicn explain | ⚠️ | Not yet implemented — fully specified (ExplainTrace, ExplainResult, buildTrace, LLN-EXPLAIN-001–004) |
+| logicn plan | ⚠️ | Not yet implemented — fully specified (ComputePlan with GpuPlan/OpticalPlan/CompatibilityReport, estimateTarget, LLN-PLAN-001–004) |
 
 ### logicn-core-logic
 
 | Area | Status | Notes |
 | --- | --- | --- |
 | README.md | ✅ | **Coverage Reconciliation Status at top**: canonical shape = kind: discriminant (not type:), 4-state Decision (allow\|deny\|review\|unknown), evidence arrays, fail-closed Bool, uncertain Omni → review(); Architecture Depth section updated for all v0.2 types |
-| TODO.md | ✅ | Work tracking — all v0.2 items added; **first item**: "Align older v0.2 KB/developer-guide examples with current README canonical kind/evidence/review shape" |
-| src/ | ⚠️ | Implementation stubs |
-| Tri logic operations | ⚠️ | Fully specified v0.2 (TriState {kind:"true";value:true}/{kind:"false";value:false}/{kind:"unknown";reasons:UnknownReason[]}, UnknownReason {code,message,source?}, TRI_TRUE/TRI_FALSE, triUnknown(reason:UnknownReason), combineUnknownReasons, LN-TRI-001–005); not yet implemented |
-| Decision logic | ⚠️ | Fully specified v0.2 (Decision 4-state: allow/deny/review/unknown, each with evidence:DecisionEvidence[], constructors, decisionToRuntimeBool fails-closed, evaluateCapability deny-first → review() when policies present with no evidence, combineDecisions deny>review>unknown>allow, LN-DECISION-001–005); not yet implemented |
-| Bool boundary rules | ⚠️ | Fully specified v0.2 (BoolBoundaryResult {allowed,value,diagnostics[],reason}, validateBoolBoundary, LN-BOOL-BOUNDARY-001–005); not yet implemented |
-| Omni logic | ⚠️ | Fully specified v0.2 (OmniState 8-value snake_case, OmniDecision with OmniEvidence[], omniToDecision() maps uncertain states → review(), LN-OMNI-001–005); not yet implemented |
+| TODO.md | ✅ | Work tracking — KB alignment item checked off; all v0.2 implementation items corrected to canonical README shapes: `kind:` discriminant with `value` fields, `UnknownReason` object, 4-state Decision with `review` + `evidence[]`, correct `CapabilityRequest`/`PolicyContext` fields, `deny>review>unknown>allow` priority, correct `BoolBoundaryResult`, `OmniState` as snake_case string literal union (2026-05-26) |
+| src/ | ⚠️ | v0.1 numeric implementation present (418 lines TypeScript) — `Tri = -1\|0\|1`, `TRI_FALSE`/`TRI_UNKNOWN`/`TRI_TRUE` constants, `triNot`/`triAnd`/`triOr`/`triNor`, `TriBoolPolicy`, `LogicState<N>`/`LogicDefinition<N>`/`TruthTableRow<N>`/`LogicReport<N>`/`OmniLogicDefinition<N>`; v0.2 discriminated union shape (kind: discriminant, 4-state Decision, evidence arrays) not yet implemented — Phase 1 extends v0.1; v0.2 rewrite is a separate milestone |
+| Tri logic operations | ⚠️ | Fully specified v0.2 (TriState {kind:"true";value:true}/{kind:"false";value:false}/{kind:"unknown";reasons:UnknownReason[]}, UnknownReason {code,message,source?}, TRI_TRUE/TRI_FALSE, triUnknown(reason:UnknownReason), combineUnknownReasons, LLN-TRI-001–005); not yet implemented |
+| Decision logic | ⚠️ | Fully specified v0.2 (Decision 4-state: allow/deny/review/unknown, each with evidence:DecisionEvidence[], constructors, decisionToRuntimeBool fails-closed, evaluateCapability deny-first → review() when policies present with no evidence, combineDecisions deny>review>unknown>allow, LLN-DECISION-001–005); not yet implemented |
+| Bool boundary rules | ⚠️ | Fully specified v0.2 (BoolBoundaryResult {allowed,value,diagnostics[],reason}, validateBoolBoundary, LLN-BOOL-BOUNDARY-001–005); not yet implemented |
+| Omni logic | ⚠️ | Fully specified v0.2 (OmniState 8-value snake_case, OmniDecision with OmniEvidence[], omniToDecision() maps uncertain states → review(), LLN-OMNI-001–005); not yet implemented |
 
 ### logicn-core-compute
 
@@ -431,17 +436,17 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | Photonic / optical plan output | ⚠️ | Fully specified (OpticalNeed, OpticalFallbackPlan, OpticalPlan with recommendedMode, estimateOpticalNeed, buildOpticalPlan, photonic/ dir); not implemented |
 | GPU fallback rules | ✅ | Specified — all fallback paths documented with audit events |
 | Scheduler and planner | ✅ | Specified — responsibilities, inputs, and audit events documented |
-| WASM target | ⚠️ | Fully specified (WasmTarget extended with runtime type + forbiddenEffects[], DEFAULT_WASM_FORBIDDEN_EFFECTS, BROWSER_WASM_FORBIDDEN_EFFECTS, validateWasmEffect, validateWasmTarget, wasm/ dir, LN-WASM-001–004); not yet implemented |
-| Target compatibility report | ⚠️ | Fully specified (CompatibilityLevel, CompatibilityResult extended, TargetProfile, CompatibilityReport, buildCompatibilityReport, compatibility/ dir, LN-COMPAT-001–004); not yet implemented |
+| WASM target | ⚠️ | Fully specified (WasmTarget extended with runtime type + forbiddenEffects[], DEFAULT_WASM_FORBIDDEN_EFFECTS, BROWSER_WASM_FORBIDDEN_EFFECTS, validateWasmEffect, validateWasmTarget, wasm/ dir, LLN-WASM-001–004); not yet implemented |
+| Target compatibility report | ⚠️ | Fully specified (CompatibilityLevel, CompatibilityResult extended, TargetProfile, CompatibilityReport, buildCompatibilityReport, compatibility/ dir, LLN-COMPAT-001–004); not yet implemented |
 
 ### logicn-core-config
 
 | Area | Status | Notes |
 | --- | --- | --- |
 | README.md | ✅ | Scope documented — Architecture Depth section added (ConfigValue discriminated union 6 kinds, EnvironmentPolicy, defaultEnvironmentPolicy() per mode, EnvironmentConfig v0.2 with schemaVersion, SecretEnvironmentReference v0.2, SecretConfigSource discriminated union, LoadEnvironmentConfigInput, loadEnvironmentConfig(), EnvironmentConfigReport, SecretReportValue, internal file layout) |
-| TODO.md | ✅ | Work tracking — all v0.2 items added |
-| src/ | ⚠️ | Implementation stubs |
-| Environment config model | ⚠️ | Fully specified (EnvironmentConfig v0.2, EnvironmentMode, EnvironmentPolicy, defaultEnvironmentPolicy(), loadEnvironmentConfig(), EnvironmentConfigReport, LN-CONFIG-001–010); not yet implemented |
+| TODO.md | ✅ | Work tracking — 4 implemented items checked off: `EnvironmentMode` closed type, `ProductionStrictnessPolicy` enforcement, `RuntimeConfigHandoff` type + constructor, host package manifest boundary diagnostic; **diagnostic rename complete (2026-05-26)**: all codes now LLN-CONFIG-001…027 with `{code, name, message}` metadata; SecretConfigSource updated to canonical `env\|vault\|kms\|runtime` |
+| src/ | ⚠️ | Substantially implemented — `ProjectConfig`, `EnvironmentConfig`, `RuntimeConfigHandoff`, `ProductionStrictnessPolicy`, `DEFAULT_PRODUCTION_STRICTNESS_POLICY`, `loadConfigFromObjects`, `validateHostPackageManifestBoundary` present; diagnostic codes renamed LLN-CONFIG-001…027 with `{code, name, message}` metadata (2026-05-26); v0.2 secret config surface (`SecretConfigSource`, `SecretEnvironmentReference`, `loadEnvironmentConfig`, `EnvironmentConfigReport`) not yet implemented — **naming conflict resolved**: canonical `env\|vault\|kms\|runtime` |
+| Environment config model | ⚠️ | Fully specified (EnvironmentConfig v0.2, EnvironmentMode, EnvironmentPolicy, defaultEnvironmentPolicy(), loadEnvironmentConfig(), EnvironmentConfigReport, LLN-CONFIG-001–010); not yet implemented |
 | Secret reference model | ⚠️ | Fully specified (SecretEnvironmentReference v0.2, SecretConfigSource discriminated union, SecretReportValue); ownership in logicn-core-security |
 | Runtime policy config | ✅ | Documented in KB — `runtime-policy-config.md` |
 
@@ -450,12 +455,12 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | Area | Status | Notes |
 | --- | --- | --- |
 | README.md | ✅ | **Coverage Reconciliation Status at top**: canonical v0.2 names confirmed — has/put, get/put(IdempotencyRecord); Architecture Depth updated (NetworkProtocol 7 values incl. tcp/udp, NetworkPolicy redesigned, productionNetworkPolicy SSRF-safe, GovernedNetworkRuntime, WebhookVerificationConfig v0.2, IdempotencyRecord with status field, all typed Input/Result structs) |
-| TODO.md | ✅ | Work tracking — all v0.2 items; **first item**: "Audit docs for legacy ws/wss, sharedSecret, exists/save and has/store wording"; remaining TODO items still reference old names (sharedSecret, insertOnce(), getOrSet()) — must be updated during implementation |
+| TODO.md | ✅ | Work tracking — all v0.2 items; legacy audit item checked off; `ReplayStore` corrected to `has/put(key,ttlSeconds)`, `IdempotencyStore` corrected to `get(key)/put(record,ttlSeconds?)` (2026-05-26) |
 | src/ | ⚠️ | Implementation stubs |
 | Network boundary policy | ✅ | Documented in KB — `network-boundary-policy.md` |
 | Rate limiting | ✅ | Documented in KB — `layered-rate-limits.md` |
 | API boundary contracts | ✅ | Documented in KB — `runtime-boundary-declarations.md` |
-| Governance model | ⚠️ | Fully specified v0.2 (NetworkProtocol 7 values incl. tcp/udp, NetworkPolicy with default/allowDestinations/denyDestinations, productionNetworkPolicy SSRF deny list, GovernedNetworkRuntime, safeHttpRequest, AiProviderNetworkPolicy, LN-NETWORK-001–008); not yet implemented |
+| Governance model | ⚠️ | Fully specified v0.2 (NetworkProtocol 7 values incl. tcp/udp, NetworkPolicy with default/allowDestinations/denyDestinations, productionNetworkPolicy SSRF deny list, GovernedNetworkRuntime, safeHttpRequest, AiProviderNetworkPolicy, LLN-NETWORK-001–008); not yet implemented |
 | Webhook HMAC / replay / idempotency | ✅ | Fully specified v0.2 in `logicn-core-network-webhook.md` — canonical names: `secret: string\|Uint8Array`, `ReplayStore.has/put`, `IdempotencyStore.get/put(IdempotencyRecord)`; not yet implemented |
 
 ### logicn-core-reports
@@ -468,10 +473,10 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | Security report contracts | ✅ | Defined in logicn-core-security scope |
 | AI context report | ✅ | Documented in logicn-core (app.ai-context.json) |
 | Build / deployment reports | ✅ | Documented in `build-system-and-cli.md` |
-| Runtime audit log format (JSONL) | ⚠️ | Fully specified v0.2 (RuntimeAuditEvent with schemaVersion "logicn.runtime.audit.v1", RuntimeAuditStatus 6 values, serializeAuditEvent sync, appendAuditEvent async, validateAuditSafety, audit/ dir, LN-REPORT-001–005); not yet implemented |
-| Execution proof format | ⚠️ | Fully specified v0.2 (ExecutionProofHashes 5 SHA256 fields, ExecutionProof schemaVersion "logicn.proof.v1", buildExecutionProof/validateExecutionProof async, proofs/ dir, LN-PROOF-001–005); not yet implemented |
-| Denial report | ⚠️ | Fully specified v0.2 (DenialReport schemaVersion "logicn.denial.v1", 6-category union, denials/ dir, LN-DENIAL-001–004); not yet implemented |
-| Capability / effect / runtime evidence | ⚠️ | Fully specified v0.2 (CapabilityEvidence, EffectEvidence with declared/inferred/transitive fields, RuntimeEvidence with arrays, buildRuntimeEvidence async, evidence/ dir, LN-EVIDENCE-001–004); not yet implemented |
+| Runtime audit log format (JSONL) | ⚠️ | Fully specified v0.2 (RuntimeAuditEvent with schemaVersion "logicn.runtime.audit.v1", RuntimeAuditStatus 6 values, serializeAuditEvent sync, appendAuditEvent async, validateAuditSafety, audit/ dir, LLN-REPORT-001–005); not yet implemented |
+| Execution proof format | ⚠️ | Fully specified v0.2 (ExecutionProofHashes 5 SHA256 fields, ExecutionProof schemaVersion "logicn.proof.v1", buildExecutionProof/validateExecutionProof async, proofs/ dir, LLN-PROOF-001–005); not yet implemented |
+| Denial report | ⚠️ | Fully specified v0.2 (DenialReport schemaVersion "logicn.denial.v1", 6-category union, denials/ dir, LLN-DENIAL-001–004); not yet implemented |
+| Capability / effect / runtime evidence | ⚠️ | Fully specified v0.2 (CapabilityEvidence, EffectEvidence with declared/inferred/transitive fields, RuntimeEvidence with arrays, buildRuntimeEvidence async, evidence/ dir, LLN-EVIDENCE-001–004); not yet implemented |
 
 ### logicn-core-tasks
 
@@ -499,13 +504,13 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| README.md | ✅ | Governance-First Architecture section added; v0.2 Architecture Depth section added; **Coverage Reconciliation Status**: unresolved conflicts — OpticalTransportMode enum (3 incompatible 6-value variants), LN-PHOTONIC-001–006 diagnostic table (prior vs v0.2 meanings differ), boundary overlap with logicn-core-vector/logicn-core-compute/logicn-target-photonic; do not implement until all three conflicts resolved |
-| TODO.md | ✅ | All governance types, functions, diagnostic codes, planned sub-packages added; **first three items**: "Reconcile canonical OpticalTransportMode enum", "Reconcile canonical LN-PHOTONIC-001–006 diagnostic table", "Confirm photonic ownership before implementation" |
+| README.md | ✅ | Governance-First Architecture section added; v0.2 Architecture Depth section added; **Coverage Reconciliation Status**: unresolved conflicts — OpticalTransportMode enum (3 incompatible 6-value variants), LLN-PHOTONIC-001–006 diagnostic table (prior vs v0.2 meanings differ), boundary overlap with logicn-core-vector/logicn-core-compute/logicn-target-photonic; do not implement until all three conflicts resolved |
+| TODO.md | ✅ | All governance types, functions, diagnostic codes, planned sub-packages added; **first three items**: "Reconcile canonical OpticalTransportMode enum", "Reconcile canonical LLN-PHOTONIC-001–006 diagnostic table", "Confirm photonic ownership before implementation" |
 | src/ | ⚠️ | Implementation stubs — planning layer only |
 | Photonic compute plan | ✅ | Documented in KB — `native-photonic-compute-future.md` |
 | Photonic resolution boundary | ✅ | Documented in KB — `photonic-resolution-boundary.md` |
-| Governance architecture (prior KB) | ⚠️ | Specified in `logicn-core-photonic-backend-architecture.md` (OpticalTransportMode prior meanings, LN-PHOTONIC-001–006 prior meanings); not yet implemented |
-| Governance architecture (v0.2 formal spec) | ⚠️ | Specified in `logicn-core-photonic-v02.md` (OpticalTransportMode 6-value enum, all validation functions, PhotonicCapability, topologies, LN-PHOTONIC-001–006 v0.2 meanings); not yet implemented |
+| Governance architecture (prior KB) | ⚠️ | Specified in `logicn-core-photonic-backend-architecture.md` (OpticalTransportMode prior meanings, LLN-PHOTONIC-001–006 prior meanings); not yet implemented |
+| Governance architecture (v0.2 formal spec) | ⚠️ | Specified in `logicn-core-photonic-v02.md` (OpticalTransportMode 6-value enum, all validation functions, PhotonicCapability, topologies, LLN-PHOTONIC-001–006 v0.2 meanings); not yet implemented |
 | Real photonic backend | ❌ | Not yet — planning only until hardware available |
 
 ### logicn-framework-api-server
@@ -863,12 +868,12 @@ out before implementation.
 | `logicn-core-compiler` effect/boundary | Reconcile effect/boundary model and diagnostic-code meanings before implementation | README/TODO and KB specs use different effect/boundary shapes and code ranges |
 | `logicn-core-compiler` manifest pass 14 | Bring package README/TODO up to pass-14 integrity/stable-serialization contract, then implement | `ManifestIntegrity`, `serializeManifestStable()`, and `buildManifestIntegrity()` are in pass-14 KB, not package README/TODO |
 | `logicn-core-cli` build/verify/deploy/explain/plan | Finish build/verify and implement deploy/explain/plan command paths | None documented |
-| `logicn-core-reports` audit/proof/denial/evidence | Finalise package contracts and implementation for report schemas | None documented |
+| `logicn-core-reports` audit/proof/denial/evidence/trace | Finalise package contracts and implementation for report schemas; add FlowTraceEvent contract and JSONL writer (LLN-TRACE-001–005) | None documented |
 | `logicn-core-compute` GPU/photonic/WASM/compat | Keep as planning until backend and target compatibility implementation starts | Photonic ownership and enum conflicts affect photonic plan output |
-| `logicn-core-logic` Tri/Decision/Bool/Omni | Align older KB examples, then implement v0.2 canonical runtime contracts | Older KBs use superseded `type:`/3-state Decision forms |
-| `logicn-core-config` environment/secrets | Reconcile SecretConfigSource names, then implement EnvironmentConfig v0.2 and SecretEnvironmentReference loading/reporting | `env/file/secretStore/runtimeInjected` differs from formal `env/vault/kms/runtime`; secret ownership overlaps with `logicn-core-security` |
-| `logicn-core-security` secret/taint | Choose canonical `ProtectedSecret<T>` unwrap API before implementation | `reveal()` conflicts with `unwrapForApprovedSink(sink)` |
-| `logicn-core-network` governance/webhook | Replace or map legacy network/webhook names, then implement v0.2 contracts | `sharedSecret`, `ws/wss`, `exists/save`, `has/store` legacy wording |
+| `logicn-core-logic` Tri/Decision/Bool/Omni | Implement v0.2 canonical runtime contracts — TODO items corrected to canonical README shapes (2026-05-26) | KB alignment complete; v0.2 TODO items now use `kind:` discriminant, `value` fields, `UnknownReason`, 4-state Decision + evidence, correct OmniState snake_case literals |
+| `logicn-core-config` environment/secrets/vault | Implement EnvironmentConfig v0.2, SecretEnvironmentReference loading/reporting, ConfigVault (LLN-VAULT-001–005) — SecretConfigSource naming resolved (2026-05-26) | Canonical `SecretConfigSource`: `env\|vault\|kms\|runtime`; Config Vault and .env trust model KBs added |
+| `logicn-core-security` secret/taint | Implement v0.2 secret reference model — ProtectedSecret unwrap API resolved (2026-05-26) | Canonical: `unwrapForApprovedSink(sink)`; `private revealUnsafeForRuntimeOnly()` internal only |
+| `logicn-core-network` governance/webhook | Implement v0.2 contracts — legacy name audit complete (2026-05-26) | TODO corrected: `ReplayStore.insertOnce()` → `has/put(key,ttlSeconds)`, `IdempotencyStore.getOrSet()` → `get(key)/put(record,ttlSeconds?)` |
 | `logicn-core-photonic` governance | Reconcile enum, diagnostic table and ownership before implementation | Three incompatible `OpticalTransportMode` forms and diagnostic tables |
 | `logicn-core-vector` photonic proposal | Keep proposal-only until photonic ownership is resolved | Boundary conflict with `logicn-core-photonic` |
 | `logicn-framework-api-server` implementation | Map adapter replay/idempotency names to network canonical contracts | `exists()/save()` differs from network `has()/put()` |
@@ -951,25 +956,17 @@ out before implementation.
 
 - KB: `logicn-core-config-environment-secrets.md`, `logicn-core-config-v02.md`
 - README: ConfigValue discriminated union, EnvironmentPolicy, defaultEnvironmentPolicy(), EnvironmentConfig v0.2 with schemaVersion, SecretEnvironmentReference v0.2, SecretConfigSource discriminated union, LoadEnvironmentConfigInput, loadEnvironmentConfig(), EnvironmentConfigReport, SecretReportValue
-- Manual check: README and `logicn-core-config-environment-secrets.md` use
-  `SecretConfigSource` variants `env|file|secretStore|runtimeInjected`; formal
-  `logicn-core-config-v02.md` uses `env|vault|kms|runtime` and documents the
-  prior names. Config also keeps `ProtectedSecret` as a simple interface while
-  `logicn-core-security` owns the full class behavior.
-- Status: ⚠️ fully specified v0.2, but SecretConfigSource naming must be
-  reconciled before implementation.
+- Manual check (2026-05-26): SecretConfigSource naming conflict resolved — canonical `env|vault|kms|runtime`; `logicn-core-config-environment-secrets.md` updated; TODO updated. ConfigDiagnostic `name` field added to KB and implementation. Diagnostic codes renamed from `LogicN_CONFIG_*` to `LLN-CONFIG-001…027` with `{code, name, message}` metadata. Config keeps `ProtectedSecret` as a simple interface; `logicn-core-security` owns the full class.
+- Status: ✅ SecretConfigSource conflict resolved; implementation unblocked for EnvironmentConfig v0.2 and SecretEnvironmentReference loading/reporting
 
 **logicn-core-security: secret reference model with taint tracking**
 
 - KB (canonical): `logicn-core-security-secret-reference-model.md`
-- KB (conflicting): `logicn-core-security-v02.md` — ⚠️ Update status: uses reveal(); conflicts with architecture spec unwrapForApprovedSink(sink); do not implement until resolved
-- README: SecretSource discriminated union, SecretCategory 13 values, SecretRedactionPolicy, SecretReference v0.2, ProtectedSecret<T> full impl, SecretSafeSink extended, SecretTaint, safeLog, buildAuthorizationHeader; Coverage Reconciliation Status section added
-- TODO first item: "Decide canonical ProtectedSecret<T> unwrap API: reveal() or unwrapForApprovedSink(sink)"
-- Manual check: package README implementation text currently uses
-  `unwrapForApprovedSink(sink)` and states that the v0.2 formal KB still records
-  `reveal()`. `logicn-core-security-secret-reference-model.md` also prefers the
-  sink-aware architecture form.
-- Status: ⚠️ fully specified v0.2, not yet implemented; ProtectedSecret unwrap API conflict unresolved
+- KB (updated): `logicn-core-security-v02.md` — ✅ **conflict resolved (2026-05-26)** — `unwrapForApprovedSink(sink)` canonical; `private revealUnsafeForRuntimeOnly()` internal only; SecretSource renamed from `environment/file/secretStore/runtimeInjected` to `env/vault/kms/runtime|oauth|token`
+- README: SecretSource discriminated union (env|vault|kms|runtime|oauth|token), SecretCategory 13 values, SecretRedactionPolicy, SecretReference v0.2, ProtectedSecret<T> full impl with unwrapForApprovedSink(sink), SecretSafeSink extended, SecretTaint, safeLog, buildAuthorizationHeader; Coverage Reconciliation Status updated to resolved
+- TODO first item: checked off — ProtectedSecret API resolved (2026-05-26)
+- Manual check (2026-05-26): all files aligned on `unwrapForApprovedSink(sink)` as the single public API; `revealUnsafeForRuntimeOnly()` marked private throughout.
+- Status: ✅ ProtectedSecret conflict resolved; fully specified v0.2; implementation unblocked
 
 **logicn-core-network: governance model**
 
@@ -987,11 +984,11 @@ out before implementation.
 
 **logicn-core-photonic: governance architecture**
 
-- KB (legacy/historical): `logicn-core-photonic-backend-architecture.md` — ⚠️ Update status: prior 3-value OpticalTransportMode and original LN-PHOTONIC-001–006 meanings; historical context only
+- KB (legacy/historical): `logicn-core-photonic-backend-architecture.md` — ⚠️ Update status: prior 3-value OpticalTransportMode and original LLN-PHOTONIC-001–006 meanings; historical context only
 - KB (conflicting v0.2): `logicn-core-photonic-v02.md` — ⚠️ Update status: not implementation-ready; OpticalTransportMode 6-value enum conflicts with governance spec and vector spec; reconciliation required
 - KB (governance spec): `logicn-core-photonic-governance-architecture.md` — DIRECT|WAVELENGTH|PACKETIZED|HYBRID|EMULATED|SIMULATED — also conflicts; see version conflict notes
 - README: v0.2 Architecture Depth section added; Coverage Reconciliation Status (unresolved: enum, diagnostic table, package boundary)
-- TODO first three items: "Reconcile canonical OpticalTransportMode enum", "Reconcile canonical LN-PHOTONIC-001–006 table", "Confirm ownership before implementation"
+- TODO first three items: "Reconcile canonical OpticalTransportMode enum", "Reconcile canonical LLN-PHOTONIC-001–006 table", "Confirm ownership before implementation"
 - Manual check: package README/TODO still contain both the prior 3-value
   `OpticalTransportMode` and a proposed v0.2 6-value enum after the warning
   block. Treat later implementation snippets as historical/proposed until the
@@ -1000,7 +997,7 @@ out before implementation.
 
 **logicn-core-vector: photonic governance proposal**
 
-- KB: `logicn-core-vector-photonic-governance.md` — OpticalTransportMode prior 3-value + v0.2 6-value "electrical"|"hybrid"|"photonic"|"waveguide"|"plasmonic"|"coherent", PhotonicCapability 6-value, PhotonicTopology 6-value, PhotonicRuntimeTarget/PhotonicExecutionPlan v0.2, all validation functions, LN-PHOTONIC-001–006 prior+v0.2, deny-by-default fallback, BOUNDARY CONFLICT documented
+- KB: `logicn-core-vector-photonic-governance.md` — OpticalTransportMode prior 3-value + v0.2 6-value "electrical"|"hybrid"|"photonic"|"waveguide"|"plasmonic"|"coherent", PhotonicCapability 6-value, PhotonicTopology 6-value, PhotonicRuntimeTarget/PhotonicExecutionPlan v0.2, all validation functions, LLN-PHOTONIC-001–006 prior+v0.2, deny-by-default fallback, BOUNDARY CONFLICT documented
 - ⚠️ Update status: proposal/reference note only — logicn-core-photonic owns final definitions after reconciliation
 - README: Boundary conflict note + Coverage Reconciliation Status; vector does not own photonic runtime target semantics
 - TODO first item: "Treat vector photonic governance notes as proposal-only until ownership reconciled"
@@ -1025,6 +1022,59 @@ out before implementation.
 ---
 
 See `package-completion-status.md` for the full implementation order (Phase 1–4).
+
+---
+
+## 5. Implementation Build Scope
+
+### Implementation Language and Bootstrap Strategy
+
+**Two-stage bootstrap:**
+
+**Stage 1 — Bootstrap runtime (current):** Plain JavaScript (`.js` files running directly
+in Node.js, no build step, no compilation). The execution engine — parser, type checker,
+interpreter, runtime kernel — is implemented as JavaScript. `logicn-core/compiler/logicn.js`
+is the existing foundation and the correct shape for this stage. Stage 1 packages extend
+that pattern: `.js` files that Node.js can `require` or `import` directly.
+
+**Stage 2 — Self-hosted runtime:** Once the Stage 1 JavaScript runtime can compile and
+execute LogicN programs, the runtime itself will be rewritten in LogicN's own
+language/syntax. This is the self-hosting milestone.
+
+See `bootstrap-runtime-roadmap.md` and `node-hosted-runtime-roadmap.md` for the full
+stage plan (Node.js bootstrap → Neutral IR → Rust/WASM → LogicN self-hosted).
+
+**Existing TypeScript files:** `logicn-core-cli`, `logicn-core-config` and
+`logicn-core-logic` contain TypeScript files from earlier contract and tooling work. These
+are the tooling and contract layer — not the runtime engine itself. They remain where they
+are for now; the Stage 1 runtime engine grows from `compiler/logicn.js` outward. Whether
+the tooling layer migrates to plain JavaScript or stays as TypeScript is a separate
+decision made per package when implementation begins.
+
+### Phase 1 Package Build Selection
+
+Stage 1 runtime files are plain `.js` files that run directly in Node.js. No build step.
+No compilation. `logicn-core/compiler/logicn.js` is the existing foundation and the model
+for all Stage 1 runtime additions.
+
+| Package | Decision | Stage 1 notes |
+| --- | --- | --- |
+| `logicn-core` | **Runtime foundation** | `compiler/logicn.js` is the Stage 1 root — parser, type checker, formatter prototype already in JavaScript; runtime engine grows from here; no `src/` directory needed |
+| `logicn-core-cli` | **Include** | CLI tooling layer — 10 TypeScript files present from earlier contract work; `check` and `fmt` working; `build`, `verify`, `deploy`, `explain`, `plan` command bodies are the remaining gaps; language decision (keep TypeScript or migrate to `.js`) made when those commands are implemented |
+| `logicn-core-config` | **Include (scope-limited)** | Config and policy layer — TypeScript implemented (`ProjectConfig`/`EnvironmentConfig`/`RuntimeConfigHandoff`/`ProductionStrictnessPolicy`/`loadConfigFromObjects`/`validateHostPackageManifestBoundary`); diagnostic codes renamed to LLN-CONFIG-001…027; SecretConfigSource conflict resolved (2026-05-26) — v0.2 secret config surface now unblocked |
+| `logicn-core-logic` | **Include (v0.1 extensions)** | Runtime logic layer — 418 lines TypeScript v0.1 numeric Tri (`Tri = -1\|0\|1`, `TriBoolPolicy`, generic `LogicState<N>`/`LogicDefinition<N>` framework); extend v0.1 with missing operations; v0.2 discriminated union rewrite is a separate milestone after self-hosting is achievable |
+| `logicn-core-network` | **Add** | Runtime network layer — canonical v0.2 contracts in `logicn-core-network-webhook.md` are clean and unblocked (`WebhookRequest`/`WebhookResponse`, `IdempotencyRecord`, `ReplayStore.has/put`, `IdempotencyStore.get/put(IdempotencyRecord)`); high-value dependency for `logicn-framework-api-server`; no blocking conflicts |
+
+### Surfaces Deferred from Phase 1
+
+| Surface | Package | Reason |
+| --- | --- | --- |
+| `SecretConfigSource` / `SecretEnvironmentReference` / `loadEnvironmentConfig` | `logicn-core-config` | **Resolved (2026-05-26)** — canonical: `env\|vault\|kms\|runtime`; KB and TODO updated; implementation unblocked |
+| `ProtectedSecret<T>` unwrap API | `logicn-core-security` | **Resolved (2026-05-26)** — canonical: `unwrapForApprovedSink(sink)`; `private revealUnsafeForRuntimeOnly()` internal only; KB and TODO updated |
+| `OpticalTransportMode` / LLN-PHOTONIC diagnostic codes | `logicn-core-photonic` | Three incompatible 6-value enums; diagnostic code meanings differ across prior KB, v0.2 formal and vector spec |
+| v0.2 `TriState` / `Decision` / `BoolBoundaryResult` / `OmniState` discriminated unions | `logicn-core-logic` | Phase 1 ships v0.1 extensions; v0.2 rewrite is a separate milestone |
+| `ReplayStore.exists/save` adapter name mapping | `logicn-framework-api-server` | Must be mapped to canonical `has/put(ttlSeconds)` before implementation can proceed |
+| `src/` contracts | `logicn-core` | No `src/` directory; no shared base contracts defined; deferred to a later pass |
 
 ---
 
@@ -1061,7 +1111,7 @@ vector (28.txt)  = "electrical"|"hybrid"|"photonic"|"waveguide"|"plasmonic"|"coh
 UNRESOLVED: three incompatible 6-value enums; must be reconciled before implementation
 ```
 
-**LN-PHOTONIC diagnostic codes**
+**LLN-PHOTONIC diagnostic codes**
 
 ```text
 prior KB = 001 unavailable, 002 denied by policy, 003 scheduler unavailable,
@@ -1119,20 +1169,31 @@ network package (x9) = has()/put() with no IdempotencyRecord
 24.txt/28.txt v0.2   = get()/put(IdempotencyRecord) with status field  ← canonical
 ```
 
-**ProtectedSecret**
+**ProtectedSecret** ✅ resolved (2026-05-26)
 
 ```text
-logicn-core-config (x7)   = simple interface {reference, protected:true}
-logicn-core-security (x8) = class ProtectedSecret<T> with reveal()
-architecture spec (x14)   = class ProtectedSecret<T> with unwrapForApprovedSink()  ← preferred; not yet decided
+Canonical: class ProtectedSecret<T> with unwrapForApprovedSink(sink)
+           private revealUnsafeForRuntimeOnly() — internal runtime use only
+
+logicn-core-security-v02.md     updated — unwrapForApprovedSink(sink) canonical
+logicn-core-security/README.md  updated — Coverage Reconciliation Status resolved
+logicn-core-security/TODO.md    updated — decision item checked off
 ```
 
-**SecretSource**
+**SecretSource / SecretConfigSource** ✅ resolved (2026-05-26)
 
 ```text
-logicn-core-config (x7)   = env/vault/kms/runtime                              (4 values)
-logicn-core-security (x8) = environment/vault/kms/runtime/oauth/token          (6 values)
-architecture spec (x14)   = "env"|"file"|"secretStore"|"runtimeInjected"       (4 values, different names)
+Canonical SecretConfigSource (logicn-core-config):
+    "env" | "vault" | "kms" | "runtime"                                        (4 values)
+
+Canonical SecretSource (logicn-core-security adds auth-layer sources):
+    "env" | "vault" | "kms" | "runtime" | "oauth" | "token"                   (6 values)
+
+logicn-core-config-environment-secrets.md  updated — SecretConfigSource env|vault|kms|runtime
+logicn-core-config/TODO.md                 updated — SecretConfigSource line corrected
+logicn-core-security-v02.md               updated — "environment" renamed to "env"; file/secretStore/runtimeInjected removed
+logicn-core-security/README.md             updated — SecretSource canonical names
+logicn-core-security/TODO.md               updated — SecretSource item corrected
 ```
 
 **NetworkProtocol**
@@ -1182,7 +1243,7 @@ downloaded update  = http/https/tcp/udp/grpc/websocket/quic                    (
 - `logicn-core-photonic-v02.md` — not implementation-ready; OpticalTransportMode conflict
 - `logicn-core-photonic-backend-architecture.md` — legacy/historical; prior 3-value enum + prior diagnostic codes
 - `logicn-core-vector-photonic-governance.md` — proposal/reference note; logicn-core-photonic owns final definitions
-- `logicn-core-security-v02.md` — uses reveal(); conflicts with architecture spec unwrapForApprovedSink(sink)
+- `logicn-core-security-v02.md` — **updated (2026-05-26)**: canonical `unwrapForApprovedSink(sink)`; SecretSource canonical names; no longer stale
 - `logicn-framework-api-server-implementation.md` — adapter-level ReplayStore names; canonical is network has/put
 
 ### Summary of changes
@@ -1194,7 +1255,7 @@ downloaded update  = http/https/tcp/udp/grpc/websocket/quic                    (
 - Marked photonic enum/diagnostic/ownership conflicts as not implementation-ready.
 - Marked logicn-core-logic README and tri-decision-bool KB as current runtime-facing canonical shape.
 - Marked network webhook v0.2 as canonical for webhook/replay/idempotency.
-- Marked ProtectedSecret reveal/unwrap API as unresolved — do not implement until decided.
+- Marked ProtectedSecret reveal/unwrap API as unresolved — do not implement until decided. (**Resolved 2026-05-26**: canonical `unwrapForApprovedSink(sink)`; see Version Conflict Notes.)
 - Added follow-up TODO items for all 6 packages with unresolved conflicts.
 
 ### Workspace stats (build/graph/LogicN_GRAPH_REPORT.md, generated 2026-05-25)

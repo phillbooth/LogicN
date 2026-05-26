@@ -53,7 +53,7 @@ not be implemented until reconciled:
 - photonic ownership and naming: `logicn-core-photonic` owns photonic runtime
   target and execution plan semantics; `logicn-core-vector` may reference vector
   suitability only, and the conflicting `OpticalTransportMode` enums and
-  `LN-PHOTONIC-001` through `LN-PHOTONIC-006` meanings remain unresolved.
+  `LLN-PHOTONIC-001` through `LLN-PHOTONIC-006` meanings remain unresolved.
 - logic semantics: `logicn-core-logic` README and
   `logicn-core-logic-tri-decision-bool.md` are the current v0.2 canonical
   developer-facing shape for `TriState`, `Decision`, `BoolBoundaryResult` and
