@@ -349,6 +349,7 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | examples/ | ✅ | hello, option, result, decision, payment-webhook, benchmarks |
 | compiler/logicn.js | ✅ | **Stage 1 runtime foundation** — plain JavaScript file, runs directly in Node.js with no build step; parser, type checker, formatter prototype; the model for all Stage 1 runtime additions |
 | src/index.ts | ✅ | **Shared type contracts** — `BaseDiagnostic` (minimal `{code,name,severity,message}` shape; all package diagnostics are structurally compatible), `CompilerDiagnostic extends BaseDiagnostic` (adds `location?`, `suggestedFix?`), `DiagnosticSeverity`, `SourceLocation`, `TokenKind`, `Token`, `LexResult`; `ContentBlockType`, `CONTENT_BLOCK_TYPES`, `TypedContentBlockExpression`; `BindingKind`, `BindingDeclaration`, `MethodChainCall`, `MethodChainExpression`; `SafetyLevel`, `IntentDeclaration`, `EffectReference`, `FlowDeclarationMetadata`; `FlowTraceStage`, `FlowTraceStatus`, `FlowTraceDecision`, `FlowTraceEvent`; `AstNodeKind` (includes `charLiteral`, `byteLiteral`, `readonlyDecl`, `methodChainExpr`, `typedContentBlockExpr`, `guardedFlowDecl`, `privilegedFlowDecl`, `unsafeFlowDecl`, `experimentalFlowDecl`, `unsafeBlock`, `intentDecl`, `requiresCapabilityDecl`, `fallbackDecl` — 2026-05-26), `AstNode`, `ParseResult`, `BuildOutputKind`, `BuildOutput`, `BuildManifest`; `createCompilerDiagnostic()`, `hasErrors()`, `filterBySeverity()` helpers. Note: `EnvironmentMode` is **not** here — canonical owner is `@logicn/core-config`. |
+| tests/ | ✅ | 9 contract tests (2026-05-26) — `createCompilerDiagnostic` shape, optional fields, `hasErrors`, `filterBySeverity`, `CONTENT_BLOCK_TYPES`; `npm test` chains LLN compiler examples (42 pass) + Node contract suite (9 pass) |
 
 ### logicn-core-runtime
 
@@ -357,6 +358,7 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | README.md | ✅ | Scope, execution model, philosophy, contracts, phases documented |
 | TODO.md | ✅ | Work tracking |
 | src/ | ⚠️ | Implementation stubs — runtime contracts defined, not yet executed |
+| tests/ | ✅ | 12 tests passing (2026-05-26) — `validateRuntimeContext`, `createRuntimeContext` (throws on invalid), `okRuntimeResult`/`errorRuntimeResult`, `decideRuntimeEffect` (default + custom policy, all effect kinds), `DEFAULT_RUNTIME_EFFECT_POLICY` constants, `createRuntimeReport` |
 | Execution contract model | ✅ | Documented — request → planning → verification → execution → audit |
 | Effect dispatch | ✅ | Listed in README scope |
 | Resilient flow supervision | ✅ | Listed in README scope |
@@ -373,6 +375,7 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | README.md | ✅ | Scope, boundary, contracts fully documented — Architecture Depth section added; **Coverage Reconciliation Status**: ProtectedSecret<T> conflict **resolved (2026-05-26)** — canonical `unwrapForApprovedSink(sink)`; SecretSource canonical names updated (`env\|vault\|kms\|runtime\|oauth\|token`) |
 | TODO.md | ✅ | Work tracking — all v0.2 items added; **first item checked off**: ProtectedSecret<T> unwrap API resolved (2026-05-26); SecretSource item updated to canonical names |
 | src/ | ⚠️ | Implementation stubs |
+| tests/ | ✅ | 14 tests passing (2026-05-26) — `createSecureStringReference` (label, classification, fingerprint, no value), redact bearer tokens + credentials, permission deny-by-default, wildcard deny priority, duplicate grant detection, empty resource rejection, redact non-sensitive content unchanged, `validatePermissionModel`, `validateCryptographicPolicy`, `validateRedactionRule`, `createSecurityReport` |
 | SecureString / Secret<T> | ✅ | Contracts documented |
 | Redaction primitives | ✅ | Contracts documented |
 | Permission model types | ✅ | Contracts documented |
@@ -421,11 +424,11 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | --- | --- | --- |
 | README.md | ✅ | **Coverage Reconciliation Status at top**: canonical shape = kind: discriminant (not type:), 4-state Decision (allow\|deny\|review\|unknown), evidence arrays, fail-closed Bool, uncertain Omni → review(); Architecture Depth section updated for all v0.2 types |
 | TODO.md | ✅ | Work tracking — KB alignment item checked off; all v0.2 implementation items corrected to canonical README shapes: `kind:` discriminant with `value` fields, `UnknownReason` object, 4-state Decision with `review` + `evidence[]`, correct `CapabilityRequest`/`PolicyContext` fields, `deny>review>unknown>allow` priority, correct `BoolBoundaryResult`, `OmniState` as snake_case string literal union (2026-05-26) |
-| src/ | ⚠️ | v0.1 numeric implementation present (418 lines TypeScript) — `Tri = -1\|0\|1`, `TRI_FALSE`/`TRI_UNKNOWN`/`TRI_TRUE` constants, `triNot`/`triAnd`/`triOr`/`triNor`, `TriBoolPolicy`, `LogicState<N>`/`LogicDefinition<N>`/`TruthTableRow<N>`/`LogicReport<N>`/`OmniLogicDefinition<N>`; v0.2 discriminated union shape (kind: discriminant, 4-state Decision, evidence arrays) not yet implemented — Phase 1 extends v0.1; v0.2 rewrite is a separate milestone |
-| Tri logic operations | ⚠️ | Fully specified v0.2 (TriState {kind:"true";value:true}/{kind:"false";value:false}/{kind:"unknown";reasons:UnknownReason[]}, UnknownReason {code,message,source?}, TRI_TRUE/TRI_FALSE, triUnknown(reason:UnknownReason), combineUnknownReasons, LLN-TRI-001–005); not yet implemented |
-| Decision logic | ⚠️ | Fully specified v0.2 (Decision 4-state: allow/deny/review/unknown, each with evidence:DecisionEvidence[], constructors, decisionToRuntimeBool fails-closed, evaluateCapability deny-first → review() when policies present with no evidence, combineDecisions deny>review>unknown>allow, LLN-DECISION-001–005); not yet implemented |
-| Bool boundary rules | ⚠️ | Fully specified v0.2 (BoolBoundaryResult {allowed,value,diagnostics[],reason}, validateBoolBoundary, LLN-BOOL-BOUNDARY-001–005); not yet implemented |
-| Omni logic | ⚠️ | Fully specified v0.2 (OmniState 8-value snake_case, OmniDecision with OmniEvidence[], omniToDecision() maps uncertain states → review(), LLN-OMNI-001–005); not yet implemented |
+| src/ | ✅ | Root `index.ts` — v0.1 numeric implementation (Tri, LogicState, LogicDefinition, TruthTableRow, OmniLogicDefinition); sub-paths (`/tri`, `/decision`, `/bool-boundary`, `/omni`) — v0.2 discriminated union implementation fully complete (2026-05-26) |
+| Tri logic operations | ✅ | v0.2 implemented in `src/tri/` — `TriState` discriminated union, `TRI_STATE_TRUE/FALSE`, `triUnknown`, `triUnknownFromReasons`, `triStateNot/And/Or/Nor`, `combineUnknownReasons`, `deduplicateUnknownReasons`, `LLN-TRI-001–005` diagnostics; 13 tests passing (2026-05-26) |
+| Decision logic | ✅ | v0.2 implemented in `src/decision/` — 4-state `Decision`, `allow/deny/review/unknownDecision` constructors, `decisionToRuntimeBool`, `combineDecisions` (deny>review>unknown>allow), `evaluateCapability`, `LLN-DECISION-001–005` diagnostics; 12 tests passing (2026-05-26) |
+| Bool boundary rules | ✅ | v0.2 implemented in `src/bool-boundary/` — `validateBoolBoundary` (TriState + Decision inputs, fail-closed on unknown/review), `BoolBoundaryResult`, `BoolBoundaryContext`, `LLN-BOOL-BOUNDARY-001–005` diagnostics; 8 tests passing (2026-05-26) |
+| Omni logic | ✅ | v0.2 implemented in `src/omni/` — `OmniState` 8-value snake_case union, `OMNI_STATES`, `OMNI_UNCERTAIN_STATES`, `isOmniState`, `isOmniUncertain`, `omniToDecision` (uncertain→review, confidence threshold 0.8), `LLN-OMNI-001–005` diagnostics; 10 tests passing (2026-05-26) |
 
 ### logicn-core-compute
 
@@ -450,6 +453,7 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | README.md | ✅ | Scope documented — Architecture Depth section added (ConfigValue discriminated union 6 kinds, EnvironmentPolicy, defaultEnvironmentPolicy() per mode, EnvironmentConfig v0.2 with schemaVersion, SecretEnvironmentReference v0.2, SecretConfigSource discriminated union, LoadEnvironmentConfigInput, loadEnvironmentConfig(), EnvironmentConfigReport, SecretReportValue, internal file layout) |
 | TODO.md | ✅ | Work tracking — 4 implemented items checked off: `EnvironmentMode` closed type, `ProductionStrictnessPolicy` enforcement, `RuntimeConfigHandoff` type + constructor, host package manifest boundary diagnostic; **diagnostic rename complete (2026-05-26)**: all codes now LLN-CONFIG-001…027 with `{code, name, message}` metadata; SecretConfigSource updated to canonical `env\|vault\|kms\|runtime` |
 | src/ | ⚠️ | Substantially implemented — `ProjectConfig`, `EnvironmentConfig`, `RuntimeConfigHandoff`, `ProductionStrictnessPolicy`, `DEFAULT_PRODUCTION_STRICTNESS_POLICY`, `loadConfigFromObjects`, `validateHostPackageManifestBoundary` present; diagnostic codes renamed LLN-CONFIG-001…027 with `{code, name, message}` metadata (2026-05-26); v0.2 secret config surface (`SecretConfigSource`, `SecretEnvironmentReference`, `loadEnvironmentConfig`, `EnvironmentConfigReport`) not yet implemented — **naming conflict resolved**: canonical `env\|vault\|kms\|runtime` |
+| tests/ | ✅ | 17 tests passing (2026-05-26) — all original config tests + `LOGICN_ENVIRONMENT_MODES` (4 modes), `isEnvironmentMode`, `defaultEnvironmentPolicy` (production/staging strict, development/test permissive), `getVaultEntry` (typed retrieval, missing key), `LLN_VAULT_001–005` constants, all 5 vault diagnostic constructors (correct codes, error severity, key in message/path) |
 | Environment config model | ⚠️ | Fully specified (EnvironmentConfig v0.2, EnvironmentMode, EnvironmentPolicy, defaultEnvironmentPolicy(), loadEnvironmentConfig(), EnvironmentConfigReport, LLN-CONFIG-001–010); not yet implemented |
 | Secret reference model | ⚠️ | Fully specified (SecretEnvironmentReference v0.2, SecretConfigSource discriminated union, SecretReportValue); ownership in logicn-core-security |
 | Runtime policy config | ✅ | Documented in KB — `runtime-policy-config.md` |
@@ -461,6 +465,7 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | README.md | ✅ | **Coverage Reconciliation Status at top**: canonical v0.2 names confirmed — has/put, get/put(IdempotencyRecord); Architecture Depth updated (NetworkProtocol 7 values incl. tcp/udp, NetworkPolicy redesigned, productionNetworkPolicy SSRF-safe, GovernedNetworkRuntime, WebhookVerificationConfig v0.2, IdempotencyRecord with status field, all typed Input/Result structs) |
 | TODO.md | ✅ | Work tracking — all v0.2 items; legacy audit item checked off; `ReplayStore` corrected to `has/put(key,ttlSeconds)`, `IdempotencyStore` corrected to `get(key)/put(record,ttlSeconds?)` (2026-05-26) |
 | src/ | ⚠️ | Implementation stubs |
+| tests/ | ✅ | 12 tests passing (2026-05-26) — `defineNetworkPolicy`, `validateNetworkPolicy` (deny-by-default, plaintext HTTP, raw sockets, invalid ports, empty name, default-allow, timeout/backpressure warnings), `selectNetworkBackend` (prefer list, fallback, unsatisfied), `createNetworkReport` (ports, hosts, backend selection), `DEFAULT_TLS_POLICY`/`DEFAULT_NETWORK_PRIVACY_POLICY` constants, example JSON |
 | Network boundary policy | ✅ | Documented in KB — `network-boundary-policy.md` |
 | Rate limiting | ✅ | Documented in KB — `layered-rate-limits.md` |
 | API boundary contracts | ✅ | Documented in KB — `runtime-boundary-declarations.md` |
@@ -474,6 +479,7 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | README.md | ✅ | Scope documented — Architecture Depth section added (RuntimeAuditStatus v0.2, RuntimeAuditEvent v0.2, ExecutionProofHashes 5 SHA256 fields, DenialReport v0.2, all evidence types v0.2, validateAuditSafety, shared/ dir, output layout) |
 | TODO.md | ✅ | Work tracking — all v0.2 items added |
 | src/ | ⚠️ | Implementation stubs |
+| tests/ | ✅ | 15 tests passing (2026-05-26) — all original reports + `createProcessingReport` (totalItems/success/fail/retry/quarantine/stopped/failureTypes), `createBuildCacheReport` (hits/misses/maxSizeBytes, default denied data classes including SecureString + authorization_decisions), `serializeReportJson` (round-trips to JSON with correct fields), `summarizeDiagnostics` (severity counts + status), `validateLoReport` accepts all 14 canonical kinds |
 | Security report contracts | ✅ | Defined in logicn-core-security scope |
 | AI context report | ✅ | Documented in logicn-core (app.ai-context.json) |
 | Build / deployment reports | ✅ | Documented in `build-system-and-cli.md` |

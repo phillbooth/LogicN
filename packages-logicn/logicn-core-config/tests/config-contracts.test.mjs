@@ -6,6 +6,20 @@ import {
   loadConfigFromObjects,
   parseEnvironmentConfig,
   validateHostPackageManifestBoundary,
+  LOGICN_ENVIRONMENT_MODES,
+  isEnvironmentMode,
+  defaultEnvironmentPolicy,
+  getVaultEntry,
+  LLN_VAULT_001,
+  LLN_VAULT_002,
+  LLN_VAULT_003,
+  LLN_VAULT_004,
+  LLN_VAULT_005,
+  vaultDiagnosticSecretInVault,
+  vaultDiagnosticKeyInvalid,
+  vaultDiagnosticTypeMismatch,
+  vaultDiagnosticKeyMissing,
+  vaultDiagnosticMutationDenied,
 } from "../dist/index.js";
 
 describe("logicn-core-config contracts", () => {
@@ -241,5 +255,81 @@ describe("logicn-core-config contracts", () => {
     });
 
     assert.deepEqual(diagnostics, []);
+  });
+
+  it("LOGICN_ENVIRONMENT_MODES contains exactly four canonical modes", () => {
+    assert.deepEqual([...LOGICN_ENVIRONMENT_MODES], ["development", "test", "staging", "production"]);
+  });
+
+  it("isEnvironmentMode validates membership correctly", () => {
+    assert.equal(isEnvironmentMode("production"), true);
+    assert.equal(isEnvironmentMode("development"), true);
+    assert.equal(isEnvironmentMode("local"), false);
+    assert.equal(isEnvironmentMode("prod"), false);
+  });
+
+  it("defaultEnvironmentPolicy is maximally strict in production and staging", () => {
+    const prod = defaultEnvironmentPolicy("production");
+    assert.equal(prod.allowDotEnvFiles, false);
+    assert.equal(prod.allowUnsafeOverrides, false);
+    assert.equal(prod.allowSecretValuesInReports, false);
+
+    const staging = defaultEnvironmentPolicy("staging");
+    assert.equal(staging.allowDotEnvFiles, false);
+    assert.equal(staging.allowUnsafeOverrides, false);
+  });
+
+  it("defaultEnvironmentPolicy allows .env files in development only", () => {
+    const dev = defaultEnvironmentPolicy("development");
+    assert.equal(dev.allowDotEnvFiles, true);
+    assert.equal(dev.allowUnsafeOverrides, true);
+
+    const test = defaultEnvironmentPolicy("test");
+    assert.equal(test.allowDotEnvFiles, true);
+    assert.equal(test.allowUnsafeOverrides, false);
+  });
+
+  it("getVaultEntry retrieves typed values from a vault schema", () => {
+    const vault = {
+      "app.name":       { key: "app.name",       value: "LogicN Demo", type: "string"  },
+      "limits.maxMb":   { key: "limits.maxMb",   value: 64,            type: "number"  },
+      "flags.enabled":  { key: "flags.enabled",  value: true,          type: "boolean" },
+    };
+
+    assert.equal(getVaultEntry(vault, "app.name"), "LogicN Demo");
+    assert.equal(getVaultEntry(vault, "limits.maxMb"), 64);
+    assert.equal(getVaultEntry(vault, "flags.enabled"), true);
+    assert.equal(getVaultEntry(vault, "missing.key"), undefined);
+  });
+
+  it("vault diagnostic codes are correctly formatted LLN-VAULT codes", () => {
+    assert.equal(LLN_VAULT_001, "LLN-VAULT-001");
+    assert.equal(LLN_VAULT_002, "LLN-VAULT-002");
+    assert.equal(LLN_VAULT_003, "LLN-VAULT-003");
+    assert.equal(LLN_VAULT_004, "LLN-VAULT-004");
+    assert.equal(LLN_VAULT_005, "LLN-VAULT-005");
+  });
+
+  it("vault diagnostic constructors produce correct codes and error severity", () => {
+    assert.equal(vaultDiagnosticSecretInVault("auth.apiKey").code, LLN_VAULT_001);
+    assert.equal(vaultDiagnosticKeyInvalid("INVALID_KEY").code, LLN_VAULT_002);
+    assert.equal(vaultDiagnosticTypeMismatch("app.timeout", "number", "string").code, LLN_VAULT_003);
+    assert.equal(vaultDiagnosticKeyMissing("app.region").code, LLN_VAULT_004);
+    assert.equal(vaultDiagnosticMutationDenied("app.name").code, LLN_VAULT_005);
+
+    const allDiags = [
+      vaultDiagnosticSecretInVault("k"),
+      vaultDiagnosticKeyInvalid("k"),
+      vaultDiagnosticTypeMismatch("k", "number", "string"),
+      vaultDiagnosticKeyMissing("k"),
+      vaultDiagnosticMutationDenied("k"),
+    ];
+    assert.ok(allDiags.every((d) => d.severity === "error"));
+  });
+
+  it("vaultDiagnosticSecretInVault includes the key in message and path", () => {
+    const d = vaultDiagnosticSecretInVault("auth.apiKey");
+    assert.match(d.message, /auth\.apiKey/);
+    assert.equal(d.path, "auth.apiKey");
   });
 });

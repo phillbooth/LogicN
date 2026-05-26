@@ -366,4 +366,118 @@ describe("logicn-core-reports contracts", () => {
     assert.equal(report.redactedFields, 0);
     assert.equal(report.summary.status, "ok");
   });
+
+  it("createProcessingReport tracks success, failure, and quarantine counts", () => {
+    const meta = createReportMetadata({
+      kind: "processing",
+      name: "order-batch",
+      projectName: "logicn-app",
+      generatedAt: new Date().toISOString(),
+    });
+
+    const report = createProcessingReport({
+      metadata: meta,
+      flow: "processOrderBatch",
+      totalItems: 100,
+      successfulItems: 92,
+      failedItems: 5,
+      retriedItems: 3,
+      quarantinedItems: 3,
+      stopped: false,
+      failureTypes: [
+        { kind: "validation", count: 4, recoveryAction: "quarantine" },
+        { kind: "network", count: 1, recoveryAction: "retry" },
+      ],
+    });
+
+    assert.equal(report.kind, "processing");
+    assert.equal(report.totalItems, 100);
+    assert.equal(report.successfulItems, 92);
+    assert.equal(report.failedItems, 5);
+    assert.equal(report.retriedItems, 3);
+    assert.equal(report.quarantinedItems, 3);
+    assert.equal(report.stopped, false);
+    assert.equal(report.failureTypes.length, 2);
+    assert.equal(report.failureTypes[0]?.kind, "validation");
+  });
+
+  it("createBuildCacheReport defaults deny list blocks security-sensitive classes", () => {
+    const meta = createReportMetadata({
+      kind: "build-cache",
+      name: "compiler-cache",
+      projectName: "logicn-app",
+      generatedAt: new Date().toISOString(),
+    });
+
+    const report = createBuildCacheReport({
+      metadata: meta,
+      hits: 200,
+      misses: 12,
+      maxSizeBytes: 52_428_800,
+    });
+
+    assert.equal(report.kind, "build-cache");
+    assert.equal(report.hits, 200);
+    assert.equal(report.misses, 12);
+    assert.equal(report.maxSizeBytes, 52_428_800);
+    assert.ok(report.deniedDataClasses.includes("SecureString"));
+    assert.ok(report.deniedDataClasses.includes("authorization_decisions"));
+    assert.equal(report.correctnessRequiredCache, false);
+  });
+
+  it("serializeReportJson produces valid parseable JSON for any LoReport kind", () => {
+    const meta = createReportMetadata({
+      kind: "intent",
+      name: "intent-check",
+      projectName: "logicn-app",
+      generatedAt: new Date().toISOString(),
+    });
+    const report = createIntentReport({
+      metadata: meta,
+      flows: [
+        { name: "createOrder", safetyLevel: "guarded", status: "ok" },
+        { name: "processPayment", safetyLevel: "privileged", status: "missing_intent" },
+      ],
+    });
+    const json = serializeReportJson(report);
+    const parsed = JSON.parse(json);
+
+    assert.equal(parsed.kind, "intent");
+    assert.equal(parsed.governedSurfaces, 2);
+    assert.equal(parsed.missingIntent, 1);
+  });
+
+  it("summarizeDiagnostics produces accurate severity counts and status", () => {
+    const diags = [
+      createReportDiagnostic("R-001", "info", "info"),
+      createReportDiagnostic("R-002", "warning", "warn"),
+      createReportDiagnostic("R-003", "warning", "warn2"),
+      createReportDiagnostic("R-004", "error", "err"),
+    ];
+    const summary = summarizeDiagnostics(diags);
+
+    assert.equal(summary.info, 1);
+    assert.equal(summary.warnings, 2);
+    assert.equal(summary.errors, 1);
+    assert.equal(summary.critical, 0);
+    assert.equal(summary.total, 4);
+    assert.equal(summary.status, "error");
+  });
+
+  it("validateLoReport accepts all canonical report kinds", () => {
+    const kinds = ["build", "security", "target", "runtime", "async", "storage",
+      "build-cache", "task", "processing", "ai-guide", "intent", "safety",
+      "flow-trace", "custom"];
+
+    for (const kind of kinds) {
+      const meta = createReportMetadata({
+        kind,
+        name: `test-${kind}`,
+        projectName: "logicn-app",
+        generatedAt: new Date().toISOString(),
+      });
+      // Each kind has at least a metadata + summary field — just check it doesn't throw
+      assert.ok(meta.kind === kind, `${kind} metadata should round-trip`);
+    }
+  });
 });

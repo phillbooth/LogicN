@@ -170,4 +170,67 @@ describe("logicn-core-security contracts", () => {
       true,
     );
   });
+
+  it("decidePermission wildcard deny takes priority over explicit allow", () => {
+    const model = definePermissionModel([
+      { action: "read", resource: "*", effect: "deny" },
+      { action: "read", resource: "config:public", effect: "allow" },
+    ]);
+
+    // Priority: explicitDeny > wildcardDeny > explicitAllow > wildcardAllow
+    // wildcardDeny wins over explicitAllow — both resources are denied
+    assert.equal(
+      decidePermission(model, "read", "config:public").allowed,
+      false,
+    );
+    assert.equal(
+      decidePermission(model, "read", "config:private").allowed,
+      false,
+    );
+  });
+
+  it("validatePermissionModel detects duplicate grants", () => {
+    const model = definePermissionModel([
+      { action: "read", resource: "config:public", effect: "allow" },
+      { action: "read", resource: "config:public", effect: "allow" },
+    ]);
+    const diagnostics = validatePermissionModel(model);
+
+    assert.ok(
+      diagnostics.some((d) => d.code === "LogicN_SECURITY_PERMISSION_DUPLICATE_GRANT"),
+    );
+  });
+
+  it("validatePermissionModel rejects empty resource string", () => {
+    const model = definePermissionModel([
+      { action: "write", resource: "", effect: "allow" },
+    ]);
+    const diagnostics = validatePermissionModel(model);
+
+    assert.ok(
+      diagnostics.some((d) => d.code === "LogicN_SECURITY_PERMISSION_EMPTY_RESOURCE"),
+    );
+  });
+
+  it("redactText preserves non-sensitive content unchanged", () => {
+    const result = redactText("Hello, this is a normal message with no secrets.");
+
+    assert.equal(result.redacted, false);
+    assert.equal(result.text, "Hello, this is a normal message with no secrets.");
+    assert.equal(result.diagnostics?.length ?? 0, 0);
+  });
+
+  it("createSecureStringReference includes fingerprint and classification", () => {
+    const ref = createSecureStringReference("DB_PASSWORD", {
+      classification: "credential",
+      fingerprint: "sha256:abc123",
+    });
+
+    assert.equal(ref.kind, "SecureString");
+    assert.equal(ref.label, "DB_PASSWORD");
+    assert.equal(ref.classification, "credential");
+    assert.equal(ref.fingerprint, "sha256:abc123");
+    assert.equal(ref.redacted, true);
+    assert.equal(Object.hasOwn(ref, "value"), false);
+  });
 });
