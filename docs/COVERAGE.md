@@ -44,6 +44,7 @@ Core language constructs, keywords, type system, declaration blocks.
 | safe / unsafe type qualifiers | ✅ | `safe-unsafe-trust-model.md` |
 | Context-specific safe types (safe Email, safe Url, etc.) | ✅ | `safe-unsafe-trust-model.md` |
 | Array<T> and string operations | ✅ | `arrays-and-string-operations.md` |
+| Standard types: String, Char, Byte, Bytes, SecureString | ✅ | `logicn-core-standard-types-string-char-byte.md` — Unicode boundaries, encoding safety, `LLN-STRING-001–004`, `LLN-CHAR-001–004`, `LLN-BYTE-001–005`; `charLiteral` and `byteLiteral` added to `AstNodeKind` in `logicn-core/src/index.ts` (2026-05-26) |
 | List<T> operations | ✅ | `list-operations.md` |
 | Query type (sql, graphql, mongo, search blocks) | ✅ | `query-type-and-database-access.md` |
 | Result<T, E> and typed errors | ✅ | `typed-error-model.md`, `no-exceptions-result-model.md` |
@@ -344,7 +345,7 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | ARCHITECTURE.md | ✅ | References COVERAGE.md as workspace conflict register; names photonic enum and logic discriminant as unresolved conflicts; as-documented conflicts must not be implemented until reconciled |
 | examples/ | ✅ | hello, option, result, decision, payment-webhook, benchmarks |
 | compiler/logicn.js | ✅ | **Stage 1 runtime foundation** — plain JavaScript file, runs directly in Node.js with no build step; parser, type checker, formatter prototype; the model for all Stage 1 runtime additions |
-| src/ | ❌ | No src/ directory — not needed for Stage 1; runtime engine grows outward from compiler/logicn.js; shared base contracts deferred until Stage 1 runtime scope is settled |
+| src/index.ts | ✅ | **Shared type contracts** — `BaseDiagnostic` (minimal `{code,name,severity,message}` shape; all package diagnostics are structurally compatible), `CompilerDiagnostic extends BaseDiagnostic` (adds `location?`, `suggestedFix?`), `DiagnosticSeverity`, `SourceLocation`, `TokenKind`, `Token`, `LexResult`, `AstNodeKind` (includes `charLiteral`, `byteLiteral` — 2026-05-26), `AstNode`, `ParseResult`, `BuildOutputKind`, `BuildOutput`, `BuildManifest`; `createCompilerDiagnostic()`, `hasErrors()`, `filterBySeverity()` helpers. Note: `EnvironmentMode` is **not** here — canonical owner is `@logicn/core-config`. |
 
 ### logicn-core-runtime
 

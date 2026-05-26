@@ -112,6 +112,8 @@ export type AstNodeKind =
   | "mutDecl"
   | "identifier"
   | "stringLiteral"
+  | "charLiteral"
+  | "byteLiteral"
   | "numberLiteral"
   | "boolLiteral"
   | "binaryExpr"
