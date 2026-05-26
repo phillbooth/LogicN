@@ -226,7 +226,7 @@ pub fn fetch_user(
 Compiler diagnostic:
 
 ```text
-LN-EFFECT-001: undeclared effect
+LLN-EFFECT-001: undeclared effect
 function: fetch_user
 required effect: network
 ```
@@ -279,7 +279,7 @@ import { InternalKey } from "app/auth/private-keys"
 Compiler error:
 
 ```text
-LN-BOUNDARY-001: import crosses restricted package boundary
+LLN-BOUNDARY-001: import crosses restricted package boundary
 module: app/auth/private-keys
 ```
 
@@ -300,7 +300,7 @@ pub fn export_token() -> SecretToken {
 Compiler error:
 
 ```text
-LN-BOUNDARY-002: public API exposes private secret-bearing type
+LLN-BOUNDARY-002: public API exposes private secret-bearing type
 ```
 
 ---

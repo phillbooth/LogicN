@@ -1003,13 +1003,13 @@ non-auditable execution
 
 | Code | Meaning |
 |---|---|
-| `LN-COMPUTE-001` | requested compute target unavailable |
-| `LN-COMPUTE-002` | accelerator effect denied by policy |
-| `LN-COMPUTE-003` | optical transport unavailable |
-| `LN-COMPUTE-004` | distributed scheduler unavailable |
-| `LN-COMPUTE-005` | runtime fallback occurred |
-| `LN-COMPUTE-006` | GPU memory pressure exceeded |
-| `LN-COMPUTE-007` | backend adapter failure |
+| `LLN-COMPUTE-001` | requested compute target unavailable |
+| `LLN-COMPUTE-002` | accelerator effect denied by policy |
+| `LLN-COMPUTE-003` | optical transport unavailable |
+| `LLN-COMPUTE-004` | distributed scheduler unavailable |
+| `LLN-COMPUTE-005` | runtime fallback occurred |
+| `LLN-COMPUTE-006` | GPU memory pressure exceeded |
+| `LLN-COMPUTE-007` | backend adapter failure |
 
 ---
 

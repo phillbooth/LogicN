@@ -125,7 +125,7 @@ must not be treated as implemented app functionality.
   which form is canonical or explicitly mark the conflict unresolved.
 - Photonic public contracts must not be implemented from conflicting docs until
   `OpticalTransportMode`, `PhotonicRuntimeTarget`, `PhotonicExecutionPlan` and
-  `LN-PHOTONIC-001` through `LN-PHOTONIC-006` have one package-owned canonical
+  `LLN-PHOTONIC-001` through `LLN-PHOTONIC-006` have one package-owned canonical
   definition.
 - Webhook HMAC, replay protection and idempotency contracts must use the
   `logicn-core-network` v0.2 canonical model unless an adapter explicitly maps

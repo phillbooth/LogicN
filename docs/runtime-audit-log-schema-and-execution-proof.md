@@ -867,13 +867,13 @@ execution proof
 
 | Code | Meaning |
 |---|---|
-| `LN-AUDIT-001` | runtime audit write failed |
-| `LN-AUDIT-002` | execution proof hash mismatch |
-| `LN-AUDIT-003` | runtime manifest hash mismatch |
-| `LN-AUDIT-004` | denied effect execution observed |
-| `LN-AUDIT-005` | secret leakage detected in audit payload |
-| `LN-AUDIT-006` | runtime capability evidence missing |
-| `LN-AUDIT-007` | distributed trace correlation failed |
+| `LLN-AUDIT-001` | runtime audit write failed |
+| `LLN-AUDIT-002` | execution proof hash mismatch |
+| `LLN-AUDIT-003` | runtime manifest hash mismatch |
+| `LLN-AUDIT-004` | denied effect execution observed |
+| `LLN-AUDIT-005` | secret leakage detected in audit payload |
+| `LLN-AUDIT-006` | runtime capability evidence missing |
+| `LLN-AUDIT-007` | distributed trace correlation failed |
 
 ---
 

@@ -770,11 +770,11 @@ unsafe self-modifying runtime logic
 
 | Code | Meaning |
 |---|---|
-| `LN-OMNI-001` | Omni logic feature disabled |
-| `LN-OMNI-002` | advisory logic attempted privileged action |
-| `LN-OMNI-003` | unsupported Omni state |
-| `LN-OMNI-004` | non-deterministic logic used in restricted runtime path |
-| `LN-OMNI-005` | Omni reasoning trace missing |
+| `LLN-OMNI-001` | Omni logic feature disabled |
+| `LLN-OMNI-002` | advisory logic attempted privileged action |
+| `LLN-OMNI-003` | unsupported Omni state |
+| `LLN-OMNI-004` | non-deterministic logic used in restricted runtime path |
+| `LLN-OMNI-005` | Omni reasoning trace missing |
 
 ---
 

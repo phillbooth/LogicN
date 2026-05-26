@@ -311,7 +311,7 @@ module app/payments/service
 Compiler diagnostic:
 
 ```text
-LN-MODULE-001: module declaration does not match source location
+LLN-MODULE-001: module declaration does not match source location
 file: app/src/users/service.ln
 found: app/payments/service
 expected: app/users/service
@@ -388,7 +388,7 @@ import { UserRecord } from "app/users/repository"
 Compiler diagnostic:
 
 ```text
-LN-VIS-001: cannot import private symbol
+LLN-VIS-001: cannot import private symbol
 symbol: UserRecord
 module: app/users/repository
 ```
@@ -653,7 +653,7 @@ import { to_profile } from "app/users/service"
 Compiler error:
 
 ```text
-LN-VIS-001: cannot import private symbol
+LLN-VIS-001: cannot import private symbol
 symbol: to_profile
 module: app/users/service
 ```
@@ -669,7 +669,7 @@ import { UserRecord } from "app/users/types"
 Compiler error:
 
 ```text
-LN-VIS-002: cannot import package-visible symbol from outside owning package
+LLN-VIS-002: cannot import package-visible symbol from outside owning package
 symbol: UserRecord
 from package: app/users
 current package: app/admin
@@ -684,7 +684,7 @@ import { read_secret } from "../../.env"
 Compiler error:
 
 ```text
-LN-MODULE-002: import path is outside package boundary
+LLN-MODULE-002: import path is outside package boundary
 import: ../../.env
 ```
 
@@ -747,7 +747,7 @@ pub fn get_token() -> SecretToken {
 Compiler error:
 
 ```text
-LN-VIS-003: public function exposes private return type
+LLN-VIS-003: public function exposes private return type
 function: get_token
 private type: SecretToken
 ```
@@ -838,7 +838,7 @@ app/users/routes  -> app/users/service
 Compiler error:
 
 ```text
-LN-MODULE-003: circular import detected
+LLN-MODULE-003: circular import detected
 cycle:
 app/users/service -> app/users/routes -> app/users/service
 ```
@@ -898,19 +898,19 @@ The formatter may group and sort imports automatically.
 
 | Code | Meaning |
 |---|---|
-| `LN-MODULE-001` | Module declaration does not match source location |
-| `LN-MODULE-002` | Import path escapes package boundary |
-| `LN-MODULE-003` | Circular import detected |
-| `LN-MODULE-004` | Imported module not found |
-| `LN-MODULE-005` | Import is not listed in package policy |
-| `LN-MODULE-006` | Wildcard symbol import is not allowed |
-| `LN-VIS-001` | Cannot import private symbol |
-| `LN-VIS-002` | Cannot import package-visible symbol from outside package |
-| `LN-VIS-003` | Public symbol exposes private type |
-| `LN-VIS-004` | Public module exports non-public dependency type |
-| `LN-VIS-005` | Runtime-only symbol used by normal code |
-| `LN-CAP-001` | Imported function requires ungranted capability |
-| `LN-CAP-002` | Imported module declares denied effect |
+| `LLN-MODULE-001` | Module declaration does not match source location |
+| `LLN-MODULE-002` | Import path escapes package boundary |
+| `LLN-MODULE-003` | Circular import detected |
+| `LLN-MODULE-004` | Imported module not found |
+| `LLN-MODULE-005` | Import is not listed in package policy |
+| `LLN-MODULE-006` | Wildcard symbol import is not allowed |
+| `LLN-VIS-001` | Cannot import private symbol |
+| `LLN-VIS-002` | Cannot import package-visible symbol from outside package |
+| `LLN-VIS-003` | Public symbol exposes private type |
+| `LLN-VIS-004` | Public module exports non-public dependency type |
+| `LLN-VIS-005` | Runtime-only symbol used by normal code |
+| `LLN-CAP-001` | Imported function requires ungranted capability |
+| `LLN-CAP-002` | Imported module declares denied effect |
 
 ---
 
