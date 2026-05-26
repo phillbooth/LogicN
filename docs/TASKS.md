@@ -146,7 +146,7 @@
 - [ ] Reconcile coverage-driven documentation conflicts before implementing the
   affected public package contracts
   - [ ] Choose one canonical `OpticalTransportMode` enum and one
-    `LN-PHOTONIC-001` through `LN-PHOTONIC-006` diagnostic table
+    `LLN-PHOTONIC-001` through `LLN-PHOTONIC-006` diagnostic table
   - [ ] Confirm photonic ownership between `logicn-core-photonic`,
     `logicn-core-vector`, `logicn-core-compute` and `logicn-target-photonic`
   - [ ] Align API-server webhook/replay/idempotency adapter docs with
