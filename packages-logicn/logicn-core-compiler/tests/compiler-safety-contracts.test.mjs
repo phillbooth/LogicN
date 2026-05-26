@@ -243,10 +243,96 @@ flow doWork() {
     assert.equal(LLN_BINDING_DIAGNOSTICS.length, 4);
     assert.equal(LLN_PIPELINE_DIAGNOSTICS.length, 5);
     assert.equal(LLN_INTENT_DIAGNOSTICS.length, 5);
+    assert.equal(LLN_BLOCK_DIAGNOSTICS.length, 4);
 
     assert.ok(LLN_SYNTAX_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-SYNTAX-")));
     assert.ok(LLN_BINDING_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-BINDING-")));
     assert.ok(LLN_PIPELINE_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-PIPELINE-")));
     assert.ok(LLN_INTENT_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-INTENT-")));
+    assert.ok(LLN_BLOCK_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-BLOCK-")));
+  });
+
+  it("accepts a well-formed typed content block without errors", () => {
+    const result = validateCoreSyntaxSafety({
+      file: "content.lln",
+      text: `
+flow renderPage() -> Html {
+  html <<HTML
+    <div class="container">
+      <h1>Hello LogicN</h1>
+    </div>
+  HTML
+}
+`,
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.diagnostics.length, 0);
+  });
+
+  it("emits LLN-BLOCK-001 for an unknown content block type", () => {
+    const result = validateCoreSyntaxSafety({
+      file: "content.lln",
+      text: `
+flow renderFeed() {
+  xml <<XML
+    <feed/>
+  XML
+}
+`,
+    });
+
+    assert.equal(result.ok, false);
+    assert.ok(
+      result.diagnostics.some((d) => d.code === LLN_BLOCK_001.code),
+      "Expected LLN-BLOCK-001 for unknown block type",
+    );
+  });
+
+  it("emits LLN-BLOCK-002 for an unclosed typed content block", () => {
+    const result = validateCoreSyntaxSafety({
+      file: "content.lln",
+      text: `
+flow renderPage() -> Html {
+  html <<PAGE
+    <div>This block is never closed.
+}
+`,
+    });
+
+    assert.equal(result.ok, false);
+    assert.ok(
+      result.diagnostics.some((d) => d.code === LLN_BLOCK_002.code),
+      "Expected LLN-BLOCK-002 for unclosed content block",
+    );
+  });
+
+  it("does not flag var/const keywords found inside a typed content block", () => {
+    const result = validateCoreSyntaxSafety({
+      file: "content.lln",
+      text: `
+flow renderScript() {
+  script <<SCRIPT
+    const count = 0
+    var message = "hello"
+  SCRIPT
+}
+`,
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.diagnostics.length, 0);
+  });
+
+  it("validateTypedContentBlock stub returns empty diagnostics", () => {
+    const diags = validateTypedContentBlock({
+      blockType: "html",
+      marker: "HTML",
+      content: "<div>hello</div>",
+      file: "test.lln",
+      startLine: 3,
+    });
+
+    assert.equal(diags.length, 0);
   });
 });
