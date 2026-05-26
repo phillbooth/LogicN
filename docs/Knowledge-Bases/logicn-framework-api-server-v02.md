@@ -414,11 +414,11 @@ function mapErrorToHttpResponse(
 
 | Code            | Meaning                           |
 | --------------- | --------------------------------- |
-| LN-NETWORK-001  | SSRF-protected destination denied |
-| LN-NETWORK-006  | Replay attack detected            |
-| LN-NETWORK-007  | Invalid webhook signature         |
-| LN-BOUNDARY-001 | Invalid runtime boundary          |
-| LN-EFFECT-002   | Effect propagation violation      |
+| LLN-NETWORK-001  | SSRF-protected destination denied |
+| LLN-NETWORK-006  | Replay attack detected            |
+| LLN-NETWORK-007  | Invalid webhook signature         |
+| LLN-BOUNDARY-001 | Invalid runtime boundary          |
+| LLN-EFFECT-002   | Effect propagation violation      |
 
 ---
 

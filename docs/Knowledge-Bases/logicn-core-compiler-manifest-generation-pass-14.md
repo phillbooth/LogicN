@@ -9,7 +9,7 @@ Compiler pass: 14
 Version target: v0.2
 Implementation status: specified, implementation pending
 Primary output: runtime-manifest.json
-Related diagnostics: LN-MANIFEST-001 through LN-MANIFEST-005
+Related diagnostics: LLN-MANIFEST-001 through LLN-MANIFEST-005
 ```
 
 This document defines the compiler manifest generation pass for LogicN Core Compiler.
@@ -404,7 +404,7 @@ export function validateManifest(
 
   if (!manifest.schemaVersion) {
     diagnostics.push({
-      code: "LN-MANIFEST-001",
+      code: "LLN-MANIFEST-001",
       severity: "error",
       message: "Runtime manifest is missing schemaVersion."
     })
@@ -412,7 +412,7 @@ export function validateManifest(
 
   if (manifest.schemaVersion !== "logicn.runtime.manifest.v0.2") {
     diagnostics.push({
-      code: "LN-MANIFEST-003",
+      code: "LLN-MANIFEST-003",
       severity: "error",
       message: `Unsupported runtime manifest version: ${manifest.schemaVersion}.`
     })
@@ -422,7 +422,7 @@ export function validateManifest(
     for (const capability of fn.capabilities) {
       if (!manifest.permissions.some(permission => permission.name === capability)) {
         diagnostics.push({
-          code: "LN-MANIFEST-004",
+          code: "LLN-MANIFEST-004",
           severity: "error",
           message: `Function ${fn.name} references unknown capability ${capability}.`
         })
@@ -434,7 +434,7 @@ export function validateManifest(
     for (const effect of route.effects) {
       if (!isEffectAllowedForTarget(effect, manifest.target)) {
         diagnostics.push({
-          code: "LN-MANIFEST-005",
+          code: "LLN-MANIFEST-005",
           severity: "error",
           message: `Route ${route.method} ${route.path} uses effect ${effect} not supported by target ${manifest.target}.`
         })
@@ -448,15 +448,15 @@ export function validateManifest(
 
 ---
 
-## LN-MANIFEST Diagnostic Codes
+## LLN-MANIFEST Diagnostic Codes
 
 | Code | Meaning | Severity | Fix |
 | --- | --- | --- | --- |
-| `LN-MANIFEST-001` | Runtime manifest missing or incomplete | error | Re-run build after effect/boundary passes complete |
-| `LN-MANIFEST-002` | Manifest integrity/hash failure | error | Rebuild manifest and verify stable serialisation |
-| `LN-MANIFEST-003` | Unsupported manifest schema version | error | Upgrade CLI/runtime or regenerate manifest |
-| `LN-MANIFEST-004` | Invalid capability reference | error | Add missing capability or remove invalid effect |
-| `LN-MANIFEST-005` | Runtime target mismatch | error | Change target or remove incompatible effects |
+| `LLN-MANIFEST-001` | Runtime manifest missing or incomplete | error | Re-run build after effect/boundary passes complete |
+| `LLN-MANIFEST-002` | Manifest integrity/hash failure | error | Rebuild manifest and verify stable serialisation |
+| `LLN-MANIFEST-003` | Unsupported manifest schema version | error | Upgrade CLI/runtime or regenerate manifest |
+| `LLN-MANIFEST-004` | Invalid capability reference | error | Add missing capability or remove invalid effect |
+| `LLN-MANIFEST-005` | Runtime target mismatch | error | Change target or remove incompatible effects |
 
 ---
 
@@ -606,7 +606,7 @@ Which capability is missing?
 3. Add manifest-validator.ts
 4. Add manifest-hash.ts
 5. Add manifest-serializer.ts
-6. Add LN-MANIFEST diagnostics
+6. Add LLN-MANIFEST diagnostics
 7. Connect pass 14 to compiler pipeline
 8. Write runtime-manifest.json during build
 9. Add split manifest output files
@@ -656,7 +656,7 @@ describe("buildManifest", () => {
     const manifest = buildManifest(inputWithMissingCapability)
     const diagnostics = validateManifest(manifest)
 
-    expect(diagnostics.some(d => d.code === "LN-MANIFEST-004")).toBe(true)
+    expect(diagnostics.some(d => d.code === "LLN-MANIFEST-004")).toBe(true)
   })
 })
 ```

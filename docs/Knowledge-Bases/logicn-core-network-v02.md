@@ -400,14 +400,14 @@ interface NetworkPolicyReport {
 
 | Code           | Meaning                           |
 | -------------- | --------------------------------- |
-| LN-NETWORK-001 | SSRF-protected destination denied |
-| LN-NETWORK-002 | Sensitive data in AI prompt       |
-| LN-NETWORK-003 | Missing capability                |
-| LN-NETWORK-004 | TLS required                      |
-| LN-NETWORK-005 | Unsupported protocol              |
-| LN-NETWORK-006 | Replay attack detected            |
-| LN-NETWORK-007 | Invalid webhook signature         |
-| LN-NETWORK-008 | Unsafe network boundary           |
+| LLN-NETWORK-001 | SSRF-protected destination denied |
+| LLN-NETWORK-002 | Sensitive data in AI prompt       |
+| LLN-NETWORK-003 | Missing capability                |
+| LLN-NETWORK-004 | TLS required                      |
+| LLN-NETWORK-005 | Unsupported protocol              |
+| LLN-NETWORK-006 | Replay attack detected            |
+| LLN-NETWORK-007 | Invalid webhook signature         |
+| LLN-NETWORK-008 | Unsafe network boundary           |
 
 ---
 
@@ -433,7 +433,7 @@ logicn-core-network/
 
   diagnostics/
     NetworkDiagnostic.ts
-    codes.ts                (LN-NETWORK-001–008)
+    codes.ts                (LLN-NETWORK-001–008)
 
   ai/
     validateAiPrompt.ts

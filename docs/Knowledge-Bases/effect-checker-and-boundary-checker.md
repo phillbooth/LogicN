@@ -7,7 +7,7 @@ Package: logicn-core-compiler
 Area: effect checker and boundary checker
 Version target: v0.2
 Implementation status: fully specified, implementation pending
-Canonical diagnostic ranges: LN-EFFECT-001 through LN-EFFECT-004, LN-BOUNDARY-001 through LN-BOUNDARY-004
+Canonical diagnostic ranges: LLN-EFFECT-001 through LLN-EFFECT-004, LLN-BOUNDARY-001 through LLN-BOUNDARY-004
 Primary compiler outputs: effect graph, boundary graph, runtime manifest input metadata
 ```
 
@@ -360,7 +360,7 @@ export function validateFunctionEffects(
   for (const effect of fn.effectiveEffects) {
     if (!registry.has(effect.name)) {
       diagnostics.push({
-        code: "LN-EFFECT-001",
+        code: "LLN-EFFECT-001",
         severity: "error",
         message: `Unknown or undeclared effect ${effect.name}.`,
         sourceLocation: effect.sourceLocation
@@ -369,7 +369,7 @@ export function validateFunctionEffects(
 
     if (!isEffectAllowedOnTarget(effect.name, target)) {
       diagnostics.push({
-        code: "LN-EFFECT-002",
+        code: "LLN-EFFECT-002",
         severity: "error",
         message: `Effect ${effect.name} is forbidden for target ${target}.`,
         sourceLocation: effect.sourceLocation
@@ -380,7 +380,7 @@ export function validateFunctionEffects(
   for (const transitive of fn.transitiveEffects) {
     if (!containsEffect(fn.declaredEffects, transitive.name)) {
       diagnostics.push({
-        code: "LN-EFFECT-004",
+        code: "LLN-EFFECT-004",
         severity: "error",
         message: `Function ${fn.name} inherits ${transitive.name} but does not declare it.`,
         sourceLocation: transitive.sourceLocation
@@ -394,16 +394,16 @@ export function validateFunctionEffects(
 
 ---
 
-## Canonical LN-EFFECT Codes
+## Canonical LLN-EFFECT Codes
 
 | Code | Meaning | Severity | Typical fix |
 | --- | --- | --- | --- |
-| `LN-EFFECT-001` | Unknown or undeclared effect | error | Declare the effect or add it to the registry |
-| `LN-EFFECT-002` | Effect forbidden for selected target | error | Change target or remove the effect |
-| `LN-EFFECT-003` | Effect escalation detected | error | Narrow callee authority or update capability policy |
-| `LN-EFFECT-004` | Transitive effect mismatch | error/warning | Declare inherited effect or remove effectful call |
+| `LLN-EFFECT-001` | Unknown or undeclared effect | error | Declare the effect or add it to the registry |
+| `LLN-EFFECT-002` | Effect forbidden for selected target | error | Change target or remove the effect |
+| `LLN-EFFECT-003` | Effect escalation detected | error | Narrow callee authority or update capability policy |
+| `LLN-EFFECT-004` | Transitive effect mismatch | error/warning | Declare inherited effect or remove effectful call |
 
-`LN-EFFECT-001` through `LN-EFFECT-004` are the canonical v0.2 compiler codes for this checker. Older `LLN-E4*` codes may remain as compatibility aliases in CLI output, but new reports should use the `LN-EFFECT-*` range.
+`LLN-EFFECT-001` through `LLN-EFFECT-004` are the canonical v0.2 compiler codes for this checker. Older `LLN-E4*` codes may remain as compatibility aliases in CLI output, but new reports should use the `LLN-EFFECT-*` range.
 
 ---
 
@@ -520,7 +520,7 @@ export function validateBoundaryEdge(
   for (const effect of edge.transferredEffects) {
     if (boundary.deniedEffects.includes(effect)) {
       diagnostics.push({
-        code: "LN-BOUNDARY-001",
+        code: "LLN-BOUNDARY-001",
         severity: "error",
         message: `Effect ${effect} is denied at boundary ${boundary.id}.`
       })
@@ -531,7 +531,7 @@ export function validateBoundaryEdge(
       !boundary.allowedEffects.includes(effect)
     ) {
       diagnostics.push({
-        code: "LN-BOUNDARY-002",
+        code: "LLN-BOUNDARY-002",
         severity: "error",
         message: `Effect ${effect} is not allowed at boundary ${boundary.id}.`
       })
@@ -540,7 +540,7 @@ export function validateBoundaryEdge(
 
   if (edge.transferredSecrets.length > 0 && boundary.type !== "secret") {
     diagnostics.push({
-      code: "LN-BOUNDARY-003",
+      code: "LLN-BOUNDARY-003",
       severity: "error",
       message: `Secret values cannot cross ${boundary.type} boundary ${boundary.id}.`
     })
@@ -548,7 +548,7 @@ export function validateBoundaryEdge(
 
   if (edge.requiresValidation && !hasValidationPolicy(boundary)) {
     diagnostics.push({
-      code: "LN-BOUNDARY-004",
+      code: "LLN-BOUNDARY-004",
       severity: "error",
       message: `Boundary ${boundary.id} requires validation policy before execution.`
     })
@@ -560,16 +560,16 @@ export function validateBoundaryEdge(
 
 ---
 
-## Canonical LN-BOUNDARY Codes
+## Canonical LLN-BOUNDARY Codes
 
 | Code | Meaning | Severity | Typical fix |
 | --- | --- | --- | --- |
-| `LN-BOUNDARY-001` | Denied effect crosses boundary | error | Remove effect or change boundary policy |
-| `LN-BOUNDARY-002` | Effect not present in boundary allowlist | error | Add explicit allow policy or move code behind safer boundary |
-| `LN-BOUNDARY-003` | Secret or protected value crosses unsafe boundary | error | Use SecretReference/redaction or keep secret inside secret boundary |
-| `LN-BOUNDARY-004` | Required boundary policy missing | error | Add validation/auth/rate-limit/replay/secret policy |
+| `LLN-BOUNDARY-001` | Denied effect crosses boundary | error | Remove effect or change boundary policy |
+| `LLN-BOUNDARY-002` | Effect not present in boundary allowlist | error | Add explicit allow policy or move code behind safer boundary |
+| `LLN-BOUNDARY-003` | Secret or protected value crosses unsafe boundary | error | Use SecretReference/redaction or keep secret inside secret boundary |
+| `LLN-BOUNDARY-004` | Required boundary policy missing | error | Add validation/auth/rate-limit/replay/secret policy |
 
-`LN-BOUNDARY-001` through `LN-BOUNDARY-004` are the canonical v0.2 compiler codes for this checker. Older expanded boundary codes may be retained in historical reports, but new compiler reports should use the four-code canonical range above.
+`LLN-BOUNDARY-001` through `LLN-BOUNDARY-004` are the canonical v0.2 compiler codes for this checker. Older expanded boundary codes may be retained in historical reports, but new compiler reports should use the four-code canonical range above.
 
 ---
 
@@ -642,7 +642,7 @@ pub fn render_profile_page(http: HttpClient, id: UserId) -> Html {
 `render_profile_page` inherits `network` from `load_profile`. If it does not declare that effect, the checker emits:
 
 ```text
-LN-EFFECT-004: Function render_profile_page inherits network but does not declare it.
+LLN-EFFECT-004: Function render_profile_page inherits network but does not declare it.
 ```
 
 Corrected:
@@ -670,7 +670,7 @@ pub fn debug_secret(secret: SecretString) {
 The boundary checker must reject this because a protected secret crosses a runtime/logging boundary.
 
 ```text
-LN-BOUNDARY-003: Secret values cannot cross runtime boundary runtime.print.
+LLN-BOUNDARY-003: Secret values cannot cross runtime boundary runtime.print.
 ```
 
 Corrected:
@@ -694,7 +694,7 @@ route POST "/admin/restart" {
 A public API route cannot directly cross into process execution unless an explicit privileged policy exists.
 
 ```text
-LN-BOUNDARY-001: Effect process.spawn is denied at boundary api.public.
+LLN-BOUNDARY-001: Effect process.spawn is denied at boundary api.public.
 ```
 
 Corrected design:
@@ -727,7 +727,7 @@ pub fn read_local_file(path: Text) -> Text
 The target policy rejects this because direct filesystem access is not allowed for the selected WASM target.
 
 ```text
-LN-EFFECT-002: Effect filesystem.read is forbidden for target wasm.
+LLN-EFFECT-002: Effect filesystem.read is forbidden for target wasm.
 ```
 
 ---
@@ -843,11 +843,11 @@ packages-logicn/logicn-core-compiler/src/
  6. Build EffectGraph from checked functions and call edges
  7. Propagate effects using iterative fixpoint
  8. Validate undeclared, forbidden, escalated, and transitive effects
- 9. Emit LN-EFFECT-001 through LN-EFFECT-004 diagnostics
+ 9. Emit LLN-EFFECT-001 through LLN-EFFECT-004 diagnostics
 10. Define Boundary, BoundaryRequirement, BoundaryEdge, and BoundaryGraph
 11. Build boundary graph from routes, packages, jobs, workers, calls, and interop
 12. Validate denied effects, allowlists, secret movement, and required policies
-13. Emit LN-BOUNDARY-001 through LN-BOUNDARY-004 diagnostics
+13. Emit LLN-BOUNDARY-001 through LLN-BOUNDARY-004 diagnostics
 14. Generate effect-report.json and boundary-report.json
 15. Feed FunctionManifest, EffectManifest, and BoundaryManifest data into pass 14
 16. Add tests for propagation, recursive calls, secret leakage, target denial, and API boundary denial
@@ -901,7 +901,7 @@ describe("boundary checker", () => {
       }
     )
 
-    expect(diagnostics.some(d => d.code === "LN-BOUNDARY-003")).toBe(true)
+    expect(diagnostics.some(d => d.code === "LLN-BOUNDARY-003")).toBe(true)
   })
 })
 ```
@@ -960,8 +960,8 @@ CheckedCallExpression
 The canonical diagnostic ranges are:
 
 ```text
-LN-EFFECT-001 through LN-EFFECT-004
-LN-BOUNDARY-001 through LN-BOUNDARY-004
+LLN-EFFECT-001 through LLN-EFFECT-004
+LLN-BOUNDARY-001 through LLN-BOUNDARY-004
 ```
 
 These systems are required before LogicN can truthfully claim governed execution, runtime authority control, deployment-safe manifests, or audit-grade execution proof.

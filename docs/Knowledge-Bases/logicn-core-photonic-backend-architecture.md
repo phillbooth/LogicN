@@ -1,7 +1,7 @@
 # LogicN Core Photonic: Backend Architecture and Governance Model
 
 Update status: this is a legacy/backend architecture note. It contains older
-three-value `OpticalTransportMode` and older `LN-PHOTONIC-*` meanings. Use it as
+three-value `OpticalTransportMode` and older `LLN-PHOTONIC-*` meanings. Use it as
 historical context only until `logicn-core-photonic` reconciles the current
 coverage conflicts.
 
@@ -576,16 +576,16 @@ expose unsafe memory access
 
 ---
 
-## Diagnostic Codes (LN-PHOTONIC series)
+## Diagnostic Codes (LLN-PHOTONIC series)
 
 | Code | Meaning |
 | --- | --- |
-| `LN-PHOTONIC-001` | optical runtime unavailable |
-| `LN-PHOTONIC-002` | optical transport denied by policy |
-| `LN-PHOTONIC-003` | distributed optical scheduler unavailable |
-| `LN-PHOTONIC-004` | photonic fallback occurred |
-| `LN-PHOTONIC-005` | unsupported optical target |
-| `LN-PHOTONIC-006` | invalid distributed transport graph |
+| `LLN-PHOTONIC-001` | optical runtime unavailable |
+| `LLN-PHOTONIC-002` | optical transport denied by policy |
+| `LLN-PHOTONIC-003` | distributed optical scheduler unavailable |
+| `LLN-PHOTONIC-004` | photonic fallback occurred |
+| `LLN-PHOTONIC-005` | unsupported optical target |
+| `LLN-PHOTONIC-006` | invalid distributed transport graph |
 
 ---
 

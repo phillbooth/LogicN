@@ -426,29 +426,29 @@ function checkCompatibility(
 
 ## Diagnostic Codes (v0.2)
 
-### LN-COMPUTE
+### LLN-COMPUTE
 
 | Code           | Meaning                  |
 | -------------- | ------------------------ |
-| LN-COMPUTE-001 | Invalid compute workload |
-| LN-COMPUTE-002 | GPU planning failure     |
-| LN-COMPUTE-003 | Optical planning failure |
+| LLN-COMPUTE-001 | Invalid compute workload |
+| LLN-COMPUTE-002 | GPU planning failure     |
+| LLN-COMPUTE-003 | Optical planning failure |
 
-### LN-WASM
+### LLN-WASM
 
 | Code        | Meaning                     |
 | ----------- | --------------------------- |
-| LN-WASM-001 | Forbidden WASM effect       |
-| LN-WASM-002 | Invalid runtime capability  |
-| LN-WASM-003 | Unsupported browser runtime |
+| LLN-WASM-001 | Forbidden WASM effect       |
+| LLN-WASM-002 | Invalid runtime capability  |
+| LLN-WASM-003 | Unsupported browser runtime |
 
-### LN-COMPAT
+### LLN-COMPAT
 
 | Code          | Meaning                        |
 | ------------- | ------------------------------ |
-| LN-COMPAT-001 | Runtime incompatibility        |
-| LN-COMPAT-002 | Forbidden target effect        |
-| LN-COMPAT-003 | Unsupported deployment profile |
+| LLN-COMPAT-001 | Runtime incompatibility        |
+| LLN-COMPAT-002 | Forbidden target effect        |
+| LLN-COMPAT-003 | Unsupported deployment profile |
 
 ---
 

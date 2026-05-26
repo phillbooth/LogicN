@@ -428,14 +428,14 @@ AI traffic must be auditable when auditRequired is true
 ```ts
 export interface NetworkDiagnostic {
   code:
-    | "LN-NETWORK-001"
-    | "LN-NETWORK-002"
-    | "LN-NETWORK-003"
-    | "LN-NETWORK-004"
-    | "LN-NETWORK-005"
-    | "LN-NETWORK-006"
-    | "LN-NETWORK-007"
-    | "LN-NETWORK-008"
+    | "LLN-NETWORK-001"
+    | "LLN-NETWORK-002"
+    | "LLN-NETWORK-003"
+    | "LLN-NETWORK-004"
+    | "LLN-NETWORK-005"
+    | "LLN-NETWORK-006"
+    | "LLN-NETWORK-007"
+    | "LLN-NETWORK-008"
   severity: "error" | "warning" | "info"
   message: string
   destination?: string
@@ -448,14 +448,14 @@ export interface NetworkDiagnostic {
 
 | Code | Meaning |
 | --- | --- |
-| `LN-NETWORK-001` | undeclared network destination |
-| `LN-NETWORK-002` | capability missing for network operation |
-| `LN-NETWORK-003` | insecure transport denied |
-| `LN-NETWORK-004` | raw socket denied |
-| `LN-NETWORK-005` | destination not allowlisted |
-| `LN-NETWORK-006` | secret flow to unapproved destination |
-| `LN-NETWORK-007` | AI provider not approved |
-| `LN-NETWORK-008` | runtime network policy unavailable, replay/idempotency violation or governance metadata missing |
+| `LLN-NETWORK-001` | undeclared network destination |
+| `LLN-NETWORK-002` | capability missing for network operation |
+| `LLN-NETWORK-003` | insecure transport denied |
+| `LLN-NETWORK-004` | raw socket denied |
+| `LLN-NETWORK-005` | destination not allowlisted |
+| `LLN-NETWORK-006` | secret flow to unapproved destination |
+| `LLN-NETWORK-007` | AI provider not approved |
+| `LLN-NETWORK-008` | runtime network policy unavailable, replay/idempotency violation or governance metadata missing |
 
 ## NetworkPolicyReport
 

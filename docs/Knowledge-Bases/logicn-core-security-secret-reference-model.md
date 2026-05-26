@@ -217,7 +217,7 @@ export class ProtectedSecret<T> {
     unwrapForApprovedSink(sink: SecretSafeSink): T {
         if (!canSendSecretToSink(this.reference, sink)) {
             throw new SecretPolicyError(
-                "LN-SECRET-001",
+                "LLN-SECRET-001",
                 `Secret ${this.reference.name} cannot be sent to sink ${sink.id}`
             )
         }
@@ -315,7 +315,7 @@ export function checkStringConcat(input: {
 }): SecretDiagnostic[]
 ```
 
-Emits `LN-SECRET-002` when secret-tainted values flow into unsafe string
+Emits `LLN-SECRET-002` when secret-tainted values flow into unsafe string
 creation.
 
 ### checkSecretSink()
@@ -328,7 +328,7 @@ export function checkSecretSink(input: {
 }): SecretDiagnostic[]
 ```
 
-Emits `LN-SECRET-001` when a protected secret is sent to an unsafe sink.
+Emits `LLN-SECRET-001` when a protected secret is sent to an unsafe sink.
 
 ---
 
@@ -336,7 +336,7 @@ Emits `LN-SECRET-001` when a protected secret is sent to an unsafe sink.
 
 ```ts
 export interface SecretDiagnostic {
-    code: "LN-SECRET-001" | "LN-SECRET-002"
+    code: "LLN-SECRET-001" | "LLN-SECRET-002"
     severity: "error" | "warning"
     message: string
     secretName?: string
@@ -448,8 +448,8 @@ secret → approved database initialization
 
 | Code | Meaning |
 | --------------- | -------------------------------------------------------- |
-| `LN-SECRET-001` | Secret sent to unsafe sink |
-| `LN-SECRET-002` | Secret-tainted value flowed into unsafe string operation |
+| `LLN-SECRET-001` | Secret sent to unsafe sink |
+| `LLN-SECRET-002` | Secret-tainted value flowed into unsafe string operation |
 
 ---
 

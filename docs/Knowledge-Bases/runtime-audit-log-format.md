@@ -9,11 +9,11 @@ Version target: v0.2
 Format: JSONL, one RuntimeAuditEvent per line
 Implementation status: fully specified, not yet finalised in package
 Canonical diagnostic ranges:
-  - LN-AUDIT-001 through LN-AUDIT-005
-  - LN-REPORT-001 through LN-REPORT-005
-  - LN-PROOF-001 through LN-PROOF-005
-  - LN-DENIAL-001 through LN-DENIAL-005
-  - LN-EVIDENCE-001 through LN-EVIDENCE-005
+  - LLN-AUDIT-001 through LLN-AUDIT-005
+  - LLN-REPORT-001 through LLN-REPORT-005
+  - LLN-PROOF-001 through LLN-PROOF-005
+  - LLN-DENIAL-001 through LLN-DENIAL-005
+  - LLN-EVIDENCE-001 through LLN-EVIDENCE-005
 ```
 
 Runtime audit logs are security-relevant records emitted by the LogicN runtime and related governance tooling.
@@ -605,7 +605,7 @@ Raw secret types must never be assignable to `AuditReportValue`.
     "eventId": "evt_002",
     "reason": "Secret value attempted to cross runtime log boundary.",
     "category": "secret",
-    "diagnosticCode": "LN-DENIAL-003",
+    "diagnosticCode": "LLN-DENIAL-003",
     "suggestedFix": "Use a SecretReference or redacted value before logging.",
     "evidence": [
       {
@@ -642,7 +642,7 @@ export function validateAuditSafety(
 
   if (event.schemaVersion !== "logicn.runtime.audit.v0.2") {
     diagnostics.push({
-      code: "LN-AUDIT-001",
+      code: "LLN-AUDIT-001",
       severity: "error",
       message: `Unsupported audit schema version: ${event.schemaVersion}.`
     })
@@ -650,7 +650,7 @@ export function validateAuditSafety(
 
   if (!event.eventId || !event.executionId || !event.timestamp) {
     diagnostics.push({
-      code: "LN-AUDIT-002",
+      code: "LLN-AUDIT-002",
       severity: "error",
       message: "Audit event is missing required identity or timestamp fields."
     })
@@ -658,7 +658,7 @@ export function validateAuditSafety(
 
   if (containsUnsafeSecretValue(event.metadata)) {
     diagnostics.push({
-      code: "LN-AUDIT-003",
+      code: "LLN-AUDIT-003",
       severity: "error",
       message: "Audit event metadata contains an unsafe secret value."
     })
@@ -666,7 +666,7 @@ export function validateAuditSafety(
 
   if (event.status === "denied" && !event.denial) {
     diagnostics.push({
-      code: "LN-DENIAL-001",
+      code: "LLN-DENIAL-001",
       severity: "error",
       message: "Denied audit event must include a DenialReport."
     })
@@ -674,7 +674,7 @@ export function validateAuditSafety(
 
   if (event.proof && !hasFiveExecutionProofHashes(event.proof)) {
     diagnostics.push({
-      code: "LN-PROOF-001",
+      code: "LLN-PROOF-001",
       severity: "error",
       message: "Execution proof must include all five proof hashes."
     })
@@ -688,55 +688,55 @@ export function validateAuditSafety(
 
 ## Diagnostic Codes
 
-### LN-AUDIT
+### LLN-AUDIT
 
 | Code | Meaning |
 | --- | --- |
-| `LN-AUDIT-001` | Unsupported audit schema version |
-| `LN-AUDIT-002` | Missing required audit event field |
-| `LN-AUDIT-003` | Unsafe secret value in audit metadata |
-| `LN-AUDIT-004` | Invalid audit status transition |
-| `LN-AUDIT-005` | Audit event ordering or chain failure |
+| `LLN-AUDIT-001` | Unsupported audit schema version |
+| `LLN-AUDIT-002` | Missing required audit event field |
+| `LLN-AUDIT-003` | Unsafe secret value in audit metadata |
+| `LLN-AUDIT-004` | Invalid audit status transition |
+| `LLN-AUDIT-005` | Audit event ordering or chain failure |
 
-### LN-REPORT
-
-| Code | Meaning |
-| --- | --- |
-| `LN-REPORT-001` | Report schema version missing or unsupported |
-| `LN-REPORT-002` | Report contains unsafe raw value |
-| `LN-REPORT-003` | Report references missing artefact |
-| `LN-REPORT-004` | Report hash mismatch |
-| `LN-REPORT-005` | Report output path is unsafe |
-
-### LN-PROOF
+### LLN-REPORT
 
 | Code | Meaning |
 | --- | --- |
-| `LN-PROOF-001` | Execution proof missing one or more of the five hashes |
-| `LN-PROOF-002` | Proof hash format invalid |
-| `LN-PROOF-003` | Manifest hash mismatch |
-| `LN-PROOF-004` | Audit chain hash mismatch |
-| `LN-PROOF-005` | Proof references missing execution id |
+| `LLN-REPORT-001` | Report schema version missing or unsupported |
+| `LLN-REPORT-002` | Report contains unsafe raw value |
+| `LLN-REPORT-003` | Report references missing artefact |
+| `LLN-REPORT-004` | Report hash mismatch |
+| `LLN-REPORT-005` | Report output path is unsafe |
 
-### LN-DENIAL
-
-| Code | Meaning |
-| --- | --- |
-| `LN-DENIAL-001` | Denied event missing denial report |
-| `LN-DENIAL-002` | Denial report missing evidence |
-| `LN-DENIAL-003` | Secret boundary denial |
-| `LN-DENIAL-004` | Policy denial |
-| `LN-DENIAL-005` | Target compatibility denial |
-
-### LN-EVIDENCE
+### LLN-PROOF
 
 | Code | Meaning |
 | --- | --- |
-| `LN-EVIDENCE-001` | Unknown evidence type |
-| `LN-EVIDENCE-002` | Evidence missing required field |
-| `LN-EVIDENCE-003` | Evidence contains unsafe raw secret |
-| `LN-EVIDENCE-004` | Evidence hash mismatch |
-| `LN-EVIDENCE-005` | Evidence references missing event or artefact |
+| `LLN-PROOF-001` | Execution proof missing one or more of the five hashes |
+| `LLN-PROOF-002` | Proof hash format invalid |
+| `LLN-PROOF-003` | Manifest hash mismatch |
+| `LLN-PROOF-004` | Audit chain hash mismatch |
+| `LLN-PROOF-005` | Proof references missing execution id |
+
+### LLN-DENIAL
+
+| Code | Meaning |
+| --- | --- |
+| `LLN-DENIAL-001` | Denied event missing denial report |
+| `LLN-DENIAL-002` | Denial report missing evidence |
+| `LLN-DENIAL-003` | Secret boundary denial |
+| `LLN-DENIAL-004` | Policy denial |
+| `LLN-DENIAL-005` | Target compatibility denial |
+
+### LLN-EVIDENCE
+
+| Code | Meaning |
+| --- | --- |
+| `LLN-EVIDENCE-001` | Unknown evidence type |
+| `LLN-EVIDENCE-002` | Evidence missing required field |
+| `LLN-EVIDENCE-003` | Evidence contains unsafe raw secret |
+| `LLN-EVIDENCE-004` | Evidence hash mismatch |
+| `LLN-EVIDENCE-005` | Evidence references missing event or artefact |
 
 ---
 
@@ -797,7 +797,7 @@ describe("validateAuditSafety", () => {
       denial: undefined
     })
 
-    expect(diagnostics.some(d => d.code === "LN-DENIAL-001")).toBe(true)
+    expect(diagnostics.some(d => d.code === "LLN-DENIAL-001")).toBe(true)
   })
 
   it("rejects execution proof missing hashes", () => {
@@ -808,7 +808,7 @@ describe("validateAuditSafety", () => {
       } as ExecutionProofHashes
     })
 
-    expect(diagnostics.some(d => d.code === "LN-PROOF-001")).toBe(true)
+    expect(diagnostics.some(d => d.code === "LLN-PROOF-001")).toBe(true)
   })
 })
 ```

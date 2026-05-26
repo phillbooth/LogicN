@@ -127,7 +127,7 @@ pub fn fetch_user(
 ) -> Result<UserProfile, NetworkError> {
     http.get("/users/" + id)
 }
-// LN-EFFECT-001: undeclared effect
+// LLN-EFFECT-001: undeclared effect
 // function: fetch_user  required effect: network
 ```
 
@@ -153,7 +153,7 @@ Example — restricted import:
 
 ```logicn
 import { InternalKey } from "app/auth/private-keys"
-// LN-BOUNDARY-001: import crosses restricted package boundary
+// LLN-BOUNDARY-001: import crosses restricted package boundary
 ```
 
 Example — secret leakage through public API:
@@ -161,7 +161,7 @@ Example — secret leakage through public API:
 ```logicn
 private type SecretToken = String
 pub fn export_token() -> SecretToken { ... }
-// LN-BOUNDARY-002: public API exposes private secret-bearing type
+// LLN-BOUNDARY-002: public API exposes private secret-bearing type
 ```
 
 See `effect-checker-and-boundary-checker.md` for full specification.

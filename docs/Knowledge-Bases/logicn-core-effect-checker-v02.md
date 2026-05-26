@@ -166,14 +166,14 @@ function analyzeFunction(
 
 ---
 
-### LN-EFFECT Diagnostic Codes (v0.2)
+### LLN-EFFECT Diagnostic Codes (v0.2)
 
 | Code          | Meaning                               |
 | ------------- | ------------------------------------- |
-| LN-EFFECT-001 | Missing IO effect declaration         |
-| LN-EFFECT-002 | Effect propagation violation          |
-| LN-EFFECT-003 | Missing Async effect declaration      |
-| LN-EFFECT-004 | Unsafe operation without Unsafe effect |
+| LLN-EFFECT-001 | Missing IO effect declaration         |
+| LLN-EFFECT-002 | Effect propagation violation          |
+| LLN-EFFECT-003 | Missing Async effect declaration      |
+| LLN-EFFECT-004 | Unsafe operation without Unsafe effect |
 
 Note: These meanings differ from the prior KB codes. v0.2 codes are
 specific to effect category failures rather than generic "undeclared effect".
@@ -248,7 +248,7 @@ function validateBoundary(
          fn.declaredEffects.has(Effect.External))
     ) {
         diagnostics.push({
-            code: "LN-BOUNDARY-002",
+            code: "LLN-BOUNDARY-002",
             message: "Sandbox boundary violation: prohibited effect detected."
         });
     }
@@ -259,14 +259,14 @@ function validateBoundary(
 
 ---
 
-### LN-BOUNDARY Diagnostic Codes (v0.2)
+### LLN-BOUNDARY Diagnostic Codes (v0.2)
 
 | Code             | Meaning                              |
 | ---------------- | ------------------------------------ |
-| LN-BOUNDARY-001  | Invalid external boundary crossing   |
-| LN-BOUNDARY-002  | Sandbox boundary violation           |
-| LN-BOUNDARY-003  | Runtime boundary violation           |
-| LN-BOUNDARY-004  | Unsafe boundary access               |
+| LLN-BOUNDARY-001  | Invalid external boundary crossing   |
+| LLN-BOUNDARY-002  | Sandbox boundary violation           |
+| LLN-BOUNDARY-003  | Runtime boundary violation           |
+| LLN-BOUNDARY-004  | Unsafe boundary access               |
 
 ---
 
@@ -281,7 +281,7 @@ function validateBoundary(
  4. Implement EffectGraph with nodes Map
  5. Implement propagateEffects() with visited-node cycle detection
  6. Implement analyzeFunction() comparing declared vs inferred
- 7. Emit LN-EFFECT-001–004 diagnostics per missing effect
+ 7. Emit LLN-EFFECT-001–004 diagnostics per missing effect
  8. Integrate effect graph with compiler pass 13
 ```
 
@@ -294,7 +294,7 @@ function validateBoundary(
 12. Implement Internal→External Network/External effect requirement
 13. Implement Sandbox prohibition for IO/Network/Unsafe/External
 14. Implement Runtime boundary requirement
-15. Emit LN-BOUNDARY-001–004 diagnostics for violations
+15. Emit LLN-BOUNDARY-001–004 diagnostics for violations
 16. Feed validated boundary graph into manifest generation (pass 14)
 ```
 
@@ -312,13 +312,13 @@ logicn-core-compiler/src/
     EffectGraph.ts
     propagateEffects.ts     (recursive + visited tracking)
     analyzeFunction.ts
-    effect-diagnostics.ts   (LN-EFFECT-001–004)
+    effect-diagnostics.ts   (LLN-EFFECT-001–004)
 
   boundaries/
     BoundaryType.ts         (enum — 5 values)
     BoundaryNode.ts
     validateBoundary.ts
-    boundary-diagnostics.ts (LN-BOUNDARY-001–004)
+    boundary-diagnostics.ts (LLN-BOUNDARY-001–004)
 ```
 
 ---

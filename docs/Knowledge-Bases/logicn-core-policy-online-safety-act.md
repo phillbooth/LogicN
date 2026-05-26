@@ -146,10 +146,10 @@ age_check provider "trusted-age-provider" {
 
 | Code | Meaning |
 | ---------------------- | ----------------------------------------- |
-| `LN-SAFETY-AGE-001` | Age-restricted route missing age assurance policy |
-| `LN-SAFETY-AGE-002` | Unknown age state cannot grant access |
-| `LN-SAFETY-AGE-003` | Self-declared age is not sufficient for this content category |
-| `LN-SAFETY-AUDIT-001` | Age-gated access decision missing audit evidence |
+| `LLN-SAFETY-AGE-001` | Age-restricted route missing age assurance policy |
+| `LLN-SAFETY-AGE-002` | Unknown age state cannot grant access |
+| `LLN-SAFETY-AGE-003` | Self-declared age is not sufficient for this content category |
+| `LLN-SAFETY-AUDIT-001` | Age-gated access decision missing audit evidence |
 
 ---
 

@@ -263,7 +263,7 @@ Example diagnostic:
 
 ```json
 {
-  "code": "LN-ENCAP-001",
+  "code": "LLN-ENCAP-001",
   "severity": "error",
   "message": "Public route cannot return model User directly. Return a declared response or view contract.",
   "safeToShow": true

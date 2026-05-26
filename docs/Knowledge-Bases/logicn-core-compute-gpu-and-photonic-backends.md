@@ -9,9 +9,9 @@ Version target: v0.2
 Implementation status: fully specified, planning only
 v0.1 baseline: CPU + compute planner only
 Canonical diagnostics:
-  - LN-COMPUTE-001 through LN-COMPUTE-005
-  - LN-WASM-001 through LN-WASM-005
-  - LN-COMPAT-001 through LN-COMPAT-005
+  - LLN-COMPUTE-001 through LLN-COMPUTE-005
+  - LLN-WASM-001 through LLN-WASM-005
+  - LLN-COMPAT-001 through LLN-COMPAT-005
 ```
 
 `logicn-core-compute` owns compute planning contracts, not backend execution.
@@ -546,7 +546,7 @@ export function checkTargetCompatibility(
   for (const effect of workload.effects) {
     if (profile.forbiddenEffects.includes(effect)) {
       blockers.push({
-        code: "LN-COMPAT-001",
+        code: "LLN-COMPAT-001",
         message: `Effect ${effect} is forbidden on target ${profile.target}.`,
         effect,
         target: profile.target
@@ -555,7 +555,7 @@ export function checkTargetCompatibility(
 
     if (!profile.supportedEffects.includes(effect)) {
       warnings.push({
-        code: "LN-COMPAT-002",
+        code: "LLN-COMPAT-002",
         message: `Effect ${effect} is not explicitly supported on target ${profile.target}.`,
         effect,
         target: profile.target
@@ -565,7 +565,7 @@ export function checkTargetCompatibility(
 
   if (profile.memoryLimitMb !== undefined && workload.memoryMb > profile.memoryLimitMb) {
     blockers.push({
-      code: "LN-COMPAT-003",
+      code: "LLN-COMPAT-003",
       message: `Workload memory ${workload.memoryMb}MB exceeds target limit ${profile.memoryLimitMb}MB.`,
       target: profile.target
     })
@@ -573,7 +573,7 @@ export function checkTargetCompatibility(
 
   if (workload.dataShape.sensitive && !profile.allowsSensitiveData) {
     blockers.push({
-      code: "LN-COMPAT-004",
+      code: "LLN-COMPAT-004",
       message: `Target ${profile.target} does not allow sensitive data.`,
       target: profile.target
     })
@@ -664,35 +664,35 @@ export function estimateTarget(
 
 # Diagnostic Codes
 
-## LN-COMPUTE
+## LLN-COMPUTE
 
 | Code | Meaning |
 | --- | --- |
-| `LN-COMPUTE-001` | Workload cannot be planned |
-| `LN-COMPUTE-002` | No safe fallback target exists |
-| `LN-COMPUTE-003` | Compute capability missing |
-| `LN-COMPUTE-004` | Sensitive workload requires explicit target approval |
-| `LN-COMPUTE-005` | Compute plan report could not be generated |
+| `LLN-COMPUTE-001` | Workload cannot be planned |
+| `LLN-COMPUTE-002` | No safe fallback target exists |
+| `LLN-COMPUTE-003` | Compute capability missing |
+| `LLN-COMPUTE-004` | Sensitive workload requires explicit target approval |
+| `LLN-COMPUTE-005` | Compute plan report could not be generated |
 
-## LN-WASM
-
-| Code | Meaning |
-| --- | --- |
-| `LN-WASM-001` | Forbidden effect used by WASM target |
-| `LN-WASM-002` | Host import required but not allowed |
-| `LN-WASM-003` | WASI filesystem required but not enabled |
-| `LN-WASM-004` | Host network required but not enabled |
-| `LN-WASM-005` | WASM runtime profile missing or unsupported |
-
-## LN-COMPAT
+## LLN-WASM
 
 | Code | Meaning |
 | --- | --- |
-| `LN-COMPAT-001` | Target forbids required effect |
-| `LN-COMPAT-002` | Target does not explicitly support effect |
-| `LN-COMPAT-003` | Workload exceeds target memory limit |
-| `LN-COMPAT-004` | Target does not allow sensitive data |
-| `LN-COMPAT-005` | Target compatibility report incomplete |
+| `LLN-WASM-001` | Forbidden effect used by WASM target |
+| `LLN-WASM-002` | Host import required but not allowed |
+| `LLN-WASM-003` | WASI filesystem required but not enabled |
+| `LLN-WASM-004` | Host network required but not enabled |
+| `LLN-WASM-005` | WASM runtime profile missing or unsupported |
+
+## LLN-COMPAT
+
+| Code | Meaning |
+| --- | --- |
+| `LLN-COMPAT-001` | Target forbids required effect |
+| `LLN-COMPAT-002` | Target does not explicitly support effect |
+| `LLN-COMPAT-003` | Workload exceeds target memory limit |
+| `LLN-COMPAT-004` | Target does not allow sensitive data |
+| `LLN-COMPAT-005` | Target compatibility report incomplete |
 
 ---
 
@@ -791,7 +791,7 @@ describe("target compatibility", () => {
       browserWasmProfile
     )
 
-    expect(result.blockers.some(blocker => blocker.code === "LN-COMPAT-001")).toBe(true)
+    expect(result.blockers.some(blocker => blocker.code === "LLN-COMPAT-001")).toBe(true)
   })
 })
 ```

@@ -153,7 +153,7 @@ Example diagnostic:
 
 ```json
 {
-  "code": "LN-CRYPTO-001",
+  "code": "LLN-CRYPTO-001",
   "severity": "error",
   "message": "Random.number() cannot be used for token generation. Use SecureRandom.",
   "safeToShow": true

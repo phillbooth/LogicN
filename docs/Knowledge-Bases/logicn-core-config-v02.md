@@ -390,22 +390,22 @@ function validateSandboxConfig(
 
 ## Diagnostic Codes
 
-### LN-CONFIG
+### LLN-CONFIG
 
 | Code          | Meaning                   |
 | ------------- | ------------------------- |
-| LN-CONFIG-001 | Invalid config schema     |
-| LN-CONFIG-002 | Missing environment value |
-| LN-CONFIG-003 | Invalid environment mode  |
+| LLN-CONFIG-001 | Invalid config schema     |
+| LLN-CONFIG-002 | Missing environment value |
+| LLN-CONFIG-003 | Invalid environment mode  |
 
-### LN-SECRET
+### LLN-SECRET
 
 | Code          | Meaning                         |
 | ------------- | ------------------------------- |
-| LN-SECRET-001 | Unsafe secret sink              |
-| LN-SECRET-002 | Secret serialization prohibited |
-| LN-SECRET-003 | Invalid secret reference        |
-| LN-SECRET-004 | Secret exposure in report       |
+| LLN-SECRET-001 | Unsafe secret sink              |
+| LLN-SECRET-002 | Secret serialization prohibited |
+| LLN-SECRET-003 | Invalid secret reference        |
+| LLN-SECRET-004 | Secret exposure in report       |
 
 ---
 

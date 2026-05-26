@@ -297,7 +297,7 @@ Module path:  app/users/service
 If the declaration and path disagree, the compiler emits:
 
 ```text
-LN-MODULE-001: module declaration does not match source location
+LLN-MODULE-001: module declaration does not match source location
 file: app/src/users/service.lln
 found: app/payments/service
 expected: app/users/service
@@ -420,7 +420,7 @@ return type or parameters:
 private type SecretToken = String
 
 pub fn export_token() -> SecretToken { ... }
-// LN-VIS-003: public function exposes private return type
+// LLN-VIS-003: public function exposes private return type
 ```
 
 Correct approach — expose a safe wrapper type:
@@ -569,19 +569,19 @@ The formatter may group and sort imports automatically.
 Module system diagnostics:
 
 ```text
-LN-MODULE-001  module declaration does not match source location
-LN-MODULE-002  import path escapes package boundary
-LN-MODULE-003  circular import detected
-LN-MODULE-004  imported module not found
-LN-MODULE-005  import not listed in package policy
-LN-MODULE-006  wildcard symbol import not allowed
-LN-VIS-001     cannot import private symbol
-LN-VIS-002     cannot import package-visible symbol from outside package
-LN-VIS-003     public function exposes private return type
-LN-VIS-004     public module exports non-public dependency type
-LN-VIS-005     runtime-only symbol used by application code
-LN-CAP-001     imported function requires ungranted capability
-LN-CAP-002     imported module declares denied effect
+LLN-MODULE-001  module declaration does not match source location
+LLN-MODULE-002  import path escapes package boundary
+LLN-MODULE-003  circular import detected
+LLN-MODULE-004  imported module not found
+LLN-MODULE-005  import not listed in package policy
+LLN-MODULE-006  wildcard symbol import not allowed
+LLN-VIS-001     cannot import private symbol
+LLN-VIS-002     cannot import package-visible symbol from outside package
+LLN-VIS-003     public function exposes private return type
+LLN-VIS-004     public module exports non-public dependency type
+LLN-VIS-005     runtime-only symbol used by application code
+LLN-CAP-001     imported function requires ungranted capability
+LLN-CAP-002     imported module declares denied effect
 ```
 
 See also the `LLN-E3xxx` series in the compiler diagnostics for earlier

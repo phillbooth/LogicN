@@ -423,7 +423,7 @@ export function validateEffects(
   for (const effect of input.effects) {
     if (!isEffectAllowedForTarget(effect.name, input.target)) {
       diagnostics.push({
-        code: "LN-EFFECT-002",
+        code: "LLN-EFFECT-002",
         severity: "error",
         message: `Effect ${effect.name} is forbidden for target ${input.target}.`
       })
@@ -802,7 +802,7 @@ describe("logicn verify", () => {
     const result = await verifyArtefact(invalidArtefact)
 
     expect(result.success).toBe(false)
-    expect(result.diagnostics.some(d => d.code === "LN-MANIFEST-002")).toBe(true)
+    expect(result.diagnostics.some(d => d.code === "LLN-MANIFEST-002")).toBe(true)
   })
 })
 ```

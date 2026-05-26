@@ -148,13 +148,13 @@ function triAnd(
 
 ---
 
-### LN-TRI Diagnostics
+### LLN-TRI Diagnostics
 
 | Code       | Meaning                       |
 | ---------- | ----------------------------- |
-| LN-TRI-001 | Invalid TriState              |
-| LN-TRI-002 | Missing unknown reasons       |
-| LN-TRI-003 | Invalid tri-state combination |
+| LLN-TRI-001 | Invalid TriState              |
+| LLN-TRI-002 | Missing unknown reasons       |
+| LLN-TRI-003 | Invalid tri-state combination |
 
 ---
 
@@ -352,13 +352,13 @@ function evaluateCapability(
 
 ---
 
-### LN-DECISION Diagnostics
+### LLN-DECISION Diagnostics
 
 | Code            | Meaning                    |
 | --------------- | -------------------------- |
-| LN-DECISION-001 | Invalid decision           |
-| LN-DECISION-002 | Unsafe decision conversion |
-| LN-DECISION-003 | Missing deny reason        |
+| LLN-DECISION-001 | Invalid decision           |
+| LLN-DECISION-002 | Unsafe decision conversion |
+| LLN-DECISION-003 | Missing deny reason        |
 
 ---
 
@@ -413,13 +413,13 @@ function validateBoolBoundary(
 
 ---
 
-### LN-BOOL-BOUNDARY Diagnostics
+### LLN-BOOL-BOUNDARY Diagnostics
 
 | Code                 | Meaning                   |
 | -------------------- | ------------------------- |
-| LN-BOOL-BOUNDARY-001 | Unsafe unknown conversion |
-| LN-BOOL-BOUNDARY-002 | Invalid bool boundary     |
-| LN-BOOL-BOUNDARY-003 | Implicit logical collapse |
+| LLN-BOOL-BOUNDARY-001 | Unsafe unknown conversion |
+| LLN-BOOL-BOUNDARY-002 | Invalid bool boundary     |
+| LLN-BOOL-BOUNDARY-003 | Implicit logical collapse |
 
 ---
 
@@ -505,14 +505,14 @@ function evaluateOmni(
 
 ---
 
-### LN-OMNI Diagnostics
+### LLN-OMNI Diagnostics
 
 | Code        | Meaning                    |
 | ----------- | -------------------------- |
-| LN-OMNI-001 | Invalid omni state         |
-| LN-OMNI-002 | Impossible state detected  |
-| LN-OMNI-003 | Unsafe omni collapse       |
-| LN-OMNI-004 | Conflicting runtime states |
+| LLN-OMNI-001 | Invalid omni state         |
+| LLN-OMNI-002 | Impossible state detected  |
+| LLN-OMNI-003 | Unsafe omni collapse       |
+| LLN-OMNI-004 | Conflicting runtime states |
 
 ---
 
@@ -525,7 +525,7 @@ logicn-core-logic/src/
     TriState.ts           (discriminated union — type field)
     constants.ts          (TRI_TRUE, TRI_FALSE, triUnknown)
     operators.ts          (triAnd, combineUnknownReasons)
-    diagnostics.ts        (LN-TRI-001–003)
+    diagnostics.ts        (LLN-TRI-001–003)
 
   decision/
     Decision.ts           (discriminated union — type field)
@@ -533,15 +533,15 @@ logicn-core-logic/src/
     combineDecisions.ts   (priority: DENY > UNKNOWN > ALLOW)
     evaluateCapability.ts (deny-first)
     decisionToRuntimeBool.ts
-    diagnostics.ts        (LN-DECISION-001–003)
+    diagnostics.ts        (LLN-DECISION-001–003)
 
   bool-boundary/
     BoolBoundaryResult.ts
     validateBoolBoundary.ts
-    diagnostics.ts        (LN-BOOL-BOUNDARY-001–003)
+    diagnostics.ts        (LLN-BOOL-BOUNDARY-001–003)
 
   omni/
     OmniState.ts          (enum — 8 values)
     evaluateOmni.ts
-    diagnostics.ts        (LN-OMNI-001–004)
+    diagnostics.ts        (LLN-OMNI-001–004)
 ```

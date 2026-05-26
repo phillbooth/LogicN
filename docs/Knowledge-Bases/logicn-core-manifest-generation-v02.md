@@ -267,15 +267,15 @@ function buildBoundaries(
 
 ---
 
-## LN-MANIFEST Diagnostic Codes (v0.2)
+## LLN-MANIFEST Diagnostic Codes (v0.2)
 
 | Code             | Meaning                    |
 | ---------------- | -------------------------- |
-| LN-MANIFEST-001  | Unsafe route detected      |
-| LN-MANIFEST-002  | Unsafe export detected     |
-| LN-MANIFEST-003  | Invalid boundary           |
-| LN-MANIFEST-004  | Capability conflict        |
-| LN-MANIFEST-005  | Serialization failure      |
+| LLN-MANIFEST-001  | Unsafe route detected      |
+| LLN-MANIFEST-002  | Unsafe export detected     |
+| LLN-MANIFEST-003  | Invalid boundary           |
+| LLN-MANIFEST-004  | Capability conflict        |
+| LLN-MANIFEST-005  | Serialization failure      |
 
 Note: These meanings differ significantly from the prior KB:
 - Prior 001: missing runtime manifest

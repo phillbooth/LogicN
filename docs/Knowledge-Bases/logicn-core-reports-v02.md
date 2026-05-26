@@ -310,7 +310,7 @@ function validateAuditSafety(
             !event.proof
         ) {
             diagnostics.push({
-                code: "LN-AUDIT-001",
+                code: "LLN-AUDIT-001",
                 message:
                     "Unsafe event missing execution proof."
             });
@@ -325,45 +325,45 @@ function validateAuditSafety(
 
 ## Diagnostic Codes (v0.2)
 
-### LN-AUDIT
+### LLN-AUDIT
 
 | Code         | Meaning                    |
 | ------------ | -------------------------- |
-| LN-AUDIT-001 | Unsafe event missing proof |
-| LN-AUDIT-002 | Invalid audit event        |
-| LN-AUDIT-003 | Audit hash mismatch        |
+| LLN-AUDIT-001 | Unsafe event missing proof |
+| LLN-AUDIT-002 | Invalid audit event        |
+| LLN-AUDIT-003 | Audit hash mismatch        |
 
-### LN-REPORT
+### LLN-REPORT
 
 | Code          | Meaning                     |
 | ------------- | --------------------------- |
-| LN-REPORT-001 | Invalid report structure    |
-| LN-REPORT-002 | JSONL serialization failure |
-| LN-REPORT-003 | Missing runtime metadata    |
+| LLN-REPORT-001 | Invalid report structure    |
+| LLN-REPORT-002 | JSONL serialization failure |
+| LLN-REPORT-003 | Missing runtime metadata    |
 
-### LN-PROOF
+### LLN-PROOF
 
 | Code         | Meaning                 |
 | ------------ | ----------------------- |
-| LN-PROOF-001 | Invalid execution proof |
-| LN-PROOF-002 | Proof hash mismatch     |
-| LN-PROOF-003 | Missing execution hash  |
+| LLN-PROOF-001 | Invalid execution proof |
+| LLN-PROOF-002 | Proof hash mismatch     |
+| LLN-PROOF-003 | Missing execution hash  |
 
-### LN-DENIAL
+### LLN-DENIAL
 
 | Code          | Meaning                 |
 | ------------- | ----------------------- |
-| LN-DENIAL-001 | Invalid denial report   |
-| LN-DENIAL-002 | Missing denial evidence |
-| LN-DENIAL-003 | Invalid denial boundary |
+| LLN-DENIAL-001 | Invalid denial report   |
+| LLN-DENIAL-002 | Missing denial evidence |
+| LLN-DENIAL-003 | Invalid denial boundary |
 
-### LN-EVIDENCE
+### LLN-EVIDENCE
 
 | Code            | Meaning                    |
 | --------------- | -------------------------- |
-| LN-EVIDENCE-001 | Invalid evidence payload   |
-| LN-EVIDENCE-002 | Unsupported evidence type  |
-| LN-EVIDENCE-003 | Evidence integrity failure |
+| LLN-EVIDENCE-001 | Invalid evidence payload   |
+| LLN-EVIDENCE-002 | Unsupported evidence type  |
+| LLN-EVIDENCE-003 | Evidence integrity failure |
 
 ---
 

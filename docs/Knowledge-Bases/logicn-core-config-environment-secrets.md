@@ -191,6 +191,7 @@ export interface SecretEnvironmentReference {
 ```ts
 export interface ConfigDiagnostic {
   code: string
+  name: string
   severity: "info" | "warning" | "error"
   message: string
   path?: string
@@ -250,7 +251,7 @@ export function loadEnvironmentConfig(
 
     if (value === undefined) {
       diagnostics.push({
-        code: "LN-CONFIG-001",
+        code: "LLN-CONFIG-001",
         severity: "error",
         message: `Required environment variable ${name} is missing.`,
         path: "environment.variables",
@@ -270,7 +271,7 @@ export function loadEnvironmentConfig(
 
     if (value === undefined) {
       diagnostics.push({
-        code: "LN-CONFIG-002",
+        code: "LLN-CONFIG-002",
         severity: "error",
         message: `Required secret ${name} is missing.`,
         path: "environment.secrets",
@@ -372,7 +373,7 @@ Example host boundary violation diagnostic:
 
 ```json
 {
-  "code": "LN-CONFIG-010",
+  "code": "LLN-CONFIG-010",
   "severity": "error",
   "message": "Host package.json must not define LogicN runtime policy.",
   "path": "package.json.logicnRuntime",
@@ -397,17 +398,17 @@ config-diagnostics.ts
 host-package-boundary.ts
 ```
 
-### Diagnostic Codes (LN-CONFIG series)
+### Diagnostic Codes (LLN-CONFIG series)
 
 | Code | Meaning |
 | --- | --- |
-| `LN-CONFIG-001` | required public environment variable missing |
-| `LN-CONFIG-002` | required secret missing |
-| `LN-CONFIG-003` | unknown environment mode |
-| `LN-CONFIG-004` | production strict mode disabled |
-| `LN-CONFIG-005` | unsafe secret default detected |
-| `LN-CONFIG-006` | development package enabled in production |
-| `LN-CONFIG-010` | host package manifest boundary violation |
+| `LLN-CONFIG-001` | required public environment variable missing |
+| `LLN-CONFIG-002` | required secret missing |
+| `LLN-CONFIG-003` | unknown environment mode |
+| `LLN-CONFIG-004` | production strict mode disabled |
+| `LLN-CONFIG-005` | unsafe secret default detected |
+| `LLN-CONFIG-006` | development package enabled in production |
+| `LLN-CONFIG-010` | host package manifest boundary violation |
 
 ---
 
@@ -707,7 +708,7 @@ pub fn expose_config() -> Config {
 Expected diagnostic:
 
 ```text
-LN-BOUNDARY-006
+LLN-BOUNDARY-006
 secret escaping public API
 ```
 
@@ -729,12 +730,12 @@ Runtime manifests should include secret metadata only — no raw values:
 }
 ```
 
-### Diagnostic Codes (LN-SECRET series)
+### Diagnostic Codes (LLN-SECRET series)
 
 | Code | Meaning |
 | --- | --- |
-| `LN-SECRET-001` | required secret unavailable |
-| `LN-SECRET-002` | secret value attempted to flow to unsafe sink |
+| `LLN-SECRET-001` | required secret unavailable |
+| `LLN-SECRET-002` | secret value attempted to flow to unsafe sink |
 
 ---
 
@@ -934,10 +935,10 @@ export interface SecretEnvironmentReference {
 }
 
 export type SecretConfigSource =
-  | { kind: "env";         variableName: string }
-  | { kind: "file";        filePath: string }
-  | { kind: "secretStore"; storeId: string; keyPath: string }
-  | { kind: "runtimeInjected" }
+  | { kind: "env";     variableName: string }
+  | { kind: "vault";   storeId: string; keyPath: string }
+  | { kind: "kms";     keyId: string; provider?: string }
+  | { kind: "runtime" }
 ```
 
 ### LoadEnvironmentConfigInput
@@ -964,7 +965,7 @@ export async function loadEnvironmentConfig(
   // Validate mode.
   if (!["development", "test", "staging", "production"].includes(input.mode)) {
     diagnostics.push({
-      code: "LN-CONFIG-003",
+      code: "LLN-CONFIG-003",
       severity: "error",
       message: `Unknown environment mode: ${input.mode}.`
     })
@@ -973,7 +974,7 @@ export async function loadEnvironmentConfig(
   // Check .env file policy.
   if (input.allowDotEnv && !policy.allowDotEnvFiles) {
     diagnostics.push({
-      code: "LN-CONFIG-004",
+      code: "LLN-CONFIG-004",
       severity: "error",
       message: `.env files are not allowed in ${input.mode} mode.`
     })

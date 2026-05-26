@@ -8,9 +8,9 @@ Area: Tri logic, Decision logic, Bool boundary rules
 Version target: v0.2
 Implementation status: fully specified, implementation pending
 Canonical diagnostics:
-  - LN-TRI-001 through LN-TRI-005
-  - LN-DECISION-001 through LN-DECISION-005
-  - LN-BOOL-BOUNDARY-001 through LN-BOOL-BOUNDARY-005
+  - LLN-TRI-001 through LLN-TRI-005
+  - LLN-DECISION-001 through LLN-DECISION-005
+  - LLN-BOOL-BOUNDARY-001 through LLN-BOOL-BOUNDARY-005
 ```
 
 Tri logic, Decision logic, and Bool boundary rules form LogicN's deterministic governance logic layer.
@@ -306,7 +306,7 @@ export function validateBoolBoundary(
       allowed: false,
       value: false,
       diagnostics: [{
-        code: "LN-BOOL-BOUNDARY-001",
+        code: "LLN-BOOL-BOUNDARY-001",
         severity: "error",
         message: "Tri unknown cannot cross runtime Bool boundary as true."
       }],
@@ -318,7 +318,7 @@ export function validateBoolBoundary(
     allowed: input.kind === "allow",
     value: decisionToRuntimeBool(input),
     diagnostics: input.kind === "allow" ? [] : [{
-      code: "LN-BOOL-BOUNDARY-002",
+      code: "LLN-BOOL-BOUNDARY-002",
       severity: "error",
       message: `Decision ${input.kind} converted to runtime Bool false.`
     }],
@@ -398,35 +398,35 @@ export function evaluateCapability(
 
 # Diagnostic Codes
 
-## LN-TRI
+## LLN-TRI
 
 | Code | Meaning |
 | --- | --- |
-| `LN-TRI-001` | Invalid TriState shape |
-| `LN-TRI-002` | Unknown state missing reason |
-| `LN-TRI-003` | Invalid Tri operation |
-| `LN-TRI-004` | Tri converted to Bool without boundary validation |
-| `LN-TRI-005` | Tri report contains unsafe value |
+| `LLN-TRI-001` | Invalid TriState shape |
+| `LLN-TRI-002` | Unknown state missing reason |
+| `LLN-TRI-003` | Invalid Tri operation |
+| `LLN-TRI-004` | Tri converted to Bool without boundary validation |
+| `LLN-TRI-005` | Tri report contains unsafe value |
 
-## LN-DECISION
-
-| Code | Meaning |
-| --- | --- |
-| `LN-DECISION-001` | Invalid Decision shape |
-| `LN-DECISION-002` | Decision missing evidence |
-| `LN-DECISION-003` | Non-deny decision used despite denial evidence |
-| `LN-DECISION-004` | Decision converted to Bool without fail-closed policy |
-| `LN-DECISION-005` | Unknown decision lacks unknown reasons |
-
-## LN-BOOL-BOUNDARY
+## LLN-DECISION
 
 | Code | Meaning |
 | --- | --- |
-| `LN-BOOL-BOUNDARY-001` | Tri unknown attempted to cross Bool boundary |
-| `LN-BOOL-BOUNDARY-002` | Non-allow Decision converted to Bool false |
-| `LN-BOOL-BOUNDARY-003` | Implicit truthy/falsy conversion attempted |
-| `LN-BOOL-BOUNDARY-004` | Review decision used as runtime true |
-| `LN-BOOL-BOUNDARY-005` | Bool boundary result missing diagnostics or reason |
+| `LLN-DECISION-001` | Invalid Decision shape |
+| `LLN-DECISION-002` | Decision missing evidence |
+| `LLN-DECISION-003` | Non-deny decision used despite denial evidence |
+| `LLN-DECISION-004` | Decision converted to Bool without fail-closed policy |
+| `LLN-DECISION-005` | Unknown decision lacks unknown reasons |
+
+## LLN-BOOL-BOUNDARY
+
+| Code | Meaning |
+| --- | --- |
+| `LLN-BOOL-BOUNDARY-001` | Tri unknown attempted to cross Bool boundary |
+| `LLN-BOOL-BOUNDARY-002` | Non-allow Decision converted to Bool false |
+| `LLN-BOOL-BOUNDARY-003` | Implicit truthy/falsy conversion attempted |
+| `LLN-BOOL-BOUNDARY-004` | Review decision used as runtime true |
+| `LLN-BOOL-BOUNDARY-005` | Bool boundary result missing diagnostics or reason |
 
 ---
 

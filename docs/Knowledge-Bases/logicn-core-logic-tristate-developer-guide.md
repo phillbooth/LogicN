@@ -560,7 +560,7 @@ function validateBoolBoundary(value: TriState): BoolBoundaryResult {
   return {
     allowed: false,
     diagnostic: {
-      code: "LN-BOOL-BOUNDARY-001",
+      code: "LLN-BOOL-BOUNDARY-001",
       message: "Unknown TriState cannot implicitly convert to bool.",
     },
   };
@@ -571,7 +571,7 @@ Invalid boundary (bad):
 ```ts
 const canDeploy = triUnknown("Deployment policy was not loaded.");
 
-if (canDeploy as any) {       // LN-BOOL-BOUNDARY-001
+if (canDeploy as any) {       // LLN-BOOL-BOUNDARY-001
   deployToProduction();
 }
 ```
@@ -699,25 +699,25 @@ matchTri(canReadSecret, {
 
 | Rule | Diagnostic |
 | ----------------------------------------- | ----------------------- |
-| Unknown used as bool | `LN-BOOL-BOUNDARY-001` |
-| Missing unknown match case | `LN-TRI-001` or `LN-BOOL-BOUNDARY-002` |
-| Unknown reason missing | `LN-TRI-002` |
-| Unsafe decision conversion | `LN-DECISION-002` |
-| Sensitive path without explicit unknown handling | `LN-BOOL-BOUNDARY-003` |
+| Unknown used as bool | `LLN-BOOL-BOUNDARY-001` |
+| Missing unknown match case | `LLN-TRI-001` or `LLN-BOOL-BOUNDARY-002` |
+| Unknown reason missing | `LLN-TRI-002` |
+| Unsafe decision conversion | `LLN-DECISION-002` |
+| Sensitive path without explicit unknown handling | `LLN-BOOL-BOUNDARY-003` |
 
 Diagnostic examples:
 ```text
-LN-BOOL-BOUNDARY-001:
+LLN-BOOL-BOUNDARY-001:
 Unknown TriState cannot implicitly convert to bool.
 ```
 
 ```text
-LN-TRI-002:
+LLN-TRI-002:
 Unknown TriState must include at least one reason.
 ```
 
 ```text
-LN-DECISION-002:
+LLN-DECISION-002:
 Decision conversion is unsafe because UNKNOWN was not handled explicitly.
 ```
 

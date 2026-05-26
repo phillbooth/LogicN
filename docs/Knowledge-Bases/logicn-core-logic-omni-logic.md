@@ -8,7 +8,7 @@ Area: Omni logic
 Version target: v0.2
 Implementation status: advisory/research model only
 Canonical diagnostics:
-  - LN-OMNI-001 through LN-OMNI-005
+  - LLN-OMNI-001 through LLN-OMNI-005
 ```
 
 Omni Logic is LogicN's advisory multi-state reasoning model.
@@ -226,11 +226,11 @@ OmniDecision -> runtime Bool
 
 | Code | Meaning |
 | --- | --- |
-| `LN-OMNI-001` | Invalid Omni state |
-| `LN-OMNI-002` | Omni confidence outside valid range |
-| `LN-OMNI-003` | Omni reasoning missing evidence |
-| `LN-OMNI-004` | Omni logic attempted direct runtime Bool conversion |
-| `LN-OMNI-005` | Omni advisory result attempted authority escalation |
+| `LLN-OMNI-001` | Invalid Omni state |
+| `LLN-OMNI-002` | Omni confidence outside valid range |
+| `LLN-OMNI-003` | Omni reasoning missing evidence |
+| `LLN-OMNI-004` | Omni logic attempted direct runtime Bool conversion |
+| `LLN-OMNI-005` | Omni advisory result attempted authority escalation |
 
 ---
 

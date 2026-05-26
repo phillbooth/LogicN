@@ -32,7 +32,7 @@ The governance layer establishes:
 
 Aligns with: `OpticalTransportMode` six-value enum, `PhotonicRuntimeTarget` v0.2,
 `PhotonicExecutionPlan` v0.2, `PhotonicCapability` definitions, topology constraints,
-validation functions, deterministic execution requirements, LN-PHOTONIC-001–006.
+validation functions, deterministic execution requirements, LLN-PHOTONIC-001–006.
 
 ---
 
@@ -411,9 +411,9 @@ transport arbitration.
 
 ---
 
-## 13. LN-PHOTONIC Governance Compliance
+## 13. LLN-PHOTONIC Governance Compliance
 
-LN-PHOTONIC-001 through LN-PHOTONIC-006 governance requirements introduced
+LLN-PHOTONIC-001 through LLN-PHOTONIC-006 governance requirements introduced
 in v0.2 SHALL be treated as normative controls.
 
 Governance implementations MUST preserve: transport determinism, topology
@@ -516,7 +516,7 @@ LogicN Core Photonic v0.2 introduces a deterministic governance architecture lay
 - deterministic execution enforcement
 - execution plan validation
 - audit traceability
-- LN-PHOTONIC-001–006 compliance
+- LLN-PHOTONIC-001–006 compliance
 
 See: docs/Knowledge-Bases/logicn-core-photonic-governance-architecture.md
 ```
@@ -526,7 +526,7 @@ See: docs/Knowledge-Bases/logicn-core-photonic-governance-architecture.md
 The prior backend architecture KB used:
 - a three-value `OpticalTransportMode` string union
 - earlier `PhotonicRuntimeTarget` field definitions
-- earlier LN-PHOTONIC semantic meanings
+- earlier LLN-PHOTONIC semantic meanings
 
 This governance architecture formalizes migration to:
 - six-value `OpticalTransportMode` enum (governance form)

@@ -4,11 +4,11 @@
 
 This document is the v0.2 canonical specification for `logicn-core-security`.
 
-Update status: this formal v0.2 file still uses
-`ProtectedSecret<T>.reveal()`. `docs/COVERAGE.md` records an unresolved conflict
-with the architecture spec, which uses
-`ProtectedSecret<T>.unwrapForApprovedSink(sink)`. Do not implement secret
-unwrapping until `logicn-core-security` chooses one canonical public shape.
+Update status: **conflict resolved (2026-05-26)** — canonical public API is
+`ProtectedSecret<T>.unwrapForApprovedSink(sink)`. The former `reveal()` method
+is retained only as `private revealUnsafeForRuntimeOnly()` for internal runtime
+use. Do not expose `revealUnsafeForRuntimeOnly()` in public APIs, diagnostics,
+reports, or AI context.
 
 See also: `model-security-contracts.md`, `data-in-motion-security.md`.
 
@@ -19,7 +19,7 @@ See also: `model-security-contracts.md`, `data-in-motion-security.md`.
 ```ts
 type SecretSource =
     | {
-        type: "environment";
+        type: "env";
       }
 
     | {
@@ -43,17 +43,18 @@ type SecretSource =
       };
 ```
 
-| Source      | Description              |
-| ----------- | ------------------------ |
-| environment | Environment variables    |
-| vault       | Secret vault provider    |
-| kms         | Key management system    |
-| runtime     | Runtime-generated secret |
-| oauth       | OAuth credentials        |
-| token       | API/authentication token |
+| Source  | Description              |
+| ------- | ------------------------ |
+| env     | Environment variables    |
+| vault   | Secret vault provider    |
+| kms     | Key management system    |
+| runtime | Runtime-generated secret |
+| oauth   | OAuth credentials        |
+| token   | API/authentication token |
 
-Note: The prior KB used "env", "file", "secretStore", "runtimeInjected".
-The v0.2 formal spec adds "oauth" and "token" and renames the others.
+Note: The prior KB used "environment", "file", "secretStore", "runtimeInjected".
+Canonical names (2026-05-26): "env", "vault", "kms", "runtime". The security
+package adds "oauth" and "token" for auth-layer secrets beyond the core 4.
 
 ---
 
@@ -285,14 +286,36 @@ class ProtectedSecret<T> {
         this.taint = taint;
     }
 
-    reveal(): T {
+    /**
+     * Canonical public unwrap API.
+     * The sink must be approved before the value is released.
+     * Emits LLN-SECRET-001 if the sink is not approved.
+     */
+    unwrapForApprovedSink(
+        sink: SecretSafeSink
+    ): T {
+        if (!isSafeSink(sink.type)) {
+            throw new Error(
+                `LLN-SECRET-001: secret cannot be sent to sink ${sink.type}`
+            );
+        }
+
+        return this.revealUnsafeForRuntimeOnly();
+    }
+
+    /**
+     * Internal runtime use only.
+     * Never expose in public APIs, diagnostics, reports, or AI context.
+     */
+    private revealUnsafeForRuntimeOnly(): T {
         return this.value;
     }
 }
 ```
 
-Note: The method is `reveal()`. The prior KB used `unwrapForApprovedSink()`.
-The `reveal()` method is the v0.2 formal specification.
+Note (2026-05-26): canonical public API is `unwrapForApprovedSink(sink)`.
+`revealUnsafeForRuntimeOnly()` is private and must not be called from
+application code, framework adapters, or diagnostic helpers.
 
 ---
 
@@ -396,7 +419,7 @@ function buildAuthorizationHeader(
 
     return {
         value:
-            `Bearer ${token.reveal()}`,
+            `Bearer ${token.unwrapForApprovedSink(authorizationHeaderSink)}`,
 
         secret: true,
 
@@ -450,11 +473,11 @@ Result:
 
 | Code          | Meaning                         |
 | ------------- | ------------------------------- |
-| LN-SECRET-001 | Unsafe log sink                 |
-| LN-SECRET-002 | Unsafe secret propagation       |
-| LN-SECRET-003 | Secret serialization prohibited |
-| LN-SECRET-004 | Invalid secret derivation       |
-| LN-SECRET-005 | Missing taint metadata          |
+| LLN-SECRET-001 | Unsafe log sink                 |
+| LLN-SECRET-002 | Unsafe secret propagation       |
+| LLN-SECRET-003 | Secret serialization prohibited |
+| LLN-SECRET-004 | Invalid secret derivation       |
+| LLN-SECRET-005 | Missing taint metadata          |
 
 ---
 
@@ -465,9 +488,9 @@ logicn-core-security/
 
   secrets/
     SecretReference.ts
-    ProtectedSecret.ts    (class with reveal())
+    ProtectedSecret.ts    (class with unwrapForApprovedSink(sink); private revealUnsafeForRuntimeOnly())
     SecretTaint.ts        (interface with propagationChain[])
-    SecretSource.ts       (6-value discriminated union)
+    SecretSource.ts       (6-value discriminated union: env|vault|kms|runtime|oauth|token)
 
   runtime/
     safeLog.ts
@@ -476,7 +499,7 @@ logicn-core-security/
 
   diagnostics/
     SecretDiagnostic.ts
-    codes.ts              (LN-SECRET-001–005)
+    codes.ts              (LLN-SECRET-001–005)
 
   policies/
     redaction.ts          (SecretRedactionPolicy, DEFAULT_REDACTION_POLICY)

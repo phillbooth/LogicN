@@ -9,7 +9,7 @@ Status: **fully specified (prior + v0.2), not yet implemented**
 Update status: this file is a proposal/reference note, not the canonical owner
 of photonic runtime contracts. `logicn-core-photonic` owns final
 `OpticalTransportMode`, `PhotonicRuntimeTarget`, `PhotonicExecutionPlan` and
-`LN-PHOTONIC-*` definitions after reconciliation.
+`LLN-PHOTONIC-*` definitions after reconciliation.
 
 ---
 
@@ -36,7 +36,7 @@ src/
     build.ts             # buildPhotonicPlan
     fallback.ts          # resolveFallback
     validate.ts          # validation helpers
-    codes.ts             # LN-PHOTONIC-001–006
+    codes.ts             # LLN-PHOTONIC-001–006
     index.ts             # public exports
 ```
 
@@ -209,7 +209,7 @@ export function resolveFallback(input) {
 }
 ```
 
-### LN-PHOTONIC-001–006 (Prior Meanings)
+### LLN-PHOTONIC-001–006 (Prior Meanings)
 
 ```ts
 export const PHOTONIC_CODES = {
@@ -255,7 +255,7 @@ src/
     estimate.ts          # optical suitability estimation
     build.ts             # buildPhotonicPlan
     fallback.ts          # resolveFallback
-    codes.ts             # LN-PHOTONIC-001–006 v0.2 meanings
+    codes.ts             # LLN-PHOTONIC-001–006 v0.2 meanings
     index.ts             # public exports
 ```
 
@@ -446,7 +446,7 @@ export function validateTransportMode(mode) {
 }
 ```
 
-### LN-PHOTONIC-001–006 (v0.2 Meanings)
+### LLN-PHOTONIC-001–006 (v0.2 Meanings)
 
 ```ts
 export const PHOTONIC_CODES = {
@@ -459,7 +459,7 @@ export const PHOTONIC_CODES = {
 } as const;
 ```
 
-### LN-PHOTONIC-006
+### LLN-PHOTONIC-006
 
 ```ts
 // Triggered when runtime planning becomes nondeterministic.
@@ -494,7 +494,7 @@ export const PHOTONIC_CODES = {
 ## Security Rules
 
 ```ts
-// Rule 1: Determinism is mandatory. LN-PHOTONIC-006 fires on violations.
+// Rule 1: Determinism is mandatory. LLN-PHOTONIC-006 fires on violations.
 ```
 
 ```ts
@@ -559,7 +559,7 @@ Until resolved, no photonic types should be implemented in `logicn-core-vector`.
 - [ ] Add `src/photonic/estimate.ts` — `estimateOpticalSuitability`
 - [ ] Add `src/photonic/build.ts` — `buildPhotonicPlan`
 - [ ] Add `src/photonic/fallback.ts` — `resolveFallback`
-- [ ] Add `src/photonic/codes.ts` — `LN-PHOTONIC-001–006` v0.2
+- [ ] Add `src/photonic/codes.ts` — `LLN-PHOTONIC-001–006` v0.2
 - [ ] Add `src/photonic/index.ts` — public export surface
 - [ ] Add deterministic planning tests
 - [ ] Add transport mode validation tests
@@ -585,7 +585,7 @@ resolveFallback (ResolveFallbackInput → string | undefined)
 validateTransportMode (OpticalTransportMode → boolean)
 validatePhotonicTarget (PhotonicRuntimeTarget → boolean)
 validatePhotonicPlan (PhotonicExecutionPlan → boolean)
-LN-PHOTONIC-001–006 (v0.2 meanings)
+LLN-PHOTONIC-001–006 (v0.2 meanings)
 ```
 
 > **Version conflict**: `OpticalTransportMode` v0.2 (6-value: electrical|hybrid|photonic|waveguide|plasmonic|coherent) differs from the governance architecture spec in `logicn-core-photonic-governance-architecture.md` which defines: DIRECT|WAVELENGTH|PACKETIZED|HYBRID|EMULATED|SIMULATED. These must be reconciled before implementation.

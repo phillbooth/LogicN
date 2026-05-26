@@ -7,7 +7,7 @@ This document is the v0.2 canonical specification for `logicn-core-photonic`.
 Update status: `docs/COVERAGE.md` records unresolved conflicts between this
 formal v0.2 spec, the governance overlay and the vector photonic proposal. This
 file is not implementation-ready for `OpticalTransportMode` or
-`LN-PHOTONIC-*` until the owner package reconciles one canonical enum and one
+`LLN-PHOTONIC-*` until the owner package reconciles one canonical enum and one
 diagnostic table.
 
 See also: `logicn-core-photonic-backend-architecture.md` (prior KB),
@@ -305,12 +305,12 @@ ExperimentalRouting is blocked by default. Requires explicit override.
 
 | Code            | Meaning                            |
 | --------------- | ---------------------------------- |
-| LN-PHOTONIC-001 | Isolation guarantee missing        |
-| LN-PHOTONIC-002 | Propagation depth exceeded         |
-| LN-PHOTONIC-003 | Experimental runtime prohibited    |
-| LN-PHOTONIC-004 | Invalid optical topology           |
-| LN-PHOTONIC-005 | Non-deterministic runtime detected |
-| LN-PHOTONIC-006 | Unsafe hybrid transition           |
+| LLN-PHOTONIC-001 | Isolation guarantee missing        |
+| LLN-PHOTONIC-002 | Propagation depth exceeded         |
+| LLN-PHOTONIC-003 | Experimental runtime prohibited    |
+| LLN-PHOTONIC-004 | Invalid optical topology           |
+| LLN-PHOTONIC-005 | Non-deterministic runtime detected |
+| LLN-PHOTONIC-006 | Unsafe hybrid transition           |
 
 Note: The prior KB had different meanings for these codes:
 - Prior 001: optical runtime unavailable
@@ -346,7 +346,7 @@ logicn-core-photonic/
 
   diagnostics/
     PhotonicDiagnostic.ts
-    codes.ts                (LN-PHOTONIC-001–006)
+    codes.ts                (LLN-PHOTONIC-001–006)
 
   targets/
     runtimeTargets.ts       (PhotonicRuntimeTarget)
