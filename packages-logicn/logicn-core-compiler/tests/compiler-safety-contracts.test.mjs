@@ -6,15 +6,19 @@ import {
   checkBindingReassignment,
   checkReadonlyMutation,
   checkMethodChain,
+  validateTypedContentBlock,
   LLN_SYNTAX_001,
   LLN_SYNTAX_002,
   LLN_BINDING_001,
   LLN_BINDING_002,
   LLN_BINDING_003,
+  LLN_BLOCK_001,
+  LLN_BLOCK_002,
   LLN_INTENT_DIAGNOSTICS,
   LLN_BINDING_DIAGNOSTICS,
   LLN_PIPELINE_DIAGNOSTICS,
   LLN_SYNTAX_DIAGNOSTICS,
+  LLN_BLOCK_DIAGNOSTICS,
 } from "../dist/index.js";
 
 describe("logicn-core-compiler syntax safety contracts", () => {

@@ -264,6 +264,49 @@ export const LLN_PIPELINE_DIAGNOSTICS = [
 ] as const;
 
 // ---------------------------------------------------------------------------
+// Typed content block diagnostics — LLN-BLOCK-001..004
+// ---------------------------------------------------------------------------
+
+/** Unknown typed content block type — only html, dom, script, css are valid. */
+export const LLN_BLOCK_001 = {
+  code: "LLN-BLOCK-001",
+  name: "UNKNOWN_CONTENT_BLOCK_TYPE",
+  severity: "error",
+  message: "Unknown typed content block type. Valid types are: html, dom, script, css.",
+} as const;
+
+/** Typed content block was opened but its closing marker was never found. */
+export const LLN_BLOCK_002 = {
+  code: "LLN-BLOCK-002",
+  name: "UNCLOSED_CONTENT_BLOCK",
+  severity: "error",
+  message: "Typed content block is never closed. The closing marker must appear alone at the start of a line.",
+} as const;
+
+/** The closing marker does not match the opening marker. */
+export const LLN_BLOCK_003 = {
+  code: "LLN-BLOCK-003",
+  name: "MISMATCHED_CONTENT_BLOCK_MARKER",
+  severity: "error",
+  message: "Typed content block closing marker does not match the opening marker.",
+} as const;
+
+/** A ProtectedSecret value was emitted into a script or html block. */
+export const LLN_BLOCK_004 = {
+  code: "LLN-BLOCK-004",
+  name: "SECRET_IN_CONTENT_BLOCK",
+  severity: "error",
+  message: "ProtectedSecret cannot be emitted into a typed content block.",
+} as const;
+
+export const LLN_BLOCK_DIAGNOSTICS = [
+  LLN_BLOCK_001,
+  LLN_BLOCK_002,
+  LLN_BLOCK_003,
+  LLN_BLOCK_004,
+] as const;
+
+// ---------------------------------------------------------------------------
 // Governed surface types — surfaces that require intent declarations
 // ---------------------------------------------------------------------------
 
@@ -282,6 +325,23 @@ export type GovernedSurfaceKind =
 // ---------------------------------------------------------------------------
 // Private internal types
 // ---------------------------------------------------------------------------
+
+// Mirrors ContentBlockType in @logicn/core — kept local until workspace links are in place.
+type ContentBlockType = "html" | "dom" | "script" | "css";
+
+const VALID_CONTENT_BLOCK_TYPES: ReadonlySet<string> = new Set<ContentBlockType>([
+  "html", "dom", "script", "css",
+]);
+
+interface ContentBlockScope {
+  readonly blockType: ContentBlockType;
+  readonly marker: string;
+  readonly startLine: number;
+}
+
+type ContentBlockOpenResult =
+  | { readonly kind: "entered"; readonly scope: ContentBlockScope }
+  | { readonly kind: "unknown_type"; readonly diagnostics: readonly CompilerDiagnostic[] };
 
 type KnownCoreType = "Bool" | "Tri" | "Decision";
 
@@ -323,11 +383,34 @@ export function validateCoreSyntaxSafety(
   const lines = source.text.split(/\r?\n/);
   let flowScope: FlowScope | undefined;
   let matchBlock: MatchBlock | undefined;
+  let contentBlockScope: ContentBlockScope | undefined;
   let braceDepth = 0;
 
   lines.forEach((line, index) => {
     const lineNumber = index + 1;
     const trimmed = line.trim();
+
+    // ── Typed content block tracking ─────────────────────────────────────
+    // When inside a block, skip all other checks. Brace depth is not updated
+    // so that { } in HTML/CSS/JS do not affect LogicN scope tracking.
+    if (contentBlockScope !== undefined) {
+      if (trimmed === contentBlockScope.marker) {
+        contentBlockScope = undefined;
+      }
+      return;
+    }
+
+    // Detect typed content block opens (html/dom/script/css <<MARKER).
+    const blockOpen = parseContentBlockOpen(source.file, line, lineNumber);
+    if (blockOpen !== undefined) {
+      if (blockOpen.kind === "entered") {
+        contentBlockScope = blockOpen.scope;
+      } else {
+        diagnostics.push(...blockOpen.diagnostics);
+      }
+      return; // block opener line needs no further processing
+    }
+    // ─────────────────────────────────────────────────────────────────────
 
     collectFlowSymbols(source.file, line, lineNumber, symbols);
     collectVariableSymbol(source.file, line, lineNumber, symbols);
@@ -384,11 +467,46 @@ export function validateCoreSyntaxSafety(
     diagnostics.push(...validateTriMatchExhaustive(source.file, matchBlock));
   }
 
+  // Report any typed content block that was opened but never closed.
+  if (contentBlockScope !== undefined) {
+    diagnostics.push(
+      createCompilerDiagnostic(
+        LLN_BLOCK_002.code,
+        LLN_BLOCK_002.severity,
+        `${contentBlockScope.blockType} block opened with marker ${contentBlockScope.marker} is never closed.`,
+        source.file,
+        contentBlockScope.startLine,
+        1,
+      ),
+    );
+  }
+
   return {
     ok: !diagnostics.some((diagnostic) => diagnostic.severity === "error"),
     diagnostics,
     reports: [],
   };
+}
+
+/**
+ * Validates a typed content block at the AST level.
+ *
+ * Stage 1 status: STUB — returns empty diagnostics.
+ * Full implementation (Stage 2) will validate block content based on type:
+ *   html/dom — HTML structure validation
+ *   script   — JavaScript syntax check; LLN-BLOCK-004 secret detection
+ *   css      — CSS property/selector validation
+ *
+ * TODO LLN-BLOCK-004: detect ProtectedSecret references interpolated into script blocks.
+ */
+export function validateTypedContentBlock(_input: {
+  readonly blockType: "html" | "dom" | "script" | "css";
+  readonly marker: string;
+  readonly content: string;
+  readonly file: string;
+  readonly startLine: number;
+}): readonly CompilerDiagnostic[] {
+  return [];
 }
 
 function collectFlowSymbols(
@@ -711,6 +829,52 @@ function validateTriMatchExhaustive(
       matchBlock.symbol.location.column,
     ),
   ];
+}
+
+// Pattern: optional `print ` prefix, then a word, then ` <<MARKER`
+// Valid:   html <<HTML, dom <<DOM, script <<SCRIPT, css <<CSS
+// Invalid: xml <<XML (unknown type)
+const CONTENT_BLOCK_OPEN_RE =
+  /^\s*(?:print\s+)?([a-zA-Z][a-zA-Z0-9_]*)\s+<<([A-Z_][A-Z0-9_]*)\s*$/;
+
+function parseContentBlockOpen(
+  file: string,
+  line: string,
+  lineNumber: number,
+): ContentBlockOpenResult | undefined {
+  const match = line.match(CONTENT_BLOCK_OPEN_RE);
+
+  if (match === null || match[1] === undefined || match[2] === undefined) {
+    return undefined;
+  }
+
+  const rawType = match[1].toLowerCase();
+  const marker = match[2];
+
+  if (!VALID_CONTENT_BLOCK_TYPES.has(rawType)) {
+    return {
+      kind: "unknown_type",
+      diagnostics: [
+        createCompilerDiagnostic(
+          LLN_BLOCK_001.code,
+          LLN_BLOCK_001.severity,
+          `Unknown typed content block type "${rawType}". Valid types are: html, dom, script, css.`,
+          file,
+          lineNumber,
+          line.search(new RegExp(`\\b${match[1]}\\b`)) + 1,
+        ),
+      ],
+    };
+  }
+
+  return {
+    kind: "entered",
+    scope: {
+      blockType: rawType as ContentBlockType,
+      marker,
+      startLine: lineNumber,
+    },
+  };
 }
 
 function detectUnsupportedBindingKeyword(

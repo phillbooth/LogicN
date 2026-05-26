@@ -93,6 +93,48 @@ export interface LexResult {
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
+// Typed content block types
+// ---------------------------------------------------------------------------
+
+/**
+ * The four canonical typed content block types.
+ * All use heredoc-style `<<MARKER … MARKER` syntax.
+ */
+export type ContentBlockType = "html" | "dom" | "script" | "css";
+
+export const CONTENT_BLOCK_TYPES: readonly ContentBlockType[] = [
+  "html",
+  "dom",
+  "script",
+  "css",
+] as const;
+
+/**
+ * A typed content block expression — heredoc-style embedded content.
+ *
+ * @example
+ *   html <<HTML
+ *     <div class="foo">Hello LogicN</div>
+ *   HTML
+ *
+ *   script <<SCRIPT
+ *     console.log("hello");
+ *   SCRIPT
+ *
+ * The `marker` must appear alone at the start of a line to close the block.
+ * Content is preserved exactly as written.
+ */
+export interface TypedContentBlockExpression {
+  readonly kind: "typedContentBlockExpr";
+  readonly blockType: ContentBlockType;
+  /** The closing marker string, e.g. "HTML", "SCRIPT". */
+  readonly marker: string;
+  /** Raw block content, exactly as written between opening and closing marker. */
+  readonly content: string;
+  readonly location?: SourceLocation;
+}
+
+// ---------------------------------------------------------------------------
 // Variable binding types
 // ---------------------------------------------------------------------------
 
@@ -301,6 +343,7 @@ export type AstNodeKind =
   | "callExpr"
   | "memberExpr"
   | "methodChainExpr"
+  | "typedContentBlockExpr"
   | "matchExpr"
   | "matchArm"
   // ── Statements ──
