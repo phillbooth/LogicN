@@ -6,11 +6,11 @@
 
 `docs/COVERAGE.md` currently records unresolved photonic documentation conflicts.
 This package remains the owner for photonic runtime target semantics, photonic
-execution plan semantics and eventual `LN-PHOTONIC-*` diagnostic meanings, but
+execution plan semantics and eventual `LLN-PHOTONIC-*` diagnostic meanings, but
 the following are not implementation-ready yet:
 
 - one canonical `OpticalTransportMode` enum
-- one canonical `LN-PHOTONIC-001` through `LN-PHOTONIC-006` diagnostic table
+- one canonical `LLN-PHOTONIC-001` through `LLN-PHOTONIC-006` diagnostic table
 - final boundary between `logicn-core-photonic`, `logicn-core-vector`,
   `logicn-core-compute` and `logicn-target-photonic`
 
@@ -110,16 +110,16 @@ export interface PhotonicExecutionPlan {
 
 Functions: `estimateOpticalSuitability()`, `buildPhotonicPlan()`, `resolveFallback()`.
 
-### Diagnostic Codes (LN-PHOTONIC series)
+### Diagnostic Codes (LLN-PHOTONIC series)
 
 | Code | Meaning |
 | --- | --- |
-| `LN-PHOTONIC-001` | optical runtime unavailable |
-| `LN-PHOTONIC-002` | optical transport denied by policy |
-| `LN-PHOTONIC-003` | distributed optical scheduler unavailable |
-| `LN-PHOTONIC-004` | photonic fallback occurred |
-| `LN-PHOTONIC-005` | unsupported optical target |
-| `LN-PHOTONIC-006` | invalid distributed transport graph |
+| `LLN-PHOTONIC-001` | optical runtime unavailable |
+| `LLN-PHOTONIC-002` | optical transport denied by policy |
+| `LLN-PHOTONIC-003` | distributed optical scheduler unavailable |
+| `LLN-PHOTONIC-004` | photonic fallback occurred |
+| `LLN-PHOTONIC-005` | unsupported optical target |
+| `LLN-PHOTONIC-006` | invalid distributed transport graph |
 
 Internal structure: `photonic-runtime.ts`, `photonic-planner.ts`,
 `photonic-routing.ts`, `photonic-fallback.ts`, `photonic-audit.ts`,
@@ -270,12 +270,12 @@ enum PhotonicCapability {
 
 | Code | Meaning |
 | --------------- | ---------------------------------- |
-| `LN-PHOTONIC-001` | Isolation guarantee missing |
-| `LN-PHOTONIC-002` | Propagation depth exceeded |
-| `LN-PHOTONIC-003` | Experimental runtime prohibited |
-| `LN-PHOTONIC-004` | Invalid optical topology |
-| `LN-PHOTONIC-005` | Non-deterministic runtime detected |
-| `LN-PHOTONIC-006` | Unsafe hybrid transition |
+| `LLN-PHOTONIC-001` | Isolation guarantee missing |
+| `LLN-PHOTONIC-002` | Propagation depth exceeded |
+| `LLN-PHOTONIC-003` | Experimental runtime prohibited |
+| `LLN-PHOTONIC-004` | Invalid optical topology |
+| `LLN-PHOTONIC-005` | Non-deterministic runtime detected |
+| `LLN-PHOTONIC-006` | Unsafe hybrid transition |
 
 Note: These meanings differ from the prior KB. See `logicn-core-photonic-v02.md`
 for full details on the v0.2 code meanings vs prior KB codes.
@@ -302,7 +302,7 @@ logicn-core-photonic/
 
   diagnostics/
     PhotonicDiagnostic.ts
-    codes.ts                (LN-PHOTONIC-001–006)
+    codes.ts                (LLN-PHOTONIC-001–006)
 
   targets/
     runtimeTargets.ts       (PhotonicRuntimeTarget)

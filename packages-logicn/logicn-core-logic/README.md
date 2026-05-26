@@ -352,28 +352,28 @@ allow uncertainty to become runtime permission
 
 # Diagnostic Codes
 
-## LN-TRI
+## LLN-TRI
 
 ```text
-LN-TRI-001 through LN-TRI-005
+LLN-TRI-001 through LLN-TRI-005
 ```
 
-## LN-DECISION
+## LLN-DECISION
 
 ```text
-LN-DECISION-001 through LN-DECISION-005
+LLN-DECISION-001 through LLN-DECISION-005
 ```
 
-## LN-BOOL-BOUNDARY
+## LLN-BOOL-BOUNDARY
 
 ```text
-LN-BOOL-BOUNDARY-001 through LN-BOOL-BOUNDARY-005
+LLN-BOOL-BOUNDARY-001 through LLN-BOOL-BOUNDARY-005
 ```
 
-## LN-OMNI
+## LLN-OMNI
 
 ```text
-LN-OMNI-001 through LN-OMNI-005
+LLN-OMNI-001 through LLN-OMNI-005
 ```
 
 ---

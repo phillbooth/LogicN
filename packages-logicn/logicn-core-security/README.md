@@ -5,18 +5,18 @@ report contracts.
 
 ## Coverage Reconciliation Status
 
-`docs/COVERAGE.md` records a documentation conflict for protected secret
-unwrapping. This package owns the final decision, but implementation should not
-proceed from conflicting examples until the shape is chosen:
+**Conflict resolved (2026-05-26).** Canonical public API:
 
 ```text
-v0.2 formal spec: ProtectedSecret<T>.reveal()
-architecture spec: ProtectedSecret<T>.unwrapForApprovedSink(sink)
+ProtectedSecret<T>.unwrapForApprovedSink(sink)   ← canonical public API
+private revealUnsafeForRuntimeOnly()              ← internal runtime use only
 ```
 
-The stronger sink-aware form is preferred by the architecture notes, while the
-formal v0.2 KB still records `reveal()`. Keep package docs and KB files aligned
-before adding code that reveals protected values.
+`unwrapForApprovedSink(sink)` is the only public unwrap path. It validates the
+sink before releasing the value and emits `LLN-SECRET-001` on an unapproved sink.
+`revealUnsafeForRuntimeOnly()` must not appear in public APIs, framework
+adapters, diagnostics, reports, or AI context. The `logicn-core-security-v02.md`
+KB has been updated to reflect this decision.
 
 LogicN's strongest honest security position is application security policy. This
 package helps make permissions, typed API boundaries, package effects, secrets,
@@ -162,12 +162,12 @@ function canSendSecretToSink(secret: SecretReference, sink: SecretSafeSink): boo
 function redactSecretValue(value: string): RedactionResult
 ```
 
-### Diagnostic Codes (LN-SECRET series)
+### Diagnostic Codes (LLN-SECRET series)
 
 | Code | Meaning |
 | --- | --- |
-| `LN-SECRET-001` | required secret unavailable |
-| `LN-SECRET-002` | secret value attempted to flow to unsafe sink |
+| `LLN-SECRET-001` | required secret unavailable |
+| `LLN-SECRET-002` | secret value attempted to flow to unsafe sink |
 
 See `docs/Knowledge-Bases/logicn-core-config-environment-secrets.md` for the
 full secret reference model specification.
@@ -178,10 +178,12 @@ full secret reference model specification.
 
 ```ts
 export type SecretSource =
-    | { type: "env";             variable: string }
-    | { type: "file";            path: string; key?: string }
-    | { type: "secretStore";     provider: "aws-secrets-manager" | "gcp-secret-manager" | "azure-key-vault" | "vault" | "custom"; key: string }
-    | { type: "runtimeInjected"; name: string }
+    | { type: "env";     variable: string }
+    | { type: "vault";   provider: "aws-secrets-manager" | "gcp-secret-manager" | "azure-key-vault" | "hashicorp-vault" | "custom"; key: string }
+    | { type: "kms";     keyId: string; provider?: string }
+    | { type: "runtime"; name: string }
+    | { type: "oauth";   provider: string }
+    | { type: "token";   name: string }
 ```
 
 ### SecretCategory
@@ -290,14 +292,17 @@ export class ProtectedSecret<T> {
 
     unwrapForApprovedSink(sink: SecretSafeSink): T {
         if (!canSendSecretToSink(this.reference, sink)) {
-            throw new SecretPolicyError("LN-SECRET-001",
+            throw new SecretPolicyError("LLN-SECRET-001",
                 `Secret ${this.reference.name} cannot be sent to sink ${sink.id}`)
         }
-        return this.value
+        return this.revealUnsafeForRuntimeOnly()
     }
 
     toString(): string { return "[REDACTED_SECRET]" }
     toJSON(): string   { return "[REDACTED_SECRET]" }
+
+    /** Internal runtime use only — must not appear in public APIs. */
+    private revealUnsafeForRuntimeOnly(): T { return this.value }
 }
 ```
 
@@ -340,7 +345,7 @@ export const STRIPE_AUTH_HEADER_SINK: SecretSafeSink  // productionSafe: true, r
 
 ```ts
 export interface SecretDiagnostic {
-    code: "LN-SECRET-001" | "LN-SECRET-002"
+    code: "LLN-SECRET-001" | "LLN-SECRET-002"
     severity: "error" | "warning"
     message: string
     secretName?: string
@@ -361,12 +366,12 @@ export type SecretTaint =
 
 export function combineTaint(left: SecretTaint, right: SecretTaint): SecretTaint
 
-// Emits LN-SECRET-002 on tainted string concatenation
+// Emits LLN-SECRET-002 on tainted string concatenation
 export function checkStringConcat(input: {
     left: ExpressionInfo; right: ExpressionInfo; location: SourceLocation
 }): SecretDiagnostic[]
 
-// Emits LN-SECRET-001 on unsafe sink
+// Emits LLN-SECRET-001 on unsafe sink
 export function checkSecretSink(input: {
     secret: SecretReference; sink: SecretSafeSink; location: SourceLocation
 }): SecretDiagnostic[]
@@ -401,7 +406,7 @@ packages-logicn/logicn-core-security/src/
     secret-safe-sink.ts        ← SecretSafeSink, LOG_SINK, API_RESPONSE_SINK
     secret-policy.ts           ← canSendSecretToSink()
     secret-redaction.ts        ← redactSecretValue(), createSecretFingerprint()
-    secret-diagnostics.ts      ← SecretDiagnostic, LN-SECRET-001, LN-SECRET-002
+    secret-diagnostics.ts      ← SecretDiagnostic, LLN-SECRET-001, LLN-SECRET-002
     secret-report.ts           ← logicn.secret.report.v1
   checks/
     check-secret-sink.ts       ← checkSecretSink()

@@ -383,11 +383,11 @@ src/
 ### Diagnostic Codes
 
 ```text
-LN-AUDIT-001 through LN-AUDIT-007
-LN-REPORT-001 through LN-REPORT-005
-LN-PROOF-001 through LN-PROOF-005
-LN-DENIAL-001 through LN-DENIAL-004
-LN-EVIDENCE-001 through LN-EVIDENCE-004
+LLN-AUDIT-001 through LLN-AUDIT-007
+LLN-REPORT-001 through LLN-REPORT-005
+LLN-PROOF-001 through LLN-PROOF-005
+LLN-DENIAL-001 through LLN-DENIAL-004
+LLN-EVIDENCE-001 through LLN-EVIDENCE-004
 ```
 
 Secret safety rule: audit logs must never store API keys, passwords, tokens,

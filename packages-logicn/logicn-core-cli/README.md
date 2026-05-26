@@ -62,13 +62,13 @@ logicn rollback          — rollback to previous deployment
 14-pass pipeline. Flags: `--target`, `--json`, `--report`, `--strict`,
 `--profile`, `--out`, `--audit`. Produces `runtime-manifest.json`,
 `compiler-report.json`, `effect-report.json`, `capability-report.json`,
-`audit-report.json`, `build-hash.txt`. Diagnostic codes: `LN-BUILD-001`
-through `LN-BUILD-005`. Status: partial implementation.
+`audit-report.json`, `build-hash.txt`. Diagnostic codes: `LLN-BUILD-001`
+through `LLN-BUILD-005`. Status: partial implementation.
 
 `logicn verify` validates compiler and runtime artefact integrity.
 Flags: `--json`, `--strict`, `--manifest`, `--hash`, `--policy`, `--audit`.
 Produces verification status with `manifestHash` and `graphHash`.
-Diagnostic codes: `LN-VERIFY-001` through `LN-VERIFY-005`.
+Diagnostic codes: `LLN-VERIFY-001` through `LLN-VERIFY-005`.
 Status: partial — hash checks only.
 
 `logicn deploy` validates the runtime manifest, effects, capabilities, policy,
@@ -77,20 +77,20 @@ success, `2` policy denial, `3` runtime incompatibility, `4` deployment
 validation failure, `5` capability resolution failure, `7` manifest integrity
 failure. Flags: `--dry-run`, `--json`, `--report`, `--audit`, `--strict`,
 `--profile`, `--policy`, `--target`. Produces `deployment-report.json`.
-Diagnostic codes: `LN-DEPLOY-001` through `LN-DEPLOY-005`.
+Diagnostic codes: `LLN-DEPLOY-001` through `LLN-DEPLOY-005`.
 
 `logicn explain` explains compiler decisions, runtime authority, effect
 declarations, boundary violations, and why deployment was denied.
 Flags: `--tree` (dependency graph), `--trace` (execution reasoning chain),
 `--effects`, `--capabilities`, `--runtime`, `--policy`, `--audit`, `--json`.
-Diagnostic codes: `LN-EXPLAIN-001` through `LN-EXPLAIN-004`.
+Diagnostic codes: `LLN-EXPLAIN-001` through `LLN-EXPLAIN-004`.
 
 `logicn plan` estimates how execution will be coordinated — CPU/GPU suitability,
 memory pressure, parallelism, and fallback options. The planner recommends;
 the runtime decides final execution.
 Flags: `--json`, `--runtime`, `--memory`, `--parallelism`, `--energy`,
 `--target`, `--graph`, `--compatibility`. Produces `compute-plan.json`.
-Diagnostic codes: `LN-PLAN-001` through `LN-PLAN-004`.
+Diagnostic codes: `LLN-PLAN-001` through `LLN-PLAN-004`.
 
 Implementation order: Phase 1 build → Phase 2 verify → Phase 3 explain →
 Phase 4 deploy → Phase 5 plan.
@@ -292,7 +292,7 @@ export function validateEffects(
 //   effectiveEffects = declaredEffects ∪ inferredEffects
 //   check each effect against policy.allowedEffects
 //   check capabilities present for each effect
-//   emit LN-EFFECT-001 through LN-EFFECT-004 as needed
+//   emit LLN-EFFECT-001 through LLN-EFFECT-004 as needed
 ```
 
 ### Explain Contracts

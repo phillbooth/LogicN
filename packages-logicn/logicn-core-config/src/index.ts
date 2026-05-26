@@ -11,8 +11,9 @@ export type ConfigDiagnosticSeverity = "warning" | "error";
 
 export interface ConfigDiagnostic {
   readonly code: string;
-  readonly message: string;
+  readonly name: string;
   readonly severity: ConfigDiagnosticSeverity;
+  readonly message: string;
   readonly path?: string;
   readonly suggestedFix?: string;
 }
@@ -28,9 +29,7 @@ export interface ProductionPackageOverride {
   readonly expires?: string;
 }
 
-export interface ConfigPathmatch {
-  readonly [name: string]: string;
-}
+export type ConfigPathMap = Readonly<Record<string, string>>;
 
 export interface ProjectConfig {
   readonly name: string;
@@ -124,8 +123,8 @@ const ENVIRONMENT_VARIABLE_SCOPE_SET: ReadonlySet<string> = new Set(
 
 const ENVIRONMENT_VARIABLE_NAME_PATTERN = /^[A-Z_][A-Z0-9_]*$/;
 
-export const DEFAULT_HOST_PACKAGE_MANIFEST_BOUNDARY_POLICY:
-  HostPackageManifestBoundaryPolicy = {
+export const DEFAULT_HOST_PACKAGE_MANIFEST_BOUNDARY_POLICY: HostPackageManifestBoundaryPolicy =
+  {
     manifestPath: "package.json",
     forbiddenLoKeys: [
       "LogicN",
@@ -147,18 +146,19 @@ export const DEFAULT_HOST_PACKAGE_MANIFEST_BOUNDARY_POLICY:
     ],
   };
 
-export const DEFAULT_PRODUCTION_STRICTNESS_POLICY: ProductionStrictnessPolicy = {
-  requireStrictProject: true,
-  allowDefaultedSecrets: false,
-  allowMissingRequiredVariables: false,
-  requireRuntimeHandoffValidation: true,
-  disabledPackagePatterns: [
-    "packages-logicn/logicn-tools-benchmark",
-    "packages-logicn/logicn-devtools-",
-  ],
-  allowProductionPackageOverrides: true,
-  maxWarnings: 0,
-};
+export const DEFAULT_PRODUCTION_STRICTNESS_POLICY: ProductionStrictnessPolicy =
+  {
+    requireStrictProject: true,
+    allowDefaultedSecrets: false,
+    allowMissingRequiredVariables: false,
+    requireRuntimeHandoffValidation: true,
+    disabledPackagePatterns: [
+      "packages-logicn/logicn-tools-benchmark",
+      "packages-logicn/logicn-devtools-",
+    ],
+    allowProductionPackageOverrides: true,
+    maxWarnings: 0,
+  };
 
 export function isEnvironmentMode(value: string): value is EnvironmentMode {
   return ENVIRONMENT_MODE_SET.has(value);
@@ -166,6 +166,7 @@ export function isEnvironmentMode(value: string): value is EnvironmentMode {
 
 export function createConfigDiagnostic(
   code: string,
+  name: string,
   severity: ConfigDiagnosticSeverity,
   message: string,
   path?: string,
@@ -173,6 +174,7 @@ export function createConfigDiagnostic(
 ): ConfigDiagnostic {
   return {
     code,
+    name,
     severity,
     message,
     ...(path === undefined ? {} : { path }),
@@ -195,7 +197,8 @@ export function resolveEnvironmentMode(
       mode: fallback,
       diagnostics: [
         createConfigDiagnostic(
-          "LogicN_CONFIG_INVALID_ENVIRONMENT_MODE",
+          "LLN-CONFIG-001",
+          "INVALID_ENVIRONMENT_MODE",
           "error",
           `Unsupported environment mode "${value}".`,
           "environment.mode",
@@ -209,7 +212,8 @@ export function resolveEnvironmentMode(
     mode: fallback,
     diagnostics: [
       createConfigDiagnostic(
-        "LogicN_CONFIG_MISSING_ENVIRONMENT_MODE",
+        "LLN-CONFIG-002",
+        "MISSING_ENVIRONMENT_MODE",
         "warning",
         `Environment mode was not set; using "${fallback}".`,
         "environment.mode",
@@ -254,7 +258,8 @@ export function parseProjectConfig(
     return {
       diagnostics: [
         createConfigDiagnostic(
-          "LogicN_CONFIG_PROJECT_NOT_OBJECT",
+          "LLN-CONFIG-003",
+          "PROJECT_NOT_OBJECT",
           "error",
           "Project config must be an object.",
           "project",
@@ -382,7 +387,8 @@ export function validateRuntimeEnvironment(
           : "warning";
       diagnostics.push(
         createConfigDiagnostic(
-          "LogicN_CONFIG_REQUIRED_ENVIRONMENT_VARIABLE_MISSING",
+          "LLN-CONFIG-004",
+          "REQUIRED_ENVIRONMENT_VARIABLE_MISSING",
           severity,
           `Required environment variable "${reference.name}" is missing.`,
           `environment.${reference.secret ? "secrets" : "variables"}.${reference.name}`,
@@ -417,7 +423,8 @@ export function createRuntimeConfigHandoff(
   ) {
     diagnostics.push(
       createConfigDiagnostic(
-        "LogicN_CONFIG_PRODUCTION_REQUIRES_ENVIRONMENT_VALIDATION",
+        "LLN-CONFIG-005",
+        "PRODUCTION_REQUIRES_ENVIRONMENT_VALIDATION",
         "error",
         "Production config handoff requires environment variable presence validation.",
         "environment",
@@ -513,7 +520,8 @@ export function validateHostPackageManifestBoundary(
   if (!isRecord(input)) {
     return [
       createConfigDiagnostic(
-        "LogicN_CONFIG_HOST_PACKAGE_MANIFEST_NOT_OBJECT",
+        "LLN-CONFIG-006",
+        "HOST_PACKAGE_MANIFEST_NOT_OBJECT",
         "error",
         "Host package manifest must be an object.",
         policy.manifestPath,
@@ -527,7 +535,8 @@ export function validateHostPackageManifestBoundary(
     if (Object.hasOwn(input, key)) {
       diagnostics.push(
         createConfigDiagnostic(
-          "LogicN_CONFIG_LogicN_PACKAGE_GRAPH_IN_HOST_MANIFEST",
+          "LLN-CONFIG-007",
+          "LOGICN_KEY_IN_HOST_MANIFEST",
           "error",
           `Host package manifest must not define LogicN package graph key "${key}". Use package-logicn.json and LogicN.lock.json for LogicN packages.`,
           `${policy.manifestPath}.${key}`,
@@ -546,7 +555,8 @@ export function validateHostPackageManifestBoundary(
     if (!isRecord(dependencies)) {
       diagnostics.push(
         createConfigDiagnostic(
-          "LogicN_CONFIG_HOST_DEPENDENCIES_NOT_OBJECT",
+          "LLN-CONFIG-008",
+          "HOST_DEPENDENCIES_NOT_OBJECT",
           "error",
           `Host package manifest field "${field}" must be an object.`,
           `${policy.manifestPath}.${field}`,
@@ -559,7 +569,8 @@ export function validateHostPackageManifestBoundary(
       if (isLoPackageGraphAlias(packageName)) {
         diagnostics.push(
           createConfigDiagnostic(
-            "LogicN_CONFIG_LogicN_PACKAGE_ALIAS_IN_HOST_DEPENDENCIES",
+            "LLN-CONFIG-009",
+            "LOGICN_ALIAS_IN_HOST_DEPENDENCIES",
             "error",
             `Host package dependency "${packageName}" looks like a LogicN package graph alias. Use package-logicn.json for LogicN package resolution.`,
             `${policy.manifestPath}.${field}.${packageName}`,
@@ -586,7 +597,8 @@ function validateProductionStrictness(
   if (policy.requireStrictProject && !project.strict) {
     diagnostics.push(
       createConfigDiagnostic(
-        "LogicN_CONFIG_PRODUCTION_REQUIRES_STRICT_PROJECT",
+        "LLN-CONFIG-010",
+        "PRODUCTION_REQUIRES_STRICT_PROJECT",
         "error",
         "Production mode requires strict project configuration.",
         "project.strict",
@@ -599,7 +611,8 @@ function validateProductionStrictness(
       if (secret.defaultValue !== undefined) {
         diagnostics.push(
           createConfigDiagnostic(
-            "LogicN_CONFIG_SECRET_DEFAULT_NOT_ALLOWED",
+            "LLN-CONFIG-011",
+            "SECRET_DEFAULT_NOT_ALLOWED",
             "error",
             `Secret environment variable "${secret.name}" must not define a default value.`,
             `environment.secrets.${secret.name}`,
@@ -625,7 +638,8 @@ function validateProductionStrictness(
     if (!overridePaths.has(packageRef.path)) {
       diagnostics.push(
         createConfigDiagnostic(
-          "LogicN_CONFIG_PRODUCTION_PACKAGE_DISABLED",
+          "LLN-CONFIG-012",
+          "PRODUCTION_PACKAGE_DISABLED",
           "error",
           `Production mode disables package "${packageRef.path}" by default.`,
           "project.packages",
@@ -638,7 +652,8 @@ function validateProductionStrictness(
     if (!policy.allowProductionPackageOverrides) {
       diagnostics.push(
         createConfigDiagnostic(
-          "LogicN_CONFIG_PRODUCTION_PACKAGE_OVERRIDE_NOT_ALLOWED",
+          "LLN-CONFIG-013",
+          "PRODUCTION_PACKAGE_OVERRIDE_NOT_ALLOWED",
           "error",
           `Production package override is not allowed for "${packageRef.path}".`,
           "project.production.packageOverrides",
@@ -662,7 +677,8 @@ function readProductionPackageOverrides(
   if (!isRecord(input)) {
     diagnostics.push(
       createConfigDiagnostic(
-        "LogicN_CONFIG_PRODUCTION_POLICY_INVALID",
+        "LLN-CONFIG-014",
+        "PRODUCTION_POLICY_INVALID",
         "error",
         "Production package policy must be an object.",
         "production",
@@ -679,7 +695,8 @@ function readProductionPackageOverrides(
   if (!Array.isArray(overrides)) {
     diagnostics.push(
       createConfigDiagnostic(
-        "LogicN_CONFIG_PRODUCTION_PACKAGE_OVERRIDES_INVALID",
+        "LLN-CONFIG-015",
+        "PRODUCTION_PACKAGE_OVERRIDES_INVALID",
         "error",
         "Production package overrides must be an array.",
         path,
@@ -695,7 +712,8 @@ function readProductionPackageOverrides(
     if (!isRecord(override)) {
       diagnostics.push(
         createConfigDiagnostic(
-          "LogicN_CONFIG_PRODUCTION_PACKAGE_OVERRIDE_INVALID",
+          "LLN-CONFIG-016",
+          "PRODUCTION_PACKAGE_OVERRIDE_INVALID",
           "error",
           "Production package override must be an object.",
           overridePath,
@@ -743,7 +761,8 @@ function readEnvironmentVariableReferences(
   if (!Array.isArray(input)) {
     diagnostics.push(
       createConfigDiagnostic(
-        "LogicN_CONFIG_ENVIRONMENT_REFERENCES_NOT_ARRAY",
+        "LLN-CONFIG-017",
+        "ENVIRONMENT_REFERENCES_NOT_ARRAY",
         "error",
         "Environment variable references must be an array.",
         path,
@@ -787,7 +806,8 @@ function parseEnvironmentVariableReference(
   if (!isRecord(input)) {
     diagnostics.push(
       createConfigDiagnostic(
-        "LogicN_CONFIG_ENVIRONMENT_REFERENCE_INVALID",
+        "LLN-CONFIG-018",
+        "ENVIRONMENT_REFERENCE_INVALID",
         "error",
         "Environment variable reference must be a string or object.",
         path,
@@ -811,7 +831,8 @@ function parseEnvironmentVariableReference(
   if (scopeInput !== undefined && scopeInput !== scope) {
     diagnostics.push(
       createConfigDiagnostic(
-        "LogicN_CONFIG_ENVIRONMENT_REFERENCE_SCOPE_INVALID",
+        "LLN-CONFIG-019",
+        "ENVIRONMENT_REFERENCE_SCOPE_INVALID",
         "error",
         `Unsupported environment variable scope "${String(scopeInput)}".`,
         `${path}.scope`,
@@ -844,7 +865,8 @@ function checkedEnvironmentVariableReference(
   if (!ENVIRONMENT_VARIABLE_NAME_PATTERN.test(reference.name)) {
     diagnostics.push(
       createConfigDiagnostic(
-        "LogicN_CONFIG_ENVIRONMENT_REFERENCE_NAME_INVALID",
+        "LLN-CONFIG-020",
+        "ENVIRONMENT_REFERENCE_NAME_INVALID",
         "error",
         `Environment variable "${reference.name}" must be uppercase snake case.`,
         `${path}.name`,
@@ -869,7 +891,8 @@ function readRequiredString(
 
   diagnostics.push(
     createConfigDiagnostic(
-      "LogicN_CONFIG_REQUIRED_STRING_MISSING",
+      "LLN-CONFIG-021",
+      "REQUIRED_STRING_MISSING",
       "error",
       `Required string "${key}" is missing.`,
       pathPrefix === undefined ? key : `${pathPrefix}.${key}`,
@@ -910,7 +933,8 @@ function readStringArray(
   if (!Array.isArray(value)) {
     diagnostics.push(
       createConfigDiagnostic(
-        "LogicN_CONFIG_STRING_ARRAY_INVALID",
+        "LLN-CONFIG-022",
+        "STRING_ARRAY_INVALID",
         "error",
         `"${key}" must be an array of strings.`,
         key,
@@ -925,7 +949,8 @@ function readStringArray(
   if (strings.length !== value.length) {
     diagnostics.push(
       createConfigDiagnostic(
-        "LogicN_CONFIG_STRING_ARRAY_ITEM_INVALID",
+        "LLN-CONFIG-023",
+        "STRING_ARRAY_ITEM_INVALID",
         "error",
         `"${key}" contains a non-string value.`,
         key,
@@ -950,7 +975,8 @@ function readPackageReferences(
   if (!Array.isArray(value)) {
     diagnostics.push(
       createConfigDiagnostic(
-        "LogicN_CONFIG_PACKAGE_REFERENCES_INVALID",
+        "LLN-CONFIG-024",
+        "PACKAGE_REFERENCES_INVALID",
         "error",
         `"${key}" must be an array of package references.`,
         key,
@@ -986,7 +1012,8 @@ function readPackageReferences(
 
     diagnostics.push(
       createConfigDiagnostic(
-        "LogicN_CONFIG_PACKAGE_REFERENCE_INVALID",
+        "LLN-CONFIG-025",
+        "PACKAGE_REFERENCE_INVALID",
         "error",
         "Package reference must be a string or object.",
         `${key}.${index}`,
@@ -1011,7 +1038,8 @@ function readStringMap(
   if (!isRecord(value)) {
     diagnostics.push(
       createConfigDiagnostic(
-        "LogicN_CONFIG_STRING_MAP_INVALID",
+        "LLN-CONFIG-026",
+        "STRING_MAP_INVALID",
         "error",
         `"${key}" must be an object whose values are strings.`,
         key,
@@ -1030,7 +1058,8 @@ function readStringMap(
 
     diagnostics.push(
       createConfigDiagnostic(
-        "LogicN_CONFIG_STRING_MAP_VALUE_INVALID",
+        "LLN-CONFIG-027",
+        "STRING_MAP_VALUE_INVALID",
         "error",
         `"${key}.${entryKey}" must be a string.`,
         `${key}.${entryKey}`,
@@ -1049,4 +1078,282 @@ function isLoPackageGraphAlias(packageName: string): boolean {
   return /^(?:package-LogicN|LogicN\.lock|LogicN-profile|LogicN-package-graph)$/i.test(
     packageName,
   );
+}
+
+// =============================================================================
+// v0.2 ADDITIONS — SecretConfigSource, EnvironmentPolicy, ConfigValue, Vault
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// SecretConfigSource
+//
+// Discriminated union for where a secret value comes from.
+// Used in logicn-core-config (4 values). The security package adds oauth and
+// token (6 values total — defined separately in logicn-core-security).
+// ---------------------------------------------------------------------------
+
+export type SecretConfigSource =
+  | { readonly kind: "env";     readonly variableName: string }
+  | { readonly kind: "vault";   readonly storeId: string; readonly keyPath: string }
+  | { readonly kind: "kms";     readonly keyId: string;   readonly provider?: string }
+  | { readonly kind: "runtime" };
+
+export type SecretConfigSourceKind = SecretConfigSource["kind"];
+
+export const SECRET_CONFIG_SOURCE_KINDS: readonly SecretConfigSourceKind[] = [
+  "env",
+  "vault",
+  "kms",
+  "runtime",
+];
+
+export function isSecretConfigSourceKind(
+  value: unknown,
+): value is SecretConfigSourceKind {
+  return (
+    typeof value === "string" &&
+    (SECRET_CONFIG_SOURCE_KINDS as readonly string[]).includes(value)
+  );
+}
+
+// ---------------------------------------------------------------------------
+// SecretCategory — classifies the nature of a secret
+// ---------------------------------------------------------------------------
+
+export type SecretCategory =
+  | "api-key"
+  | "signing-key"
+  | "password"
+  | "token"
+  | "certificate"
+  | "database-credential"
+  | "webhook-secret"
+  | "oauth-secret"
+  | "generic";
+
+// ---------------------------------------------------------------------------
+// SecretRedactionPolicy — how a secret value should be redacted in output
+// ---------------------------------------------------------------------------
+
+export interface SecretRedactionPolicy {
+  /**
+   * String to substitute when the secret value must appear in output.
+   * Default: "[REDACTED]"
+   */
+  readonly placeholder: string;
+  /**
+   * Whether to include the secret's name (not value) in reports.
+   * Default: true
+   */
+  readonly includeNameInReports: boolean;
+  /**
+   * Whether to include the secret source kind (not value/path) in reports.
+   * Default: true
+   */
+  readonly includeSourceKindInReports: boolean;
+}
+
+export const DEFAULT_SECRET_REDACTION_POLICY: SecretRedactionPolicy = {
+  placeholder: "[REDACTED]",
+  includeNameInReports: true,
+  includeSourceKindInReports: true,
+};
+
+// ---------------------------------------------------------------------------
+// EnvironmentPolicy — per-mode access policy for environment sources
+// ---------------------------------------------------------------------------
+
+export interface EnvironmentPolicy {
+  /**
+   * Whether .env files are allowed as a secret or config source.
+   * Should be false in staging and production.
+   */
+  readonly allowDotEnvFiles: boolean;
+
+  /**
+   * Whether process.env overrides are permitted.
+   * Should be false in all non-development modes.
+   */
+  readonly allowUnsafeOverrides: boolean;
+
+  /**
+   * Raw secret values must NEVER appear in reports.
+   * This field is always false — it exists to make the prohibition explicit
+   * and type-checkable so callers cannot accidentally set it to true.
+   */
+  readonly allowSecretValuesInReports: false;
+}
+
+/**
+ * Default EnvironmentPolicy per environment mode.
+ *
+ * | Mode        | allowDotEnvFiles | allowUnsafeOverrides |
+ * | development | true             | true                 |
+ * | test        | true             | false                |
+ * | staging     | false            | false                |
+ * | production  | false            | false                |
+ */
+export function defaultEnvironmentPolicy(mode: EnvironmentMode): EnvironmentPolicy {
+  switch (mode) {
+    case "development":
+      return { allowDotEnvFiles: true,  allowUnsafeOverrides: true,  allowSecretValuesInReports: false };
+    case "test":
+      return { allowDotEnvFiles: true,  allowUnsafeOverrides: false, allowSecretValuesInReports: false };
+    case "staging":
+      return { allowDotEnvFiles: false, allowUnsafeOverrides: false, allowSecretValuesInReports: false };
+    case "production":
+      return { allowDotEnvFiles: false, allowUnsafeOverrides: false, allowSecretValuesInReports: false };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ConfigValue — typed value kinds for the Config Vault
+// ---------------------------------------------------------------------------
+
+export type ConfigValue =
+  | { readonly kind: "string";   readonly value: string }
+  | { readonly kind: "number";   readonly value: number }
+  | { readonly kind: "boolean";  readonly value: boolean }
+  | { readonly kind: "url";      readonly value: string }
+  | { readonly kind: "duration"; readonly value: string }
+  | { readonly kind: "bytes";    readonly value: number }
+  | { readonly kind: "region";   readonly value: string }
+  | { readonly kind: "semver";   readonly value: string }
+  | { readonly kind: "currency"; readonly value: string }
+  | { readonly kind: "mime-type"; readonly value: string }
+  | { readonly kind: "array";    readonly value: readonly ConfigValue[] };
+
+export type ConfigValueKind = ConfigValue["kind"];
+
+// ---------------------------------------------------------------------------
+// Config Vault types
+//
+// The Config Vault holds typed, non-secret, read-only application config.
+// Secrets must NEVER appear in the Config Vault (LLN-VAULT-001).
+// ---------------------------------------------------------------------------
+
+export interface ConfigVaultEntry<T> {
+  /** Dot-path key. Example: "app.name", "limits.maxUploadMb". */
+  readonly key: string;
+  readonly value: T;
+  readonly type: ConfigValueKind;
+}
+
+export interface ConfigVaultSchema {
+  readonly [dotPath: string]: ConfigVaultEntry<unknown>;
+}
+
+export interface ConfigVaultResult {
+  readonly entries: ConfigVaultSchema;
+  readonly diagnostics: readonly ConfigDiagnostic[];
+}
+
+/**
+ * Retrieve a typed vault entry by dot-path key.
+ * Returns undefined if the key is absent.
+ */
+export function getVaultEntry<T>(
+  vault: ConfigVaultSchema,
+  key: string,
+): T | undefined {
+  return vault[key]?.value as T | undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Config Vault diagnostic codes — LN-VAULT series
+// ---------------------------------------------------------------------------
+
+/** LLN-VAULT-001: Secret-like value found in config vault — use secret {} reference instead. */
+export const LLN_VAULT_001 = "LLN-VAULT-001";
+/** LLN-VAULT-002: Config vault key does not match segment.segment dot-path format. */
+export const LLN_VAULT_002 = "LLN-VAULT-002";
+/** LLN-VAULT-003: Config vault value cannot be coerced to declared type. */
+export const LLN_VAULT_003 = "LLN-VAULT-003";
+/** LLN-VAULT-004: Required vault key is not present in vault global block. */
+export const LLN_VAULT_004 = "LLN-VAULT-004";
+/** LLN-VAULT-005: Attempt to write to config vault at runtime (config vault is read-only). */
+export const LLN_VAULT_005 = "LLN-VAULT-005";
+
+export function vaultDiagnosticSecretInVault(key: string): ConfigDiagnostic {
+  return createConfigDiagnostic(
+    LLN_VAULT_001,
+    "SECRET_IN_VAULT",
+    "error",
+    `Config vault key "${key}" contains a secret-like value. Use a secret {} reference instead.`,
+    key,
+    `secret ${key.toUpperCase().replace(/\./g, "_")} { from vault "vault://..." }`,
+  );
+}
+
+export function vaultDiagnosticKeyInvalid(key: string): ConfigDiagnostic {
+  return createConfigDiagnostic(
+    LLN_VAULT_002,
+    "VAULT_KEY_INVALID",
+    "error",
+    `Config vault key "${key}" does not match the required segment.segment dot-path format.`,
+    key,
+    `Keys must match the pattern: segment.segment (e.g. "app.name", "limits.maxUploadMb").`,
+  );
+}
+
+export function vaultDiagnosticTypeMismatch(
+  key: string,
+  declared: string,
+  actual: string,
+): ConfigDiagnostic {
+  return createConfigDiagnostic(
+    LLN_VAULT_003,
+    "VAULT_TYPE_MISMATCH",
+    "error",
+    `Config vault key "${key}" declares type "${declared}" but value is "${actual}".`,
+    key,
+  );
+}
+
+export function vaultDiagnosticKeyMissing(key: string): ConfigDiagnostic {
+  return createConfigDiagnostic(
+    LLN_VAULT_004,
+    "VAULT_KEY_MISSING",
+    "error",
+    `Required vault key "${key}" is not present in the vault global block.`,
+    key,
+  );
+}
+
+export function vaultDiagnosticMutationDenied(key: string): ConfigDiagnostic {
+  return createConfigDiagnostic(
+    LLN_VAULT_005,
+    "VAULT_MUTATION_DENIED",
+    "error",
+    `Config vault key "${key}" cannot be written at runtime. The config vault is read-only after boot.`,
+    key,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// EnvironmentConfigReport and SecretReportValue
+//
+// Safe report types: never expose raw secret values.
+// ---------------------------------------------------------------------------
+
+/**
+ * A secret value as it appears in reports.
+ * The raw value is never included — only the source kind and redacted marker.
+ */
+export interface SecretReportValue {
+  readonly name: string;
+  /** Source kind (env, vault, kms, runtime) — never the raw path or value. */
+  readonly sourceKind: SecretConfigSourceKind;
+  readonly redacted: true;
+  readonly category?: SecretCategory;
+}
+
+export interface EnvironmentConfigReport {
+  readonly schemaVersion: "logicn.config.environment.v1";
+  readonly mode: EnvironmentMode;
+  readonly policy: EnvironmentPolicy;
+  readonly variableCount: number;
+  readonly secretCount: number;
+  readonly secrets: readonly SecretReportValue[];
+  readonly diagnostics: readonly ConfigDiagnostic[];
 }

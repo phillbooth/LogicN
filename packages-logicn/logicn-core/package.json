@@ -4,10 +4,14 @@
   "description": "LogicN / LogicN language package, examples, schemas and prototype CLI.",
   "license": "Apache-2.0",
   "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "bin": {
     "LogicN": "./compiler/logicn.js"
   },
   "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build:types": "tsc -p tsconfig.json",
     "check": "node compiler/logicn.js check examples --exclude source-map-error.lln",
     "build:examples": "node compiler/logicn.js build examples --exclude source-map-error.lln --out build/examples",
     "ast": "node compiler/logicn.js ast examples/hello.lln",
@@ -25,5 +29,8 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }

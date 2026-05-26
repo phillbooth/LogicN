@@ -1,3 +1,18 @@
+// =============================================================================
+// logicn-core-logic — v0.1 stable exports
+//
+// Package: @logicn/core-logic
+// Role:    Multi-state logic primitives: Tri (numeric), LogicDefinition,
+//          TruthTable, and Omni logic contracts.
+//
+// v0.2 types (TriState, Decision, BoolBoundary, OmniState) are exported from
+// sub-path imports:
+//   @logicn/core-logic/tri
+//   @logicn/core-logic/decision
+//   @logicn/core-logic/bool-boundary
+//   @logicn/core-logic/omni
+// =============================================================================
+
 export type Tri = -1 | 0 | 1;
 
 export const TRI_FALSE: Tri = -1;
@@ -17,7 +32,10 @@ export type TriBoolPolicy =
 export type LogicDiagnosticSeverity = "info" | "warning" | "error";
 
 export interface LogicDiagnostic {
+  /** Structured diagnostic code in LLN-* format. */
   readonly code: string;
+  /** Human-readable code name. Example: "DUPLICATE_STATE". */
+  readonly name: string;
   readonly severity: LogicDiagnosticSeverity;
   readonly message: string;
   readonly path?: string;
@@ -147,7 +165,8 @@ export function validateOmniLogicDefinition<N extends number>(
 
   if (definition.kind !== "Omni" || definition.bounded !== true) {
     diagnostics.push({
-      code: "LogicN_LOGIC_OMNI_MUST_BE_BOUNDED",
+      code: "LLN-LOGIC-006",
+      name: "OMNI_MUST_BE_BOUNDED",
       severity: "error",
       message: "Omni logic definitions must be explicitly bounded.",
       path: "bounded",
@@ -156,7 +175,8 @@ export function validateOmniLogicDefinition<N extends number>(
 
   if (definition.width > 256) {
     diagnostics.push({
-      code: "LogicN_LOGIC_OMNI_WIDTH_TOO_LARGE",
+      code: "LLN-LOGIC-007",
+      name: "OMNI_WIDTH_TOO_LARGE",
       severity: "error",
       message: "Omni logic definitions must declare 256 states or fewer.",
       path: "width",
@@ -173,7 +193,8 @@ export function validateLogicDefinition<N extends number>(
 
   if (!isSafeLogicName(definition.name)) {
     diagnostics.push({
-      code: "LogicN_LOGIC_INVALID_NAME",
+      code: "LLN-LOGIC-001",
+      name: "INVALID_NAME",
       severity: "error",
       message:
         "Logic definition names must be non-empty identifiers beginning with a letter or underscore.",
@@ -183,7 +204,8 @@ export function validateLogicDefinition<N extends number>(
 
   if (!Number.isSafeInteger(definition.width) || definition.width < 2) {
     diagnostics.push({
-      code: "LogicN_LOGIC_INVALID_WIDTH",
+      code: "LLN-LOGIC-002",
+      name: "INVALID_WIDTH",
       severity: "error",
       message: "Logic width must be a safe integer greater than or equal to 2.",
       path: "width",
@@ -192,7 +214,8 @@ export function validateLogicDefinition<N extends number>(
 
   if (definition.states.length !== definition.width) {
     diagnostics.push({
-      code: "LogicN_LOGIC_STATE_COUNT_MISMATCH",
+      code: "LLN-LOGIC-003",
+      name: "STATE_COUNT_MISMATCH",
       severity: "error",
       message: "Logic state count must exactly match the declared width.",
       path: "states",
@@ -204,7 +227,8 @@ export function validateLogicDefinition<N extends number>(
   definition.states.forEach((state, index) => {
     if (!isSafeLogicName(state)) {
       diagnostics.push({
-        code: "LogicN_LOGIC_INVALID_STATE_NAME",
+        code: "LLN-LOGIC-004",
+        name: "INVALID_STATE_NAME",
         severity: "error",
         message:
           "Logic state names must be non-empty identifiers beginning with a letter or underscore.",
@@ -214,7 +238,8 @@ export function validateLogicDefinition<N extends number>(
 
     if (seenStates.has(state)) {
       diagnostics.push({
-        code: "LogicN_LOGIC_DUPLICATE_STATE",
+        code: "LLN-LOGIC-005",
+        name: "DUPLICATE_STATE",
         severity: "error",
         message: `Logic state "${state}" is duplicated.`,
         path: `states.${index}`,
@@ -307,7 +332,8 @@ export function validateTruthTable<N extends number>(
 
   if (truthTable.length === 0) {
     diagnostics.push({
-      code: "LogicN_LOGIC_EMPTY_TRUTH_TABLE",
+      code: "LLN-LOGIC-008",
+      name: "EMPTY_TRUTH_TABLE",
       severity: "warning",
       message: "Truth table has no rows.",
       path: "truthTable",
@@ -320,7 +346,8 @@ export function validateTruthTable<N extends number>(
 
   if (expectedInputCount === undefined || expectedInputCount === 0) {
     diagnostics.push({
-      code: "LogicN_LOGIC_EMPTY_TRUTH_TABLE_INPUTS",
+      code: "LLN-LOGIC-009",
+      name: "EMPTY_TRUTH_TABLE_INPUTS",
       severity: "error",
       message: "Truth table rows must declare at least one input.",
       path: "truthTable.0.inputs",
@@ -332,7 +359,8 @@ export function validateTruthTable<N extends number>(
   truthTable.forEach((row, rowIndex) => {
     if (row.inputs.length !== expectedInputCount) {
       diagnostics.push({
-        code: "LogicN_LOGIC_TRUTH_TABLE_ARITY_MISMATCH",
+        code: "LLN-LOGIC-010",
+        name: "TRUTH_TABLE_ARITY_MISMATCH",
         severity: "error",
         message: "Truth table rows must use a consistent input count.",
         path: `truthTable.${rowIndex}.inputs`,
@@ -342,7 +370,8 @@ export function validateTruthTable<N extends number>(
     row.inputs.forEach((input, inputIndex) => {
       if (!isValidLogicState(logic, input)) {
         diagnostics.push({
-          code: "LogicN_LOGIC_INVALID_INPUT_STATE",
+          code: "LLN-LOGIC-011",
+          name: "INVALID_INPUT_STATE",
           severity: "error",
           message: "Truth table input state is outside the declared logic width.",
           path: `truthTable.${rowIndex}.inputs.${inputIndex}`,
@@ -352,7 +381,8 @@ export function validateTruthTable<N extends number>(
 
     if (!isValidLogicState(logic, row.output)) {
       diagnostics.push({
-        code: "LogicN_LOGIC_INVALID_OUTPUT_STATE",
+        code: "LLN-LOGIC-012",
+        name: "INVALID_OUTPUT_STATE",
         severity: "error",
         message: "Truth table output state is outside the declared logic width.",
         path: `truthTable.${rowIndex}.output`,
@@ -363,7 +393,8 @@ export function validateTruthTable<N extends number>(
 
     if (rowKeys.has(rowKey)) {
       diagnostics.push({
-        code: "LogicN_LOGIC_DUPLICATE_TRUTH_TABLE_ROW",
+        code: "LLN-LOGIC-013",
+        name: "DUPLICATE_TRUTH_TABLE_ROW",
         severity: "error",
         message: "Truth table contains a duplicate input combination.",
         path: `truthTable.${rowIndex}.inputs`,
@@ -382,7 +413,8 @@ export function validateTruthTable<N extends number>(
     rowKeys.size < expectedRows
   ) {
     diagnostics.push({
-      code: "LogicN_LOGIC_INCOMPLETE_TRUTH_TABLE",
+      code: "LLN-LOGIC-014",
+      name: "INCOMPLETE_TRUTH_TABLE",
       severity: "warning",
       message: "Truth table does not cover every input combination.",
       path: "truthTable",
@@ -391,6 +423,10 @@ export function validateTruthTable<N extends number>(
 
   return diagnostics;
 }
+
+// ---------------------------------------------------------------------------
+// Private helpers
+// ---------------------------------------------------------------------------
 
 function assertTri(value: Tri): Tri {
   if (!isTri(value)) {

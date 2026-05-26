@@ -5,7 +5,7 @@ piece is required to clarify core `Tri` or `LogicN` semantics.
 
 ```text
 [ ] Reconcile coverage conflict: choose one canonical OpticalTransportMode enum
-[ ] Reconcile coverage conflict: choose one canonical LN-PHOTONIC-001..006 table
+[ ] Reconcile coverage conflict: choose one canonical LLN-PHOTONIC-001..006 table
 [ ] Confirm photonic ownership with logicn-core-vector, logicn-core-compute and logicn-target-photonic before implementation
 [x] Create /packages-logicn/logicn-core-photonic
 [x] Document package boundary
@@ -28,7 +28,7 @@ piece is required to clarify core `Tri` or `LogicN` semantics.
 [ ] Implement estimateOpticalSuitability(graph: ExecutionGraph): boolean
 [ ] Implement buildPhotonicPlan(module: string): PhotonicExecutionPlan
 [ ] Implement resolveFallback(opticalAvailable: boolean): string
-[ ] Define LN-PHOTONIC-001 through LN-PHOTONIC-006 diagnostic codes
+[ ] Define LLN-PHOTONIC-001 through LLN-PHOTONIC-006 diagnostic codes
 [ ] Create internal dir: photonic-runtime.ts, photonic-planner.ts, photonic-routing.ts, photonic-fallback.ts, photonic-audit.ts, photonic-targets.ts
 [ ] Define runtime audit event shapes for photonic transport and fallback
 [ ] Plan sub-packages: logicn-target-photonic-runtime, logicn-target-photonic-routing, logicn-target-photonic-audit
@@ -48,7 +48,7 @@ piece is required to clarify core `Tri` or `LogicN` semantics.
 [ ] Define PhotonicCapability enum (OpticalExecution/HybridExecution/ExperimentalRouting/RealtimeScheduling)
 [ ] Implement validateCapability(capability: PhotonicCapability): boolean — blocks ExperimentalRouting by default
 [ ] Define optical topologies list (OpticalMesh/WaveguideBus/CoherentRing/HybridBridge)
-[ ] Update LN-PHOTONIC-001–006 meanings to v0.2 (001=isolation missing, 002=propagation exceeded, 003=experimental prohibited, 004=invalid topology, 005=non-deterministic, 006=unsafe hybrid)
+[ ] Update LLN-PHOTONIC-001–006 meanings to v0.2 (001=isolation missing, 002=propagation exceeded, 003=experimental prohibited, 004=invalid topology, 005=non-deterministic, 006=unsafe hybrid)
 [ ] Create runtime/transport.ts (OpticalTransportMode enum)
 [ ] Create runtime/isolation.ts (validateIsolation)
 [ ] Create planning/topology.ts (topologies list)

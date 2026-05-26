@@ -5,7 +5,7 @@ HTTP serving belongs in `logicn-framework-api-server`; application request
 policy belongs in `logicn-framework-app-kernel`.
 
 ```text
-[ ] Audit docs for legacy ws/wss, sharedSecret, exists/save and has/store wording and map or replace with canonical v0.2 names
+[x] Audit docs for legacy ws/wss, sharedSecret, exists/save and has/store wording and map or replace with canonical v0.2 names — README has canonical names; TODO items below corrected to canonical webhook KB API (2026-05-26)
 [x] Create /packages-logicn/logicn-core-network
 [x] Add README.md
 [x] Add package metadata
@@ -35,15 +35,15 @@ policy belongs in `logicn-framework-app-kernel`.
 [ ] Define WebhookVerificationResult: valid, reason?, diagnostics[]
 [ ] Implement verifyWebhookHmac(payload, signature, config): WebhookVerificationResult
 [ ] Implement validateWebhookTimestamp(timestamp, maxAgeSeconds): WebhookVerificationResult
-[ ] Define ReplayStore interface: insertOnce(), has()
+[ ] Define ReplayStore interface: has(key: string): Promise<boolean> | boolean, put(key: string, ttlSeconds: number): Promise<void> | void
 [ ] Implement validateReplayProtection(id, store): Promise<NetworkDiagnostic[]>
-[ ] Define IdempotencyStore interface: getOrSet()
+[ ] Define IdempotencyStore interface: get(key: string): Promise<IdempotencyRecord | undefined> | IdempotencyRecord | undefined, put(record: IdempotencyRecord, ttlSeconds?: number): Promise<void> | void
 [ ] Implement validateIdempotency(key, store): Promise<NetworkDiagnostic[]>
 [ ] Implement validateAiPrompt(prompt, policy): NetworkDiagnostic[]
 [ ] Define NetworkDiagnostic: code, message, severity, destination?
 [ ] Define NetworkPolicyReport with schemaVersion "logicn.network.report.v1"
-[ ] Define LN-NETWORK-001 through LN-NETWORK-008 diagnostic codes
+[ ] Define LLN-NETWORK-001 through LLN-NETWORK-008 diagnostic codes
 [ ] Create internal dir: policy/, runtime/, webhook/, reports/, diagnostics/
-[ ] Implement deny-by-default rule (LN-NETWORK-001 for undeclared destinations)
-[ ] Integrate with boundary checker for LN-BOUNDARY-008 (network allowlist violation)
+[ ] Implement deny-by-default rule (LLN-NETWORK-001 for undeclared destinations)
+[ ] Integrate with boundary checker for LLN-BOUNDARY-008 (network allowlist violation)
 ```

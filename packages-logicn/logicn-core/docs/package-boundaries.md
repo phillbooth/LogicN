@@ -146,7 +146,7 @@ packages-logicn/logicn-core-photonic
   logic-to-light vocabulary
   photonic runtime target semantics
   photonic execution plan semantics
-  LN-PHOTONIC diagnostics after reconciliation
+  LLN-PHOTONIC diagnostics after reconciliation
 
 packages-logicn/logicn-target-cpu
   CPU architecture metadata

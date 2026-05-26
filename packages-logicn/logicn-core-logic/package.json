@@ -1,12 +1,34 @@
 {
   "name": "@logicn/core-logic",
   "version": "0.1.0-beta.0",
-  "description": "LogicN multi-state logic concepts including Tri, LogicN and future Omni logic.",
+  "description": "LogicN multi-state logic concepts including Tri, Decision, BoolBoundary and Omni logic.",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./tri": {
+      "import": "./dist/tri/index.js",
+      "types": "./dist/tri/index.d.ts"
+    },
+    "./decision": {
+      "import": "./dist/decision/index.js",
+      "types": "./dist/decision/index.d.ts"
+    },
+    "./bool-boundary": {
+      "import": "./dist/bool-boundary/index.js",
+      "types": "./dist/bool-boundary/index.d.ts"
+    },
+    "./omni": {
+      "import": "./dist/omni/index.js",
+      "types": "./dist/omni/index.d.ts"
+    }
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc -p tsconfig.json",

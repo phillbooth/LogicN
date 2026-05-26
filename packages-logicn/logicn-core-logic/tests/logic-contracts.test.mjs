@@ -52,7 +52,7 @@ describe("logicn-core-logic contracts", () => {
 
     assert.equal(
       diagnostics.some(
-        (diagnostic) => diagnostic.code === "LogicN_LOGIC_DUPLICATE_STATE",
+        (diagnostic) => diagnostic.code === "LLN-LOGIC-005",
       ),
       true,
     );
@@ -110,20 +110,19 @@ describe("logicn-core-logic contracts", () => {
 
     assert.equal(
       diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === "LogicN_LOGIC_DUPLICATE_TRUTH_TABLE_ROW",
+        (diagnostic) => diagnostic.code === "LLN-LOGIC-013",
       ),
       true,
     );
     assert.equal(
       diagnostics.some(
-        (diagnostic) => diagnostic.code === "LogicN_LOGIC_INVALID_INPUT_STATE",
+        (diagnostic) => diagnostic.code === "LLN-LOGIC-011",
       ),
       true,
     );
     assert.equal(
       diagnostics.some(
-        (diagnostic) => diagnostic.code === "LogicN_LOGIC_INCOMPLETE_TRUTH_TABLE",
+        (diagnostic) => diagnostic.code === "LLN-LOGIC-014",
       ),
       true,
     );

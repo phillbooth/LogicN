@@ -228,7 +228,7 @@ Suggested diagnostic:
 
 ```json
 {
-  "code": "LN-SEC-PATCH-001",
+  "code": "LLN-SEC-PATCH-001",
   "severity": "error",
   "message": "Runtime patching is not allowed. Use an adapter, interface, pipeline, test mock or signed hotfix package.",
   "safeToShow": true

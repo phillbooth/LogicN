@@ -58,7 +58,7 @@ describe("logicn-core-config contracts", () => {
     assert.equal(result.runtime?.canRun, false);
     assert.equal(
       result.diagnostics[0]?.code,
-      "LogicN_CONFIG_REQUIRED_ENVIRONMENT_VARIABLE_MISSING",
+      "LLN-CONFIG-004",
     );
     assert.match(result.diagnostics[0]?.message ?? "", /LOGICN_APP_SECRET/);
     assert.doesNotMatch(result.diagnostics[0]?.message ?? "", /undefined|null|set/);
@@ -83,7 +83,7 @@ describe("logicn-core-config contracts", () => {
     assert.equal(result.runtime?.canRun, false);
     assert.equal(
       result.diagnostics[0]?.code,
-      "LogicN_CONFIG_PRODUCTION_REQUIRES_ENVIRONMENT_VALIDATION",
+      "LLN-CONFIG-005",
     );
   });
 
@@ -110,7 +110,7 @@ describe("logicn-core-config contracts", () => {
     assert.equal(result.runtime?.canRun, false);
     assert.equal(
       result.diagnostics.at(-1)?.code,
-      "LogicN_CONFIG_PRODUCTION_PACKAGE_DISABLED",
+      "LLN-CONFIG-012",
     );
   });
 
@@ -182,7 +182,7 @@ describe("logicn-core-config contracts", () => {
     assert.equal(result.runtime?.canRun, false);
     assert.equal(
       result.diagnostics.at(-1)?.code,
-      "LogicN_CONFIG_PRODUCTION_PACKAGE_OVERRIDE_NOT_ALLOWED",
+      "LLN-CONFIG-013",
     );
   });
 
@@ -215,15 +215,14 @@ describe("logicn-core-config contracts", () => {
     assert.equal(
       diagnostics.some(
         (diagnostic) =>
-          diagnostic.code === "LogicN_CONFIG_LogicN_PACKAGE_GRAPH_IN_HOST_MANIFEST",
+          diagnostic.code === "LLN-CONFIG-007",
       ),
       true,
     );
     assert.equal(
       diagnostics.some(
         (diagnostic) =>
-          diagnostic.code ===
-          "LogicN_CONFIG_LogicN_PACKAGE_ALIAS_IN_HOST_DEPENDENCIES",
+          diagnostic.code === "LLN-CONFIG-009",
       ),
       true,
     );

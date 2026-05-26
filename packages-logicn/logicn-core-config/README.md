@@ -29,7 +29,7 @@ host package manifest boundary checks
 export type EnvironmentMode = "development" | "test" | "staging" | "production"
 ```
 
-Unknown modes emit `LN-CONFIG-003` rather than silently falling back.
+Unknown modes emit `LLN-CONFIG-003` rather than silently falling back.
 
 ## Environment Config Types
 
@@ -49,7 +49,7 @@ export interface SecretEnvironmentReference {
 ```
 
 `loadEnvironmentConfig()` validates required variables and secrets, emits
-`LN-CONFIG-001` for missing public variables and `LN-CONFIG-002` for missing
+`LLN-CONFIG-001` for missing public variables and `LLN-CONFIG-002` for missing
 secrets.
 
 ## Safe Secret Resolution Flow
@@ -72,13 +72,13 @@ raw value is never logged or reported
 
 | Code | Meaning |
 | --- | --- |
-| `LN-CONFIG-001` | required public environment variable missing |
-| `LN-CONFIG-002` | required secret missing |
-| `LN-CONFIG-003` | unknown environment mode |
-| `LN-CONFIG-004` | production strict mode disabled |
-| `LN-CONFIG-005` | unsafe secret default detected |
-| `LN-CONFIG-006` | development package enabled in production |
-| `LN-CONFIG-010` | host package manifest boundary violation |
+| `LLN-CONFIG-001` | required public environment variable missing |
+| `LLN-CONFIG-002` | required secret missing |
+| `LLN-CONFIG-003` | unknown environment mode |
+| `LLN-CONFIG-004` | production strict mode disabled |
+| `LLN-CONFIG-005` | unsafe secret default detected |
+| `LLN-CONFIG-006` | development package enabled in production |
+| `LLN-CONFIG-010` | host package manifest boundary violation |
 
 ## Contracts
 

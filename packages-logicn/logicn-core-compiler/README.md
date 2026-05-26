@@ -203,15 +203,15 @@ build/
     diagnostics.json
 ```
 
-### Manifest Diagnostic Codes (LN-MANIFEST series)
+### Manifest Diagnostic Codes (LLN-MANIFEST series)
 
 | Code | Meaning |
 | --- | --- |
-| `LN-MANIFEST-001` | missing runtime manifest |
-| `LN-MANIFEST-002` | manifest integrity failure |
-| `LN-MANIFEST-003` | unsupported manifest version |
-| `LN-MANIFEST-004` | invalid capability reference |
-| `LN-MANIFEST-005` | runtime target mismatch |
+| `LLN-MANIFEST-001` | missing runtime manifest |
+| `LLN-MANIFEST-002` | manifest integrity failure |
+| `LLN-MANIFEST-003` | unsupported manifest version |
+| `LLN-MANIFEST-004` | invalid capability reference |
+| `LLN-MANIFEST-005` | runtime target mismatch |
 
 ## Effect Checker (Planned)
 
@@ -287,18 +287,18 @@ The propagation algorithm runs iteratively. Each pass updates every node's
 `inferredEffects` based on the effects of its callees. Iteration continues
 until no node's inferred set changes (fixpoint).
 
-### Effect Diagnostic Codes (LN-EFFECT series)
+### Effect Diagnostic Codes (LLN-EFFECT series)
 
 | Code | Meaning |
 | --- | --- |
-| `LN-EFFECT-001` | undeclared effect — function uses an effect not in its declaration |
-| `LN-EFFECT-002` | forbidden effect — effect is not permitted in this context |
-| `LN-EFFECT-003` | missing capability — effect requires a capability not granted |
-| `LN-EFFECT-004` | unsafe transitive — unsafe effect propagated from callee |
+| `LLN-EFFECT-001` | undeclared effect — function uses an effect not in its declaration |
+| `LLN-EFFECT-002` | forbidden effect — effect is not permitted in this context |
+| `LLN-EFFECT-003` | missing capability — effect requires a capability not granted |
+| `LLN-EFFECT-004` | unsafe transitive — unsafe effect propagated from callee |
 
 Legacy codes `LLN-E4001` (undeclared effect), `LLN-E4002` (undeclared propagated
 effect), `LLN-E4003` (forbidden compile-time effect) remain active until the
-LN-EFFECT series fully replaces them.
+LLN-EFFECT series fully replaces them.
 
 See `docs/Knowledge-Bases/effect-checker-and-boundary-checker.md` for the full
 specification including the 12-effect table, algorithm, and checker output schema.
@@ -376,16 +376,16 @@ export interface CheckedCallExpression {
 
 ### Boundary Diagnostic Codes
 
-**Compiler-specific (LN-BOUNDARY series):**
+**Compiler-specific (LLN-BOUNDARY series):**
 
 | Code | Meaning |
 | --- | --- |
-| `LN-BOUNDARY-001` | missing validation at untrusted boundary |
-| `LN-BOUNDARY-002` | missing replay protection on webhook boundary |
-| `LN-BOUNDARY-003` | unsafe effect crosses trust boundary |
-| `LN-BOUNDARY-004` | secret leaked across boundary |
+| `LLN-BOUNDARY-001` | missing validation at untrusted boundary |
+| `LLN-BOUNDARY-002` | missing replay protection on webhook boundary |
+| `LLN-BOUNDARY-003` | unsafe effect crosses trust boundary |
+| `LLN-BOUNDARY-004` | secret leaked across boundary |
 
-**Extended boundary checker codes (LN-BOUNDARY-001 through LN-BOUNDARY-009)
+**Extended boundary checker codes (LLN-BOUNDARY-001 through LLN-BOUNDARY-009)
 and legacy codes LLN-E4004 through LLN-E4006** remain active. See
 `docs/Knowledge-Bases/effect-checker-and-boundary-checker.md` for the
 full 16-item implementation checklist and all boundary violation examples.
@@ -434,12 +434,12 @@ packages-logicn/logicn-core-compiler/src/
     effect-interface.ts      ← Effect, EffectCategory
     effect-graph.ts          ← EffectGraph, EffectGraphNode
     effect-propagation.ts    ← propagateEffects(), inferExpressionEffects()
-    effect-diagnostics.ts    ← LN-EFFECT-001–004
+    effect-diagnostics.ts    ← LLN-EFFECT-001–004
   boundaries/
     boundary-interface.ts    ← Boundary, BoundaryType, TrustLevel
     boundary-graph.ts        ← BoundaryGraph, BoundaryEdge
     boundary-requirement.ts  ← BoundaryRequirement
-    boundary-diagnostics.ts  ← LN-BOUNDARY-001–004
+    boundary-diagnostics.ts  ← LLN-BOUNDARY-001–004
   manifests/
     manifest-builder.ts      ← buildManifest()
     manifest-schema.ts       ← RuntimeManifest, sub-types

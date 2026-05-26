@@ -533,22 +533,22 @@ Compatibility must remain explainable.
 
 # Diagnostic Codes
 
-## LN-COMPUTE
+## LLN-COMPUTE
 
 ```text
-LN-COMPUTE-001 through LN-COMPUTE-005
+LLN-COMPUTE-001 through LLN-COMPUTE-005
 ```
 
-## LN-WASM
+## LLN-WASM
 
 ```text
-LN-WASM-001 through LN-WASM-005
+LLN-WASM-001 through LLN-WASM-005
 ```
 
-## LN-COMPAT
+## LLN-COMPAT
 
 ```text
-LN-COMPAT-001 through LN-COMPAT-005
+LLN-COMPAT-001 through LLN-COMPAT-005
 ```
 
 ---
