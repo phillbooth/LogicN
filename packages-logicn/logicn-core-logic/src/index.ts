@@ -29,15 +29,22 @@ export type TriBoolPolicy =
   | "unknown_as_true"
   | "unknown_as_error";
 
+/** Matches DiagnosticSeverity in @logicn/core — kept local until workspace links are in place. */
 export type LogicDiagnosticSeverity = "info" | "warning" | "error";
 
+/**
+ * Diagnostic produced by logic validation functions.
+ * Structurally compatible with BaseDiagnostic in @logicn/core.
+ * Additional field: path — dot-path into the validated structure.
+ */
 export interface LogicDiagnostic {
-  /** Structured diagnostic code in LLN-* format. */
+  /** Structured diagnostic code in LLN-SERIES-NNN format. */
   readonly code: string;
-  /** Human-readable code name. Example: "DUPLICATE_STATE". */
+  /** Screaming-snake-case name. Example: "DUPLICATE_STATE". */
   readonly name: string;
   readonly severity: LogicDiagnosticSeverity;
   readonly message: string;
+  /** Dot-path into the validated structure, e.g. "states.2". */
   readonly path?: string;
 }
 

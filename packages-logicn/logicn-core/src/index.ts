@@ -22,17 +22,34 @@ export interface SourceLocation {
   readonly column: number;
 }
 
-export interface CompilerDiagnostic {
-  /**
-   * Structured diagnostic code in LLN-* format.
-   * Example: "LLN-LEX-001", "LLN-TYPE-004".
-   */
+/**
+ * Minimal diagnostic shape shared across all LogicN packages.
+ *
+ * Every package-specific diagnostic type (LogicDiagnostic, ConfigDiagnostic,
+ * SecurityDiagnostic, etc.) is structurally compatible with this interface.
+ * Once workspace links are established, package diagnostics will formally
+ * extend BaseDiagnostic via imports from @logicn/core.
+ */
+export interface BaseDiagnostic {
+  /** Structured diagnostic code in LLN-SERIES-NNN format. */
   readonly code: string;
-  /** Human-readable code name. Example: "UNEXPECTED_CHARACTER". */
+  /** Screaming-snake-case name. Example: "DUPLICATE_STATE". */
   readonly name: string;
   readonly severity: DiagnosticSeverity;
   readonly message: string;
+}
+
+/**
+ * Full compiler diagnostic — extends BaseDiagnostic with source location
+ * and an optional suggested fix for IDE integration.
+ */
+export interface CompilerDiagnostic extends BaseDiagnostic {
+  /**
+   * Source location of the error or warning.
+   * Absent for diagnostics that cannot be attributed to a specific position.
+   */
   readonly location?: SourceLocation;
+  /** Human-readable fix suggestion for IDE quick-fix integration. */
   readonly suggestedFix?: string;
 }
 
@@ -156,30 +173,9 @@ export interface BuildManifest {
 }
 
 // ---------------------------------------------------------------------------
-// Environment mode (foundational)
-// ---------------------------------------------------------------------------
-
-export const LOGICN_ENVIRONMENT_MODES = [
-  "development",
-  "test",
-  "staging",
-  "production",
-] as const;
-
-export type EnvironmentMode = (typeof LOGICN_ENVIRONMENT_MODES)[number];
-
-const ENVIRONMENT_MODE_SET: ReadonlySet<string> = new Set(
-  LOGICN_ENVIRONMENT_MODES,
-);
-
-/**
- * Type guard for EnvironmentMode.
- * Safe to call with any unknown value.
- */
-export function isEnvironmentMode(value: unknown): value is EnvironmentMode {
-  return typeof value === "string" && ENVIRONMENT_MODE_SET.has(value);
-}
-
+// Note: EnvironmentMode is the canonical type for deployment environments.
+// It is defined and owned by @logicn/core-config. When workspace links are
+// established, packages that need EnvironmentMode should import it from there.
 // ---------------------------------------------------------------------------
 // Compiler diagnostic helpers
 // ---------------------------------------------------------------------------

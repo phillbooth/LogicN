@@ -1,20 +1,40 @@
-export const ENVIRONMENT_MODES = [
+/**
+ * Canonical environment mode constants for the LogicN platform.
+ *
+ * EnvironmentMode is owned by this package (@logicn/core-config).
+ * All other packages that need EnvironmentMode should import from here.
+ * Once workspace links are established this will be a direct package import.
+ */
+export const LOGICN_ENVIRONMENT_MODES = [
   "development",
   "test",
   "staging",
   "production",
 ] as const;
 
-export type EnvironmentMode = (typeof ENVIRONMENT_MODES)[number];
+export type EnvironmentMode = (typeof LOGICN_ENVIRONMENT_MODES)[number];
 
-export type ConfigDiagnosticSeverity = "warning" | "error";
+/**
+ * Diagnostic severity levels for config diagnostics.
+ * Structurally compatible with DiagnosticSeverity in @logicn/core.
+ */
+export type ConfigDiagnosticSeverity = "info" | "warning" | "error";
 
+/**
+ * Diagnostic produced by config validation functions.
+ * Structurally compatible with BaseDiagnostic in @logicn/core.
+ * Additional fields: path (config key), suggestedFix (human-readable fix hint).
+ */
 export interface ConfigDiagnostic {
+  /** Structured diagnostic code in LLN-SERIES-NNN format. */
   readonly code: string;
+  /** Screaming-snake-case name. Example: "REQUIRED_ENVIRONMENT_VARIABLE_MISSING". */
   readonly name: string;
   readonly severity: ConfigDiagnosticSeverity;
   readonly message: string;
+  /** Dot-path to the config key that triggered the diagnostic. */
   readonly path?: string;
+  /** Human-readable fix suggestion. */
   readonly suggestedFix?: string;
 }
 
@@ -108,7 +128,7 @@ export interface HostPackageManifestBoundaryPolicy {
   readonly dependencyFields: readonly string[];
 }
 
-const ENVIRONMENT_MODE_SET: ReadonlySet<string> = new Set(ENVIRONMENT_MODES);
+const ENVIRONMENT_MODE_SET: ReadonlySet<string> = new Set(LOGICN_ENVIRONMENT_MODES);
 
 const ENVIRONMENT_VARIABLE_SCOPES: readonly EnvironmentVariableScope[] = [
   "build",
@@ -202,7 +222,7 @@ export function resolveEnvironmentMode(
           "error",
           `Unsupported environment mode "${value}".`,
           "environment.mode",
-          `Use one of: ${ENVIRONMENT_MODES.join(", ")}.`,
+          `Use one of: ${LOGICN_ENVIRONMENT_MODES.join(", ")}.`,
         ),
       ],
     };
