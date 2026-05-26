@@ -15,6 +15,9 @@ export type ReportKind =
   | "ai-guide"
   | "config"
   | "compiler"
+  | "intent"
+  | "safety"
+  | "flow-trace"
   | "custom";
 
 export interface ReportGenerator {
@@ -260,6 +263,117 @@ export interface CustomReport extends LoReportBase {
   readonly data: Readonly<Record<string, unknown>>;
 }
 
+// ---------------------------------------------------------------------------
+// Intent report — per-flow intent/effect consistency results
+// ---------------------------------------------------------------------------
+
+/** Status of a single flow's intent/effect check. */
+export type IntentFlowStatus = "ok" | "mismatch" | "missing_intent" | "unsafe_incomplete";
+
+export interface IntentFlowEntry {
+  readonly name: string;
+  readonly safetyLevel: string;
+  readonly intent?: string;
+  readonly declaredEffects: readonly string[];
+  readonly inferredEffects: readonly string[];
+  readonly status: IntentFlowStatus;
+  readonly mismatches: readonly string[];
+}
+
+export interface IntentReport extends LoReportBase {
+  readonly kind: "intent";
+  readonly flows: readonly IntentFlowEntry[];
+  readonly governedSurfaces: number;
+  readonly missingIntent: number;
+  readonly effectMismatches: number;
+}
+
+// ---------------------------------------------------------------------------
+// Safety report — safe/guarded/privileged/unsafe/experimental breakdown
+// ---------------------------------------------------------------------------
+
+export interface SafetyFlowEntry {
+  readonly name: string;
+  readonly safetyLevel: string;
+  readonly auditRequired: boolean;
+  readonly traceEnabled: boolean;
+  readonly capabilities: readonly string[];
+  readonly effects: readonly string[];
+}
+
+export interface SafetyReport extends LoReportBase {
+  readonly kind: "safety";
+  readonly flows: readonly SafetyFlowEntry[];
+  readonly safeCount: number;
+  readonly guardedCount: number;
+  readonly privilegedCount: number;
+  readonly unsafeCount: number;
+  readonly experimentalCount: number;
+  /** Number of experimental flows included in the build (must be 0 for production). */
+  readonly experimentalInProduction: number;
+}
+
+// ---------------------------------------------------------------------------
+// Flow trace report — governed evidence trail for auditing
+// ---------------------------------------------------------------------------
+
+export type FlowTraceStage =
+  | "request.received"
+  | "request.decoded"
+  | "validation.completed"
+  | "policy.checked"
+  | "capability.checked"
+  | "effect.executed"
+  | "handler.started"
+  | "handler.completed"
+  | "response.encoded"
+  | "request.denied";
+
+export type FlowTraceStatus = "ok" | "warning" | "denied" | "error";
+
+export type FlowTraceDecision = "allow" | "deny" | "unknown" | "conflict";
+
+/**
+ * A governed trace event. All secret and PII fields must be redacted before emission.
+ * Structurally compatible with FlowTraceEvent in @logicn/core.
+ */
+export interface FlowTraceEventRecord {
+  readonly traceId: string;
+  readonly spanId: string;
+  readonly parentSpanId?: string;
+  readonly timestamp: string;
+  readonly stage: FlowTraceStage;
+  readonly status: FlowTraceStatus;
+  readonly routeId?: string;
+  readonly effect?: string;
+  readonly capability?: string;
+  readonly decision?: FlowTraceDecision;
+  /** Non-secret metadata only. Redacted values must be "[REDACTED]". */
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export interface FlowTraceReport extends LoReportBase {
+  readonly kind: "flow-trace";
+  readonly events: readonly FlowTraceEventRecord[];
+  readonly redactedFields: number;
+}
+
+// ---------------------------------------------------------------------------
+// Runtime flow manifest — intent/safety/effect metadata for a built flow
+// ---------------------------------------------------------------------------
+
+export interface RuntimeFlowManifest {
+  /** Dot-path flow ID, e.g. "orders.create". */
+  readonly id: string;
+  readonly name: string;
+  readonly safetyLevel: string;
+  readonly intent?: string;
+  readonly effects: readonly string[];
+  readonly capabilities: readonly string[];
+  readonly auditRequired: boolean;
+  readonly traceEnabled: boolean;
+}
+
 export type LoReport =
   | BuildReport
   | SecurityReport
@@ -271,6 +385,9 @@ export type LoReport =
   | TaskReport
   | ProcessingReport
   | AiGuideReport
+  | IntentReport
+  | SafetyReport
+  | FlowTraceReport
   | CustomReport;
 
 export interface ReportArtifact {
@@ -629,6 +746,66 @@ export function createAiGuideReport(input: {
     ...(input.tokenEstimate === undefined
       ? {}
       : { tokenEstimate: input.tokenEstimate }),
+  };
+}
+
+export function createIntentReport(input: {
+  readonly metadata: ReportMetadata;
+  readonly diagnostics?: readonly ReportDiagnostic[];
+  readonly flows?: readonly IntentFlowEntry[];
+}): IntentReport {
+  const flows = input.flows ?? [];
+  const governedSurfaces = flows.length;
+  const missingIntent = flows.filter((f) => f.status === "missing_intent").length;
+  const effectMismatches = flows.filter((f) => f.status === "mismatch").length;
+
+  return {
+    kind: "intent",
+    metadata: normalizeMetadataKind(input.metadata, "intent"),
+    ...baseReportFields(input.diagnostics ?? []),
+    flows,
+    governedSurfaces,
+    missingIntent,
+    effectMismatches,
+  };
+}
+
+export function createSafetyReport(input: {
+  readonly metadata: ReportMetadata;
+  readonly diagnostics?: readonly ReportDiagnostic[];
+  readonly flows?: readonly SafetyFlowEntry[];
+  readonly experimentalInProduction?: number;
+}): SafetyReport {
+  const flows = input.flows ?? [];
+  const count = (level: string): number =>
+    flows.filter((f) => f.safetyLevel === level).length;
+
+  return {
+    kind: "safety",
+    metadata: normalizeMetadataKind(input.metadata, "safety"),
+    ...baseReportFields(input.diagnostics ?? []),
+    flows,
+    safeCount: count("safe"),
+    guardedCount: count("guarded"),
+    privilegedCount: count("privileged"),
+    unsafeCount: count("unsafe"),
+    experimentalCount: count("experimental"),
+    experimentalInProduction: input.experimentalInProduction ?? 0,
+  };
+}
+
+export function createFlowTraceReport(input: {
+  readonly metadata: ReportMetadata;
+  readonly diagnostics?: readonly ReportDiagnostic[];
+  readonly events?: readonly FlowTraceEventRecord[];
+  readonly redactedFields?: number;
+}): FlowTraceReport {
+  return {
+    kind: "flow-trace",
+    metadata: normalizeMetadataKind(input.metadata, "flow-trace"),
+    ...baseReportFields(input.diagnostics ?? []),
+    events: input.events ?? [],
+    redactedFields: input.redactedFields ?? 0,
   };
 }
 

@@ -92,44 +92,230 @@ export interface LexResult {
 // AST types
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Variable binding types
+// ---------------------------------------------------------------------------
+
+/**
+ * The three canonical binding keywords in LogicN.
+ *
+ * let      — immutable binding; value cannot be reassigned.
+ * mut      — mutable binding; reassignment is explicit and visible.
+ * readonly — immutable binding with a read-only view over the value;
+ *            safe to share; mutation through this reference is rejected.
+ *
+ * `var` and `const` are NOT valid LogicN keywords (LLN-SYNTAX-001/002).
+ */
+export type BindingKind = "let" | "mut" | "readonly";
+
+/** AST shape for a variable binding declaration. */
+export interface BindingDeclaration {
+  readonly kind: BindingKind;
+  readonly name: string;
+  readonly typeAnnotation?: string;
+  readonly location?: SourceLocation;
+}
+
+// ---------------------------------------------------------------------------
+// Method-chain (pipeline) types
+// ---------------------------------------------------------------------------
+
+/**
+ * A single method call within a method-chain pipeline.
+ *
+ * @example
+ *   input.validate()
+ *   orders.filter(o => o.active)
+ *   payment.redactSecrets().toReport()
+ */
+export interface MethodChainCall {
+  readonly methodName: string;
+  readonly typeArguments?: readonly string[];
+  readonly location?: SourceLocation;
+}
+
+/**
+ * A method-chain pipeline expression.
+ *
+ * @example
+ *   input
+ *     .validate()
+ *     .sanitize()
+ *     .save()
+ */
+export interface MethodChainExpression {
+  readonly kind: "methodChainExpr";
+  /** The initial receiver (variable or expression before the first dot). */
+  readonly receiver: string;
+  readonly calls: readonly MethodChainCall[];
+  readonly location?: SourceLocation;
+}
+
+// ---------------------------------------------------------------------------
+// Intent, safety level, and effect types
+// ---------------------------------------------------------------------------
+
+/**
+ * Explicit safety classification for flows and blocks.
+ *
+ * safe        — pure or low-risk; no side-effectful operations
+ * guarded     — governed code with declared effects, policies, and audit
+ * privileged  — high-authority code requiring declared capabilities
+ * unsafe      — bypasses normal safety guarantees; requires approval + fallback
+ * experimental — non-production / feature-flagged; blocked in production targets
+ */
+export type SafetyLevel =
+  | "safe"
+  | "guarded"
+  | "privileged"
+  | "unsafe"
+  | "experimental";
+
+/**
+ * A developer-declared statement of purpose for a flow or block.
+ * Captured at parse time and embedded in the AST and manifest.
+ */
+export interface IntentDeclaration {
+  /** Raw intent text as written by the developer, e.g. "create customer order". */
+  readonly text: string;
+  readonly location?: SourceLocation;
+}
+
+/**
+ * A single effect reference in an `effects [...]` declaration.
+ * Effects name the security-sensitive operations a flow may perform.
+ *
+ * Canonical effect groups: auth, permission, secret, network, database,
+ * payment, email, ai, native, filesystem, shell, audit.
+ */
+export interface EffectReference {
+  /** Dot-path effect name, e.g. "database.write", "secret.read". */
+  readonly name: string;
+  readonly location?: SourceLocation;
+}
+
+/**
+ * Metadata extracted from a flow or block header at parse time.
+ * Used by the intent checker, manifest generator, and runtime planner.
+ */
+export interface FlowDeclarationMetadata {
+  readonly name: string;
+  readonly safetyLevel: SafetyLevel;
+  readonly intent?: IntentDeclaration;
+  readonly declaredEffects: readonly EffectReference[];
+  readonly requiredCapabilities: readonly string[];
+  readonly auditRequired: boolean;
+  readonly traceEnabled: boolean;
+  /** Only present on unsafe blocks. */
+  readonly unsafeReason?: string;
+  /** Only present on unsafe blocks. Name of the safe fallback flow. */
+  readonly fallbackFlow?: string;
+  readonly location?: SourceLocation;
+}
+
+// ---------------------------------------------------------------------------
+// Flow trace types (governed evidence — never raw debug output)
+// ---------------------------------------------------------------------------
+
+export type FlowTraceStage =
+  | "request.received"
+  | "request.decoded"
+  | "validation.completed"
+  | "policy.checked"
+  | "capability.checked"
+  | "effect.executed"
+  | "handler.started"
+  | "handler.completed"
+  | "response.encoded"
+  | "request.denied";
+
+export type FlowTraceStatus = "ok" | "warning" | "denied" | "error";
+
+export type FlowTraceDecision = "allow" | "deny" | "unknown" | "conflict";
+
+/**
+ * A single governed trace event emitted during flow execution.
+ * All secret and PII fields must be redacted before emission.
+ * This is auditable evidence, not a debugging dump.
+ */
+export interface FlowTraceEvent {
+  readonly traceId: string;
+  readonly spanId: string;
+  readonly parentSpanId?: string;
+  readonly timestamp: string;
+  readonly stage: FlowTraceStage;
+  readonly status: FlowTraceStatus;
+  readonly routeId?: string;
+  readonly effect?: string;
+  readonly capability?: string;
+  readonly decision?: FlowTraceDecision;
+  /**
+   * Non-secret metadata only. Must not contain secrets, PII, or raw payloads.
+   * Redacted values must be replaced with the string "[REDACTED]".
+   */
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
 export type AstNodeKind =
   | "program"
   | "importDecl"
   | "useDecl"
   | "typeDecl"
   | "enumDecl"
+  // ── Flow declarations (base + safety-level variants) ──
   | "flowDecl"
   | "secureFlowDecl"
   | "pureFlowDecl"
+  | "guardedFlowDecl"
+  | "privilegedFlowDecl"
+  | "unsafeFlowDecl"
+  | "experimentalFlowDecl"
+  // ── Unsafe native block ──
+  | "unsafeBlock"
+  // ── Flow header sub-declarations ──
+  | "intentDecl"
+  | "requiresCapabilityDecl"
+  | "fallbackDecl"
+  // ── API and route declarations ──
   | "apiDecl"
   | "routeDecl"
   | "handlerDecl"
   | "effectsDecl"
   | "webhookDecl"
+  // ── Compute and target ──
   | "computeDecl"
   | "targetDecl"
+  // ── Variable declarations (let / mut / readonly) ──
   | "letDecl"
   | "mutDecl"
+  | "readonlyDecl"
+  // ── Leaf nodes (literals and identifiers) ──
   | "identifier"
   | "stringLiteral"
   | "charLiteral"
   | "byteLiteral"
   | "numberLiteral"
   | "boolLiteral"
+  // ── Expressions ──
   | "binaryExpr"
   | "callExpr"
   | "memberExpr"
+  | "methodChainExpr"
   | "matchExpr"
   | "matchArm"
+  // ── Statements ──
   | "ifStmt"
   | "block"
   | "returnStmt"
+  // ── Concurrency ──
   | "parallelBlock"
   | "workerDecl"
   | "channelDecl"
   | "checkpointStmt"
   | "rollbackStmt"
+  // ── Tracing ──
   | "traceFlowDecl"
+  // ── Security and secrets ──
   | "secretDecl"
   | "vaultGlobalDecl"
   | "securityBlock"

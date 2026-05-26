@@ -1,3 +1,14 @@
+// =============================================================================
+// logicn-core-compiler — compiler pipeline contracts
+//
+// Package: @logicn/core-compiler
+// Role:    Parsing, checking, diagnostics, and IR contracts for the
+//          LogicN compiler pipeline.
+//
+// Intent/effects checking (LLN-INTENT-*) is specified here.
+// Parser implementation lives in compiler/logicn.js (Stage 1 CJS runtime).
+// =============================================================================
+
 export interface CompilerInput {
   readonly projectRoot: string;
   readonly entryFiles: readonly string[];
@@ -32,6 +43,246 @@ export interface CoreSyntaxSafetyOptions {
   readonly scanUnsafeDynamicCode?: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Intent and safety level types
+// ---------------------------------------------------------------------------
+
+/**
+ * All recognised flow safety levels — mirrors SafetyLevel in @logicn/core.
+ * Kept local until workspace links are in place.
+ */
+export type CompilerSafetyLevel =
+  | "safe"
+  | "guarded"
+  | "privileged"
+  | "unsafe"
+  | "experimental";
+
+/**
+ * A kind mismatch found during intent/effect consistency checking.
+ */
+export type IntentMismatchKind =
+  | "undeclared_effect"
+  | "destructive_effect_in_safe_flow"
+  | "missing_intent"
+  | "unsafe_without_fallback"
+  | "unsafe_without_reason"
+  | "privileged_without_capability"
+  | "experimental_in_production";
+
+export interface IntentMismatch {
+  readonly kind: IntentMismatchKind;
+  readonly message: string;
+  readonly path?: string;
+}
+
+/**
+ * Result of running the intent/effect consistency checker on a single flow.
+ * Structurally compatible with CompilerResult.
+ */
+export interface IntentCheckResult {
+  readonly flowName: string;
+  readonly safetyLevel: CompilerSafetyLevel;
+  readonly intent?: string;
+  readonly declaredEffects: readonly string[];
+  /** Effects the checker could infer from the flow body. */
+  readonly inferredEffects: readonly string[];
+  readonly mismatches: readonly IntentMismatch[];
+  readonly diagnostics: readonly CompilerDiagnostic[];
+}
+
+// ---------------------------------------------------------------------------
+// Intent diagnostic codes — LLN-INTENT-001..005
+//
+// Note: The source document uses "LN-INTENT-*"; the canonical repo format
+// is "LLN-INTENT-*" (matching LLN-CONFIG-*, LLN-LOGIC-*, etc.).
+// ---------------------------------------------------------------------------
+
+/** Declared intent conflicts with inferred behavior (e.g. delete in a "send receipt" flow). */
+export const LLN_INTENT_001 = {
+  code: "LLN-INTENT-001",
+  name: "INTENT_BEHAVIOR_MISMATCH",
+  severity: "error",
+  message: "Declared intent conflicts with inferred behavior.",
+} as const;
+
+/** API route, webhook, payment flow, or other governed surface is missing a required intent declaration. */
+export const LLN_INTENT_002 = {
+  code: "LLN-INTENT-002",
+  name: "MISSING_REQUIRED_INTENT",
+  severity: "error",
+  message: "Governed surface requires an intent declaration.",
+} as const;
+
+/** Unsafe block is missing a reason, approval, or fallback declaration. */
+export const LLN_INTENT_003 = {
+  code: "LLN-INTENT-003",
+  name: "UNSAFE_MISSING_REASON_OR_FALLBACK",
+  severity: "error",
+  message: "Unsafe block must declare reason, approval, and a safe fallback.",
+} as const;
+
+/** Privileged flow does not declare the required capability. */
+export const LLN_INTENT_004 = {
+  code: "LLN-INTENT-004",
+  name: "PRIVILEGED_MISSING_CAPABILITY",
+  severity: "error",
+  message: "Privileged flow must declare its required capability.",
+} as const;
+
+/** Experimental flow or block is included in a production build target. */
+export const LLN_INTENT_005 = {
+  code: "LLN-INTENT-005",
+  name: "EXPERIMENTAL_IN_PRODUCTION",
+  severity: "error",
+  message: "Experimental code must not be included in a production build target without explicit approval.",
+} as const;
+
+export const LLN_INTENT_DIAGNOSTICS = [
+  LLN_INTENT_001,
+  LLN_INTENT_002,
+  LLN_INTENT_003,
+  LLN_INTENT_004,
+  LLN_INTENT_005,
+] as const;
+
+// ---------------------------------------------------------------------------
+// Syntax diagnostics — LLN-SYNTAX-001..002
+// ---------------------------------------------------------------------------
+
+/** `var` is not a valid LogicN keyword. Use `let` or `mut`. */
+export const LLN_SYNTAX_001 = {
+  code: "LLN-SYNTAX-001",
+  name: "VAR_NOT_SUPPORTED",
+  severity: "error",
+  message: "LogicN does not support var. Use let for immutable bindings or mut for mutable bindings.",
+} as const;
+
+/** `const` is not a valid LogicN keyword. Use `let` or `readonly`. */
+export const LLN_SYNTAX_002 = {
+  code: "LLN-SYNTAX-002",
+  name: "CONST_NOT_SUPPORTED",
+  severity: "error",
+  message: "LogicN does not support const. Use let for immutable bindings or readonly for read-only values.",
+} as const;
+
+export const LLN_SYNTAX_DIAGNOSTICS = [LLN_SYNTAX_001, LLN_SYNTAX_002] as const;
+
+// ---------------------------------------------------------------------------
+// Binding diagnostics — LLN-BINDING-001..004
+// ---------------------------------------------------------------------------
+
+/** Attempt to reassign an immutable `let` binding. */
+export const LLN_BINDING_001 = {
+  code: "LLN-BINDING-001",
+  name: "IMMUTABLE_LET_REASSIGNMENT",
+  severity: "error",
+  message: "Cannot reassign immutable let binding. Use mut only if reassignment is required.",
+} as const;
+
+/** Attempt to reassign a `readonly` binding. */
+export const LLN_BINDING_002 = {
+  code: "LLN-BINDING-002",
+  name: "READONLY_REASSIGNMENT",
+  severity: "error",
+  message: "Cannot reassign readonly binding.",
+} as const;
+
+/** Attempt to mutate a value through a `readonly` binding. */
+export const LLN_BINDING_003 = {
+  code: "LLN-BINDING-003",
+  name: "READONLY_PROPERTY_MUTATION",
+  severity: "error",
+  message: "Cannot mutate a value through a readonly binding.",
+} as const;
+
+/** `mut` binding used in a pure or safe context where mutation is forbidden. */
+export const LLN_BINDING_004 = {
+  code: "LLN-BINDING-004",
+  name: "MUT_IN_PURE_CONTEXT",
+  severity: "error",
+  message: "mut binding used where mutation is forbidden. Use let or a functional accumulator (fold, count, filter).",
+} as const;
+
+export const LLN_BINDING_DIAGNOSTICS = [
+  LLN_BINDING_001,
+  LLN_BINDING_002,
+  LLN_BINDING_003,
+  LLN_BINDING_004,
+] as const;
+
+// ---------------------------------------------------------------------------
+// Pipeline diagnostics — LLN-PIPELINE-001..005
+// ---------------------------------------------------------------------------
+
+/** A method called in a pipeline chain does not exist on the current type. */
+export const LLN_PIPELINE_001 = {
+  code: "LLN-PIPELINE-001",
+  name: "UNKNOWN_PIPELINE_METHOD",
+  severity: "error",
+  message: "Unknown method in pipeline chain.",
+} as const;
+
+/** The return type of a pipeline stage does not match the input of the next. */
+export const LLN_PIPELINE_002 = {
+  code: "LLN-PIPELINE-002",
+  name: "PIPELINE_TYPE_MISMATCH",
+  severity: "error",
+  message: "Pipeline stage output type does not match the next stage's input type.",
+} as const;
+
+/** A pipeline contains a fallible stage whose Result is not handled. */
+export const LLN_PIPELINE_003 = {
+  code: "LLN-PIPELINE-003",
+  name: "UNHANDLED_FALLIBLE_PIPELINE",
+  severity: "error",
+  message: "Fallible pipeline stage produces a Result that is not handled or propagated.",
+} as const;
+
+/** A pipeline stage uses an effect not declared on the enclosing flow. */
+export const LLN_PIPELINE_004 = {
+  code: "LLN-PIPELINE-004",
+  name: "PIPELINE_UNDECLARED_EFFECT",
+  severity: "error",
+  message: "Pipeline stage requires an effect that is not declared on the enclosing flow.",
+} as const;
+
+/** A pipeline attempts to mutate a value through a readonly receiver. */
+export const LLN_PIPELINE_005 = {
+  code: "LLN-PIPELINE-005",
+  name: "PIPELINE_READONLY_MUTATION",
+  severity: "error",
+  message: "Pipeline stage attempts to mutate a readonly receiver.",
+} as const;
+
+export const LLN_PIPELINE_DIAGNOSTICS = [
+  LLN_PIPELINE_001,
+  LLN_PIPELINE_002,
+  LLN_PIPELINE_003,
+  LLN_PIPELINE_004,
+  LLN_PIPELINE_005,
+] as const;
+
+// ---------------------------------------------------------------------------
+// Governed surface types — surfaces that require intent declarations
+// ---------------------------------------------------------------------------
+
+export type GovernedSurfaceKind =
+  | "api.route"
+  | "webhook"
+  | "payment.flow"
+  | "secret.access"
+  | "network.call"
+  | "ai.invoke"
+  | "native.interop"
+  | "deployment.action"
+  | "unsafe.block"
+  | "privileged.flow";
+
+// ---------------------------------------------------------------------------
+// Private internal types
+// ---------------------------------------------------------------------------
+
 type KnownCoreType = "Bool" | "Tri" | "Decision";
 
 interface KnownSymbol {
@@ -41,7 +292,15 @@ interface KnownSymbol {
 }
 
 interface FlowScope {
-  readonly kind: "flow" | "secure flow" | "pure flow";
+  readonly kind:
+    | "flow"
+    | "secure flow"
+    | "pure flow"
+    | "guarded flow"
+    | "privileged flow"
+    | "unsafe flow"
+    | "experimental flow"
+    | "unsafe block";
   readonly startLine: number;
   readonly braceDepth: number;
 }
@@ -91,6 +350,7 @@ export function validateCoreSyntaxSafety(
       ...detectTriBranchCondition(source.file, line, lineNumber, symbols),
       ...detectUnsafeCoreAssignment(source.file, line, lineNumber, symbols),
       ...detectRiskyTriBoolPolicy(source.file, line, lineNumber, flowScope),
+      ...detectUnsupportedBindingKeyword(source.file, line, lineNumber),
     );
 
     if (options.scanSecrets ?? true) {
@@ -188,20 +448,71 @@ function parseFlowStart(
   lineNumber: number,
   braceDepth: number,
 ): FlowScope | undefined {
-  const flowMatch = line.match(/^\s*(secure\s+|pure\s+)?flow\b/);
+  // Match: [safety-level] flow <name> or unsafe block <name>
+  const flowMatch = line.match(
+    /^\s*(secure\s+|pure\s+|guarded\s+|privileged\s+|unsafe\s+|experimental\s+)?(?:(flow)\b|(block)\b)/,
+  );
 
   if (flowMatch === null) {
     return undefined;
   }
 
-  const prefix = flowMatch[1]?.trim();
-  const kind =
-    prefix === "secure" ? "secure flow" : prefix === "pure" ? "pure flow" : "flow";
+  // "unsafe block" is distinct from "unsafe flow"
+  const isBlock = flowMatch[3] === "block";
+  const prefix = flowMatch[1]?.trim() ?? "";
+
+  let kind: FlowScope["kind"];
+
+  if (isBlock && prefix === "unsafe") {
+    kind = "unsafe block";
+  } else {
+    switch (prefix) {
+      case "secure":       kind = "secure flow";       break;
+      case "pure":         kind = "pure flow";         break;
+      case "guarded":      kind = "guarded flow";      break;
+      case "privileged":   kind = "privileged flow";   break;
+      case "unsafe":       kind = "unsafe flow";       break;
+      case "experimental": kind = "experimental flow"; break;
+      default:             kind = "flow";              break;
+    }
+  }
 
   return {
     kind,
     startLine: lineNumber,
     braceDepth: braceDepth + Math.max(countBraceDelta(line), 1),
+  };
+}
+
+/**
+ * Validates that declared intent and effects are consistent with inferred behavior.
+ *
+ * Stage 1 status: STUB — returns an empty result.
+ * Full implementation requires the compiler AST to carry FlowDeclarationMetadata.
+ * Wire up in Stage 3 once the parser emits intent/effect nodes.
+ *
+ * TODO LLN-INTENT-001: check inferred effects against declared effects.
+ * TODO LLN-INTENT-002: require intent on governed surfaces.
+ * TODO LLN-INTENT-003: require unsafe blocks to declare reason + fallback.
+ * TODO LLN-INTENT-004: require privileged flows to declare capability.
+ * TODO LLN-INTENT-005: block experimental flows in production targets.
+ */
+export function validateIntentEffects(
+  _flowName: string,
+  _safetyLevel: CompilerSafetyLevel,
+  _intent: string | undefined,
+  _declaredEffects: readonly string[],
+  _inferredEffects: readonly string[],
+  _isProductionTarget: boolean,
+): IntentCheckResult {
+  return {
+    flowName: _flowName,
+    safetyLevel: _safetyLevel,
+    ...(_intent === undefined ? {} : { intent: _intent }),
+    declaredEffects: [..._declaredEffects],
+    inferredEffects: [..._inferredEffects],
+    mismatches: [],
+    diagnostics: [],
   };
 }
 
@@ -400,6 +711,150 @@ function validateTriMatchExhaustive(
       matchBlock.symbol.location.column,
     ),
   ];
+}
+
+function detectUnsupportedBindingKeyword(
+  file: string,
+  line: string,
+  lineNumber: number,
+): readonly CompilerDiagnostic[] {
+  const trimmed = line.trim();
+
+  // Ignore comment lines and doc comments
+  if (trimmed.startsWith("//") || trimmed.startsWith("///")) {
+    return [];
+  }
+
+  // Detect `var <identifier>` or `var <identifier>:` as a statement
+  if (/^\s*\bvar\s+[A-Za-z_]/.test(line)) {
+    return [
+      createCompilerDiagnostic(
+        LLN_SYNTAX_001.code,
+        LLN_SYNTAX_001.severity,
+        LLN_SYNTAX_001.message,
+        file,
+        lineNumber,
+        line.search(/\bvar\b/) + 1,
+      ),
+    ];
+  }
+
+  // Detect `const <identifier>` or `const <identifier>:` as a statement
+  // Exclude TypeScript-style `export const` — this scanner runs on .lln files
+  if (/^\s*\bconst\s+[A-Za-z_]/.test(line)) {
+    return [
+      createCompilerDiagnostic(
+        LLN_SYNTAX_002.code,
+        LLN_SYNTAX_002.severity,
+        LLN_SYNTAX_002.message,
+        file,
+        lineNumber,
+        line.search(/\bconst\b/) + 1,
+      ),
+    ];
+  }
+
+  return [];
+}
+
+// ---------------------------------------------------------------------------
+// Binding and pipeline checker stubs
+// ---------------------------------------------------------------------------
+
+/**
+ * Checks whether a reassignment targets an immutable binding.
+ *
+ * Stage 1 status: STUB — returns diagnostics based on binding kind alone.
+ * Full implementation requires AST-level binding scope tracking.
+ *
+ * TODO LLN-BINDING-001: reject reassignment of let bindings.
+ * TODO LLN-BINDING-002: reject reassignment of readonly bindings.
+ */
+export function checkBindingReassignment(input: {
+  readonly bindingKind: "let" | "mut" | "readonly";
+  readonly bindingName: string;
+  readonly location: SourceLocation;
+}): readonly CompilerDiagnostic[] {
+  if (input.bindingKind === "let") {
+    return [
+      createCompilerDiagnostic(
+        LLN_BINDING_001.code,
+        LLN_BINDING_001.severity,
+        `Cannot reassign immutable let binding ${input.bindingName}. Use mut only if reassignment is required.`,
+        input.location.file,
+        input.location.line,
+        input.location.column,
+      ),
+    ];
+  }
+
+  if (input.bindingKind === "readonly") {
+    return [
+      createCompilerDiagnostic(
+        LLN_BINDING_002.code,
+        LLN_BINDING_002.severity,
+        `Cannot reassign readonly binding ${input.bindingName}.`,
+        input.location.file,
+        input.location.line,
+        input.location.column,
+      ),
+    ];
+  }
+
+  return [];
+}
+
+/**
+ * Checks whether a property mutation occurs through a readonly binding.
+ *
+ * Stage 1 status: STUB — returns diagnostic when binding is readonly.
+ * Full implementation requires property access tracking in the AST.
+ *
+ * TODO LLN-BINDING-003: reject property mutation through readonly binding.
+ */
+export function checkReadonlyMutation(input: {
+  readonly bindingKind: "let" | "mut" | "readonly";
+  readonly bindingName: string;
+  readonly propertyName: string;
+  readonly location: SourceLocation;
+}): readonly CompilerDiagnostic[] {
+  if (input.bindingKind !== "readonly") {
+    return [];
+  }
+
+  return [
+    createCompilerDiagnostic(
+      LLN_BINDING_003.code,
+      LLN_BINDING_003.severity,
+      `Cannot mutate property ${input.propertyName} through readonly binding ${input.bindingName}.`,
+      input.location.file,
+      input.location.line,
+      input.location.column,
+    ),
+  ];
+}
+
+/**
+ * Validates a method-chain pipeline for type safety, effects, and readonly rules.
+ *
+ * Stage 1 status: STUB — returns an empty result.
+ * Full implementation requires:
+ *   - Type scope (to resolve method return types)
+ *   - Effect context (to compare declared vs used effects)
+ *   - Readonly scope (to detect readonly receiver mutation)
+ *
+ * TODO LLN-PIPELINE-001: reject unknown pipeline methods.
+ * TODO LLN-PIPELINE-002: reject type mismatches between stages.
+ * TODO LLN-PIPELINE-003: require Result handling in fallible pipelines.
+ * TODO LLN-PIPELINE-004: require declared effects for effectful stages.
+ * TODO LLN-PIPELINE-005: reject readonly receiver mutation.
+ */
+export function checkMethodChain(_input: {
+  readonly receiver: string;
+  readonly calls: readonly { readonly methodName: string }[];
+  readonly location: SourceLocation;
+}): readonly CompilerDiagnostic[] {
+  return [];
 }
 
 function createCompilerDiagnostic(

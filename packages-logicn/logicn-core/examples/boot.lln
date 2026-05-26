@@ -42,10 +42,10 @@ permissions {
 
 globals {
   /// @purpose Public application name used in logs and health checks.
-  const APP_NAME: String = "OrderRiskDemo"
+  readonly APP_NAME: String = "OrderRiskDemo"
 
   /// @purpose Public application version used in reports.
-  const APP_VERSION: String = "0.1.0"
+  readonly APP_VERSION: String = "0.1.0"
 
   /// @purpose Port used by the development HTTP server.
   /// @source runtime environment

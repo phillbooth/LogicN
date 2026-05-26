@@ -44,11 +44,12 @@ Visibility enforcement         — enforce public/private boundaries
 ### Compile-Time Example
 
 ```logicn
-const SIZE = 1024
+readonly SIZE = 1024
 ```
 
 The compiler fully resolves this value before runtime. No runtime context
-is required.
+is required. Note: LogicN uses `readonly` for immutable/compile-time values.
+`const` is not a supported keyword — see `LLN-SYNTAX-002`.
 
 ### Compile-Time Restrictions
 
@@ -122,13 +123,13 @@ full capability model.
 ## Compile-Time Evaluation vs Runtime Execution
 
 ```logicn
-const area = 10 * 20      // compile-time evaluation
+readonly area = 10 * 20   // compile-time evaluation
 let width = input()       // runtime value
 ```
 
 | Expression | Evaluates At | Properties |
 | ---------- | ------------ | ---------- |
-| `const area = 10 * 20` | Compile time | Deterministic, stable, no side effects |
+| `readonly area = 10 * 20` | Compile time | Deterministic, stable, no side effects |
 | `let width = input()` | Runtime | May vary, depends on external state |
 | `fs.read("config.json")` | Runtime | Performs effect, may fail |
 | `type User { name: String }` | Compile time | Fully resolved before execution |

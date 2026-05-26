@@ -45,6 +45,7 @@ Core language constructs, keywords, type system, declaration blocks.
 | Context-specific safe types (safe Email, safe Url, etc.) | ✅ | `safe-unsafe-trust-model.md` |
 | Array<T> and string operations | ✅ | `arrays-and-string-operations.md` |
 | Standard types: String, Char, Byte, Bytes, SecureString | ✅ | `logicn-core-standard-types-string-char-byte.md` — Unicode boundaries, encoding safety, `LLN-STRING-001–004`, `LLN-CHAR-001–004`, `LLN-BYTE-001–005`; `charLiteral` and `byteLiteral` added to `AstNodeKind` in `logicn-core/src/index.ts` (2026-05-26) |
+| Binding keywords: let / mut / readonly; rejection of var / const; method-chain pipelines | ✅ | `logicn-core-syntax-bindings-pipeline.md` — `BindingKind`, `BindingDeclaration`, `MethodChainExpression`/`Call` in `@logicn/core`; `LLN-SYNTAX-001..002`, `LLN-BINDING-001..004`, `LLN-PIPELINE-001..005` constants; `var`/`const` detection live in `validateCoreSyntaxSafety()`; `checkBindingReassignment()`, `checkReadonlyMutation()`, `checkMethodChain()` stubs; `readonlyDecl`, `methodChainExpr` added to `AstNodeKind`; `boot.lln` `const` → `readonly` fixed; 12/12 tests passing (2026-05-26) |
 | List<T> operations | ✅ | `list-operations.md` |
 | Query type (sql, graphql, mongo, search blocks) | ✅ | `query-type-and-database-access.md` |
 | Result<T, E> and typed errors | ✅ | `typed-error-model.md`, `no-exceptions-result-model.md` |
@@ -277,6 +278,7 @@ Execution, scheduling, trust verification, identity, memory, hardware targets.
 | .env trust model (source vs trust level; security levels; compiler warnings) | ✅ | `logicn-core-config-dotenv-trust-model.md` |
 | Config Vault (typed non-secret shared config; LLN-VAULT-001–005; vault global block) | ✅ | `logicn-core-config-vault.md` |
 | Flow Trace API (FlowTraceEvent; governed trace; JSONL; LLN-TRACE-001–005; redaction) | ✅ | `logicn-core-flow-trace.md` |
+| Intent, safety levels, effects, flow tracing, runtime manifests | ✅ | `logicn-core-intent-safety-effects.md` — `SafetyLevel`, `IntentDeclaration`, `EffectReference`, `FlowDeclarationMetadata`, `FlowTraceEvent` in `@logicn/core`; `IntentCheckResult`, `IntentMismatch`, `LLN-INTENT-001–005`, `validateIntentEffects()` stub in `@logicn/core-compiler`; `IntentReport`, `SafetyReport`, `FlowTraceReport`, `RuntimeFlowManifest` in `@logicn/core-reports`; 8 new `AstNodeKind` values; 3 new tests (2026-05-26) |
 | Network governance model | ✅ | `logicn-core-network-governance.md` |
 | Effect checker — v0.2 formal spec | ✅ | `logicn-core-effect-checker-v02.md` |
 | Manifest generation — v0.2 formal spec | ✅ | `logicn-core-manifest-generation-v02.md` |

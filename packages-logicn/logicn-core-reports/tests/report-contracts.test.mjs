@@ -6,9 +6,12 @@ import {
   createAsyncReport,
   createBuildReport,
   createBuildCacheReport,
+  createFlowTraceReport,
+  createIntentReport,
   createProcessingReport,
   createReportDiagnostic,
   createReportMetadata,
+  createSafetyReport,
   createSecurityReport,
   createStorageReport,
   createTargetReport,
@@ -257,5 +260,110 @@ describe("logicn-core-reports contracts", () => {
         "LogicN_REPORT_DIAGNOSTIC_CODE_REQUIRED",
       ],
     );
+  });
+
+  it("creates intent reports with flow-level consistency results", () => {
+    const intentMeta = createReportMetadata({
+      ...metadata,
+      kind: "intent",
+      name: "LogicN intent report",
+    });
+
+    const report = createIntentReport({
+      metadata: intentMeta,
+      flows: [
+        {
+          name: "createOrder",
+          safetyLevel: "guarded",
+          intent: "create customer order",
+          declaredEffects: ["database.write", "network.call"],
+          inferredEffects: ["database.write", "network.call"],
+          status: "ok",
+          mismatches: [],
+        },
+        {
+          name: "sendReceipt",
+          safetyLevel: "safe",
+          intent: "send customer receipt",
+          declaredEffects: ["email.send"],
+          inferredEffects: ["database.delete", "email.send"],
+          status: "mismatch",
+          mismatches: ["Undeclared effect: database.delete"],
+        },
+        {
+          name: "processWebhook",
+          safetyLevel: "guarded",
+          intent: undefined,
+          declaredEffects: [],
+          inferredEffects: ["network.call"],
+          status: "missing_intent",
+          mismatches: ["Governed surface missing required intent."],
+        },
+      ],
+    });
+
+    assert.equal(report.kind, "intent");
+    assert.equal(report.governedSurfaces, 3);
+    assert.equal(report.missingIntent, 1);
+    assert.equal(report.effectMismatches, 1);
+    assert.equal(report.flows.length, 3);
+    assert.equal(report.summary.status, "ok"); // no diagnostics pushed
+  });
+
+  it("creates safety reports with safety-level breakdowns", () => {
+    const safetyMeta = createReportMetadata({
+      ...metadata,
+      kind: "safety",
+      name: "LogicN safety report",
+    });
+
+    const report = createSafetyReport({
+      metadata: safetyMeta,
+      flows: [
+        { name: "add", safetyLevel: "safe", auditRequired: false, traceEnabled: false, capabilities: [], effects: [] },
+        { name: "createOrder", safetyLevel: "guarded", auditRequired: true, traceEnabled: true, capabilities: ["OrderWriter"], effects: ["database.write"] },
+        { name: "rotateKey", safetyLevel: "privileged", auditRequired: true, traceEnabled: true, capabilities: ["KeyRotationAdmin"], effects: ["secret.write"] },
+        { name: "nativeResize", safetyLevel: "unsafe", auditRequired: true, traceEnabled: false, capabilities: [], effects: ["native.call"] },
+        { name: "newFraudModel", safetyLevel: "experimental", auditRequired: true, traceEnabled: true, capabilities: [], effects: ["ai.invoke"] },
+      ],
+      experimentalInProduction: 0,
+    });
+
+    assert.equal(report.kind, "safety");
+    assert.equal(report.safeCount, 1);
+    assert.equal(report.guardedCount, 1);
+    assert.equal(report.privilegedCount, 1);
+    assert.equal(report.unsafeCount, 1);
+    assert.equal(report.experimentalCount, 1);
+    assert.equal(report.experimentalInProduction, 0);
+  });
+
+  it("creates flow trace reports with governed evidence events", () => {
+    const traceMeta = createReportMetadata({
+      ...metadata,
+      kind: "flow-trace",
+      name: "LogicN flow trace report",
+    });
+
+    const now = new Date().toISOString();
+
+    const report = createFlowTraceReport({
+      metadata: traceMeta,
+      events: [
+        { traceId: "t1", spanId: "s1", timestamp: now, stage: "request.received", status: "ok", routeId: "POST /orders" },
+        { traceId: "t1", spanId: "s2", timestamp: now, stage: "request.decoded", status: "ok" },
+        { traceId: "t1", spanId: "s3", timestamp: now, stage: "capability.checked", capability: "OrderWriter", decision: "allow", status: "ok" },
+        { traceId: "t1", spanId: "s4", timestamp: now, stage: "effect.executed", effect: "database.write", status: "ok" },
+        { traceId: "t1", spanId: "s5", timestamp: now, stage: "response.encoded", status: "ok", metadata: { statusCode: 201 } },
+      ],
+      redactedFields: 0,
+    });
+
+    assert.equal(report.kind, "flow-trace");
+    assert.equal(report.events.length, 5);
+    assert.equal(report.events[0].stage, "request.received");
+    assert.equal(report.events[2].decision, "allow");
+    assert.equal(report.redactedFields, 0);
+    assert.equal(report.summary.status, "ok");
   });
 });
