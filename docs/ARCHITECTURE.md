@@ -40,6 +40,13 @@ requirements.
 The concept lives in
 `docs/Knowledge-Bases/security-invariants-and-policy-proof.md`.
 
+## Package Dependency and Data Flow Diagrams
+
+Mermaid diagrams for the `logicn-core*` package dependency graph, the runtime
+data flow (HTTP request → response), the compile-time 14-pass pipeline, and the
+diagnostic code namespace table live in
+`docs/Knowledge-Bases/logicn-core-package-architecture.md`.
+
 ## Documentation Coverage And Conflict Register
 
 `docs/COVERAGE.md` is the current index for language, runtime and package

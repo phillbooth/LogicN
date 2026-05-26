@@ -364,7 +364,13 @@ export type AstNodeKind =
   | "securityBlock"
   | "permissionsBlock"
   | "jsonPolicyBlock"
-  | "memoryBlock";
+  | "memoryBlock"
+  // ── Runtime-owned resources ──
+  | "resourceDecl"
+  | "resourceScopeDecl"
+  | "resourceInitBlock"
+  | "resourceShutdownBlock"
+  | "usesDecl";
 
 export interface AstNode {
   readonly kind: AstNodeKind;

@@ -350,9 +350,9 @@ These sit alongside `stringLiteral`, `numberLiteral`, and `boolLiteral` in the l
 [ ] std.text module: String, Char, Encoding, DecodeError
 [ ] std.bytes module: Byte, Bytes, ReadOnlyView<T>
 [ ] std.security module: SecureString boundary rule
-[ ] LLN-STRING-001..004 in compiler diagnostics
-[ ] LLN-CHAR-001..004 in compiler diagnostics
-[ ] LLN-BYTE-001..005 in compiler diagnostics
+[x] LLN-STRING-001..004 in compiler diagnostics (@logicn/core-compiler src/index.ts)
+[x] LLN-CHAR-001..004 in compiler diagnostics (@logicn/core-compiler src/index.ts)
+[x] LLN-BYTE-001..005 in compiler diagnostics (@logicn/core-compiler src/index.ts)
 [x] charLiteral added to AstNodeKind (@logicn/core)
 [x] byteLiteral added to AstNodeKind (@logicn/core)
 ```

@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import {
   validateCoreSyntaxSafety,
+  validateIntentEffects,
   checkBindingReassignment,
   checkReadonlyMutation,
   checkMethodChain,
@@ -14,11 +15,26 @@ import {
   LLN_BINDING_003,
   LLN_BLOCK_001,
   LLN_BLOCK_002,
+  LLN_STRING_001,
+  LLN_STRING_002,
+  LLN_CHAR_001,
+  LLN_CHAR_003,
+  LLN_BYTE_001,
+  LLN_BYTE_004,
   LLN_INTENT_DIAGNOSTICS,
   LLN_BINDING_DIAGNOSTICS,
   LLN_PIPELINE_DIAGNOSTICS,
   LLN_SYNTAX_DIAGNOSTICS,
   LLN_BLOCK_DIAGNOSTICS,
+  LLN_STRING_DIAGNOSTICS,
+  LLN_CHAR_DIAGNOSTICS,
+  LLN_BYTE_DIAGNOSTICS,
+  LLN_MEMORY_001,
+  LLN_MEMORY_003,
+  LLN_MEMORY_005,
+  LLN_MEMORY_006,
+  LLN_MEMORY_008,
+  LLN_MEMORY_DIAGNOSTICS,
 } from "../dist/index.js";
 
 describe("logicn-core-compiler syntax safety contracts", () => {
@@ -244,12 +260,18 @@ flow doWork() {
     assert.equal(LLN_PIPELINE_DIAGNOSTICS.length, 5);
     assert.equal(LLN_INTENT_DIAGNOSTICS.length, 5);
     assert.equal(LLN_BLOCK_DIAGNOSTICS.length, 4);
+    assert.equal(LLN_STRING_DIAGNOSTICS.length, 4);
+    assert.equal(LLN_CHAR_DIAGNOSTICS.length, 4);
+    assert.equal(LLN_BYTE_DIAGNOSTICS.length, 5);
 
     assert.ok(LLN_SYNTAX_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-SYNTAX-")));
     assert.ok(LLN_BINDING_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-BINDING-")));
     assert.ok(LLN_PIPELINE_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-PIPELINE-")));
     assert.ok(LLN_INTENT_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-INTENT-")));
     assert.ok(LLN_BLOCK_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-BLOCK-")));
+    assert.ok(LLN_STRING_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-STRING-")));
+    assert.ok(LLN_CHAR_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-CHAR-")));
+    assert.ok(LLN_BYTE_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-BYTE-")));
   });
 
   it("accepts a well-formed typed content block without errors", () => {
@@ -334,5 +356,90 @@ flow renderScript() {
     });
 
     assert.equal(diags.length, 0);
+  });
+
+  it("validateIntentEffects stub returns correct empty result shape", () => {
+    const result = validateIntentEffects(
+      "createOrder",
+      "guarded",
+      "create customer order",
+      ["database.write", "network.call"],
+      ["database.write", "network.call"],
+      false,
+    );
+
+    assert.equal(result.flowName, "createOrder");
+    assert.equal(result.safetyLevel, "guarded");
+    assert.equal(result.intent, "create customer order");
+    assert.deepEqual(result.declaredEffects, ["database.write", "network.call"]);
+    assert.deepEqual(result.inferredEffects, ["database.write", "network.call"]);
+    assert.deepEqual(result.mismatches, []);
+    assert.deepEqual(result.diagnostics, []);
+  });
+
+  it("validateIntentEffects stub omits intent field when undefined", () => {
+    const result = validateIntentEffects(
+      "processWebhook",
+      "guarded",
+      undefined,
+      [],
+      ["network.call"],
+      false,
+    );
+
+    assert.equal(result.flowName, "processWebhook");
+    assert.equal(Object.hasOwn(result, "intent"), false);
+    assert.deepEqual(result.mismatches, []);
+    assert.deepEqual(result.diagnostics, []);
+  });
+
+  it("String/Char/Byte diagnostic constants carry correct codes and names", () => {
+    // String
+    assert.equal(LLN_STRING_001.code, "LLN-STRING-001");
+    assert.equal(LLN_STRING_001.name, "INVALID_UTF8_DECODE");
+    assert.equal(LLN_STRING_002.code, "LLN-STRING-002");
+    assert.equal(LLN_STRING_002.name, "SECRET_STORED_AS_STRING");
+    assert.equal(LLN_STRING_002.severity, "error");
+
+    // Char
+    assert.equal(LLN_CHAR_001.code, "LLN-CHAR-001");
+    assert.equal(LLN_CHAR_001.name, "CHAR_BYTE_CONFUSION");
+    assert.equal(LLN_CHAR_003.code, "LLN-CHAR-003");
+    assert.equal(LLN_CHAR_003.name, "MULTI_CHAR_LITERAL");
+
+    // Byte
+    assert.equal(LLN_BYTE_001.code, "LLN-BYTE-001");
+    assert.equal(LLN_BYTE_001.name, "BYTE_OUT_OF_RANGE");
+    assert.equal(LLN_BYTE_004.code, "LLN-BYTE-004");
+    assert.equal(LLN_BYTE_004.name, "RAW_BYTES_LOGGED");
+
+    // All String/Char/Byte constants are severity "error" except LLN_STRING_004 (warning)
+    assert.ok(LLN_STRING_DIAGNOSTICS.filter((d) => d.severity === "error").length === 3);
+    assert.ok(LLN_CHAR_DIAGNOSTICS.every((d) => d.severity === "error"));
+    assert.ok(LLN_BYTE_DIAGNOSTICS.every((d) => d.severity === "error"));
+  });
+
+  it("Memory diagnostic constants carry correct codes, names, and are all errors", () => {
+    // Spot-check individual constants
+    assert.equal(LLN_MEMORY_001.code, "LLN-MEMORY-001");
+    assert.equal(LLN_MEMORY_001.name, "USE_AFTER_MOVE");
+    assert.equal(LLN_MEMORY_001.severity, "error");
+
+    assert.equal(LLN_MEMORY_003.code, "LLN-MEMORY-003");
+    assert.equal(LLN_MEMORY_003.name, "BORROW_ESCAPES_SCOPE");
+
+    assert.equal(LLN_MEMORY_005.code, "LLN-MEMORY-005");
+    assert.equal(LLN_MEMORY_005.name, "MUTABLE_ALIAS");
+
+    assert.equal(LLN_MEMORY_006.code, "LLN-MEMORY-006");
+    assert.equal(LLN_MEMORY_006.name, "BOUNDS_VIOLATION");
+
+    assert.equal(LLN_MEMORY_008.code, "LLN-MEMORY-008");
+    assert.equal(LLN_MEMORY_008.name, "UNSAFE_MEMORY_REQUIRES_FALLBACK");
+
+    // Array completeness and uniformity
+    assert.equal(LLN_MEMORY_DIAGNOSTICS.length, 8);
+    assert.ok(LLN_MEMORY_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-MEMORY-")));
+    assert.ok(LLN_MEMORY_DIAGNOSTICS.every((d) => d.severity === "error"));
   });
 });

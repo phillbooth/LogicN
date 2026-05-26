@@ -307,6 +307,223 @@ export const LLN_BLOCK_DIAGNOSTICS = [
 ] as const;
 
 // ---------------------------------------------------------------------------
+// String diagnostics — LLN-STRING-001..004
+// ---------------------------------------------------------------------------
+
+/** Attempted String.decode() produced an invalid UTF-8 sequence. */
+export const LLN_STRING_001 = {
+  code: "LLN-STRING-001",
+  name: "INVALID_UTF8_DECODE",
+  severity: "error",
+  message: "Attempted decode produced invalid UTF-8. Handle the DecodeError with a map block.",
+} as const;
+
+/** A secret value was assigned to a plain String binding instead of SecureString. */
+export const LLN_STRING_002 = {
+  code: "LLN-STRING-002",
+  name: "SECRET_STORED_AS_STRING",
+  severity: "error",
+  message: "Secret value must not be stored in a plain String. Use SecureString or Secret.env().",
+} as const;
+
+/** A Bytes value was assigned to a String binding without an explicit decode step. */
+export const LLN_STRING_003 = {
+  code: "LLN-STRING-003",
+  name: "IMPLICIT_STRING_BYTE_CONVERSION",
+  severity: "error",
+  message: "Bytes cannot become String without an explicit decode. Use String.decode(bytes, Encoding.UTF8).",
+} as const;
+
+/** `.length` was called on a String without specifying whether chars or bytes are counted. */
+export const LLN_STRING_004 = {
+  code: "LLN-STRING-004",
+  name: "AMBIGUOUS_STRING_LENGTH",
+  severity: "warning",
+  message: "Ambiguous String length. Use .charCount() for Unicode scalar count or .encodedLength(Encoding.UTF8) for byte length.",
+} as const;
+
+export const LLN_STRING_DIAGNOSTICS = [
+  LLN_STRING_001,
+  LLN_STRING_002,
+  LLN_STRING_003,
+  LLN_STRING_004,
+] as const;
+
+// ---------------------------------------------------------------------------
+// Char diagnostics — LLN-CHAR-001..004
+// ---------------------------------------------------------------------------
+
+/** A Char value was assigned to or compared with a Byte without an explicit conversion. */
+export const LLN_CHAR_001 = {
+  code: "LLN-CHAR-001",
+  name: "CHAR_BYTE_CONFUSION",
+  severity: "error",
+  message: "Char cannot be assigned to Byte. Char is text; Byte is raw data. Encode explicitly with .toString().encode(Encoding.UTF8).",
+} as const;
+
+/** A character literal contains an invalid Unicode scalar value. */
+export const LLN_CHAR_002 = {
+  code: "LLN-CHAR-002",
+  name: "INVALID_CHAR_LITERAL",
+  severity: "error",
+  message: "Character literal contains an invalid Unicode scalar value.",
+} as const;
+
+/** A character literal contains more than one character unit. */
+export const LLN_CHAR_003 = {
+  code: "LLN-CHAR-003",
+  name: "MULTI_CHAR_LITERAL",
+  severity: "error",
+  message: "Char literal must contain exactly one character unit. Use String for multi-character values.",
+} as const;
+
+/** A Char was used as an integer without calling .codePoint(). */
+export const LLN_CHAR_004 = {
+  code: "LLN-CHAR-004",
+  name: "IMPLICIT_CHAR_NUMBER_CONVERSION",
+  severity: "error",
+  message: "Char cannot be used as an integer directly. Use .codePoint() to get the Unicode code point.",
+} as const;
+
+export const LLN_CHAR_DIAGNOSTICS = [
+  LLN_CHAR_001,
+  LLN_CHAR_002,
+  LLN_CHAR_003,
+  LLN_CHAR_004,
+] as const;
+
+// ---------------------------------------------------------------------------
+// Byte diagnostics — LLN-BYTE-001..005
+// ---------------------------------------------------------------------------
+
+/** A Byte literal value is outside the valid 0–255 range. */
+export const LLN_BYTE_001 = {
+  code: "LLN-BYTE-001",
+  name: "BYTE_OUT_OF_RANGE",
+  severity: "error",
+  message: "Byte value must be between 0 and 255.",
+} as const;
+
+/** A Byte arithmetic result could exceed 255 without explicit overflow handling. */
+export const LLN_BYTE_002 = {
+  code: "LLN-BYTE-002",
+  name: "BYTE_OVERFLOW",
+  severity: "error",
+  message: "Byte arithmetic result may exceed 255. Use wrapping, checked, or saturating arithmetic explicitly.",
+} as const;
+
+/** A Bytes value was assigned to a String binding without an explicit decode step. */
+export const LLN_BYTE_003 = {
+  code: "LLN-BYTE-003",
+  name: "IMPLICIT_BYTE_STRING_CONVERSION",
+  severity: "error",
+  message: "Bytes cannot become String without an explicit decode. Use String.decode(bytes, Encoding.UTF8).",
+} as const;
+
+/** A raw Bytes value was passed to a log sink without redaction. */
+export const LLN_BYTE_004 = {
+  code: "LLN-BYTE-004",
+  name: "RAW_BYTES_LOGGED",
+  severity: "error",
+  message: "Raw Bytes must not be passed directly to a log sink. Redact, hash, or encode before logging.",
+} as const;
+
+/** A Bytes read has no declared memory limit or streaming path. */
+export const LLN_BYTE_005 = {
+  code: "LLN-BYTE-005",
+  name: "UNBOUNDED_BYTES_READ",
+  severity: "error",
+  message: "Bytes read without a declared memory limit or a streaming path. Declare maxBodyMb or use a streaming reader.",
+} as const;
+
+export const LLN_BYTE_DIAGNOSTICS = [
+  LLN_BYTE_001,
+  LLN_BYTE_002,
+  LLN_BYTE_003,
+  LLN_BYTE_004,
+  LLN_BYTE_005,
+] as const;
+
+// ---------------------------------------------------------------------------
+// Memory diagnostics — LLN-MEMORY-001..008
+// ---------------------------------------------------------------------------
+
+/** A moved value was used again after ownership transferred. */
+export const LLN_MEMORY_001 = {
+  code: "LLN-MEMORY-001",
+  name: "USE_AFTER_MOVE",
+  severity: "error",
+  message: "A moved value cannot be used again. Ownership transferred at the move site.",
+} as const;
+
+/** A value was borrowed after its ownership had already moved. */
+export const LLN_MEMORY_002 = {
+  code: "LLN-MEMORY-002",
+  name: "BORROW_AFTER_MOVE",
+  severity: "error",
+  message: "Cannot borrow a value after ownership has moved.",
+} as const;
+
+/** A borrowed reference outlives the scope of its owner. */
+export const LLN_MEMORY_003 = {
+  code: "LLN-MEMORY-003",
+  name: "BORROW_ESCAPES_SCOPE",
+  severity: "error",
+  message: "Borrowed reference cannot outlive its owner. Return ownership via move instead.",
+} as const;
+
+/** Mutation was attempted through a readonly reference. */
+export const LLN_MEMORY_004 = {
+  code: "LLN-MEMORY-004",
+  name: "READONLY_MUTATION",
+  severity: "error",
+  message: "Cannot mutate a value through a readonly reference.",
+} as const;
+
+/** A mutable borrow exists while another borrow or alias is active. */
+export const LLN_MEMORY_005 = {
+  code: "LLN-MEMORY-005",
+  name: "MUTABLE_ALIAS",
+  severity: "error",
+  message: "A mutable borrow cannot coexist with another active borrow or alias of the same value.",
+} as const;
+
+/** An index may be outside the bounds of the target collection. */
+export const LLN_MEMORY_006 = {
+  code: "LLN-MEMORY-006",
+  name: "BOUNDS_VIOLATION",
+  severity: "error",
+  message: "Index may be outside collection bounds. Use .get(index) for safe access or prove bounds at compile time.",
+} as const;
+
+/** An unchecked access was used outside an approved unsafe block. */
+export const LLN_MEMORY_007 = {
+  code: "LLN-MEMORY-007",
+  name: "UNCHECKED_ACCESS_OUTSIDE_UNSAFE",
+  severity: "error",
+  message: "Unchecked index or memory access must be inside an approved unsafe block with a declared reason and fallback.",
+} as const;
+
+/** An unsafe memory operation has no declared safe fallback. */
+export const LLN_MEMORY_008 = {
+  code: "LLN-MEMORY-008",
+  name: "UNSAFE_MEMORY_REQUIRES_FALLBACK",
+  severity: "error",
+  message: "Unsafe memory operation must declare a safe fallback. Every unsafe block requires a fallback flow.",
+} as const;
+
+export const LLN_MEMORY_DIAGNOSTICS = [
+  LLN_MEMORY_001,
+  LLN_MEMORY_002,
+  LLN_MEMORY_003,
+  LLN_MEMORY_004,
+  LLN_MEMORY_005,
+  LLN_MEMORY_006,
+  LLN_MEMORY_007,
+  LLN_MEMORY_008,
+] as const;
+
+// ---------------------------------------------------------------------------
 // Governed surface types — surfaces that require intent declarations
 // ---------------------------------------------------------------------------
 
