@@ -1,186 +1,471 @@
 # LogicN
 
 LogicN is a governance-first programming language, runtime and execution
-architecture designed to coordinate secure computation across CPUs, GPUs,
-AI accelerators, optical systems and future heterogeneous hardware.
+architecture designed to make secure computation **explicit, auditable and
+portable** across CPUs, GPUs, NPUs, APUs, TPUs, AI accelerators, WASM and
+future heterogeneous hardware — including any device that can run governed
+compute, from edge silicon to data centre accelerators.
 
-Rather than focusing only on instruction execution, LogicN focuses on
-understanding execution intent, enforcing explicit authority, planning compute
-economics, coordinating hardware resources and producing auditable governed
-execution.
-
-LogicN combines:
-
-```text
-governed execution
-capability-based security
-hardware-aware runtime orchestration
-AI-native compute planning
-future-neutral compute abstractions
-structured auditability
-operational runtime coordination
-```
-
-into a unified compute platform.
-
-This repository is the active LogicN workspace. It keeps the language core,
-compiler/runtime contracts, governed runtime package planning, secure
-application kernel, developer tooling, reports and example app source in clear
-package boundaries while the project is still being shaped.
-
-## What This Means
-
-Most platforms are language-first, framework-first or VM-first. LogicN is
-governance-first, execution-planning-first and hardware-awareness-first.
-
-The practical development goal is to let developers describe intent,
-capabilities, effects, data boundaries and compute needs in a way that the
-compiler, runtime, audit system and AI tools can understand before work runs.
-
-The selling point is not that LogicN magically makes hardware faster. The
-selling point is that LogicN can make execution more governable:
+Rather than adding safety features to an existing language, LogicN is designed
+from the ground up around the principle that execution intent, capability
+boundaries, memory ownership, and effects should be **declared in source and
+enforced by tooling** — not inferred, guessed, or left to convention.
 
 ```text
-intent -> governed execution plan -> coordinated compute -> audit proof
+intent  →  governed execution plan  →  coordinated compute  →  audit proof
 ```
 
-That creates a foundation for safer APIs, explicit authority, AI-readable
-projects, controlled accelerator use, memory-bounded execution, verified fast
-paths and future heterogeneous compute without making normal application code
-depend on a specific hardware generation.
+---
 
-## Status
+## What LogicN Is
 
-LogicN is currently a language-design and v0.1 beta prototype project. It is not a
-stable release, and package versions use beta prerelease identifiers until the
-toolchain, package boundaries and documentation contracts are release-ready.
+LogicN is three things building toward one platform:
 
-The mature language introduction lives in:
+**1. A language** — strict typing, explicit errors, explicit memory ownership,
+declared effects, no hidden nulls, no silent failures. Source files use `.lln`.
+
+**2. A compiler and checker** — a pipeline that enforces the language rules
+before code runs. Phase 3 scanner-level checks are live today. Phase 4 (real
+parser and AST) is the current build target.
+
+**3. A governed runtime architecture** — a model for coordinating compute
+across targets (CPU, WASM, GPU, accelerators) with capability-based authority,
+audit trails and machine-readable reports. This is the long-term architecture;
+the CPU baseline is the practical v1 target.
+
+### What makes it different
+
+Most languages focus on expressing logic. LogicN focuses on **governing
+execution**:
+
+| Traditional | LogicN |
+|---|---|
+| errors as exceptions | errors as explicit typed `Result<T, E>` |
+| mutation is silent | `let` = immutable, `mut` = explicit, `readonly` = read-only view |
+| pointers implicit | ownership is declared: `borrow`, `move`, `pinned` |
+| side-effects hidden | effects declared on every flow: `effects [database.write]` |
+| unsafe is normal | `unsafe` requires `reason` + `fallback`, always explicit |
+| boundary data silently typed | `unsafe let raw` — untrusted until decoded to a safe type |
+| AI reads code | AI reads structured reports: diagnostics, source maps, intent manifests |
+| fixed hardware assumptions | declared targets: CPU, NPU, APU, GPU, WASM, accelerator |
+
+---
+
+## Status — Prototype (v0.1-beta)
+
+LogicN is a **language-design and prototype project**. It is not a production
+compiler.
+
+**What works today:**
+
+- Run simple `.lln` programs using Node.js (no installation required beyond
+  `npm install`)
+- Scanner-level safety checks (Phase 3): binding rules, `mut` in pure flow,
+  unsafe block enforcement, raw pointer detection
+- Diagnostic codes (`LLN-MEMORY-*`, `LLN-SAFETY-*`, `LLN-BINDING-*`, etc.)
+- JSON schema and OpenAPI generation from type definitions
+- Source map output and AI-readable project context generation
+- Build manifests, memory reports, execution reports
+- Project graph and task automation tooling
+
+**What is not yet implemented:**
+
+- Real lexer and parser (Phase 4 — next)
+- Full type and effect checker (Phase 5)
+- Production code generation
+- GPU, AI accelerator, photonic targets (post-v1)
+
+---
+
+## Running LogicN Today
+
+LogicN runs on **Node.js 18+** using the prototype compiler in
+`packages-logicn/logicn-core/`.
+
+```bash
+# From the logicn-core package
+cd packages-logicn/logicn-core
+
+# Install dependencies
+npm install
+
+# Run a .lln file
+node compiler/logicn.js run examples/hello.lln
+
+# Check a file for errors
+node compiler/logicn.js check examples/result.lln
+
+# Run all example checks and tests
+npm test
+
+# Build examples and generate reports
+npm run build:examples
+
+# Generate AI-readable project context
+node compiler/logicn.js ai-context examples --out build/examples
+
+# Verify build artefacts
+npm run verify -- build/examples
+```
+
+No special toolchain, no Rust, no LLVM. The v0.1 prototype runs entirely on
+Node.js. The full compiler pipeline (Phase 4 onwards) will replace this with a
+real parser and checker.
+
+---
+
+## Code Example
+
+```logicn
+// ── Bindings: three visibility levels ──────────────────────────────────────
+//
+//  let      — immutable. Cannot be reassigned (LLN-BINDING-001 if you try).
+//  mut      — mutable. Reassignment is intentional and visible.
+//  readonly — read-only view of a value owned elsewhere. Cannot mutate
+//             properties through this reference (LLN-BINDING-003).
+//
+flow demonstrateBindings(cfg: Config) {
+  let    maxRetries: Int    = 3            // fixed — cannot reassign
+  mut    attempts:   Int    = 0            // reassignable: attempts = attempts + 1
+  readonly settings: Config = cfg          // view only — cfg.timeout = 5 is rejected
+}
+
+
+// ── Intent: declare what a flow is for ─────────────────────────────────────
+//
+// Intent makes purpose machine-readable — the effect checker, audit system
+// and AI tooling all consume intent declarations. A flow whose inferred
+// behavior conflicts with its declared intent is rejected (LLN-INTENT-001).
+//
+/// intent: "Process a customer order and charge payment"
+/// trust:  "input is pre-validated at the API boundary"
+guarded flow processOrder(input: CreateOrderRequest) -> Result<OrderId, OrderError>
+effects [database.write, payment.charge]
+intent "Process a customer order and charge payment" {
+
+  let order: Order = Order {
+    id:         generateId()
+    customerId: input.customerId
+    total:      input.total
+  }
+
+  // Result must be explicitly handled — silent failure is a compile error
+  match saveOrder(order) {
+    Ok(saved) => return Ok(saved.id)
+    Err(_)    => return Err(OrderError.DatabaseFailed)
+  }
+}
+
+
+// ── Unsafe variables — boundary data stays unsafe until sanitised ───────────
+//
+// Any value that arrives from outside the system (HTTP, webhook, file, env)
+// is marked `unsafe let` — it is untrusted bytes with no type guarantee.
+// The compiler prevents unsafe values from being passed to typed parameters
+// without going through an explicit decode/validate step first.
+//
+// This is LogicN's trust-boundary model: the type system tracks where data
+// came from, not just what shape it has.
+//
+guarded flow fetchOrderStatus(orderId: OrderId) -> Result<OrderStatus, ApiError>
+effects [network.outbound]
+intent "Fetch live order status from the payment provider API" {
+
+  // Raw response from an external service — untrusted, untyped
+  unsafe let rawResponse: Bytes = http.get("https://api.payments.com/orders/" + orderId)
+
+  // Explicit decode: unsafe Bytes → typed OrderStatus
+  // Decode returns Err if the response does not match the expected schema
+  let status: OrderStatus = json.decode<OrderStatus>(rawResponse)?
+
+  // `status` is now fully typed and safe. `rawResponse` cannot be used further.
+  return Ok(status)
+}
+
+
+// ── Pure flows — zero side effects ─────────────────────────────────────────
+//
+// `pure flow` cannot: perform I/O, call effectful flows, use `mut`, or `await`.
+// The compiler enforces this at Phase 3. `mut` inside pure flow → LLN-BINDING-004.
+//
+pure flow applyDiscount(total: Float, pct: Float) -> Float {
+  return total * (pct / 100.0)
+}
+
+
+// ── Memory: borrow — temporary read-only access ────────────────────────────
+//
+// `borrow buf` passes read-only access without transferring ownership.
+// The borrow expires when this flow returns; the caller keeps the buffer.
+//
+pure flow peekFirstByte(borrow buf: Buffer) -> Option<UInt8> {
+  return buf.data.get(0)
+}
+
+
+// ── Memory: move — explicit ownership transfer ─────────────────────────────
+//
+// `move conn` transfers ownership. The caller's binding is invalidated.
+// Using `conn` after this call is LLN-MEMORY-001 (USE_AFTER_MOVE).
+//
+secure flow closeConnection(move conn: Connection) -> Result<Void, ConnError> {
+  return conn.close()
+}
+
+
+// ── Unsafe blocks — always declared, always justified ──────────────────────
+//
+// `unsafe block` requires both `reason` and `fallback` on the opening line.
+// Missing `reason` → LLN-MEMORY-008.  Raw pointer outside unsafe → LLN-RAWPTR-001.
+//
+flow readRegister(addr: UInt32) -> Result<UInt32, HardwareError> {
+  unsafe block readMMIO reason "MMIO register requires direct memory read" fallback safeDefault {
+    let value: UInt32 = *mmio_ptr(addr)
+    return Ok(value)
+  }
+}
+```
+
+---
+
+## Roadmap
+
+LogicN builds the language foundation before expanding into domain packages,
+advanced targets or full frameworks.
+
+```
+Phase 0 — Workspace Freeze                              ✅ complete
+  Active packages limited to core, compiler, tooling.
+  Finance, electrical, OT packages archived.
+  GPU/AI accelerator/photonic labelled post-v1.
+
+Phase 1 — V1 Syntax Freeze                             ✅ complete
+  V1 grammar draft defined.
+  Reserved keyword table authoritative.
+  One preferred spelling for each core construct.
+
+Phase 2 — Example Corpus                               ✅ complete
+  20 v1 .lln examples across 5 categories:
+    basic, type-system, API/JSON, memory, concurrency.
+  Examples manifest classifies all files as v1 or post-v1.
+  Rejection fixtures with expected diagnostic codes.
+
+Phase 3 — Memory Model Commitment                      ✅ complete
+  Hybrid ownership model documented and committed.
+  LLN-MEMORY-001..008 defined and exported.
+  Scanner-level enforcement implemented:
+    mut in pure flow    → LLN-BINDING-004
+    unsafe without reason → LLN-MEMORY-008
+    raw pointer outside unsafe → LLN-RAWPTR-001
+  borrow, move, pinned reserved keywords.
+  AstNodeKind memory vocabulary committed.
+  28/28 compiler contract tests passing.
+
+Phase 4 — Parser and AST                               ⬜ next
+  Lexer for the v1 keyword table.
+  Parser for the v1 grammar.
+  Stable AST with source spans.
+  Parser tests for every v1 example.
+  Rejection tests for post-v1 syntax.
+
+Phase 5 — Type and Effect Checker                      ⬜ future
+  Name resolution and symbol table.
+  Type checking: primitives, records, variants, Result, Option, Tri.
+  Exhaustive match checks.
+  Effect propagation and pure-flow enforcement.
+  Full lifetime and borrow analysis (borrow checker).
+
+Phase 6 — Runtime and Reports                          ⬜ future
+  CPU-compatible checked execution for the v1 subset.
+  WASM target planning report.
+  Build/check report: syntax, type, effect, memory diagnostics.
+  Source map output for checked examples.
+  AI-readable project summary from real parser/checker facts.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Stage A — TypeScript / Node.js Runtime                  ⬜ post-foundation
+  Phase 6 delivers the first real execution layer.
+  LogicN source is compiled to governed TypeScript output.
+  Programs run on the Node.js runtime backed by V8.
+
+  The full execution stack at this stage:
+
+  LogicN Syntax
+       ↓  governed checks: types, effects, memory, intent
+  TypeScript runtime / compiler layer
+       ↓  managed language safety, type erasure
+  JavaScript output
+       ↓  managed runtime semantics
+  Node.js runtime
+       ↓  host APIs, native bridges, event loop
+  V8 JavaScript engine
+       ↓  memory-managed JS execution
+  C++ native internals
+
+  This creates a layered memory-safety model — each layer contributes
+  its own guarantees before reaching the hardware:
+
+  LogicN Syntax      → intended safety model (ownership, effects, intent)
+  TypeScript         → managed language safety (types, null checks)
+  JavaScript         → managed runtime semantics (GC, bounds)
+  Node.js            → host runtime, APIs, native bridges
+  V8                 → memory-managed JS engine
+  C++                → native implementation layer
+
+  The LogicN layer provides the strongest, most explicit guarantees.
+  The layers beneath it inherit managed safety from the JS ecosystem.
+  This means the TypeScript runtime is a credible first execution target —
+  not a compromise, but a deliberate foundation.
+
+Stage B — LogicN Compiles Itself                        ⬜ long-term
+  The LogicN compiler and runtime are rewritten in LogicN.
+  The TypeScript bootstrap layer is no longer needed for production.
+  LogicN becomes self-hosting: the language proves its own model.
+
+  The execution stack at this stage:
+
+  LogicN Syntax
+       ↓  governed checks: types, effects, memory, intent
+  LogicN compiler (written in LogicN)
+       ↓  real code generation: CPU binary, WASM, target IR
+  CPU / WASM / NPU / APU / GPU target
+       ↓  hardware execution
+  Physical compute
+
+  Self-hosting is the maturity gate: if LogicN can compile LogicN
+  safely — enforcing its own memory model, effects and intent
+  declarations — then the governance model is real, not theoretical.
+```
+
+**Deferred until after the foundation phases:**
 
 ```text
-packages-logicn/logicn-core/README.md
+finance packages        GPU target
+electrical packages     AI accelerator target
+OT packages             photonic target
+production benchmarks   full framework features
+ORM / CMS / admin UI    production package registry
 ```
 
-The root of this repository is the workspace entry point. Use it to understand
-how LogicN packages, app files, tooling, reports and generated project graph outputs
-fit together.
+---
 
-The practical v1 baseline is CPU-compatible checked execution, WASM target
-planning and deterministic developer tooling. GPU, generic AI accelerator,
-low-bit AI, optical I/O, photonic compute, ternary and Omni-logic support are
-post-v1 package contracts, planning layers or simulation/report artefacts until
-real backends exist.
+## Architecture
 
-Generated notes, planning documents and AI-suggested structures are advisory.
-When they conflict, the repository structure, `AGENTS.md`, `logicn.workspace.json`,
-package READMEs/TODOs and docs in this workspace take precedence. Roadmap
-version labels may move when that improves staging, but package ownership rules
-should not be overridden by generated documents.
+### Language and package layers
 
-## Core Ideas
+```
+LogicN Core
+  language, type system, effects, memory safety, diagnostics, source maps
 
-LogicN is designed around:
+LogicN Compiler
+  lexer, parser, AST, type checker, effect checker, memory checker, IR
+
+LogicN Runtime
+  checked execution, effect dispatch, runtime errors, structured await
+
+LogicN Security / Config / Reports
+  redaction, permissions, crypto policy, build and security reports
+
+LogicN Logic / Vector / Compute
+  Tri, Decision, tensors, compute planning, target selection
+
+LogicN AI Packages (post-v1)
+  inference, agents, neural, neuromorphic, low-bit
+
+LogicN Target Packages
+  CPU (v1 active)          — x86-64, ARM, RISC-V
+  WASM (v1 planning)       — browser, edge, serverless
+  GPU (post-v1)            — NVIDIA CUDA, AMD ROCm, Intel Arc
+  NPU (post-v1)            — Intel NPU, Qualcomm Hexagon, Apple Neural Engine
+  APU (post-v1)            — AMD/Intel integrated GPU+AI silicon
+  TPU / AI Accelerator (post-v1) — Google TPU, Intel Gaudi, AWS Trainium
+  Photonic (post-v1)       — optical interconnect and compute planning
+
+LogicN Secure App Kernel
+  optional runtime layer — APIs, auth, rate limits, jobs
+
+LogicN API Server
+  HTTP transport, route manifests, typed dispatch
+
+LogicN CLI / Tasks / Project Graph
+  developer tooling, automation, AI context
+
+Full Frameworks (post-v1)
+  CMS, admin UI, ORMs, page builders, frontend adapters
+```
+
+### Current execution stack (Stage A — TypeScript runtime)
+
+While the real compiler is being built, LogicN programs run via Node.js:
+
+```
+LogicN Syntax
+     ↓  governed checks: types, effects, memory, intent
+TypeScript runtime / compiler layer
+     ↓  managed language safety
+JavaScript output
+     ↓  managed runtime semantics
+Node.js runtime
+     ↓  host APIs, native bridges
+V8 JavaScript engine
+     ↓  memory-managed execution
+C++ native internals
+```
+
+Each layer contributes its own safety guarantees. LogicN's layer is the
+most explicit — ownership, effects, intent. The layers below provide
+managed memory and runtime safety inherited from the JS ecosystem.
+
+**Active v1 targets:** CPU and WASM (planning). Everything else is post-v1.
+
+**Boundary rules:**
+- `logicn-core` is the language. It must not become a web framework.
+- `logicn-core-compiler` owns the pipeline. `logicn-core` owns the contract types.
+- `unsafe` is a language feature, not a permission to ignore safety rules.
+- Hardware targets are backend profiles selected by config — not core syntax.
+- Finance, electrical, OT packages are archived and not in the active workspace.
+
+---
+
+## Project Structure
 
 ```text
-strict typing
-explicit missing values
-explicit errors
-memory safety
-security-first defaults
-governed execution plans
-capability-based authority
-typed JSON and API contracts
-source maps and machine-readable reports
-AI-readable project context
-CPU compatibility by default
-hardware-neutral compute planning
-optical I/O and data-movement awareness
-optional accelerator planning
-optional AI inference packages
-structured audit proof
+C:\laragon\www\LO\
+├── docs/                          architecture, KB, roadmaps, decisions
+│   └── Knowledge-Bases/           compiler diagnostics, memory model, keyword table
+├── packages-logicn/
+│   ├── logicn-core/               language, examples, prototype compiler ← start here
+│   ├── logicn-core-compiler/      compiler pipeline contracts and scanner
+│   ├── logicn-core-runtime/       execution contracts
+│   ├── logicn-core-security/      security primitives, redaction
+│   ├── logicn-core-config/        project configuration
+│   ├── logicn-core-reports/       report schemas and writer contracts
+│   ├── logicn-core-logic/         Tri, Decision, RiskLevel
+│   ├── logicn-core-vector/        Vector, Matrix, Tensor
+│   ├── logicn-core-compute/       compute planning and target selection
+│   ├── logicn-core-cli/           developer CLI (graph, tasks, check, run)
+│   ├── logicn-core-tasks/         safe task automation with declared effects
+│   ├── logicn-devtools-project-graph/  project knowledge graph
+│   ├── logicn-target-cpu/         CPU capabilities and fallback
+│   ├── logicn-target-wasm/        WASM target planning
+│   ├── logicn-target-gpu/         GPU target planning (post-v1)
+│   ├── logicn-ai/                 AI inference contracts (post-v1)
+│   └── logicn-framework-*/        app kernel, API server (post-v1 active)
+├── build/                         generated graph, reports
+└── tools/
 ```
 
-In this repository, AI-readable means regular syntax, explicit effects,
-explicit imports, typed errors, source maps, stable diagnostics and
-machine-readable reports. It does not mean vague natural-language friendliness.
-
-For v1, these are goals unless backed by implemented compiler checks and tests.
-LogicN's strongest near-term position is secure web/runtime behavior:
-deny-by-default permissions, typed API boundaries, memory-safe values,
-secret-safe reporting, controlled interop, production gates and AI-safe
-project context. The longer-term architecture extends that same governance
-model into heterogeneous compute orchestration. See
-`docs/SECURE_WEB_RUNTIME_FIRST.md` for the runtime-first direction.
-
-The runtime architecture is now documented as operational coordination rather
-than a traditional VM model:
-
+**Archived** (outside active workspace — post-v2 domain planning):
 ```text
-Runtime Command                  workload understanding and execution planning
-Authority Control                capability, effect and policy enforcement
-Runtime Logistics                resource, queue, cache and fast-path reuse
-Compute Balancer                 approved hardware selection under live pressure
-Execution Coordination Scheduler bounded parallelism and dependency timing
-Result Assembler                 ordered result reconstruction and integrity
+C:\laragon\www\LogicN_Archive\packages-logicn\logicn-finance-core
+C:\laragon\www\LogicN_Archive\packages-logicn\logicn-electrical-core
+C:\laragon\www\LogicN_Archive\packages-logicn\logicn-ot-core
 ```
 
-These names are responsibility-based. They describe what each subsystem owns
-without tying LogicN to threads, CPUs, GPUs or any single backend.
+---
 
-The Compute Balancer does not grant authority. It chooses the best available
-approved target and falls back safely when hardware is unavailable, overloaded,
-too hot, power-constrained or not trusted enough.
-
-LogicN should not claim to make Ethernet hardware faster. Its network position
-is application-level I/O governance: typed network APIs, deny-by-default network
-permissions, TLS policy, backpressure, timeouts, zero-copy planning where
-available, platform-aware async I/O, reports and deployment profiles. See
-`docs/NETWORK_ETHERNET_IO.md` and `packages-logicn/logicn-core-network/`.
-
-LogicN should not claim legal, privacy, security, accessibility, AI governance
-or deployment compliance automatically. The enterprise `logicn-compliance`
-package family defines policy, evidence and report contracts so
-compliance-relevant behavior can be reviewed before deployment, but those
-packages live under `packages-logicn-enterprise/` and are not part of the active
-v1 build graph unless explicitly unlocked.
-
-LogicN data processing should be package-owned rather than added directly to the
-language core. The `logicn-data` package family defines typed, streaming-capable,
-memory-bounded, security-aware and archive-verifiable data-processing contracts.
-
-LogicN avoids:
-
-```text
-undefined
-silent null
-truthy/falsy conditions
-implicit type coercion
-hidden exceptions as the default error model
-raw pointers in normal code
-compiled secrets
-silent target fallback
-framework-specific language syntax
-mandatory future hardware
-```
-
-LogicN explicitly supports `optical_io` as a future data-movement and interconnect
-planning target. Intel Silicon Photonics and OCI-style devices should be treated
-as high-speed optical I/O for distributed compute, AI clusters, accelerator
-communication and memory pooling, not as normal CPUs or a direct replacement for
-photonic compute targets.
-
-LogicN also supports `ai_accelerator` as a generic accelerator planning target.
-Vendor devices such as Intel Gaudi 3 should be passive backend profiles selected
-by config, adapter policy or capability detection. They should not become
-permanent LogicN syntax such as `target gaudi`.
-
-## Quick Start
-
-From the repository root:
-
-```powershell
-cd C:\laragon\www\LO
-```
+## Quick Start — Root Tooling
 
 Generate or refresh the project graph:
 
@@ -188,370 +473,51 @@ Generate or refresh the project graph:
 node packages-logicn\logicn-core-cli\dist\index.js graph --out build\graph
 ```
 
-Inspect task automation with a dry run:
+Run the packages that have executable tests:
 
 ```powershell
-node packages-logicn\logicn-core-cli\dist\index.js task buildApi --file packages-logicn\logicn-core-tasks\examples\tasks.lln --dry-run
+npm --prefix packages-logicn\logicn-core test
+npm --prefix packages-logicn\logicn-core-compiler test
+npm --prefix packages-logicn\logicn-devtools-project-graph test
+npm --prefix packages-logicn\logicn-core-tasks test
 ```
 
-Run the package tests that currently have executable coverage:
+For the LogicN prototype compiler, work from `packages-logicn/logicn-core/`.
+See that package README for the full command list.
 
-```powershell
-npm.cmd --prefix packages-logicn\logicn-devtools-project-graph test
-npm.cmd --prefix packages-logicn\logicn-core-tasks test
-npm.cmd --prefix packages-logicn\logicn-core-cli test
-```
+---
 
-For the prototype LogicN core compiler, work from `packages-logicn/logicn-core/` and see that
-package README for the supported commands.
+## Key Documents
 
-## Project Structure
+| Document | Purpose |
+|---|---|
+| `packages-logicn/logicn-core/README.md` | Language introduction, syntax, commands |
+| `docs/CORE_FOUNDATION_ROADMAP.md` | Phase-by-phase build plan |
+| `docs/Knowledge-Bases/logicn-v1-memory-model.md` | Memory model specification |
+| `docs/Knowledge-Bases/v1-reserved-keywords.md` | Authoritative keyword table for lexer |
+| `docs/Knowledge-Bases/compiler-diagnostics.md` | All LLN-* diagnostic codes |
+| `packages-logicn/logicn-core/examples/examples-manifest.md` | V1 vs post-v1 example classification |
+| `AGENTS.md` | AI coding tool instructions |
+
+---
+
+## What LogicN Is Not (Yet)
 
 ```text
-logicn-app/
-|-- AGENTS.md
-|-- package-logicn.json          # proposed future LogicN package manifest
-|-- logicn.lock.json             # proposed future LogicN package lockfile
-|-- docs/
-|-- build/
-|   `-- graph/
-|-- packages/               # normal app/vendor package space
-|-- packages-logicn/
-|   |-- logicn-core/
-|   |-- logicn-core-compiler/
-|   |-- logicn-core-runtime/
-|   |-- logicn-core-network/
-|   |-- logicn-core-security/
-|   |-- logicn-core-config/
-|   |-- logicn-core-reports/
-|   |-- logicn-core-logic/
-|   |-- logicn-core-vector/
-|   |-- logicn-core-compute/
-|   |-- logicn-ai/
-|   |-- logicn-ai-lowbit/
-|   |-- logicn-ai-agent/
-|   |-- logicn-ai-neural/
-|   |-- logicn-ai-neuromorphic/
-|   |-- logicn-data/
-|   |-- logicn-data-html/
-|   |-- logicn-data-search/
-|   |-- logicn-data-archive/
-|   |-- logicn-data-db/
-|   |-- logicn-data-model/
-|   |-- logicn-data-query/
-|   |-- logicn-data-response/
-|   |-- logicn-data-json/
-|   |-- logicn-data-database/
-|   |-- logicn-data-pipeline/
-|   |-- logicn-data-reports/
-|   |-- logicn-db-postgres/
-|   |-- logicn-db-mysql/
-|   |-- logicn-db-sqlite/
-|   |-- logicn-db-opensearch/
-|   |-- logicn-db-firestore/
-|   |-- logicn-core-photonic/
-|   |-- logicn-target-cpu/
-|   |-- logicn-cpu-kernels/
-|   |-- logicn-target-native/
-|   |-- logicn-target-wasm/
-|   |-- logicn-target-gpu/
-|   |-- logicn-target-ai-accelerator/
-|   |-- logicn-target-photonic/
-|   |-- logicn-framework-app-kernel/
-|   |-- logicn-framework-api-server/
-|   |-- logicn-core-cli/
-|   |-- logicn-core-tasks/
-|   |-- logicn-tools-benchmark/
-|   |-- logicn-devtools-project-graph/
-|   |-- logicn-framework-example-app/
-|-- packages-logicn-enterprise/
-|   |-- logicn-compliance/
-|   `-- logicn-compliance-*/
-`-- tools/
+Not a production compiler         — Phase 4 parser not yet built
+Not a production runtime          — Phases 5 and 6 are future work
+Not a web framework               — logicn-framework-* is optional post-v1
+Not a database ORM                — data packages are separate
+Not faster hardware               — compute planning ≠ hardware speed
+Not automatic compliance          — logicn-compliance is enterprise post-v1
 ```
 
-## Package Map
+LogicN becomes credible when its safety, speed and AI-readability are enforced
+by tooling and runtime behavior — not only described in documentation.
 
-- `packages-logicn/logicn-core/` - LogicN language rules, syntax, type system, prototype
-  compiler notes, memory safety model, Structured Await, examples and core
-  documentation.
-- `packages-logicn/logicn-core-compiler/` - compiler pipeline contracts for lexer, parser, AST,
-  checkers, IR, diagnostics, source maps and compiler reports.
-- `packages-logicn/logicn-core-runtime/` - execution contracts for checked or compiled
-  LogicN code, including Structured Await scopes, cancellation and timeout
-  enforcement.
-- `packages-logicn/logicn-core-network/` - network I/O policy, profile,
-  permission, TLS, zero-copy planning, backpressure and report contracts.
-- `packages-logicn/logicn-core-security/` - reusable security primitives, redaction,
-  permissions, crypto policy and security reports.
-- `packages-logicn/logicn-core-config/` - project configuration, environment mode and production
-  strictness contracts.
-- `packages-logicn/logicn-core-reports/` - shared report schemas and report-writing
-  contracts, including async/concurrency, storage and build-cache report shapes.
-- `packages-logicn/logicn-core-logic/` - `Tri`, `LogicN`, Decision, RiskLevel and future Omni
-  logic concepts.
-- `packages-logicn/logicn-core-vector/` - vector, matrix, tensor, lane, dimension and numeric
-  operation concepts.
-- `packages-logicn/logicn-core-compute/` - compute planning, capabilities, effects, budgets and
-  target selection.
-- `packages-logicn/logicn-ai/` - generic AI inference contracts, model metadata, safety
-  policy and AI reports.
-- `packages-logicn/logicn-ai-lowbit/` - low-bit and ternary AI inference contracts, with
-  BitNet represented as one optional backend rather than LogicN syntax.
-- `packages-logicn/logicn-ai-agent/` - supervised AI agent, tool permission, task group,
-  merge policy and agent report contracts.
-- `packages-logicn/logicn-ai-neural/` - neural model, layer, inference and training boundary
-  contracts.
-- `packages-logicn/logicn-ai-neuromorphic/` - spike, event-signal and spiking model
-  contracts.
-- `packages-logicn-enterprise/logicn-compliance/` and `packages-logicn-enterprise/logicn-compliance-*` -
-  compliance, privacy, governance, audit, retention, accessibility, AI governance,
-  deployment policy and compliance report contracts.
-- `packages-logicn/logicn-data/` and `packages-logicn/logicn-data-*` - data
-  processing, HTML, search, archive, JSON, database archive, streaming pipeline
-  and data-processing report contracts.
-- `packages-logicn/logicn-data-db/`, `logicn-data-model`, `logicn-data-query`
-  and `logicn-data-response` - typed database boundary, storage model, query and
-  safe response mapping contracts.
-- `packages-logicn/logicn-db-*` - future database provider adapter contracts.
-- `packages-logicn/logicn-core-photonic/` - photonic and wavelength concepts, simulation and
-  logic-to-light mapping contracts.
-- `packages-logicn/logicn-target-cpu/` - CPU capability detection, threading, memory limits
-  and fallback planning.
-- `packages-logicn/logicn-cpu-kernels/` - optimized CPU kernel contracts for vector,
-  matrix, low-bit and ternary workloads.
-- `packages-logicn/logicn-target-native/` - future native executable target
-  planning and artifact metadata.
-- `packages-logicn/logicn-target-wasm/` - WebAssembly target planning and module metadata.
-- `packages-logicn/logicn-target-gpu/` - GPU target planning, kernel mapping and data
-  movement reports.
-- `packages-logicn/logicn-target-ai-accelerator/` - NPU, TPU, AI-chip and passive
-  accelerator backend profile planning contracts.
-- `packages-logicn/logicn-target-photonic/` - photonic backend target planning and
-  optical I/O interconnect planning that uses `logicn-core-photonic`.
-- `packages-logicn/logicn-framework-app-kernel/` - optional secure application kernel for typed API
-  boundaries, validation, auth, rate limits, jobs and runtime reports.
-- `packages-logicn/logicn-framework-api-server/` - built-in HTTP API transport that delegates typed
-  execution and policy decisions to `logicn-framework-app-kernel`.
-- `packages-logicn/logicn-core-cli/` - developer command tooling for graph, tasks, future check,
-  build, run, serve, reports, routes and security commands.
-- `packages-logicn/logicn-core-tasks/` - safe typed project automation with declared effects,
-  permissions, dependency planning and reports.
-- `packages-logicn/logicn-tools-benchmark/` - development diagnostics and benchmark contracts
-  for logic, CPU/GPU/low-bit fallback, privacy-safe reports and comparisons.
-- `packages-logicn/logicn-devtools-project-graph/` - project graph contracts and mapper for package,
-  document, policy and report relationships.
-- `packages-logicn/logicn-framework-example-app/` - bespoke application source, routes, modules, tests and app
-  configuration.
-- `docs/` - app/workspace requirements, architecture, security, deployment,
-  decisions, changelog and operational documentation.
+---
 
-Archived post-v2 package planning is preserved outside the active workspace:
+## Licence
 
-```text
-C:\laragon\www\LogicN_Archive\packages-logicn\logicn-finance-core
-C:\laragon\www\LogicN_Archive\packages-logicn\logicn-electrical-core
-C:\laragon\www\LogicN_Archive\packages-logicn\logicn-ot-core
-```
-
-## Layering
-
-```text
-LogicN Core
-  language, type system, effects, memory safety, Structured Await,
-  storage-aware performance rules and core reports
-
-LogicN Compiler / Runtime / Network / Security / Config / Reports
-  compiler pipeline, execution, network policy, shared security, configuration and report contracts
-
-LogicN Logic / Vector / Compute / AI / Neural / Photonic / Target Packages
-  specialised concepts and target planning outside the core language package;
-  only CPU and WASM are active v1 targets
-
-LogicN Secure App Kernel
-  optional runtime layer for API validation, auth, rate limits, jobs and reports
-
-LogicN API Server
-  HTTP transport that normalises requests and calls the app kernel
-
-LogicN CLI / Tasks / Project Graph
-  developer tooling, safe automation, benchmarks and AI-readable project maps
-
-Full Frameworks
-  CMS, admin UI, page builders, ORMs, template engines and frontend adapters
-```
-
-Important boundary rules:
-
-- `logicn-core` defines the language. It must not become a web framework.
-- `logicn-framework-app-kernel` is an optional secure application boundary. It must not become
-  a CMS, admin dashboard, ORM or frontend framework.
-- `logicn-framework-api-server` serves HTTP and delegates typed policy decisions.
-- `logicn-core-network` defines network policy and report contracts. It does
-  not implement every protocol or replace the HTTP server package.
-- `logicn-ai`, `logicn-ai-agent`, `logicn-ai-neural`, `logicn-ai-neuromorphic` and `logicn-ai-lowbit` are
-  optional AI package layers, not core syntax.
-- Parallel agents must be supervised, bounded, permissioned and reportable.
-- BitNet is a backend option inside low-bit AI, not a language feature.
-- AI accelerators, GPUs, optical I/O and photonic chipsets are optional targets.
-  CPU and binary-compatible fallback remain the baseline.
-- `ai_accelerator` is the public LogicN target category. Intel Gaudi and similar
-  hardware are backend profiles selected by policy and reported after planning.
-- `optical_io` means high-speed interconnect/data movement planning. It is not a
-  claim that Intel Silicon Photonics or OCI devices are general-purpose CPUs.
-- `logicn-tools-benchmark` is development diagnostics. It must not auto-run in
-  production and is disabled by default in production boot/package profiles.
-  Enabling it in production requires an explicit reported override with a
-  reason. Benchmark reports must not expose private machine or project data.
-- `logicn-devtools-project-graph` explains the repository. It does not enforce compiler,
-  runtime or security rules.
-- Development-only packages should remain outside production package
-  resolution. Use `logicn-devtools-*` for development-only inspection, graph,
-  scaffold and assistant-context packages, and `logicn-tools-*` for broader
-  diagnostics or benchmark utilities that may run in development or staging.
-  Production defaults must disable these packages unless a maintainer declares
-  an explicit production package override.
-- Finance, electrical and OT packages are archived post-v2 domain planning and
-  are not part of the active build graph. They must not become LogicN core syntax or
-  imply that LogicN beta is ready for regulated finance, certified electrical
-  protection, PLC safety systems, SCADA products or OT control.
-
-## Package Layout Direction
-
-The proposed long-term split is documented in `docs/PACKAGE_LAYOUT.md`:
-
-```text
-package.json       normal app/runtime ecosystem dependencies
-package-logicn.json    LogicN package manifest
-logicn.lock.json       deterministic LogicN package lockfile
-packages/          normal app/vendor packages
-packages-logicn/       LogicN packages, optionally a nested repository
-```
-
-The current beta has moved LogicN packages under `packages-logicn/`. `packages/` is now
-reserved for normal app/vendor package space. `package-logicn.json` and
-`logicn.lock.json` remain planned files; do not rely on them until the manifest,
-lockfile and package resolver are implemented.
-
-Package naming guidance lives in `docs/PACKAGE_NAMING.md`. Current packages use
-family prefixes such as `logicn-core-*`, `logicn-ai-*`, `logicn-target-*`,
-`logicn-framework-*`, `logicn-devtools-*` and `logicn-tools-*` so their
-runtime, developer-tooling or domain role is visible from the directory name.
-
-## Current Tooling
-
-The currently implemented root-level CLI paths are:
-
-```powershell
-node packages-logicn\logicn-core-cli\dist\index.js graph --out build\graph
-node packages-logicn\logicn-core-cli\dist\index.js graph query logicn-core-security --out build\graph
-node packages-logicn\logicn-core-cli\dist\index.js graph explain package:logicn-core-security --out build\graph
-node packages-logicn\logicn-core-cli\dist\index.js graph path package:logicn-devtools-project-graph report:project-graph --out build\graph
-
-node packages-logicn\logicn-core-cli\dist\index.js task --file packages-logicn\logicn-core-tasks\examples\tasks.lln
-node packages-logicn\logicn-core-cli\dist\index.js task buildApi --file packages-logicn\logicn-core-tasks\examples\tasks.lln --dry-run
-```
-
-`LogicN benchmark` is registered as a future command placeholder. Benchmark modes,
-report shapes and safety rules are documented in
-`packages-logicn/logicn-tools-benchmark/README.md`; the runnable benchmark runner is still on
-the package TODO list.
-
-Once `logicn-core-cli` is installed or linked, the intended shorthand is:
-
-```powershell
-LogicN graph --out build\graph
-LogicN task buildApi --dry-run
-```
-
-## Project Graph
-
-AI assistants and developers should use the generated project graph to inspect
-package ownership and repository relationships:
-
-```text
-build/graph/logicn-devtools-project-graph.json
-build/graph/LogicN_GRAPH_REPORT.md
-build/graph/logicn-ai-map.md
-build/graph/logicn-devtools-project-graph.html
-```
-
-If the graph is missing or out of date, regenerate it from the repository root:
-
-```powershell
-node packages-logicn\logicn-core-cli\dist\index.js graph --out build\graph
-```
-
-The graph is navigation tooling only. It does not replace the compiler, tests,
-security checks or package boundary rules.
-
-## Task Automation
-
-`logicn-core-tasks` loads safe task definitions from `tasks.lln` files. Tasks declare
-their dependencies, effects and permissions before anything runs.
-
-Example:
-
-```LogicN
-task buildApi {
-  depends [generateReports]
-  effects [filesystem, compiler, reports]
-
-  permissions {
-    read "./src"
-    write "./build"
-  }
-}
-```
-
-Current task execution supports loading, listing, dependency ordering, cycle
-detection, dry-run planning, permission checks and task report generation.
-Built-in operation execution is still future work.
-
-Task reports are written by default to:
-
-```text
-build/reports/task-report.json
-```
-
-## Documentation Guide
-
-- Use `packages-logicn/logicn-core/` for language documentation.
-- Use package READMEs and TODOs for package-specific contracts and work.
-- Use `docs/` for app/workspace requirements, architecture, security,
-  deployment, decisions and changelog.
-- Use `AGENTS.md` for AI coding tool instructions.
-- Update `docs/CHANGELOG.md` when architecture, tooling, package contracts or
-  behavior changes.
-
-## Git Layout
-
-Current development uses one root Git repository while package boundaries are
-still being shaped.
-
-The intended future split is:
-
-```text
-light-framework/
-|-- .git
-|-- packages/
-|   `-- normal app/vendor packages
-|-- packages-logicn/
-|   `-- .git
-`-- app/framework files
-```
-
-Use that layout only when `packages-logicn/` becomes a reusable LogicN package collection that
-is imported by different frameworks.
-
-Recommended implementation:
-
-```text
-light-framework/.git
-packages-logicn/.git
-```
-
-with `packages-logicn/` added to the framework as an intentional Git submodule or
-standalone nested repository. Do not create `packages-logicn/.git` accidentally
-inside the current app template, because the parent repository will not track
-package contents in the normal way once `packages-logicn/` is its own repository.
+LogicN is licensed under the Apache License 2.0. See `LICENSE`, `LICENCE.md`
+and `NOTICE.md`.
