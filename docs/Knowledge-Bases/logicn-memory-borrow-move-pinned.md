@@ -156,17 +156,25 @@ transfer zero_copy tensor -> inference_engine
 
 ---
 
-## Required AST Additions
+## AST Node Vocabulary (committed in Phase 3)
 
-```text
-BorrowExpression
-MutableBorrow
-MoveExpression
-PinnedAllocation
-OwnershipTransfer
-BorrowScope
-SharedAllocation
-```
+The following node kinds are added to `AstNodeKind` in `logicn-core/src/index.ts`.
+Phase 4 parses into this vocabulary; Phase 5 uses it for lifetime analysis.
+
+| AstNodeKind | Syntax form | Meaning |
+|---|---|---|
+| `borrowExpr` | `borrow x` | Immutable temporary access; no ownership transfer |
+| `borrowMutExpr` | `borrow mut x` | Exclusive mutable access within a scope |
+| `moveExpr` | `move x` | Explicit ownership transfer; source invalidated |
+| `pinnedDecl` | `pinned x` | Memory locked for DMA / accelerator transfer |
+| `ownershipTransfer` | `x -> y` | Ownership transfer to a named target |
+| `configMemoryBlock` | `memory { ... }` (manifest) | Project/runtime memory config (boot.lln) |
+| `borrowScopeBlock` | `memory { ... }` (code) | Code-level ownership/borrow scope block |
+
+> **Phase boundary:** `borrowExpr`, `borrowMutExpr`, `moveExpr`, `pinnedDecl`,
+> and `ownershipTransfer` are declared in Phase 3 to give the parser its target
+> vocabulary. Parser production rules for these nodes are implemented in Phase 4.
+> Full lifetime/borrow analysis is implemented in Phase 5.
 
 ---
 
@@ -214,14 +222,25 @@ remote borrow tensor from node "worker-2"
 
 ## Diagnostics
 
-| Code | Meaning |
-|---|---|
-| `LLN-OWN-001` | Moved value used after move |
-| `LLN-OWN-002` | Cannot move while value is borrowed |
-| `LLN-OWN-003` | Borrow outlives owner |
-| `LLN-OWN-004` | Pinned memory must be released before deallocation |
-| `LLN-OWN-005` | Shared value requires explicit synchronization |
-| `LLN-OWN-006` | Transfer to target requires ownership (borrow insufficient) |
+The canonical memory-checker diagnostic series is `LLN-MEMORY-*`, defined in
+`logicn-core-compiler/src/index.ts`. The former `LLN-OWN-*` codes are retired;
+the mapping below shows their equivalents.
+
+| Code | Name | Meaning | Former alias |
+|---|---|---|---|
+| `LLN-MEMORY-001` | `USE_AFTER_MOVE` | Moved value used after ownership transferred | `LLN-OWN-001` |
+| `LLN-MEMORY-002` | `BORROW_AFTER_MOVE` | Cannot borrow a value after ownership has moved | `LLN-OWN-002` |
+| `LLN-MEMORY-003` | `BORROW_ESCAPES_SCOPE` | Borrowed reference cannot outlive its owner | `LLN-OWN-003` |
+| `LLN-MEMORY-004` | `READONLY_MUTATION` | Cannot mutate a value through a readonly reference | — |
+| `LLN-MEMORY-005` | `MUTABLE_ALIAS` | A mutable borrow cannot coexist with another active borrow | — |
+| `LLN-MEMORY-006` | `BOUNDS_VIOLATION` | Index may be outside collection bounds | — |
+| `LLN-MEMORY-007` | `UNCHECKED_ACCESS_OUTSIDE_UNSAFE` | Unchecked access must be inside an approved unsafe block | `LLN-OWN-004` |
+| `LLN-MEMORY-008` | `UNSAFE_MEMORY_REQUIRES_FALLBACK` | Unsafe memory operation must declare a safe fallback | — |
+
+> **Note:** `LLN-OWN-005` (shared value synchronization) and `LLN-OWN-006`
+> (transfer requires ownership) are post-v1 diagnostics covering `shared` and
+> `transfer` keywords. They will be added to the `LLN-MEMORY-*` series when
+> those keywords are activated.
 
 ---
 

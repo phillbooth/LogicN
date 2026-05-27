@@ -121,13 +121,26 @@ Deliverables:
   - bounds checks
   - raw pointer ban in normal code
   - explicit unsafe boundary for future FFI
-- Compiler diagnostics for the memory rules supported by v1.
+- Authoritative v1 reserved keyword table (`docs/Knowledge-Bases/v1-reserved-keywords.md`).
+- Memory AST node vocabulary committed to `AstNodeKind` (`borrowExpr`, `moveExpr`,
+  `pinnedDecl`, `borrowMutExpr`, `ownershipTransfer`, `configMemoryBlock`, `borrowScopeBlock`).
+- Canonical diagnostic series confirmed: `LLN-MEMORY-*` for memory, `LLN-SAFETY-*`
+  for safety-scanner diagnostics (replaces deprecated `LogicN_COMPILER_*` codes).
+- Phase 2 memory fixture examples (`borrow-scope.lln`, `move-cleanup.lln`,
+  `reject-use-after-move.lln`) created and referenced in checker tests.
+- Scanner-level enforcement (binding-level rules) implemented in `logicn-core-compiler`.
+- Explicit phase boundary documented:
+  > Phase 3 enforces binding-level memory rules. Phase 5 enforces
+  > lifetime rules after parser and AST support exist.
 
 Exit criteria:
 
 - The checker can reject at least the basic unsafe memory examples.
 - Documentation says exactly what is enforced now and what is future work.
 - Performance wording is consistent with the chosen model.
+- The v1 reserved keyword table exists and is the lexer's source of truth.
+- `LLN-MEMORY-*` and `LLN-SAFETY-*` are the only active diagnostic namespaces
+  for memory and safety checks; `LogicN_COMPILER_*` codes are frozen.
 
 ## Phase 4: Parser And AST
 

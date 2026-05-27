@@ -1,3 +1,6 @@
+// EXPECT: ACCEPT
+// AREA: basic
+// PURPOSE: multi-variant enum with exhaustive match on all cases
 enum PaymentStatus {
   Paid
   Unpaid

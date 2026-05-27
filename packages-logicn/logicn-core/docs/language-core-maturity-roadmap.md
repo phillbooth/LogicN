@@ -111,18 +111,28 @@ syntax outside the standard library.
 
 ## Priority Order
 
+The canonical sequencing is defined in `docs/CORE_FOUNDATION_ROADMAP.md`.
+This file follows that ordering. Memory semantics must be finalized before
+parser stabilization because grammar and reserved keyword allocation depend
+on semantic commitments. If the parser is built first, keyword conflicts and
+grammar rewrites become inevitable.
+
 1. Freeze v1 syntax and examples.
-2. Build parser, AST and symbol table.
-3. Implement type, effect and permission checks.
-4. Implement Result, Option, Tri, Decision and exhaustive map semantics.
-5. Define memory model: ownership, readonly views, clone and resource scopes.
-6. Build secure web runtime slice.
-7. Generate typed JSON codecs and route manifests.
-8. Add source-mapped runtime errors.
-9. Add LogicN test syntax and test reports.
-10. Define package lockfile, permissions and trusted interop boundaries.
-11. Add structured await, streams, cancellation and backpressure.
-12. Add debug, profile and lint tooling.
+2. Commit memory model: ownership, readonly views, move semantics, borrow
+   rules, bounds checks, raw pointer ban, compiler diagnostics.
+3. Reserve keywords and semantic forms: produce the authoritative v1 keyword
+   table before lexer implementation begins.
+4. Build parser, AST and symbol table.
+5. Implement type, effect and permission checks.
+6. Implement Result, Option, Tri, Decision and exhaustive map semantics.
+7. Implement AST-based borrow/lifetime checker (depends on parser from step 4).
+8. Build secure web runtime slice.
+9. Generate typed JSON codecs and route manifests.
+10. Add source-mapped runtime errors.
+11. Add LogicN test syntax and test reports.
+12. Define package lockfile, permissions and trusted interop boundaries.
+13. Add structured await, streams, cancellation and backpressure.
+14. Add debug, profile and lint tooling.
 
 ## Required Positioning
 

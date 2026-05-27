@@ -1,3 +1,6 @@
+// EXPECT: ACCEPT
+// AREA: type-system
+// PURPOSE: explicit type contracts with effects declarations
 type ContractOrderId = String
 type ContractCustomerId = String
 

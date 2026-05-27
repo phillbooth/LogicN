@@ -7,12 +7,14 @@ import {
   checkBindingReassignment,
   checkReadonlyMutation,
   checkMethodChain,
+  checkMutInPureContext,
   validateTypedContentBlock,
   LLN_SYNTAX_001,
   LLN_SYNTAX_002,
   LLN_BINDING_001,
   LLN_BINDING_002,
   LLN_BINDING_003,
+  LLN_BINDING_004,
   LLN_BLOCK_001,
   LLN_BLOCK_002,
   LLN_STRING_001,
@@ -35,6 +37,15 @@ import {
   LLN_MEMORY_006,
   LLN_MEMORY_008,
   LLN_MEMORY_DIAGNOSTICS,
+  LLN_RAWPTR_001,
+  LLN_RAWPTR_DIAGNOSTICS,
+  LLN_SAFETY_001,
+  LLN_SAFETY_002,
+  LLN_SAFETY_003,
+  LLN_SAFETY_004,
+  LLN_SAFETY_005,
+  LLN_SAFETY_006,
+  LLN_SAFETY_DIAGNOSTICS,
 } from "../dist/index.js";
 
 describe("logicn-core-compiler syntax safety contracts", () => {
@@ -52,12 +63,9 @@ pure flow check(signal: Tri) -> Bool {
     });
 
     assert.equal(result.ok, false);
-    assert.equal(
-      result.diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === "LogicN_COMPILER_TRI_BRANCH_CONDITION",
-      ),
-      true,
+    assert.ok(
+      result.diagnostics.some((d) => d.code === LLN_SAFETY_001.code),
+      "Expected LLN-SAFETY-001 for Tri branch condition",
     );
   });
 
@@ -76,11 +84,9 @@ secure flow decide(signal: Tri, decision: Decision) -> Decision {
 
     assert.equal(result.ok, false);
     assert.equal(
-      result.diagnostics.filter(
-        (diagnostic) =>
-          diagnostic.code === "LogicN_COMPILER_UNSAFE_LOGIC_ASSIGNMENT",
-      ).length,
+      result.diagnostics.filter((d) => d.code === LLN_SAFETY_002.code).length,
       3,
+      "Expected 3 × LLN-SAFETY-002 for implicit Tri/Decision/Bool conversions",
     );
   });
 
@@ -98,13 +104,11 @@ pure flow signalAllowed(signal: Tri) -> Bool {
     });
 
     assert.equal(result.ok, false);
-    assert.equal(
+    assert.ok(
       result.diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === "LogicN_COMPILER_TRI_MATCH_NOT_EXHAUSTIVE" &&
-          diagnostic.message.includes("Neutral"),
+        (d) => d.code === LLN_SAFETY_006.code && d.message.includes("Neutral"),
       ),
-      true,
+      "Expected LLN-SAFETY-006 mentioning missing Neutral case",
     );
   });
 
@@ -120,11 +124,9 @@ secure flow canAccess(signal: Tri) -> Bool {
 
     assert.equal(result.ok, false);
     assert.equal(
-      result.diagnostics.find(
-        (diagnostic) =>
-          diagnostic.code === "LogicN_COMPILER_TRI_UNKNOWN_AS_TRUE",
-      )?.severity,
+      result.diagnostics.find((d) => d.code === LLN_SAFETY_003.code)?.severity,
       "error",
+      "Expected LLN-SAFETY-003 as error severity in secure flow",
     );
   });
 
@@ -141,18 +143,13 @@ flow load() -> Bool {
     });
 
     assert.equal(result.ok, false);
-    assert.equal(
-      result.diagnostics.some(
-        (diagnostic) => diagnostic.code === "LogicN_COMPILER_SECRET_LITERAL",
-      ),
-      true,
+    assert.ok(
+      result.diagnostics.some((d) => d.code === LLN_SAFETY_004.code),
+      "Expected LLN-SAFETY-004 for raw secret literal",
     );
-    assert.equal(
-      result.diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === "LogicN_COMPILER_UNSAFE_DYNAMIC_CODE",
-      ),
-      true,
+    assert.ok(
+      result.diagnostics.some((d) => d.code === LLN_SAFETY_005.code),
+      "Expected LLN-SAFETY-005 for eval() usage",
     );
   });
 
@@ -254,16 +251,7 @@ flow doWork() {
     assert.equal(diags.length, 0);
   });
 
-  it("diagnostic constant arrays are complete and have correct codes", () => {
-    assert.equal(LLN_SYNTAX_DIAGNOSTICS.length, 2);
-    assert.equal(LLN_BINDING_DIAGNOSTICS.length, 4);
-    assert.equal(LLN_PIPELINE_DIAGNOSTICS.length, 5);
-    assert.equal(LLN_INTENT_DIAGNOSTICS.length, 5);
-    assert.equal(LLN_BLOCK_DIAGNOSTICS.length, 4);
-    assert.equal(LLN_STRING_DIAGNOSTICS.length, 4);
-    assert.equal(LLN_CHAR_DIAGNOSTICS.length, 4);
-    assert.equal(LLN_BYTE_DIAGNOSTICS.length, 5);
-
+  it("diagnostic constant arrays use correct LLN-* code prefixes", () => {
     assert.ok(LLN_SYNTAX_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-SYNTAX-")));
     assert.ok(LLN_BINDING_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-BINDING-")));
     assert.ok(LLN_PIPELINE_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-PIPELINE-")));
@@ -272,6 +260,9 @@ flow doWork() {
     assert.ok(LLN_STRING_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-STRING-")));
     assert.ok(LLN_CHAR_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-CHAR-")));
     assert.ok(LLN_BYTE_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-BYTE-")));
+    assert.ok(LLN_MEMORY_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-MEMORY-")));
+    assert.ok(LLN_RAWPTR_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-RAWPTR-")));
+    assert.ok(LLN_SAFETY_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-SAFETY-")));
   });
 
   it("accepts a well-formed typed content block without errors", () => {
@@ -441,5 +432,134 @@ flow renderScript() {
     assert.equal(LLN_MEMORY_DIAGNOSTICS.length, 8);
     assert.ok(LLN_MEMORY_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-MEMORY-")));
     assert.ok(LLN_MEMORY_DIAGNOSTICS.every((d) => d.severity === "error"));
+  });
+
+  it("Safety diagnostic constants carry correct codes and names (LLN-SAFETY-* series)", () => {
+    assert.equal(LLN_SAFETY_001.code, "LLN-SAFETY-001");
+    assert.equal(LLN_SAFETY_001.name, "TRI_BRANCH_CONDITION");
+    assert.equal(LLN_SAFETY_001.severity, "error");
+
+    assert.equal(LLN_SAFETY_002.code, "LLN-SAFETY-002");
+    assert.equal(LLN_SAFETY_002.name, "UNSAFE_LOGIC_ASSIGNMENT");
+
+    assert.equal(LLN_SAFETY_003.code, "LLN-SAFETY-003");
+    assert.equal(LLN_SAFETY_003.name, "TRI_UNKNOWN_AS_TRUE");
+
+    assert.equal(LLN_SAFETY_004.code, "LLN-SAFETY-004");
+    assert.equal(LLN_SAFETY_004.name, "SECRET_LITERAL");
+
+    assert.equal(LLN_SAFETY_005.code, "LLN-SAFETY-005");
+    assert.equal(LLN_SAFETY_005.name, "UNSAFE_DYNAMIC_CODE");
+
+    assert.equal(LLN_SAFETY_006.code, "LLN-SAFETY-006");
+    assert.equal(LLN_SAFETY_006.name, "TRI_MATCH_NOT_EXHAUSTIVE");
+
+    assert.equal(LLN_SAFETY_DIAGNOSTICS.length, 6);
+    assert.ok(LLN_SAFETY_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-SAFETY-")));
+    assert.ok(LLN_SAFETY_DIAGNOSTICS.every((d) => d.severity === "error"));
+  });
+
+  it("diagnostic constants export complete arrays check — including LLN-SAFETY-* and LLN-RAWPTR-*", () => {
+    assert.equal(LLN_SYNTAX_DIAGNOSTICS.length, 2);
+    assert.equal(LLN_BINDING_DIAGNOSTICS.length, 4);
+    assert.equal(LLN_PIPELINE_DIAGNOSTICS.length, 5);
+    assert.equal(LLN_INTENT_DIAGNOSTICS.length, 5);
+    assert.equal(LLN_BLOCK_DIAGNOSTICS.length, 4);
+    assert.equal(LLN_STRING_DIAGNOSTICS.length, 4);
+    assert.equal(LLN_CHAR_DIAGNOSTICS.length, 4);
+    assert.equal(LLN_BYTE_DIAGNOSTICS.length, 5);
+    assert.equal(LLN_MEMORY_DIAGNOSTICS.length, 8);
+    assert.equal(LLN_SAFETY_DIAGNOSTICS.length, 6);
+    assert.equal(LLN_RAWPTR_DIAGNOSTICS.length, 1);
+    assert.equal(LLN_RAWPTR_001.code, "LLN-RAWPTR-001");
+    assert.equal(LLN_RAWPTR_001.name, "RAW_POINTER_OUTSIDE_UNSAFE");
+    assert.equal(LLN_RAWPTR_001.severity, "error");
+  });
+
+  // ── Phase 3 scanner-level memory rules ───────────────────────────────────
+
+  it("rejects mut binding declared inside a pure flow — LLN-BINDING-004", () => {
+    const result = validateCoreSyntaxSafety({
+      file: "pure-mut.lln",
+      text: `
+pure flow accumulateValues(items: Array<Int>) -> Int {
+  mut total: Int = 0
+  return total
+}
+`,
+    });
+
+    assert.equal(result.ok, false);
+    assert.ok(
+      result.diagnostics.some((d) => d.code === LLN_BINDING_004.code),
+      "Expected LLN-BINDING-004 for mut in pure flow",
+    );
+  });
+
+  it("allows mut binding in non-pure flows — no LLN-BINDING-004", () => {
+    const result = validateCoreSyntaxSafety({
+      file: "guarded-mut.lln",
+      text: `
+guarded flow buildPayload(items: Array<String>) -> Array<String> {
+  mut result: Array<String> = []
+  return result
+}
+`,
+    });
+
+    assert.equal(result.ok, true);
+    assert.ok(
+      !result.diagnostics.some((d) => d.code === LLN_BINDING_004.code),
+      "Should not emit LLN-BINDING-004 outside pure flow",
+    );
+  });
+
+  it("checkMutInPureContext emits LLN-BINDING-004 for pure flows and nothing otherwise", () => {
+    const loc = { file: "test.lln", line: 4, column: 3 };
+
+    const pureDiags = checkMutInPureContext({ flowSafetyLevel: "pure", bindingName: "counter", location: loc });
+    const guardedDiags = checkMutInPureContext({ flowSafetyLevel: "guarded", bindingName: "counter", location: loc });
+    const safeDiags = checkMutInPureContext({ flowSafetyLevel: "safe", bindingName: "counter", location: loc });
+
+    assert.ok(pureDiags.some((d) => d.code === LLN_BINDING_004.code), "Expected LLN-BINDING-004 for pure");
+    assert.equal(guardedDiags.length, 0, "No diagnostic for guarded");
+    assert.equal(safeDiags.length, 0, "No diagnostic for safe");
+  });
+
+  it("rejects unsafe block without reason declaration — LLN-MEMORY-008", () => {
+    const result = validateCoreSyntaxSafety({
+      file: "unsafe-no-reason.lln",
+      text: `
+flow copyBuffer() -> Result<Void, String> {
+  unsafe block copyRaw {
+    return Ok(Void)
+  }
+}
+`,
+    });
+
+    assert.equal(result.ok, false);
+    assert.ok(
+      result.diagnostics.some((d) => d.code === LLN_MEMORY_008.code),
+      "Expected LLN-MEMORY-008 for unsafe block without reason",
+    );
+  });
+
+  it("accepts unsafe block with reason declaration — no LLN-MEMORY-008", () => {
+    const result = validateCoreSyntaxSafety({
+      file: "unsafe-with-reason.lln",
+      text: `
+flow copyBuffer() -> Result<Void, String> {
+  unsafe block copyRaw reason "DMA requires direct pointer access" fallback safeMemcopy {
+    return Ok(Void)
+  }
+}
+`,
+    });
+
+    assert.ok(
+      !result.diagnostics.some((d) => d.code === LLN_MEMORY_008.code),
+      "Should not emit LLN-MEMORY-008 when reason is present",
+    );
   });
 });

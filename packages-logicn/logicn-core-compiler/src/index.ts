@@ -22,9 +22,13 @@ export interface SourceLocation {
 
 export interface CompilerDiagnostic {
   readonly code: string;
+  /** Screaming-snake-case diagnostic name, e.g. "TRI_BRANCH_CONDITION". */
+  readonly name: string;
+  readonly severity: "info" | "warning" | "error";
   readonly message: string;
   readonly location?: SourceLocation;
-  readonly severity: "info" | "warning" | "error";
+  /** Human-readable fix suggestion for IDE quick-fix integration. */
+  readonly suggestedFix?: string;
 }
 
 export interface CompilerResult {
@@ -210,6 +214,25 @@ export const LLN_BINDING_DIAGNOSTICS = [
   LLN_BINDING_003,
   LLN_BINDING_004,
 ] as const;
+
+// ---------------------------------------------------------------------------
+// Raw-pointer diagnostics — LLN-RAWPTR-001
+// ---------------------------------------------------------------------------
+
+/**
+ * Raw pointer syntax detected outside an approved unsafe block.
+ *
+ * LogicN bans raw pointer access in normal code. Only approved unsafe blocks
+ * may use raw pointer expressions, and they must declare reason + fallback.
+ */
+export const LLN_RAWPTR_001 = {
+  code: "LLN-RAWPTR-001",
+  name: "RAW_POINTER_OUTSIDE_UNSAFE",
+  severity: "error",
+  message: "Raw pointer access is not allowed in normal LogicN code. Move this into an approved unsafe block with declared reason and fallback.",
+} as const;
+
+export const LLN_RAWPTR_DIAGNOSTICS = [LLN_RAWPTR_001] as const;
 
 // ---------------------------------------------------------------------------
 // Pipeline diagnostics — LLN-PIPELINE-001..005
@@ -524,6 +547,71 @@ export const LLN_MEMORY_DIAGNOSTICS = [
 ] as const;
 
 // ---------------------------------------------------------------------------
+// Safety diagnostics — LLN-SAFETY-001..006
+//
+// These replace the deprecated LogicN_COMPILER_* diagnostic codes from
+// validateCoreSyntaxSafety. All new safety-checker diagnostics must use
+// this series. LogicN_COMPILER_* codes are frozen — do not extend them.
+// ---------------------------------------------------------------------------
+
+/** A Tri value was used directly as a branch condition without explicit conversion. */
+export const LLN_SAFETY_001 = {
+  code: "LLN-SAFETY-001",
+  name: "TRI_BRANCH_CONDITION",
+  severity: "error",
+  message: "Tri values must not be used directly as branch conditions. Use exhaustive match or an explicit conversion policy.",
+} as const;
+
+/** An unsafe implicit assignment occurred between Bool, Tri, or Decision types. */
+export const LLN_SAFETY_002 = {
+  code: "LLN-SAFETY-002",
+  name: "UNSAFE_LOGIC_ASSIGNMENT",
+  severity: "error",
+  message: "Implicit conversion between Tri, Bool, and Decision is not allowed. Use an explicit policy-bearing conversion flow.",
+} as const;
+
+/** A Tri unknown value was mapped to true without policy justification. */
+export const LLN_SAFETY_003 = {
+  code: "LLN-SAFETY-003",
+  name: "TRI_UNKNOWN_AS_TRUE",
+  severity: "error",
+  message: "Converting Tri unknown to true requires explicit policy justification. In secure flows, this is always an error.",
+} as const;
+
+/** A raw secret literal was detected in source code. */
+export const LLN_SAFETY_004 = {
+  code: "LLN-SAFETY-004",
+  name: "SECRET_LITERAL",
+  severity: "error",
+  message: "Source must not contain raw secret literals. Use SecureString or an environment reference.",
+} as const;
+
+/** An unsafe dynamic code execution call was detected. */
+export const LLN_SAFETY_005 = {
+  code: "LLN-SAFETY-005",
+  name: "UNSAFE_DYNAMIC_CODE",
+  severity: "error",
+  message: "Unsafe dynamic code execution must not appear in LogicN source. Declare intent and use a governed flow.",
+} as const;
+
+/** A Tri match block is missing one or more required cases. */
+export const LLN_SAFETY_006 = {
+  code: "LLN-SAFETY-006",
+  name: "TRI_MATCH_NOT_EXHAUSTIVE",
+  severity: "error",
+  message: "Tri match must handle all three cases: Positive, Neutral, and Negative.",
+} as const;
+
+export const LLN_SAFETY_DIAGNOSTICS = [
+  LLN_SAFETY_001,
+  LLN_SAFETY_002,
+  LLN_SAFETY_003,
+  LLN_SAFETY_004,
+  LLN_SAFETY_005,
+  LLN_SAFETY_006,
+] as const;
+
+// ---------------------------------------------------------------------------
 // Governed surface types — surfaces that require intent declarations
 // ---------------------------------------------------------------------------
 
@@ -651,6 +739,9 @@ export function validateCoreSyntaxSafety(
       ...detectUnsafeCoreAssignment(source.file, line, lineNumber, symbols),
       ...detectRiskyTriBoolPolicy(source.file, line, lineNumber, flowScope),
       ...detectUnsupportedBindingKeyword(source.file, line, lineNumber),
+      ...detectMutInPureFlow(source.file, line, lineNumber, flowScope),
+      ...detectUnsafeBlockWithoutReason(source.file, line, lineNumber),
+      ...detectRawPointerOutsideUnsafe(source.file, line, lineNumber, flowScope),
     );
 
     if (options.scanSecrets ?? true) {
@@ -689,11 +780,10 @@ export function validateCoreSyntaxSafety(
     diagnostics.push(
       createCompilerDiagnostic(
         LLN_BLOCK_002.code,
+        LLN_BLOCK_002.name,
         LLN_BLOCK_002.severity,
         `${contentBlockScope.blockType} block opened with marker ${contentBlockScope.marker} is never closed.`,
-        source.file,
-        contentBlockScope.startLine,
-        1,
+        { file: source.file, line: contentBlockScope.startLine, column: 1 },
       ),
     );
   }
@@ -904,12 +994,11 @@ function detectTriBranchCondition(
 
   return [
     createCompilerDiagnostic(
-      "LogicN_COMPILER_TRI_BRANCH_CONDITION",
-      "error",
-      "Tri values must not be used directly as branch conditions. Use exhaustive match or an explicit conversion policy.",
-      file,
-      lineNumber,
-      line.indexOf(symbol.name) + 1,
+      LLN_SAFETY_001.code,
+      LLN_SAFETY_001.name,
+      LLN_SAFETY_001.severity,
+      LLN_SAFETY_001.message,
+      { file, line: lineNumber, column: line.indexOf(symbol.name) + 1 },
     ),
   ];
 }
@@ -941,12 +1030,11 @@ function detectUnsafeCoreAssignment(
   ) {
     return [
       createCompilerDiagnostic(
-        "LogicN_COMPILER_UNSAFE_LOGIC_ASSIGNMENT",
-        "error",
+        LLN_SAFETY_002.code,
+        LLN_SAFETY_002.name,
+        LLN_SAFETY_002.severity,
         `${sourceSymbol.type} must not implicitly convert to ${targetType}. Use an explicit policy-bearing conversion flow.`,
-        file,
-        lineNumber,
-        line.indexOf(sourceSymbol.name) + 1,
+        { file, line: lineNumber, column: line.indexOf(sourceSymbol.name) + 1 },
       ),
     ];
   }
@@ -968,14 +1056,13 @@ function detectRiskyTriBoolPolicy(
 
   return [
     createCompilerDiagnostic(
-      "LogicN_COMPILER_TRI_UNKNOWN_AS_TRUE",
+      LLN_SAFETY_003.code,
+      LLN_SAFETY_003.name,
       secure ? "error" : "warning",
       secure
         ? "secure flow must not convert Tri unknown to true."
         : "Converting Tri unknown to true is risky and must be justified by policy.",
-      file,
-      lineNumber,
-      line.search(/\bunknown_as/) + 1,
+      { file, line: lineNumber, column: line.search(/\bunknown_as/) + 1 },
     ),
   ];
 }
@@ -995,12 +1082,11 @@ function detectSecretLiteral(
 
   return [
     createCompilerDiagnostic(
-      "LogicN_COMPILER_SECRET_LITERAL",
-      "error",
-      "Source must not contain raw secret literals. Use SecureString or an environment reference.",
-      file,
-      lineNumber,
-      line.indexOf(secretMatch[2]) + 1,
+      LLN_SAFETY_004.code,
+      LLN_SAFETY_004.name,
+      LLN_SAFETY_004.severity,
+      LLN_SAFETY_004.message,
+      { file, line: lineNumber, column: line.indexOf(secretMatch[2]) + 1 },
     ),
   ];
 }
@@ -1016,12 +1102,11 @@ function detectUnsafeDynamicCode(
 
   return [
     createCompilerDiagnostic(
-      "LogicN_COMPILER_UNSAFE_DYNAMIC_CODE",
-      "error",
-      "Unsafe dynamic code execution must not appear in core LogicN source.",
-      file,
-      lineNumber,
-      Math.max(line.search(/\b(?:eval|Function|unsafe_exec|raw_shell)\s*\(/) + 1, 1),
+      LLN_SAFETY_005.code,
+      LLN_SAFETY_005.name,
+      LLN_SAFETY_005.severity,
+      LLN_SAFETY_005.message,
+      { file, line: lineNumber, column: Math.max(line.search(/\b(?:eval|Function|unsafe_exec|raw_shell)\s*\(/) + 1, 1) },
     ),
   ];
 }
@@ -1038,12 +1123,11 @@ function validateTriMatchExhaustive(
 
   return [
     createCompilerDiagnostic(
-      "LogicN_COMPILER_TRI_MATCH_NOT_EXHAUSTIVE",
-      "error",
+      LLN_SAFETY_006.code,
+      LLN_SAFETY_006.name,
+      LLN_SAFETY_006.severity,
       `Tri match is missing cases: ${missing.join(", ")}.`,
-      file,
-      matchBlock.startLine,
-      matchBlock.symbol.location.column,
+      { file, line: matchBlock.startLine, column: matchBlock.symbol.location.column },
     ),
   ];
 }
@@ -1074,11 +1158,10 @@ function parseContentBlockOpen(
       diagnostics: [
         createCompilerDiagnostic(
           LLN_BLOCK_001.code,
+          LLN_BLOCK_001.name,
           LLN_BLOCK_001.severity,
           `Unknown typed content block type "${rawType}". Valid types are: html, dom, script, css.`,
-          file,
-          lineNumber,
-          line.search(new RegExp(`\\b${match[1]}\\b`)) + 1,
+          { file, line: lineNumber, column: line.search(new RegExp(`\\b${match[1]}\\b`)) + 1 },
         ),
       ],
     };
@@ -1111,11 +1194,10 @@ function detectUnsupportedBindingKeyword(
     return [
       createCompilerDiagnostic(
         LLN_SYNTAX_001.code,
+        LLN_SYNTAX_001.name,
         LLN_SYNTAX_001.severity,
         LLN_SYNTAX_001.message,
-        file,
-        lineNumber,
-        line.search(/\bvar\b/) + 1,
+        { file, line: lineNumber, column: line.search(/\bvar\b/) + 1 },
       ),
     ];
   }
@@ -1126,11 +1208,10 @@ function detectUnsupportedBindingKeyword(
     return [
       createCompilerDiagnostic(
         LLN_SYNTAX_002.code,
+        LLN_SYNTAX_002.name,
         LLN_SYNTAX_002.severity,
         LLN_SYNTAX_002.message,
-        file,
-        lineNumber,
-        line.search(/\bconst\b/) + 1,
+        { file, line: lineNumber, column: line.search(/\bconst\b/) + 1 },
       ),
     ];
   }
@@ -1160,11 +1241,10 @@ export function checkBindingReassignment(input: {
     return [
       createCompilerDiagnostic(
         LLN_BINDING_001.code,
+        LLN_BINDING_001.name,
         LLN_BINDING_001.severity,
         `Cannot reassign immutable let binding ${input.bindingName}. Use mut only if reassignment is required.`,
-        input.location.file,
-        input.location.line,
-        input.location.column,
+        input.location,
       ),
     ];
   }
@@ -1173,11 +1253,10 @@ export function checkBindingReassignment(input: {
     return [
       createCompilerDiagnostic(
         LLN_BINDING_002.code,
+        LLN_BINDING_002.name,
         LLN_BINDING_002.severity,
         `Cannot reassign readonly binding ${input.bindingName}.`,
-        input.location.file,
-        input.location.line,
-        input.location.column,
+        input.location,
       ),
     ];
   }
@@ -1206,11 +1285,10 @@ export function checkReadonlyMutation(input: {
   return [
     createCompilerDiagnostic(
       LLN_BINDING_003.code,
+      LLN_BINDING_003.name,
       LLN_BINDING_003.severity,
       `Cannot mutate property ${input.propertyName} through readonly binding ${input.bindingName}.`,
-      input.location.file,
-      input.location.line,
-      input.location.column,
+      input.location,
     ),
   ];
 }
@@ -1238,19 +1316,173 @@ export function checkMethodChain(_input: {
   return [];
 }
 
+/**
+ * Checks whether a `mut` binding is used inside a pure-context flow.
+ *
+ * Implemented: Phase 3 (binding-level, no AST required).
+ * `pure flow` bodies must not contain mutable bindings; callers should use
+ * `let` or a functional accumulator (fold, count, filter).
+ *
+ * @param flowSafetyLevel - The safety level of the enclosing flow.
+ * @param bindingName     - Name of the binding declared with `mut`.
+ * @param location        - Source location for the diagnostic.
+ */
+export function checkMutInPureContext(input: {
+  readonly flowSafetyLevel: "pure" | "safe" | "secure" | "guarded" | "privileged" | "unsafe" | "experimental";
+  readonly bindingName: string;
+  readonly location: SourceLocation;
+}): readonly CompilerDiagnostic[] {
+  if (input.flowSafetyLevel !== "pure") {
+    return [];
+  }
+
+  return [
+    createCompilerDiagnostic(
+      LLN_BINDING_004.code,
+      LLN_BINDING_004.name,
+      LLN_BINDING_004.severity,
+      `mut binding ${input.bindingName} is not allowed in a pure flow. Use let or a functional accumulator (fold, count, filter).`,
+      input.location,
+    ),
+  ];
+}
+
+/**
+ * Emits LLN-BINDING-004 when a `mut` binding declaration appears inside a
+ * `pure flow` body. `pure flow` contexts forbid all mutable state.
+ *
+ * Phase 3 binding-level rule — no AST required. Full effect tracking
+ * (including deeply nested pure closures) is Phase 5 work.
+ */
+function detectMutInPureFlow(
+  file: string,
+  line: string,
+  lineNumber: number,
+  flowScope: FlowScope | undefined,
+): readonly CompilerDiagnostic[] {
+  if (flowScope?.kind !== "pure flow") {
+    return [];
+  }
+
+  const trimmed = line.trim();
+  if (trimmed.startsWith("//") || trimmed.startsWith("///")) {
+    return [];
+  }
+
+  // Match `mut <identifier>` as a binding declaration (not a type name or argument label)
+  const mutMatch = line.match(/^\s*\bmut\s+([A-Za-z_][A-Za-z0-9_]*)\b/);
+  if (mutMatch === null || mutMatch[1] === undefined) {
+    return [];
+  }
+
+  return [
+    createCompilerDiagnostic(
+      LLN_BINDING_004.code,
+      LLN_BINDING_004.name,
+      LLN_BINDING_004.severity,
+      `mut binding "${mutMatch[1]}" is not allowed in a pure flow. Use let or a functional accumulator (fold, count, filter).`,
+      { file, line: lineNumber, column: line.search(/\bmut\b/) + 1 },
+    ),
+  ];
+}
+
+/**
+ * Emits LLN-MEMORY-008 when an `unsafe block` opening line is missing a
+ * `reason` declaration. Every unsafe block must declare a human-readable
+ * reason justification on the same line as the block header.
+ *
+ * Syntax required: unsafe block <name> reason "<text>" fallback <safeFlow> {
+ *
+ * Phase 3 binding-level rule. Structural validation of reason/fallback content
+ * is Phase 5 (AST) work.
+ */
+function detectUnsafeBlockWithoutReason(
+  file: string,
+  line: string,
+  lineNumber: number,
+): readonly CompilerDiagnostic[] {
+  // Only fire on lines that begin an unsafe block scope
+  if (!/^\s*\bunsafe\s+block\b/.test(line)) {
+    return [];
+  }
+
+  // If `reason` keyword already appears on the same line, declaration is present
+  if (/\breason\b/.test(line)) {
+    return [];
+  }
+
+  return [
+    createCompilerDiagnostic(
+      LLN_MEMORY_008.code,
+      LLN_MEMORY_008.name,
+      LLN_MEMORY_008.severity,
+      `unsafe block must declare a reason on the opening line. Expected: unsafe block <name> reason "<justification>" fallback <safeFlow> { ... }`,
+      { file, line: lineNumber, column: line.search(/\bunsafe\b/) + 1 },
+    ),
+  ];
+}
+
+/**
+ * Emits LLN-RAWPTR-001 when a raw-pointer dereference expression appears
+ * outside an approved unsafe block.
+ *
+ * LogicN bans raw pointer access in normal code. The pattern `*identifier`
+ * at the start of an expression (after whitespace, `=`, or `(`) is treated
+ * as a pointer dereference. Inside an `unsafe flow` or `unsafe block` scope
+ * the expression is permitted.
+ *
+ * Phase 3 binding-level rule. Type-level pointer tracking is Phase 5 work.
+ */
+function detectRawPointerOutsideUnsafe(
+  file: string,
+  line: string,
+  lineNumber: number,
+  flowScope: FlowScope | undefined,
+): readonly CompilerDiagnostic[] {
+  // Pointer access is permitted inside unsafe scopes
+  if (flowScope?.kind === "unsafe flow" || flowScope?.kind === "unsafe block") {
+    return [];
+  }
+
+  const trimmed = line.trim();
+  if (trimmed.startsWith("//") || trimmed.startsWith("///")) {
+    return [];
+  }
+
+  // Detect `*identifier` as a pointer dereference — after `=`, `(`, or at start
+  const ptrMatch = line.match(/(?:^|[=(,\s])\*([A-Za-z_][A-Za-z0-9_]*)\b/);
+  if (ptrMatch === null) {
+    return [];
+  }
+
+  const column = line.search(/(?:^|[=(,\s])\*[A-Za-z_]/) + 1;
+
+  return [
+    createCompilerDiagnostic(
+      LLN_RAWPTR_001.code,
+      LLN_RAWPTR_001.name,
+      LLN_RAWPTR_001.severity,
+      LLN_RAWPTR_001.message,
+      { file, line: lineNumber, column },
+    ),
+  ];
+}
+
 function createCompilerDiagnostic(
   code: string,
+  name: string,
   severity: CompilerDiagnostic["severity"],
   message: string,
-  file: string,
-  line: number,
-  column: number,
+  location?: SourceLocation,
+  suggestedFix?: string,
 ): CompilerDiagnostic {
   return {
     code,
+    name,
     severity,
     message,
-    location: { file, line, column },
+    ...(location === undefined ? {} : { location }),
+    ...(suggestedFix === undefined ? {} : { suggestedFix }),
   };
 }
 

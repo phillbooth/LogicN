@@ -364,7 +364,19 @@ export type AstNodeKind =
   | "securityBlock"
   | "permissionsBlock"
   | "jsonPolicyBlock"
+  // ── Memory config block (manifest/project-level) ──
+  //    Use configMemoryBlock for project manifest memory settings (boot.lln).
+  //    Use borrowScopeBlock for code-level ownership/borrow scope (Phase 4+).
+  //    "memoryBlock" is retained as a legacy alias — prefer the specific names.
   | "memoryBlock"
+  | "configMemoryBlock"
+  | "borrowScopeBlock"
+  // ── Memory ownership expressions (Phase 3 vocabulary, parsed in Phase 4) ──
+  | "borrowExpr"       // borrow x  — immutable temporary access, no transfer
+  | "borrowMutExpr"    // borrow mut x  — exclusive mutable access for a scope
+  | "moveExpr"         // move x  — explicit ownership transfer, source invalidated
+  | "pinnedDecl"       // pinned x  — memory locked for DMA / accelerator transfer
+  | "ownershipTransfer" // x -> y  — explicit ownership transfer to target
   // ── Runtime-owned resources ──
   | "resourceDecl"
   | "resourceScopeDecl"

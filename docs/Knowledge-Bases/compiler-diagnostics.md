@@ -279,15 +279,134 @@ LLN-CAPABILITY-IMPORT-006   Package capability changed since last review
 LLN-CAPABILITY-IMPORT-007   Calling flow does not inherit required capabilities
 ```
 
-### Ownership and Memory
+### Memory Safety (canonical series: LLN-MEMORY-*)
+
+The `LLN-MEMORY-*` series is canonical. The former `LLN-OWN-*` series is
+retired — see `logicn-memory-borrow-move-pinned.md` for the mapping.
 
 ```text
-LLN-OWN-001   Moved value used after move
-LLN-OWN-002   Cannot move while value is borrowed
-LLN-OWN-003   Borrow outlives owner
-LLN-OWN-004   Pinned memory must be released before deallocation
-LLN-OWN-005   Shared value requires explicit synchronization
-LLN-OWN-006   Transfer to target requires ownership (borrow insufficient)
+LLN-MEMORY-001   USE_AFTER_MOVE              Moved value used after ownership transferred
+LLN-MEMORY-002   BORROW_AFTER_MOVE           Cannot borrow a value after ownership has moved
+LLN-MEMORY-003   BORROW_ESCAPES_SCOPE        Borrowed reference cannot outlive its owner
+LLN-MEMORY-004   READONLY_MUTATION           Cannot mutate a value through a readonly reference
+LLN-MEMORY-005   MUTABLE_ALIAS               Mutable borrow cannot coexist with another active borrow
+LLN-MEMORY-006   BOUNDS_VIOLATION            Index may be outside collection bounds
+LLN-MEMORY-007   UNCHECKED_ACCESS_OUTSIDE_UNSAFE  Unchecked access outside approved unsafe block
+LLN-MEMORY-008   UNSAFE_MEMORY_REQUIRES_FALLBACK  Unsafe memory op must declare a safe fallback
+```
+
+### Safety (canonical series: LLN-SAFETY-*)
+
+Replaces the deprecated `LogicN_COMPILER_*` codes from the Stage 1 scanner.
+All new safety-checker diagnostics must use this series. `LogicN_COMPILER_*`
+codes are frozen — do not extend them.
+
+```text
+LLN-SAFETY-001   TRI_BRANCH_CONDITION        Tri used directly as a branch condition
+LLN-SAFETY-002   UNSAFE_LOGIC_ASSIGNMENT     Implicit conversion between Tri/Bool/Decision
+LLN-SAFETY-003   TRI_UNKNOWN_AS_TRUE         Tri unknown mapped to true without policy
+LLN-SAFETY-004   SECRET_LITERAL              Raw secret literal detected in source
+LLN-SAFETY-005   UNSAFE_DYNAMIC_CODE         eval/Function/unsafe_exec in LogicN source
+LLN-SAFETY-006   TRI_MATCH_NOT_EXHAUSTIVE    Tri match missing one or more cases
+```
+
+#### Deprecated — Stage 1 Legacy (LogicN_COMPILER_*)
+
+These codes are emitted by the Stage 1 `validateCoreSyntaxSafety` scanner and
+are frozen for compatibility. They must not be extended. All new diagnostics
+must use `LLN-SAFETY-*` or another canonical `LLN-SERIES-NNN` family.
+
+```text
+LogicN_COMPILER_TRI_BRANCH_CONDITION       → LLN-SAFETY-001 (canonical)
+LogicN_COMPILER_UNSAFE_LOGIC_ASSIGNMENT   → LLN-SAFETY-002 (canonical)
+LogicN_COMPILER_TRI_UNKNOWN_AS_TRUE        → LLN-SAFETY-003 (canonical)
+LogicN_COMPILER_SECRET_LITERAL             → LLN-SAFETY-004 (canonical)
+LogicN_COMPILER_UNSAFE_DYNAMIC_CODE        → LLN-SAFETY-005 (canonical)
+LogicN_COMPILER_TRI_MATCH_NOT_EXHAUSTIVE   → LLN-SAFETY-006 (canonical)
+```
+
+### Syntax (canonical series: LLN-SYNTAX-*)
+
+```text
+LLN-SYNTAX-001   VAR_NOT_SUPPORTED       var is not a valid LogicN keyword
+LLN-SYNTAX-002   CONST_NOT_SUPPORTED     const is not a valid LogicN keyword
+LLN-SYNTAX-003   FUTURE_RESERVED_KEYWORD Future-reserved keyword used as identifier
+LLN-SYNTAX-004   ACTIVE_KEYWORD_AS_IDENT Active keyword used as identifier
+```
+
+### Binding (canonical series: LLN-BINDING-*)
+
+```text
+LLN-BINDING-001   IMMUTABLE_LET_REASSIGNMENT     Cannot reassign immutable let binding
+LLN-BINDING-002   READONLY_REASSIGNMENT          Cannot reassign readonly binding
+LLN-BINDING-003   READONLY_PROPERTY_MUTATION     Cannot mutate through a readonly binding
+LLN-BINDING-004   MUT_IN_PURE_CONTEXT            mut binding used in a pure flow or safe context
+```
+
+### Intent (canonical series: LLN-INTENT-*)
+
+```text
+LLN-INTENT-001   INTENT_BEHAVIOR_MISMATCH        Declared intent conflicts with inferred behavior
+LLN-INTENT-002   MISSING_REQUIRED_INTENT         Governed surface requires an intent declaration
+LLN-INTENT-003   UNSAFE_MISSING_REASON_OR_FALLBACK  Unsafe block must declare reason and fallback
+LLN-INTENT-004   PRIVILEGED_MISSING_CAPABILITY   Privileged flow must declare its required capability
+LLN-INTENT-005   EXPERIMENTAL_IN_PRODUCTION      Experimental code in a production build target
+```
+
+### Pipeline (canonical series: LLN-PIPELINE-*)
+
+```text
+LLN-PIPELINE-001   UNKNOWN_PIPELINE_METHOD         Unknown method in pipeline chain
+LLN-PIPELINE-002   PIPELINE_TYPE_MISMATCH          Stage output type does not match next stage input
+LLN-PIPELINE-003   UNHANDLED_FALLIBLE_PIPELINE     Fallible stage produces unhandled Result
+LLN-PIPELINE-004   PIPELINE_UNDECLARED_EFFECT      Stage requires effect not declared on enclosing flow
+LLN-PIPELINE-005   PIPELINE_READONLY_MUTATION      Stage attempts to mutate a readonly receiver
+```
+
+### Typed Content Blocks (canonical series: LLN-BLOCK-*)
+
+```text
+LLN-BLOCK-001   UNKNOWN_CONTENT_BLOCK_TYPE    Unknown typed block type (valid: html, dom, script, css)
+LLN-BLOCK-002   UNCLOSED_CONTENT_BLOCK        Typed content block opened but never closed
+LLN-BLOCK-003   MISMATCHED_CONTENT_BLOCK_MARKER  Closing marker does not match opening marker
+LLN-BLOCK-004   SECRET_IN_CONTENT_BLOCK       ProtectedSecret emitted into a typed content block
+```
+
+### String (canonical series: LLN-STRING-*)
+
+```text
+LLN-STRING-001   INVALID_UTF8_DECODE             decode produced invalid UTF-8
+LLN-STRING-002   SECRET_STORED_AS_STRING         Secret value stored in plain String
+LLN-STRING-003   IMPLICIT_STRING_BYTE_CONVERSION Bytes assigned to String without explicit decode
+LLN-STRING-004   AMBIGUOUS_STRING_LENGTH         .length without charCount() or encodedLength()
+```
+
+### Char (canonical series: LLN-CHAR-*)
+
+```text
+LLN-CHAR-001   CHAR_BYTE_CONFUSION             Char assigned to Byte without explicit conversion
+LLN-CHAR-002   INVALID_CHAR_LITERAL            Character literal contains invalid Unicode scalar
+LLN-CHAR-003   MULTI_CHAR_LITERAL              Char literal contains more than one character unit
+LLN-CHAR-004   IMPLICIT_CHAR_NUMBER_CONVERSION Char used as integer without .codePoint()
+```
+
+### Byte (canonical series: LLN-BYTE-*)
+
+```text
+LLN-BYTE-001   BYTE_OUT_OF_RANGE              Byte literal outside 0–255 range
+LLN-BYTE-002   BYTE_OVERFLOW                  Byte arithmetic result may exceed 255
+LLN-BYTE-003   IMPLICIT_BYTE_STRING_CONVERSION  Bytes assigned to String without explicit decode
+LLN-BYTE-004   RAW_BYTES_LOGGED               Raw Bytes passed to log sink without redaction
+LLN-BYTE-005   UNBOUNDED_BYTES_READ           Bytes read without declared memory limit
+```
+
+### Raw Pointer (canonical series: LLN-RAWPTR-*)
+
+Raw pointer access is banned in normal LogicN code. The `LLN-RAWPTR-*` series
+covers violations of the raw pointer ban introduced in Phase 3.
+
+```text
+LLN-RAWPTR-001   RAW_POINTER_OUTSIDE_UNSAFE    Raw pointer access outside approved unsafe block
 ```
 
 ### Data Layout

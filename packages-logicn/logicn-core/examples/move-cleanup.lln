@@ -1,0 +1,38 @@
+// EXPECT: ACCEPT
+// AREA: memory
+// PURPOSE: resource is moved to a handler; handler holds sole ownership and performs cleanup
+
+type Connection {
+  host: String
+  port: Int
+}
+
+enum ConnectionError {
+  Timeout
+  Refused
+  Closed
+}
+
+/// Takes ownership of a connection and closes it on completion.
+/// After move, the caller cannot access the connection.
+secure flow closeConnection(move conn: Connection) -> Result<Void, ConnectionError> {
+  effects [network.close]
+
+  // conn is fully owned here; we are responsible for cleanup
+  let result: Result<Void, ConnectionError> = performClose(conn.host, conn.port)
+
+  // conn is released at the end of this scope — no double-close possible
+  return result
+}
+
+/// Opens a connection then transfers ownership to the closer.
+secure flow connectAndClose(host: String, port: Int) -> Result<Void, ConnectionError> {
+  effects [network.external, network.close]
+
+  let conn: Connection = Connection { host: host, port: port }
+
+  // move transfers ownership; conn is no longer accessible in this scope
+  return closeConnection(move conn)
+
+  // conn cannot be referenced here — ownership moved to closeConnection
+}

@@ -1,0 +1,34 @@
+// EXPECT: ACCEPT
+// AREA: memory
+// PURPOSE: scoped borrow keeps owner valid after borrow ends
+
+type Buffer {
+  data: Array<UInt8>
+  size: Int
+}
+
+/// Reads the first byte of a buffer without taking ownership.
+/// The borrow expires when this flow returns; the caller keeps the buffer.
+pure flow peekFirstByte(borrow buf: Buffer) -> Option<UInt8> {
+  if buf.size == 0 {
+    return None
+  }
+  return Some(buf.data.get(0))
+}
+
+/// Demonstrates that the owner remains valid after a borrow ends.
+flow inspectBuffer() -> Result<UInt8, String> {
+  let buf: Buffer = Buffer {
+    data: [0x48, 0x65, 0x6C, 0x6C, 0x6F]
+    size: 5
+  }
+
+  // Borrow buf for inspection — buf remains owned after this call
+  let firstByte: Option<UInt8> = peekFirstByte(borrow buf)
+
+  // buf is still fully accessible here; the borrow has ended
+  match firstByte {
+    Some(byte) => return Ok(byte)
+    None       => return Err("buffer was empty")
+  }
+}
