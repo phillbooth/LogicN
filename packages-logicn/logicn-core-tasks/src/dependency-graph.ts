@@ -1,3 +1,11 @@
+// =============================================================================
+// logicn-core-tasks — dependency resolution
+//
+// Backed by lln-graph's GraphBuilder + resolveDependencies (Kahn's topoSort).
+// Public interface is unchanged from the original hand-written DFS version.
+// =============================================================================
+
+import { GraphBuilder, resolveDependencies as llnResolveDependencies } from "lln-graph";
 import type { LoadedTasks } from "./load-tasks.js";
 import type { TaskDefinition, TaskError } from "./types.js";
 
@@ -12,57 +20,71 @@ export function resolveTaskDependencies(
   taskName: string,
 ): TaskDependencyPlan {
   const tasksByName = new Map(loadedTasks.tasks.map((task) => [task.name, task]));
-  const visiting = new Set<string>();
-  const visited = new Set<string>();
-  const order: TaskDefinition[] = [];
 
-  const visit = (name: string, path: readonly string[]): TaskError | undefined => {
+  // BFS from taskName to collect only the relevant subgraph while detecting
+  // missing dependencies along the way.
+  const relevant = new Map<string, TaskDefinition>();
+  const queue: string[] = [taskName];
+  let cursor = 0;
+
+  while (cursor < queue.length) {
+    const name = queue[cursor++]!;
+    if (relevant.has(name)) continue;
+
     const task = tasksByName.get(name);
-
     if (task === undefined) {
       return {
         task: taskName,
-        code: "LogicN_TASK_DEPENDENCY_MISSING",
-        safeMessage: `Task dependency is not defined: ${name}`,
-        internalDiagnostic: `Dependency path: ${[...path, name].join(" -> ")}`,
-        suggestedFix: "Add the missing task or remove it from the depends list."
+        order: [],
+        error: {
+          task: taskName,
+          code: "LogicN_TASK_DEPENDENCY_MISSING",
+          safeMessage: `Task dependency is not defined: ${name}`,
+          internalDiagnostic: `Dependency "${name}" was not found in the loaded task file.`,
+          suggestedFix: "Add the missing task or remove it from the depends list.",
+        },
       };
     }
 
-    if (visiting.has(name)) {
-      return {
-        task: taskName,
-        code: "LogicN_TASK_DEPENDENCY_CYCLE",
-        safeMessage: `Task dependencies contain a cycle at: ${name}`,
-        internalDiagnostic: `Dependency path: ${[...path, name].join(" -> ")}`,
-        suggestedFix: "Remove or split one dependency in the cycle."
-      };
-    }
+    relevant.set(name, task);
+    for (const dep of task.depends ?? []) queue.push(dep);
+  }
 
-    if (visited.has(name)) {
-      return undefined;
-    }
-
-    visiting.add(name);
-
-    for (const dependency of task.depends ?? []) {
-      const error = visit(dependency, [...path, name]);
-      if (error !== undefined) {
-        return error;
+  // Build a lln-graph graph from the collected tasks.
+  // Edge direction: caller → dependency (same as buildDependencyGraph convention).
+  const builder = new GraphBuilder<{ taskName: string }, { required: boolean }>();
+  for (const [name] of relevant) {
+    builder.addNode(name, { taskName: name });
+  }
+  for (const [name, task] of relevant) {
+    for (const dep of task.depends ?? []) {
+      if (relevant.has(dep)) {
+        // dep must run before name — edge points forward: dep → name
+        builder.addEdge(dep, name, { required: true });
       }
     }
+  }
 
-    visiting.delete(name);
-    visited.add(name);
-    order.push(task);
-    return undefined;
-  };
+  const result = llnResolveDependencies(builder.build());
 
-  const error = visit(taskName, []);
+  if (!result.ok) {
+    return {
+      task: taskName,
+      order: [],
+      error: {
+        task: taskName,
+        code: "LogicN_TASK_DEPENDENCY_CYCLE",
+        safeMessage: `Task dependencies contain a cycle`,
+        internalDiagnostic: result.diagnostic.message,
+        suggestedFix: "Remove or split one dependency in the cycle.",
+      },
+    };
+  }
 
-  return {
-    task: taskName,
-    order,
-    ...(error === undefined ? {} : { error })
-  };
+  // resolveDependencies returns NodeIds in execution order (dependencies first).
+  const order = result.order
+    .map((name) => relevant.get(name))
+    .filter((task): task is TaskDefinition => task !== undefined);
+
+  return { task: taskName, order };
 }

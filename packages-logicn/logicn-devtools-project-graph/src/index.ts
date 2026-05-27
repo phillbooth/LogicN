@@ -1,3 +1,5 @@
+import { GraphBuilder, bfsPath as llnBfsPath } from "lln-graph";
+
 export type ProjectGraphNodeKind =
   | "Package"
   | "Document"
@@ -493,60 +495,42 @@ export function findProjectGraphPath(
     };
   }
 
-  const queue: string[][] = [[from.id]];
-  const visited = new Set<string>([from.id]);
-  let cursor = 0;
+  // Build a transient lln-graph for the BFS, keyed by node id.
+  const llnBuilder = new GraphBuilder<ProjectGraphNode, ProjectGraphEdge>();
+  for (const node of graph.nodes) llnBuilder.addNode(node.id, node);
+  for (const edge of graph.edges) {
+    try { llnBuilder.addEdge(edge.from, edge.to, edge); } catch { /* skip edges to unknown nodes */ }
+  }
+  const llnGraph = llnBuilder.build();
 
-  while (cursor < queue.length) {
-    const path = queue[cursor];
-    cursor += 1;
+  const pathIds = llnBfsPath(llnGraph, from.id, to.id);
 
-    if (path === undefined) {
-      continue;
-    }
-
-    const current = path.at(-1);
-
-    if (current === undefined) {
-      continue;
-    }
-
-    if (current === to.id) {
-      const pathEdges = edgesForPath(graph, path);
-      return {
-        from: request.from,
-        to: request.to,
-        found: true,
-        nodes: path
-          .map((nodeId) => graph.nodes.find((node) => node.id === nodeId))
-          .filter((node): node is ProjectGraphNode => node !== undefined),
-        edges: pathEdges,
-        diagnostics: [],
-      };
-    }
-
-    for (const edge of graph.edges.filter((item) => item.from === current)) {
-      if (visited.has(edge.to)) {
-        continue;
-      }
-      visited.add(edge.to);
-      queue.push([...path, edge.to]);
-    }
+  if (pathIds === null) {
+    return {
+      from: request.from,
+      to: request.to,
+      found: false,
+      nodes: [],
+      edges: [],
+      diagnostics: [
+        {
+          code: "LogicN_PROJECT_GRAPH_PATH_NOT_FOUND",
+          severity: "warning",
+          message: `No project graph path was found from "${from.id}" to "${to.id}".`,
+        },
+      ],
+    };
   }
 
   return {
     from: request.from,
     to: request.to,
-    found: false,
-    nodes: [],
-    edges: [],
-    diagnostics: [
-      {
-        code: "LogicN_PROJECT_GRAPH_PATH_NOT_FOUND",
-        severity: "warning",
-        message: `No project graph path was found from "${from.id}" to "${to.id}".`,
-      },
-    ],
+    found: true,
+    nodes: pathIds
+      .map((nodeId) => graph.nodes.find((node) => node.id === nodeId))
+      .filter((node): node is ProjectGraphNode => node !== undefined),
+    edges: edgesForPath(graph, pathIds),
+    diagnostics: [],
   };
 }
 
