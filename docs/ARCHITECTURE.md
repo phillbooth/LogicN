@@ -2301,3 +2301,67 @@ unsafe serialization and reports can apply redaction and flow tracking.
 The concept is documented in
 `docs/Knowledge-Bases/variable-mutation-vault-design.md` and
 `docs/Knowledge-Bases/explicit-mutation-and-vault-writes.md`.
+
+## Phase 4 — Parser and AST
+
+Phase 4 is the highest-priority active phase. Its goal is a deterministic, testable,
+source-mapped parser that produces a typed AST conforming to a published JSON schema.
+
+The Phase 4 plan, deliverable checklist, AstNodeKind additions, diagnostic codes,
+outstanding questions and implementation suggestions live in:
+`docs/Knowledge-Bases/phase-4-parser-ast-plan.md`
+
+## Compute, Heterogeneous Targets and AI
+
+The following Knowledge Base files cover compute, heterogeneous targets and AI features
+that extend beyond the v1 surface. They should not drive v1 implementation but must be
+understood before designing the parser AST and compiler passes.
+
+| File | Contents |
+|---|---|
+| `logicn-compiler-enforcement-compute.md` | Capability gating, cross-target verification, resource budgets |
+| `logicn-missing-syntax-keywords.md` | `deterministic flow`, `stream flow`, `yield`, placement hints, ownership at call sites |
+| `logicn-memory-borrow-move-pinned.md` | `borrow`, `move`, `pinned` semantics and ownership model |
+| `logicn-type-system-compute-extensions.md` | Full numeric tower, `Tensor<T,S>`, SIMD types |
+| `logicn-concurrency-synchronisation-compute.md` | GPU atomics, barriers, memory fences, multi-stream |
+| `logicn-ai-neural-npu-targets.md` | Neural operator IR, quantization, NPU compute target |
+| `logicn-compiler-optimizations.md` | Comptime, pipeline fusion, bounds-check elimination, PGO, LLVM/MLIR |
+| `logicn-data-layout-memory-hints.md` | `packed`, `aligned`, `simd` layout hints; profiling |
+| `logicn-photonic-distinct-compute-model.md` | Photonic IR, wavelength types, delay-line memory |
+| `logicn-native-runtime-roadmap.md` | Rust-first native runtime, 7-stage migration |
+
+## Compliance and Governance for Regulated Industries
+
+Finance, Medical, Government and other regulated-industry compliance is implemented at
+the type and effect level, not as a framework concern:
+
+`docs/Knowledge-Bases/logicn-compliance-governance.md`
+
+Includes: `PII<T>`, `PHI<T>` (HIPAA), `PCI<T>` (PCI-DSS), `Classified<T>`, regulated
+effects, OWASP coverage, GDPR/SOX policy syntax, break-glass access, compliance packages.
+
+## Supply Chain and Package Governance
+
+The LogicN-native module system (long-term npm replacement) is documented in:
+`docs/Knowledge-Bases/logicn-native-module-system.md`
+
+Cross-package capability inheritance warnings: `docs/Knowledge-Bases/logicn-developer-tooling-advanced.md`
+
+## Developer Tooling
+
+| File | Contents |
+|---|---|
+| `logicn-developer-tools.md` | LSP, diagnostics-with-fixes, governance-aware REPL |
+| `logicn-developer-tooling-advanced.md` | Test skeleton generation, capability warnings, constraint-complete signatures |
+| `logicn-ast-published-schema.md` | Stable public AST JSON schema |
+| `logicn-intent-graph.md` | Machine-readable intent graph build artefact |
+| `logicn-natural-language-governance-summary.md` | Deterministic governance summary generation |
+
+## LLN-Graph
+
+The `lln-graph` standalone library (Apache 2.0) lives at `C:\laragon\www\LLN-Graph\` and
+provides: graph data structures, BFS/DFS/topoSort/fixpoint algorithms, LogicN-specific
+graph types (EffectGraph, BoundaryGraph, ProjectGraph, DependencyGraph), and the runtime
+logging pipeline (JSONL audit writer, proof chain, event causality DAG).
+
+Status: **complete** — 90 tests passing, built and published to `dist/`.

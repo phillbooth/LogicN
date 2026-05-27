@@ -202,3 +202,362 @@ Every diagnostic is structured, source-mapped, and actionable.
 Diagnostics never expose secrets.
 Both humans and AI tools can act on diagnostics.
 ```
+
+---
+
+## LLN-Series Diagnostic Codes
+
+All Phase 4+ diagnostics use the `LLN-CATEGORY-NNN` format. These replace and extend the
+older `LNN-*` codes as the compiler matures.
+
+### Parser (Phase 4)
+
+```text
+LLN-PARSE-001   Unexpected token
+LLN-PARSE-002   Expected declaration keyword
+LLN-PARSE-003   Unterminated string literal
+LLN-PARSE-004   Invalid numeric literal
+LLN-PARSE-005   Unclosed block or bracket
+LLN-PARSE-006   Missing return type annotation
+LLN-PARSE-007   Duplicate declaration in same scope
+LLN-PARSE-008   Invalid escape sequence
+LLN-PARSE-009   Reserved keyword used as identifier
+LLN-PARSE-010   Placement hint on non-flow/non-alloc context
+LLN-PARSE-011   Ownership expression outside allowed context
+LLN-PARSE-012   GPU stream used in non-compute context
+LLN-PARSE-013   Atomic operation on non-atomic memory region (parse-level)
+LLN-PARSE-014   Quantized type used outside neural/AI context
+```
+
+### Published AST Schema
+
+```text
+LLN-AST-001     AST schema version not recognized
+LLN-AST-002     Node kind missing required span
+LLN-AST-003     Invalid discriminant in union node
+LLN-AST-004     Schema export contains unresolved reference
+LLN-AST-005     AST truncated at syntax error boundary
+LLN-AST-006     --resolved mode requires prior --syntax-only pass
+```
+
+### Intent Graph
+
+```text
+LLN-INTENT-GRAPH-001   Intent graph node references unknown flow
+LLN-INTENT-GRAPH-002   Intent graph edge has unknown source node
+LLN-INTENT-GRAPH-003   Transitive edge conflicts with declared edge
+LLN-INTENT-GRAPH-004   Privacy redaction removed required node
+LLN-INTENT-GRAPH-005   Intent graph schema version mismatch
+LLN-INTENT-GRAPH-006   Source map entry refers to unknown file
+```
+
+### Effect Checker
+
+```text
+LLN-EFFECT-001   Undeclared effect used inside flow
+LLN-EFFECT-002   Effect propagation: transitive effect not declared
+LLN-EFFECT-003   Effect boundary violation
+LLN-EFFECT-004   Forbidden effect inside compute-restricted flow
+```
+
+### Capability Checker
+
+```text
+LLN-TARGET-CAP-001   Effect forbidden inside GPU-targeted flow
+LLN-TARGET-CAP-002   Deterministic flow cannot use nondeterministic effect
+```
+
+### Capability Imports
+
+```text
+LLN-CAPABILITY-IMPORT-001   Import introduces undeclared capability
+LLN-CAPABILITY-IMPORT-002   Import introduces network effect not declared in project
+LLN-CAPABILITY-IMPORT-003   Import introduces secret access
+LLN-CAPABILITY-IMPORT-004   Transitive dependency widens authority
+LLN-CAPABILITY-IMPORT-005   Package manifest missing export-level capability declarations
+LLN-CAPABILITY-IMPORT-006   Package capability changed since last review
+LLN-CAPABILITY-IMPORT-007   Calling flow does not inherit required capabilities
+```
+
+### Ownership and Memory
+
+```text
+LLN-OWN-001   Moved value used after move
+LLN-OWN-002   Cannot move while value is borrowed
+LLN-OWN-003   Borrow outlives owner
+LLN-OWN-004   Pinned memory must be released before deallocation
+LLN-OWN-005   Shared value requires explicit synchronization
+LLN-OWN-006   Transfer to target requires ownership (borrow insufficient)
+```
+
+### Data Layout
+
+```text
+LN-LAYOUT-001   Invalid alignment value (not a supported power-of-two)
+LN-LAYOUT-002   Packed/SIMD conflict
+LN-LAYOUT-003   Unsupported SIMD field type
+LN-LAYOUT-004   GPU transfer requires stable layout
+LN-LAYOUT-005   Target does not support requested alignment
+LN-LAYOUT-006   Layout conversion requires explicit copy
+LN-LAYOUT-007   Dynamic field prevents zero-copy
+LN-LAYOUT-008   Native ABI layout is unstable
+```
+
+### Type System
+
+```text
+LLN-TYPE-NUMERIC-001   Float16 not supported by target
+LLN-TYPE-NUMERIC-002   Implicit narrowing conversion rejected
+LLN-TYPE-NUMERIC-003   Tensor shape mismatch
+LLN-TYPE-NUMERIC-004   Quantized type used where full precision required
+LLN-TYPE-NUMERIC-005   SIMD vector width incompatible with target
+```
+
+### Neural IR / Tensors
+
+```text
+LLN-TENSOR-001   Matrix dimensions do not align
+LLN-TENSOR-002   Incompatible tensor ranks
+LLN-TENSOR-003   Dtype mismatch
+LLN-TENSOR-004   Layout mismatch
+LLN-TENSOR-005   Broadcast rule failed
+LLN-TENSOR-006   Dynamic dimension requires runtime guard
+LLN-TENSOR-007   Backend does not support operator
+LLN-TENSOR-008   Backend does not support dtype/layout combination
+LLN-TENSOR-009   Precision policy would be violated
+LLN-TENSOR-010   Native neural call lacks shape contract
+```
+
+### Quantization
+
+```text
+LLN-QUANT-001   Quantized value used where full precision required
+LLN-QUANT-002   Full-precision value used where quantized required
+LLN-QUANT-003   Incompatible quantization schemes
+LLN-QUANT-004   Missing calibration profile
+LLN-QUANT-005   Implicit dequantization forbidden
+LLN-QUANT-006   Implicit quantization forbidden
+LLN-QUANT-007   Backend does not support quantization scheme
+LLN-QUANT-008   Accuracy evidence required by policy
+LLN-QUANT-009   Quantized accumulation type mismatch
+LLN-QUANT-010   Precision downgrade not approved
+```
+
+### NPU Targets
+
+```text
+LLN-NPU-001   NPU target unavailable for deployment platform
+LLN-NPU-002   Operator unsupported by selected NPU provider
+LLN-NPU-003   Dtype unsupported by selected NPU provider
+LLN-NPU-004   Dynamic shape unsupported by selected NPU provider
+LLN-NPU-005   Quantization required for NPU target
+LLN-NPU-006   Fallback required but not declared
+LLN-NPU-007   Selected provider would violate precision policy
+LLN-NPU-008   Selected provider cannot satisfy memory budget
+LLN-NPU-009   Runtime fallback occurred and was reported
+LLN-NPU-010   NPU target requested but neural IR is opaque native call
+```
+
+### GPU Synchronisation
+
+```text
+LLN-GPU-SYNC-001   Shared memory written without barrier before read
+LLN-GPU-SYNC-002   Atomic operation on non-atomic memory region
+LLN-GPU-SYNC-003   Stream awaited after stream was already completed
+LLN-GPU-SYNC-004   Concurrent kernels on same stream must be sequential
+LLN-GPU-SYNC-005   Memory fence required before cross-stream visibility
+```
+
+### Cross-Target Verification
+
+```text
+LLN-VERIFY-001   Cross-target verification failed within tolerance
+LLN-VERIFY-002   Verification tolerance not declared for this target
+```
+
+### Compute Resource Budgets
+
+```text
+LLN-BUDGET-001   Flow exceeds declared VRAM budget
+LLN-BUDGET-002   Register usage exceeds declared limit
+LLN-BUDGET-003   Occupancy constraint cannot be met for this kernel
+LLN-BUDGET-004   Timeout budget exceeded
+```
+
+### Compiler Optimizations
+
+```text
+LLN-COMPTIME-001   Effectful flow cannot execute at compile time
+LLN-COMPTIME-002   Nondeterministic operation in comptime flow
+LLN-COMPTIME-003   Compile-time evaluation exceeded resource budget
+LLN-COMPTIME-004   Comptime flow attempted forbidden runtime access
+LLN-COMPTIME-005   Secret value cannot be embedded into compile-time constant
+LLN-COMPTIME-006   Target-dependent comptime result detected
+LLN-COMPTIME-007   Recursive comptime evaluation exceeded limit
+LLN-COMPTIME-008   Unsupported type for compile-time serialization
+
+LLN-PIPELINE-001   Pipeline fused successfully (report)
+LLN-PIPELINE-002   Fusion skipped — effect ordering conflict
+LLN-PIPELINE-003   Fusion skipped — intermediate materialisation required
+LLN-PIPELINE-004   Fusion skipped — lifetime escape
+LLN-PIPELINE-005   Fusion skipped — error order ambiguity
+LLN-PIPELINE-006   Fusion would change short-circuit behavior
+
+LLN-BOUNDS-001   Bounds check eliminated by range proof
+LLN-BOUNDS-002   Bounds check retained — collection may mutate
+LLN-BOUNDS-003   Bounds check retained — index range is unknown
+LLN-BOUNDS-004   Bounds check retained — alias may resize collection
+LLN-BOUNDS-005   Bounds check retained — integer overflow proof failed
+LLN-BOUNDS-006   Unsafe unchecked access rejected
+```
+
+### Profile-Guided Optimization
+
+```text
+LLN-PGO-001   Profile evidence ignored — workload hash changed
+LLN-PGO-002   Profile evidence ignored — target is not approved
+LLN-PGO-003   Profile evidence stale for current backend version
+LLN-PGO-004   Tuned launch exceeds memory budget
+LLN-PGO-005   Tuned launch failed correctness verification
+LLN-PGO-006   Profile requested forbidden precision relaxation
+LLN-PGO-007   No profile evidence available; using baseline planner
+LLN-PGO-008   Tuned launch selected from trusted profile evidence
+```
+
+### Backend
+
+```text
+LLN-BACKEND-001   Target backend not available
+LLN-BACKEND-002   Feature not lowerable to selected backend
+LLN-BACKEND-003   Runtime ABI mismatch
+LLN-BACKEND-004   Unsafe native lowering requires explicit permission
+LLN-BACKEND-005   Source map unavailable for optimised output
+LLN-BACKEND-006   Backend optimisation would violate security boundary
+LLN-BACKEND-007   Target fallback denied by policy
+```
+
+### Incremental Compilation
+
+```text
+LLN-INCR-001   Semantic hash mismatch — recompile required
+LLN-INCR-002   Dependency graph changed — partial invalidation
+LLN-INCR-003   Cached artefact expired
+LLN-INCR-004   Incremental build skipped security-sensitive change
+```
+
+### Native Module System
+
+```text
+LLN-MODULE-001   Package governance manifest missing
+LLN-MODULE-002   Package install scripts are forbidden
+LLN-MODULE-003   Package authority not accepted
+LLN-MODULE-004   Package manifest hash changed
+LLN-MODULE-005   Package requested undeclared capability
+LLN-MODULE-006   Package used effect not declared in manifest
+LLN-MODULE-007   Package signature verification failed
+LLN-MODULE-008   Package version is floating in production profile
+LLN-MODULE-009   Transitive dependency authority changed
+LLN-MODULE-010   Package export requires ungranted capability
+```
+
+### Constraint-Complete Signatures
+
+```text
+LLN-CONSTRAINT-001   Caller does not declare required effects
+LLN-CONSTRAINT-002   Caller missing required capability
+LLN-CONSTRAINT-003   Caller does not handle declared error type
+LLN-CONSTRAINT-004   Transitive constraint not covered by caller
+LLN-CONSTRAINT-005   Signature export missing from package manifest
+```
+
+### Test Generation
+
+```text
+LLN-GEN-TEST-001   No public API or flow contracts found for test generation
+LLN-GEN-TEST-002   Generated test references missing type
+LLN-GEN-TEST-003   Effect mock type mismatch
+LLN-GEN-TEST-004   Capability not grantable in test context
+LLN-GEN-TEST-005   Generated test file would overwrite developer changes
+LLN-GEN-TEST-006   Flow has no declared effects — no mocks generated
+LLN-GEN-TEST-007   Boundary test missing for declared external boundary
+```
+
+### Governance Summary
+
+```text
+LLN-GOV-SUMMARY-001   Governance summary missing required fact
+LLN-GOV-SUMMARY-002   Profile context unknown for summary generation
+LLN-GOV-SUMMARY-003   Summary references unpublished capability
+LLN-GOV-SUMMARY-004   Uncertainty level too high to emit summary
+LLN-GOV-SUMMARY-005   Summary template missing for this profile
+```
+
+### REPL
+
+```text
+LLN-REPL-001   Effect not permitted in current REPL profile
+LLN-REPL-002   Secret cannot be revealed in REPL session
+LLN-REPL-003   Capability not granted for this REPL session
+LLN-REPL-004   Expression would cross a boundary not permitted in session
+LLN-REPL-005   REPL session audit write failed
+LLN-REPL-006   Session capability grant would exceed profile maximum
+LLN-REPL-007   Interactive session requires --profile flag
+LLN-REPL-008   Session audit report could not be generated
+```
+
+### Compliance
+
+```text
+LLN-PII-001    PII data used without explicit pii.read or pii.write effect
+LLN-PHI-001    PHI data used without phi.read or phi.write effect (HIPAA)
+LLN-PCI-001    PCI data used without pci.read or pci.write effect (PCI-DSS)
+LLN-AUDIT-001  Audit-required flow did not produce audit.write effect
+LLN-CONSENT-001  User consent check required before PII processing
+```
+
+### Photonic Compute
+
+```text
+LLN-PHOTONIC-001   Photonic op used outside photonic compute block
+LLN-PHOTONIC-002   Wavelength out of supported range for target device
+LLN-PHOTONIC-003   Phase value exceeds device precision
+LLN-PHOTONIC-004   Delay line exceeds device buffer capacity
+LLN-PHOTONIC-005   Optical signal loss exceeds tolerance threshold
+LLN-PHOTONIC-006   O/E conversion required but not declared
+LLN-PHOTONIC-007   Photonic target requires classical fallback declaration
+LLN-PHOTONIC-008   Interference pattern cannot be resolved statically
+LLN-PHOTONIC-009   Photonic effect used in non-photonic flow
+LLN-PHOTONIC-010   Wavelength domain parallelism requires explicit route declaration
+```
+
+### Runtime
+
+```text
+LLN-RUNTIME-001   Native runtime ABI version mismatch
+LLN-RUNTIME-002   MIR bridge contract violated
+LLN-RUNTIME-003   Runtime enforcement rule failed
+LLN-RUNTIME-004   Resource scope closed before awaited task completed
+LLN-RUNTIME-005   Proof chain generation failed
+LLN-RUNTIME-006   Audit event stream write failed
+LLN-RUNTIME-007   Runtime fallback to JS prototype occurred
+```
+
+### Graph Structure (lln-graph library)
+
+```text
+LLN-GRAPH-001   Graph contains a cycle where a DAG is required
+LLN-GRAPH-002   Referenced node does not exist in graph
+LLN-GRAPH-003   A declared dependency was not found
+LLN-GRAPH-004   Iterative fixpoint did not converge within max iterations
+LLN-GRAPH-005   Resource lifecycle state transition is not permitted
+```
+
+### Supply Chain
+
+```text
+LLN-SUPPLY-001   Dependency content hash mismatch
+LLN-SUPPLY-002   Package signature verification failed
+LLN-SUPPLY-003   Unsigned package rejected by policy
+LLN-SUPPLY-004   Dependency graph hash mismatch
+LLN-SUPPLY-005   Known vulnerability in dependency
+```

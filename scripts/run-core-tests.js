@@ -1,7 +1,12 @@
 // run-core-tests.js
-// Stop hook: runs `npm test` in every logicn-core and logicn-core-* package
-// whenever a sentinel file indicates that core files were edited this turn.
-// If all package tests pass, runs the project graph (logicn-devtools-project-graph).
+// Stop hook: runs tests in dependency order whenever the sentinel file
+// indicates that relevant files were edited this turn.
+//
+// Execution order (matches the dependency chain):
+//   1. lln-graph            — upstream library
+//   2. logicn-core-*        — packages that may depend on lln-graph
+//   3. logicn-devtools-project-graph — downstream consumer of lln-graph
+//
 // Outputs a JSON { systemMessage } result so Claude Code shows a status chip.
 
 'use strict';
@@ -10,12 +15,13 @@ const { spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const ROOT = path.join(__dirname, '..');
+const ROOT        = path.join(__dirname, '..');
 const PACKAGES_DIR = path.join(ROOT, 'packages-logicn');
-const SENTINEL = path.join(ROOT, '.claude', '.core-changed');
-const GRAPH_PKG = 'logicn-devtools-project-graph';
+const LLN_GRAPH_DIR = path.join(ROOT, '..', 'LLN-Graph');
+const SENTINEL    = path.join(ROOT, '.claude', '.core-changed');
+const GRAPH_PKG   = 'logicn-devtools-project-graph';
 
-// ── Guard: only run when core files changed this turn ──────────────────────
+// ── Guard: only run when relevant files changed this turn ──────────────────
 
 if (!fs.existsSync(SENTINEL)) {
   process.exit(0);
@@ -24,7 +30,7 @@ if (!fs.existsSync(SENTINEL)) {
 // Clear sentinel immediately so a crash won't leave it stale
 try { fs.unlinkSync(SENTINEL); } catch { /* ignore */ }
 
-// ── Discover core packages ──────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────
 
 function hasTestScript(pkgDir) {
   try {
@@ -34,14 +40,6 @@ function hasTestScript(pkgDir) {
     return false;
   }
 }
-
-const corePackages = fs
-  .readdirSync(PACKAGES_DIR)
-  .filter(name => /^logicn-core/.test(name) && name !== GRAPH_PKG)
-  .map(name => ({ name, dir: path.join(PACKAGES_DIR, name) }))
-  .filter(({ dir }) => hasTestScript(dir));
-
-// ── Run a single package's test suite ──────────────────────────────────────
 
 function runTest(dir, label) {
   const r = spawnSync('npm', ['test'], {
@@ -58,25 +56,39 @@ function runTest(dir, label) {
 const results = [];
 let allPassed = true;
 
-for (const { name, dir } of corePackages) {
-  const result = runTest(dir, name);
-  results.push(result);
-  if (!result.passed) allPassed = false;
+// 1. lln-graph — run first; core packages depend on it
+if (fs.existsSync(LLN_GRAPH_DIR) && hasTestScript(LLN_GRAPH_DIR)) {
+  const r = runTest(LLN_GRAPH_DIR, 'lln-graph');
+  results.push(r);
+  if (!r.passed) allPassed = false;
 }
 
-// Build status lines
-const lines = results.map(r => `${r.passed ? '✅' : '❌'} ${r.label}`);
+// 2. logicn-core-* packages (excludes logicn-devtools-project-graph)
+const corePackages = fs
+  .readdirSync(PACKAGES_DIR)
+  .filter(name => /^logicn-core/.test(name) && name !== GRAPH_PKG)
+  .map(name => ({ name, dir: path.join(PACKAGES_DIR, name) }))
+  .filter(({ dir }) => hasTestScript(dir));
 
-// If all core packages passed, run the project graph
+for (const { name, dir } of corePackages) {
+  const r = runTest(dir, name);
+  results.push(r);
+  if (!r.passed) allPassed = false;
+}
+
+// 3. logicn-devtools-project-graph — run last; downstream of lln-graph
 if (allPassed) {
   const graphDir = path.join(PACKAGES_DIR, GRAPH_PKG);
   if (hasTestScript(graphDir)) {
-    const gr = runTest(graphDir, GRAPH_PKG);
-    lines.push(`${gr.passed ? '✅' : '❌'} ${GRAPH_PKG} (graph)`);
-    if (!gr.passed) allPassed = false;
+    const r = runTest(graphDir, GRAPH_PKG);
+    results.push(r);
+    if (!r.passed) allPassed = false;
   }
 }
 
+// ── Output ──────────────────────────────────────────────────────────────────
+
+const lines = results.map(r => `${r.passed ? '✅' : '❌'} ${r.label}`);
 const header = allPassed
   ? 'LogicN core tests — all passed'
   : 'LogicN core tests — failures detected';
