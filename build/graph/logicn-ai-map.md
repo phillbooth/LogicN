@@ -4,6 +4,20 @@
 
 LogicN / LogicN language package, examples, schemas and prototype CLI.
 
+Provides:
+- DiagnosticSeverity
+- SourceLocation
+- BaseDiagnostic
+- CompilerDiagnostic
+- TokenKind
+- Token
+- LexResult
+- ContentBlockType
+- CONTENT_BLOCK_TYPES
+- TypedContentBlockExpression
+- BindingKind
+- BindingDeclaration
+
 ## logicn-core-compiler
 
 LogicN compiler pipeline contracts for parsing, checking, IR, diagnostics and reports.
@@ -15,7 +29,12 @@ Provides:
 - CompilerResult
 - CompilerSourceText
 - CoreSyntaxSafetyOptions
-- validateCoreSyntaxSafety
+- CompilerSafetyLevel
+- IntentMismatchKind
+- IntentMismatch
+- IntentCheckResult
+- LLN_INTENT_001
+- LLN_INTENT_002
 
 ## logicn-core-runtime
 
@@ -76,13 +95,13 @@ Provides:
 LogicN project configuration, environment mode and policy loading contracts.
 
 Provides:
-- ENVIRONMENT_MODES
+- LOGICN_ENVIRONMENT_MODES
 - EnvironmentMode
 - ConfigDiagnosticSeverity
 - ConfigDiagnostic
 - ProjectPackageReference
 - ProductionPackageOverride
-- ConfigPathmatch
+- ConfigPathMap
 - ProjectConfig
 - EnvironmentVariableScope
 - EnvironmentVariableReference
@@ -109,21 +128,21 @@ Provides:
 
 ## logicn-core-logic
 
-LogicN multi-state logic concepts including Tri, LogicN and future Omni logic.
+LogicN multi-state logic concepts including Tri, Decision, BoolBoundary and Omni logic.
 
 Provides:
-- Tri
-- TRI_FALSE
-- TRI_UNKNOWN
-- TRI_TRUE
-- TRI_LOGIC_STATES
-- DECISION_LOGIC_STATES
-- TriLogicStateName
-- DecisionLogicStateName
-- TriBoolPolicy
-- LogicDiagnosticSeverity
-- LogicDiagnostic
-- LogicState
+- BoolBoundaryContext
+- BoolBoundaryResult
+- LLN_BOOL_BOUNDARY_001_FAILED_CLOSED
+- LLN_BOOL_BOUNDARY_002_UNKNOWN_REASON
+- LLN_BOOL_BOUNDARY_003_INVALID_INPUT
+- LLN_BOOL_BOUNDARY_004_MISSING_BOUNDARY_NAME
+- LLN_BOOL_BOUNDARY_005_RESULT_MISUSED
+- boolDiagnosticFailedClosed
+- boolDiagnosticUnknownReason
+- boolDiagnosticInvalidInput
+- boolDiagnosticMissingBoundaryName
+- boolDiagnosticResultMisused
 
 ## logicn-core-vector
 

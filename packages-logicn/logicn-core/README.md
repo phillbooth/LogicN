@@ -259,7 +259,189 @@ secure flow verifyPayment(status: PaymentStatus) -> Decision {
 
 ---
 
-### 4 — Memory: borrow and move
+### 4 — Bindings: let, mut and readonly
+
+LogicN has three binding forms, each with a different mutability contract that
+the compiler enforces.
+
+```logicn
+// ── let — immutable binding ───────────────────────────────────────────────
+//
+// `let` declares a binding that cannot be reassigned.
+// Attempting to reassign it is LLN-BINDING-001.
+//
+let maxRetries: Int    = 3
+let apiUrl:     String = "https://api.example.com"
+
+
+// ── mut — explicit mutable binding ───────────────────────────────────────
+//
+// `mut` makes reassignment intentional and visible at the declaration site.
+// `mut` is banned inside `pure flow` (LLN-BINDING-004).
+// Use `mut` only when the value genuinely changes over time.
+//
+guarded flow retryRequest(url: String) -> Result<Response, ApiError>
+effects [network.outbound] {
+  mut attempts: Int = 0
+
+  // attempts can be reassigned here
+  // attempts = attempts + 1
+  return http.get(url)
+}
+
+
+// ── readonly — read-only view ─────────────────────────────────────────────
+//
+// `readonly` gives a read-only view of a value owned elsewhere.
+// The binding cannot be reassigned, and properties cannot be mutated
+// through it (LLN-BINDING-003).
+// Use `readonly` for configuration, shared context and borrow parameters.
+//
+flow processRequest(req: Request) -> Result<Response, ApiError> {
+  readonly config: AppConfig = loadConfig()
+
+  // config.timeout = 10    ← REJECTED: LLN-BINDING-003
+  // config = otherConfig   ← REJECTED: LLN-BINDING-002
+
+  return handleWithConfig(req, config)
+}
+```
+
+---
+
+### 5 — Intent declarations
+
+Intent makes a flow's purpose machine-readable. The effect checker, audit
+system and AI tooling all consume intent declarations. A flow whose inferred
+behavior conflicts with its declared intent is rejected (`LLN-INTENT-001`).
+
+```logicn
+// ── intent on a guarded flow ──────────────────────────────────────────────
+//
+// `intent` is a machine-readable declaration of what this flow is for.
+// The `///` doc comments are consumed by the AI context generator.
+// The `intent` keyword on the flow body is consumed by the checker.
+//
+/// intent: "Create a new customer order and initiate payment"
+/// trust:  "input pre-validated at the API boundary by the route contract"
+/// effects: [database.write, payment.charge, network.outbound]
+guarded flow createOrder(input: CreateOrderRequest) -> Result<OrderId, OrderError>
+effects [database.write, payment.charge, network.outbound]
+intent "Create a new customer order and initiate payment" {
+
+  let order: Order = Order {
+    id:         generateId()
+    customerId: input.customerId
+    total:      input.total
+  }
+
+  match saveOrder(order) {
+    Ok(saved) => return Ok(saved.id)
+    Err(_)    => return Err(OrderError.DatabaseFailed)
+  }
+}
+
+
+// ── intent on a secure flow ───────────────────────────────────────────────
+//
+// Intent is especially important on security-critical flows.
+// If the checker infers an effect not listed in intent/effects, it rejects.
+//
+/// intent: "Validate webhook signature and route to handler"
+/// trust:  "HMAC verified before handler is called"
+secure flow handlePaymentWebhook(req: Request) -> Result<Response, WebhookError>
+effects [network.inbound, database.write]
+intent "Validate webhook signature and route to handler" {
+
+  unsafe let rawBody: Bytes = req.rawBody  // untrusted until decoded
+
+  let event: PaymentEvent = json.decode<PaymentEvent>(rawBody)?
+
+  match event.type {
+    "payment.succeeded" => handlePaymentSucceeded(event)
+    "payment.failed"    => handlePaymentFailed(event)
+    _                   => return JsonResponse({ "ignored": true })
+  }
+
+  return JsonResponse({ "received": true })
+}
+```
+
+---
+
+### 6 — Unsafe variables: boundary data
+
+Data crossing into the system from the outside world — HTTP request bodies,
+webhook payloads, API responses, file reads, environment variables — arrives
+as raw, unvalidated bytes. LogicN marks these values `unsafe` at the point
+they enter the program.
+
+The compiler tracks `unsafe` values and **prevents them from being used as
+typed values** until they pass through an explicit decode or validate step.
+This is the trust-boundary model: the type system tracks where data came
+from, not just what shape it has.
+
+```logicn
+// ── Incoming HTTP request — body is unsafe until decoded ──────────────────
+//
+// req.rawBody is untrusted bytes from a client. The type annotation does
+// not make it safe — `unsafe let` marks that the data is boundary-origin.
+//
+secure flow createOrderFromRequest(req: Request) -> Result<Response, ApiError>
+effects [network.inbound, database.write]
+intent "Accept and process a new order from an HTTP request" {
+
+  // Boundary data: unsafe until validated
+  unsafe let rawBody: Bytes = req.rawBody
+
+  // Explicit decode: unsafe Bytes → typed CreateOrderRequest
+  // If the body doesn't match the schema, returns Err — no unsafe value escapes
+  let input: CreateOrderRequest = json.decode<CreateOrderRequest>(rawBody)?
+
+  // From here, `input` is fully typed and safe. `rawBody` cannot be used again.
+  match createOrder(input) {
+    Ok(orderId) => return JsonResponse({ "id": orderId, "status": "created" })
+    Err(err)    => return ApiError.response(err)
+  }
+}
+
+
+// ── Outgoing API call — response is unsafe until decoded ──────────────────
+//
+// Even responses from services you control arrive as untyped bytes.
+// `unsafe let` makes the boundary visible and forces explicit decode.
+//
+guarded flow fetchRiskScore(customerId: CustomerId) -> Result<RiskScore, ApiError>
+effects [network.outbound]
+intent "Fetch customer risk score from the risk evaluation service" {
+
+  // Response from an external service — untrusted, untyped bytes
+  unsafe let rawResponse: Bytes = http.get("https://risk.internal/score/" + customerId)
+
+  // Decode to typed value — returns Err if shape doesn't match
+  let score: RiskScore = json.decode<RiskScore>(rawResponse)?
+
+  return Ok(score)
+}
+
+
+// ── File read — content is unsafe until parsed ────────────────────────────
+//
+guarded flow loadConfig(path: String) -> Result<AppConfig, ConfigError>
+effects [filesystem.read]
+intent "Load application configuration from disk" {
+
+  unsafe let rawFile: String = fs.readText(path)
+
+  let config: AppConfig = toml.decode<AppConfig>(rawFile)?
+
+  return Ok(config)
+}
+```
+
+---
+
+### 7 — Memory: borrow and move
 
 LogicN has a hybrid ownership model. Every value has an explicit ownership state.
 
@@ -326,7 +508,7 @@ effects [none] {
 
 ---
 
-### 5 — Unsafe — always explicit, always justified
+### 8 — Unsafe — always explicit, always justified
 
 Raw pointer access and other unsafe operations are allowed, but they must be
 **declared, justified and recoverable**.
@@ -364,7 +546,7 @@ flow alsoRejected(ptr: Pointer<UInt32>) -> UInt32 {
 
 ---
 
-### 6 — Webhooks and API contracts
+### 9 — Webhooks and API contracts
 
 ```logicn
 // Webhook declarations include security policy — HMAC, replay protection,
@@ -403,7 +585,7 @@ effects [network.inbound] {
 
 ---
 
-### 7 — Task automation
+### 10 — Task automation
 
 Tasks declare their dependencies and permissions before anything runs.
 
@@ -497,6 +679,61 @@ Phase 6 — Runtime and Reports                          ⬜ future
   Build/check report: syntax, type, effect, memory diagnostics.
   Source map output for all checked examples.
   AI-readable project summary from real parser/checker facts.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Stage A — TypeScript / Node.js Runtime                  ⬜ post-foundation
+  Phase 6 delivers the first real execution layer.
+  LogicN source is compiled to governed TypeScript output.
+  Programs run on the Node.js runtime backed by V8.
+
+  The full execution stack at this stage:
+
+  LogicN Syntax
+       ↓  governed checks: types, effects, memory, intent
+  TypeScript runtime / compiler layer
+       ↓  managed language safety, type erasure
+  JavaScript output
+       ↓  managed runtime semantics
+  Node.js runtime
+       ↓  host APIs, native bridges, event loop
+  V8 JavaScript engine
+       ↓  memory-managed JS execution
+  C++ native internals
+
+  This creates a layered memory-safety model — each layer contributes
+  its own guarantees before reaching the hardware:
+
+  LogicN Syntax      → intended safety model (ownership, effects, intent)
+  TypeScript         → managed language safety (types, null checks)
+  JavaScript         → managed runtime semantics (GC, bounds)
+  Node.js            → host runtime, APIs, native bridges
+  V8                 → memory-managed JS engine
+  C++                → native implementation layer
+
+  The LogicN layer provides the strongest, most explicit guarantees.
+  The layers beneath it inherit managed safety from the JS ecosystem.
+  This means the TypeScript runtime is a credible first execution target —
+  not a compromise, but a deliberate foundation.
+
+Stage B — LogicN Compiles Itself                        ⬜ long-term
+  The LogicN compiler and runtime are rewritten in LogicN.
+  The TypeScript bootstrap layer is no longer needed for production.
+  LogicN becomes self-hosting: the language proves its own model.
+
+  The execution stack at this stage:
+
+  LogicN Syntax
+       ↓  governed checks: types, effects, memory, intent
+  LogicN compiler (written in LogicN)
+       ↓  real code generation: CPU binary, WASM, target IR
+  CPU / WASM / NPU / APU / GPU target
+       ↓  hardware execution
+  Physical compute
+
+  Self-hosting is the maturity gate: if LogicN can compile LogicN
+  safely — enforcing its own memory model, effects and intent
+  declarations — then the governance model is real, not theoretical.
 ```
 
 **After the foundation (post-v1 maturity order):**
@@ -565,13 +802,47 @@ logicn-target-gpu / logicn-ai / logicn-*  ← post-v1
   GPU, AI accelerators, neural, neuromorphic, low-bit, photonic.
 ```
 
+**Hardware targets (by readiness):**
+
+```
+CPU    (v1 active)     — x86-64, ARM, RISC-V
+WASM   (v1 planning)   — browser, edge, serverless
+GPU    (post-v1)       — NVIDIA CUDA, AMD ROCm, Intel Arc
+NPU    (post-v1)       — Intel NPU, Qualcomm Hexagon, Apple Neural Engine
+APU    (post-v1)       — AMD/Intel integrated GPU+AI silicon
+TPU / AI Accelerator (post-v1) — Google TPU, Intel Gaudi, AWS Trainium
+Photonic (post-v1)    — optical interconnect and compute planning
+```
+
+Hardware targets are backend profiles selected by project config — not core syntax. The language itself is target-agnostic.
+
+### Current execution stack (Stage A — TypeScript runtime)
+
+While the real compiler is being built, LogicN programs run via Node.js:
+
+```
+LogicN Syntax
+     ↓  governed checks: types, effects, memory, intent
+TypeScript runtime / compiler layer
+     ↓  managed language safety
+JavaScript output
+     ↓  managed runtime semantics
+Node.js runtime
+     ↓  host APIs, native bridges
+V8 JavaScript engine
+     ↓  memory-managed execution
+C++ native internals
+```
+
+Each layer contributes its own safety guarantees. LogicN's layer is the most explicit — ownership, effects, intent. The layers below provide managed memory and runtime safety inherited from the JS ecosystem.
+
 **Key boundaries:**
 
 - `logicn-core` is the language. It must not become a web framework.
 - `logicn-core-compiler` is the only package that owns diagnostic emission.
 - Effects are declared in source — the compiler does not infer them silently.
 - `unsafe` requires `reason` + `fallback` — always.
-- GPU, photonic, AI accelerators are backend profiles — not core syntax.
+- GPU, NPU, APU, photonic, AI accelerators are backend profiles — not core syntax.
 
 ---
 
