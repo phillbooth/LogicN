@@ -271,8 +271,94 @@ changes.
 
 ---
 
+## Expression Diagnostics (LLN-EXPR-* series)
+
+| Code | Name | Description |
+|---|---|---|
+| `LLN-EXPR-001` | `OperatorNotDefined` | Operator `op` is not defined for operand type(s) |
+| `LLN-EXPR-002` | `InvalidPrefixOperand` | Prefix operator `op` cannot be applied to this operand type |
+| `LLN-EXPR-003` | `SecretEqualityDenied` | `==` cannot be used on `secret protected` values; use `constantTimeEquals()` |
+| `LLN-EXPR-004` | `UnsafeStatePropagation` | Result of expression is `unsafe` because operand `x` is `unsafe unvalidated` |
+| `LLN-EXPR-005` | `PipelineTypeMismatch` | Pipeline stage output type does not match next stage input type |
+| `LLN-EXPR-006` | `AssignmentInCondition` | Assignment `=` is not allowed inside `if`/`while` conditions; use `==` |
+| `LLN-EXPR-007` | `EffectfulExpressionInPureFlow` | Effectful call inside a `pure flow` expression |
+
+---
+
+## Governance Implications of Operator Precedence
+
+Operator precedence is not only a syntactic concern in LogicN — it affects
+semantic legality, value-state propagation, and audit proof.
+
+### Unsafe state propagation
+
+If an `unsafe unvalidated` value is used in a binary expression, the result
+inherits the unsafe state:
+
+```logicn
+let sql = "SELECT " + rawInput   // rawInput: String unsafe unvalidated
+// sql is now: String unsafe tainted
+// → LLN-EXPR-004 emitted, cannot reach database.write
+```
+
+### Short-circuit semantics
+
+`&&` and `||` short-circuit. The right side only executes when the left
+permits it. This is significant for effect ordering:
+
+```logicn
+validate.email(raw) && saveCustomer(email)
+```
+
+If `validate.email()` returns `false`, `saveCustomer()` never executes.
+The audit system records which branch was taken.
+
+### No assignment in conditionals
+
+```logicn
+if x = y { ... }   // LLN-EXPR-006 — did you mean ==?
+```
+
+Requires the explicit equality operator. This prevents accidental assignment
+bugs that could bypass security conditions.
+
+### No `++` / `--`
+
+LogicN does not include increment/decrement operators. Explicit mutation is
+required:
+
+```logicn
+mut count: Int = 0
+count = count + 1   // clear mutation, auditable
+```
+
+### Pipeline operator (future)
+
+The `|>` operator is reserved (not in Phase 5). When introduced, it will bind
+lower than all arithmetic and comparison operators:
+
+```logicn
+input |> sanitize.text |> validate.email |> saveCustomer
+```
+
+The compiler will verify value-state transitions through the pipeline:
+`unsafe unvalidated → safe validated → governed sink`.
+
+---
+
+## Restrictions in v1
+
+- No user-defined operator overloading
+- No `++` or `--`
+- No assignment expressions (only assignment statements)
+- No ternary operator `? :` (use `if/else` or `match`)
+- `|>` pipeline is reserved, not yet active
+
+---
+
 ## See Also
 
 - `docs/Knowledge-Bases/parser-error-recovery.md` — sync token policy
 - `docs/Knowledge-Bases/formal-type-system-spec.md` — types used in expressions
+- `docs/Knowledge-Bases/value-state-annotations.md` — unsafe state propagation rules
 - `packages-logicn/logicn-core-compiler/src/parser.ts` — Phase 4 implementation

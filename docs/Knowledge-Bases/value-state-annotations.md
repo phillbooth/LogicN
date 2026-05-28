@@ -19,36 +19,37 @@ They are distinct from flow qualifiers.
 | Concept | Syntax example | What it describes |
 |---|---|---|
 | Flow qualifier | `secure flow`, `pure flow` | The execution kind of a flow |
-| Value-state annotation | `String unsafe unvalidated` | The trust state of a value |
+| Safety prefix | `unsafe let`, `safe mut` | The trust state of a binding |
 
-A flow can be `secure` (security-sensitive execution) while still receiving
-`unsafe unvalidated` values from an external API body. These are orthogonal
-properties.
+A flow can be `secure` (security-sensitive execution) while still holding
+`unsafe` values from an external API body. These are orthogonal properties.
 
 ```logicn
 secure flow createCustomer(req: Request) -> Result<Response, ApiError>
 effects [database.write] {
-  let body: Json unsafe unvalidated = boundary.api.body(req)
-  let input: CreateCustomerInput safe validated = validate.customer(body)?
+  unsafe let body: Bytes      = boundary.api.body(req)
+  safe   mut body             = validate.customer(body)?
+  let input: CreateCustomerInput = body
   ...
 }
 ```
 
-The flow is `secure`. The value `body` is `unsafe unvalidated`. The value
-`input` is `safe validated`. All three are correct and different statements.
+The flow is `secure`. The binding `body` starts `unsafe`. After the validation
+gate it becomes `safe`. All three statements are correct and independent.
 
 ---
 
 ## Core Idea
 
-A value-state annotation describes **what condition a value is currently in**.
+A safety prefix describes **what trust state a binding starts in**, and
+`safe mut` upgrades it after a validation gate.
 
 ```logicn
-let rawEmail:  String  unsafe unvalidated = form.email
-let email:     Email   safe   validated   = validate.email(rawEmail)?
+unsafe let rawEmail: String = form.email              // boundary-origin: blocked from sinks
+safe   mut rawEmail         = validate.email(rawEmail)?  // gate passed: now safe
 ```
 
-The compiler uses these annotations to enforce that unvalidated data cannot
+The compiler uses these annotations to enforce that `unsafe` bindings cannot
 reach governed sinks (databases, networks, payment processors) without passing
 through an approved gate first.
 
@@ -112,70 +113,67 @@ Json tainted external     // external is a Phase 6+ provenance state
 
 ```ebnf
 binding_decl =
-  binding_keyword identifier ":" type_ref [ value_state_list ] "=" expression ;
+  [ safety_prefix ] binding_keyword identifier [ ":" type_ref ] "=" expression ;
+
+safety_prefix =
+  "unsafe" | "safe" ;
 
 binding_keyword =
   "let" | "mut" | "readonly" ;
-
-value_state_list =
-  value_state { value_state } ;
-
-value_state =
-  "safe"
-  | "unsafe"
-  | "validated"
-  | "unvalidated"
-  | "tainted"
-  | "secret"
-  | "protected"
-  | "readonly" ;
 ```
 
-Value-state tokens appear **after the type reference** and **before the `=`**.
+The safety prefix appears **before** the binding keyword. It describes the
+trust state of the value being bound.
+
+### Binding forms
+
+| Form | Meaning |
+|---|---|
+| `unsafe let name: T = expr` | New immutable binding; marks `expr` as boundary-origin |
+| `unsafe mut name: T = expr` | New mutable binding; marks `expr` as boundary-origin |
+| `safe mut name = gate(name)?` | Upgrades an existing `unsafe` binding to safe after a gate |
+| `safe let name: T = expr` | New binding explicitly declared safe (rarely needed; default is safe) |
+| `let name: T = expr` | New binding; no prefix — internally constructed, treated as safe |
+| `mut name: T = expr` | Mutable binding; no prefix — internally constructed, treated as safe |
+| `readonly name: T = expr` | Immutable after first write |
 
 ### Examples
 
 ```logicn
-let rawEmail: String unsafe unvalidated = form.email
-let email: Email safe validated = validate.email(rawEmail)?
-let token: SecureString secret protected = env.secret("API_TOKEN")
-mut retryCount: Int safe = 0
-readonly config: AppConfig safe = loadConfig()
+unsafe let rawEmail: String = form.email              // boundary input — unsafe
+safe   mut rawEmail         = validate.email(rawEmail)?  // gate passed — now safe
+
+unsafe let rawBody: Bytes   = req.rawBody             // HTTP body — unsafe
+safe   mut rawBody          = json.decode<Order>(rawBody)?  // decoded — safe
+
+let total: Decimal = price + tax                      // internal — safe by default
+readonly config: AppConfig = loadConfig()             // safe, immutable
 ```
 
-Value-state annotations are **optional**. A binding without them carries no
-annotated state (the checker does not infer states for unannotated bindings
-in Phase 5).
+The `safe`/`unsafe` prefix is **optional for non-boundary bindings**. A plain
+`let` or `mut` without a prefix is treated as safe (internally constructed).
+The prefix is required when binding boundary data so the compiler can enforce
+governed sink access rules.
 
 ---
 
 ## AST Shape
 
-The Phase 4 parser encodes value states as suffix strings on the `typeRef`
-node value (e.g. `"String unsafe unvalidated"`). Phase 5 must split this into
-structured fields.
+The safety prefix is encoded on the `BindingNode` as a `safetyPrefix` field.
 
 ### Updated binding node shape
 
 ```typescript
-export type ValueState =
-  | "safe"
-  | "unsafe"
-  | "validated"
-  | "unvalidated"
-  | "tainted"
-  | "secret"
-  | "protected"
-  | "readonly";
+export type SafetyPrefix = "safe" | "unsafe";
 
 export interface BindingNode extends AstNode {
   readonly kind: "letDecl" | "mutDecl" | "readonlyDecl";
   /** Binding name */
   readonly value: string;
-  /** Base type without state annotation */
+  /** Base type reference */
   readonly typeAnnotation?: string;
-  /** Structured value states parsed from the annotation */
-  readonly valueStates?: readonly ValueState[];
+  /** Safety prefix — "unsafe" | "safe" | undefined (no prefix = safe by default) */
+  readonly safetyPrefix?: SafetyPrefix;
   readonly location?: SourceLocation;
   readonly children?: readonly AstNode[];
 }
@@ -186,7 +184,7 @@ export interface BindingNode extends AstNode {
 Source:
 
 ```logicn
-let rawEmail: String unsafe unvalidated = form.email
+unsafe let rawEmail: String = form.email
 ```
 
 AST:
@@ -196,7 +194,7 @@ AST:
   "kind": "letDecl",
   "value": "rawEmail",
   "typeAnnotation": "String",
-  "valueStates": ["unsafe", "unvalidated"],
+  "safetyPrefix": "unsafe",
   "location": { "file": "forms.lln", "line": 3, "column": 3 }
 }
 ```
@@ -207,9 +205,9 @@ AST:
 
 These rules are enforced by the value-state checker pass (Phase 5).
 
-### Rule 1 — Unsafe values cannot reach governed sinks
+### Rule 1 — `unsafe` bindings cannot reach governed sinks
 
-Values annotated `unsafe` or `unvalidated` must not flow into:
+Bindings declared with `unsafe let` or `unsafe mut` must not flow into:
 
 ```
 database.write
@@ -221,34 +219,34 @@ secret.write
 payment.charge
 ```
 
-unless they have passed a named gate that upgrades their state first.
+without first passing through a `safe mut` upgrade.
 
 Diagnostic: `LLN-VALUESTATE-001`
 
-### Rule 2 — State upgrades require an approved gate
+### Rule 2 — `safe mut` requires an approved gate
 
-A value cannot be directly assigned from `unsafe unvalidated` to `safe validated`
-without passing through a named gate function.
+The right-hand side of `safe mut` must be a call to a recognised gate function.
+Directly re-assigning an `unsafe` binding to safe without a gate is illegal.
 
 Invalid:
 
 ```logicn
-let rawEmail: String unsafe unvalidated = input.email
-let email: Email safe validated = rawEmail   // no gate — error
+unsafe let rawEmail: String = input.email
+safe   mut rawEmail = rawEmail   // no gate — LLN-VALUESTATE-002
 ```
 
 Valid:
 
 ```logicn
-let rawEmail: String unsafe unvalidated = input.email
-let email: Email safe validated = validate.email(rawEmail)?  // gate present
+unsafe let rawEmail: String = input.email
+safe   mut rawEmail = validate.email(rawEmail)?   // gate present
 ```
 
 Diagnostic: `LLN-VALUESTATE-002`
 
-### Rule 3 — Secret protected values have restricted operations
+### Rule 3 — `SecureString` bindings have restricted operations
 
-Values annotated `secret protected` cannot be:
+`SecureString` values cannot be:
 
 - Passed to `print()`, `log.*()`, or any logging function
 - Compared with `==` (use `constantTimeEquals()`)
@@ -258,18 +256,18 @@ Values annotated `secret protected` cannot be:
 Diagnostic: `LLN-SECRET-001` (print/log), `LLN-SECRET-002` (equality comparison),
 `LLN-SECRET-003` (API response)
 
-### Rule 4 — Tainted values require sanitisation
+### Rule 4 — Tainted bindings require sanitisation
 
-Values annotated `tainted` must pass through a `sanitize.*` function before
-they can be treated as `safe validated`.
+A binding tainted by an `unsafe` operand in an expression must pass through a
+`sanitize.*` gate before it can be used at a governed sink.
 
 Diagnostic: `LLN-VALUESTATE-004`
 
-### Rule 5 — No implicit state contradiction
+### Rule 5 — Boundary values must be declared `unsafe`
 
-A type annotation must not declare a state that contradicts the value's source.
-Values arriving from `boundary.api.*` or `env.*` are presumed
-`unsafe unvalidated` by default and must be annotated accordingly.
+Values arriving from HTTP bodies, file reads, environment, or external APIs
+must be declared with `unsafe let` or `unsafe mut`. Assigning them to a plain
+`let` without the prefix is a state contradiction.
 
 Diagnostic: `LLN-VALUESTATE-005`
 
@@ -277,17 +275,24 @@ Diagnostic: `LLN-VALUESTATE-005`
 
 ## Gate Functions
 
-State upgrades from `unsafe → safe` always require a named gate.
+State upgrades from `unsafe → safe` require a `safe mut` with a named gate.
+
+```logicn
+unsafe let raw: String = req.body
+safe   mut raw = validate.email(raw)?   // gate call required
+```
 
 ### Recognised gate prefixes (Phase 5)
 
-| Pattern | Upgrades from | Upgrades to |
-|---|---|---|
-| `validate.*` | `unsafe unvalidated` | `safe validated` |
-| `sanitize.*` | `unsafe unvalidated` / `tainted` | `safe validated` |
-| `redact()` | `secret protected` | (redacted state — Phase 6+) |
-| `constantTimeEquals()` | `secret protected` | — (allowed comparison) |
-| `decode.typedJson()` | `Json unsafe unvalidated` | `safe validated` |
+| Pattern | Typical use |
+|---|---|
+| `validate.*` | Format/schema validation (email, uuid, url, phone …) |
+| `sanitize.*` | Sanitise for safe display (HTML, SQL, shell escaping) |
+| `json.decode<T>()` | Decode JSON bytes to typed value |
+| `toml.decode<T>()` | Decode TOML string to typed value |
+| `parse.*` | Parse primitive from string (int, decimal, bool) |
+| `constantTimeEquals()` | Compare two `SecureString` values |
+| `redact()` | Produce a safe log placeholder from a `SecureString` |
 
 Gate recognition in Phase 5 is pattern-based on call expression names. A
 full type-system gate registry is a Phase 6+ addition.
@@ -338,18 +343,12 @@ All codes follow the `LLN-SERIES-NNN` format.
 ```logicn
 secure flow createCustomer(req: Request) -> Result<Response, ApiError>
 effects [database.write, audit.write] {
-  let body: Json unsafe unvalidated = boundary.api.body(req)
 
-  match validate.customer(body) {
-    Ok(customerInput) => {
-      let customer: CreateCustomerInput safe validated = customerInput
-      let saved: Customer = saveCustomer(customer)?
-      return Ok(Api.created(saved))
-    }
-    Err(ValidationError) => {
-      return Ok(Api.badRequest("Invalid customer input"))
-    }
-  }
+  unsafe let body: Bytes = req.rawBody
+  safe   mut body = json.decode<CreateCustomerInput>(body)?
+
+  let saved: Customer = saveCustomer(body)?
+  return Ok(Api.created(saved))
 }
 ```
 
@@ -358,9 +357,9 @@ effects [database.write, audit.write] {
 ```logicn
 secure flow unsafeSave(req: ContactFormRequest) -> Result<ContactForm, FormError>
 effects [database.write] {
-  let rawMessage: String unsafe unvalidated = req.message
+  unsafe let rawMessage: String = req.message
 
-  // LLN-VALUESTATE-001: unsafe unvalidated value cannot flow into database.write
+  // LLN-VALUESTATE-001: unsafe binding cannot flow into database.write
   let saved: ContactForm = ContactFormsDB.insert({ message: rawMessage })?
 
   return Ok(saved)
@@ -372,7 +371,7 @@ effects [database.write] {
 ```logicn
 secure flow loadApiKey() -> Result<SecureString, SecretError>
 effects [secret.read] {
-  let apiKey: SecureString secret protected = env.secret("API_KEY")
+  let apiKey: SecureString = env.secret("API_KEY")
 
   // LLN-SECRET-001 would fire here — do NOT uncomment:
   // print(apiKey)
@@ -386,14 +385,14 @@ effects [secret.read] {
 ### Constant-time comparison — correct pattern
 
 ```logicn
-secure flow verifyToken(provided: SecureString secret protected) -> Result<Decision, AuthError>
+secure flow verifyToken(provided: SecureString) -> Result<Decision, AuthError>
 effects [secret.read, audit.write] {
-  let expected: SecureString secret protected = env.secret("EXPECTED_TOKEN")
+  let expected: SecureString = env.secret("EXPECTED_TOKEN")
 
   // LLN-SECRET-002 would fire here — do NOT uncomment:
   // if provided == expected { ... }
 
-  let valid: Bool = provided.constantTimeEquals(expected)
+  let valid: Bool = constantTimeEquals(provided, expected)
 
   match valid {
     true  => return Ok(Allow)
@@ -410,9 +409,10 @@ effects [secret.read, audit.write] {
 |---|---|---|
 | `pure flow` | Whether effects are declared | `pure flow add(a: Int) -> Int` |
 | `secure flow` | Whether effects are audited and declared | `secure flow save(...) effects [...]` |
-| `safe` / `unsafe` | Whether a **value** passed a validation gate | `let raw: String unsafe unvalidated` |
+| `unsafe let` / `safe mut` | Whether a **binding** is from a trusted source | `unsafe let raw: Bytes = req.body` |
 
-`safe flow` is **not valid syntax** in v1. Do not invent it.
+`safe flow` and `unsafe flow` are **not valid syntax** in v1. The `safe`/`unsafe`
+qualifiers apply to bindings (`let`, `mut`), not flows.
 
 ---
 

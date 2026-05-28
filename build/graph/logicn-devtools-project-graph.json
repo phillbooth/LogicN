@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-05-27T18:16:04.669Z",
+  "generatedAt": "2026-05-28T13:31:25.380Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -1578,6 +1578,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/formal-type-system-spec.md",
+      "kind": "Document",
+      "label": "formal-type-system-spec.md",
+      "sourcePath": "docs/Knowledge-Bases/formal-type-system-spec.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/generative-runtime-mapper.md",
       "kind": "Document",
       "label": "generative-runtime-mapper.md",
@@ -1749,6 +1758,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-code-examples-full-flow.md",
+      "kind": "Document",
+      "label": "logicn-code-examples-full-flow.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-code-examples-full-flow.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-compiler-enforcement-compute.md",
       "kind": "Document",
       "label": "logicn-compiler-enforcement-compute.md",
@@ -1771,6 +1789,42 @@
       "kind": "Document",
       "label": "logicn-compliance-governance.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-compliance-governance.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-concept-audit-proof.md",
+      "kind": "Document",
+      "label": "logicn-concept-audit-proof.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-concept-audit-proof.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-concept-coordinated-compute.md",
+      "kind": "Document",
+      "label": "logicn-concept-coordinated-compute.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-concept-coordinated-compute.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-concept-governed-execution-plan.md",
+      "kind": "Document",
+      "label": "logicn-concept-governed-execution-plan.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-concept-governed-execution-plan.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-concept-intent.md",
+      "kind": "Document",
+      "label": "logicn-concept-intent.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-concept-intent.md",
       "tags": [
         "document"
       ]
@@ -2154,6 +2208,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-governance-architecture.md",
+      "kind": "Document",
+      "label": "logicn-governance-architecture.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-governance-architecture.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-governance-diff-ci.md",
       "kind": "Document",
       "label": "logicn-governance-diff-ci.md",
@@ -2487,6 +2550,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/operator-precedence.md",
+      "kind": "Document",
+      "label": "operator-precedence.md",
+      "sourcePath": "docs/Knowledge-Bases/operator-precedence.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/package-completion-status.md",
       "kind": "Document",
       "label": "package-completion-status.md",
@@ -2509,6 +2581,15 @@
       "kind": "Document",
       "label": "package-resolver.md",
       "sourcePath": "docs/Knowledge-Bases/package-resolver.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/parser-error-recovery.md",
+      "kind": "Document",
+      "label": "parser-error-recovery.md",
+      "sourcePath": "docs/Knowledge-Bases/parser-error-recovery.md",
       "tags": [
         "document"
       ]
@@ -3013,6 +3094,15 @@
       "kind": "Document",
       "label": "v1-reserved-keywords.md",
       "sourcePath": "docs/Knowledge-Bases/v1-reserved-keywords.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/value-state-annotations.md",
+      "kind": "Document",
+      "label": "value-state-annotations.md",
+      "sourcePath": "docs/Knowledge-Bases/value-state-annotations.md",
       "tags": [
         "document"
       ]
@@ -5908,6 +5998,56 @@
       ]
     },
     {
+      "id": "type:logicn-core-compiler:EffectDiagnostic",
+      "kind": "Type",
+      "label": "EffectDiagnostic",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/effect-checker.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:EffectCheckResult",
+      "kind": "Type",
+      "label": "EffectCheckResult",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/effect-checker.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:checkEffects",
+      "kind": "Flow",
+      "label": "checkEffects",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/effect-checker.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:checkFlowEffects",
+      "kind": "Flow",
+      "label": "checkFlowEffects",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/effect-checker.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:effectResultsToDiagnostics",
+      "kind": "Flow",
+      "label": "effectResultsToDiagnostics",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/effect-checker.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "type:logicn-core-compiler:CompilerInput",
       "kind": "Type",
       "label": "CompilerInput",
@@ -6672,6 +6812,136 @@
       "kind": "Flow",
       "label": "checkMutInPureContext",
       "sourcePath": "packages-logicn/logicn-core-compiler/src/index.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:TokenKind",
+      "kind": "Type",
+      "label": "TokenKind",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/lexer.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:Token",
+      "kind": "Type",
+      "label": "Token",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/lexer.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LexerDiagnostic",
+      "kind": "Type",
+      "label": "LexerDiagnostic",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/lexer.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LexResult",
+      "kind": "Type",
+      "label": "LexResult",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/lexer.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:V1_ACTIVE_KEYWORDS",
+      "kind": "Type",
+      "label": "V1_ACTIVE_KEYWORDS",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/lexer.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:V1_FUTURE_RESERVED",
+      "kind": "Type",
+      "label": "V1_FUTURE_RESERVED",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/lexer.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:lex",
+      "kind": "Flow",
+      "label": "lex",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/lexer.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:AstNodeKind",
+      "kind": "Type",
+      "label": "AstNodeKind",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/parser.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:AstNode",
+      "kind": "Type",
+      "label": "AstNode",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/parser.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ParseDiagnostic",
+      "kind": "Type",
+      "label": "ParseDiagnostic",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/parser.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:FlowMeta",
+      "kind": "Type",
+      "label": "FlowMeta",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/parser.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ParseResult",
+      "kind": "Type",
+      "label": "ParseResult",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/parser.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:parseProgram",
+      "kind": "Flow",
+      "label": "parseProgram",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/parser.ts",
       "tags": [
         "function",
         "logicn-core-compiler"
@@ -15498,7 +15768,7 @@
     },
     {
       "from": "doc:AGENTS.md",
-      "to": "package:logicn-core-security",
+      "to": "package:logicn-core-compiler",
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "AGENTS.md"
@@ -15520,6 +15790,13 @@
     {
       "from": "doc:AGENTS.md",
       "to": "package:logicn-core-cli",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "AGENTS.md"
+    },
+    {
+      "from": "doc:AGENTS.md",
+      "to": "package:logicn-core-tasks",
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "AGENTS.md"
@@ -17161,6 +17438,20 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/Knowledge-Bases/effect-checker-and-boundary-checker.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/formal-type-system-spec.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/formal-type-system-spec.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/formal-type-system-spec.md",
+      "to": "package:logicn-core-logic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/formal-type-system-spec.md"
     },
     {
       "from": "doc:docs/Knowledge-Bases/generative-runtime-mapper.md",
@@ -19179,6 +19470,20 @@
       "evidencePath": "docs/Knowledge-Bases/module-system-and-visibility.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/operator-precedence.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/operator-precedence.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/operator-precedence.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/operator-precedence.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/package-completion-status.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -19275,6 +19580,20 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/Knowledge-Bases/package-declaration-syntax.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/parser-error-recovery.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/parser-error-recovery.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/parser-error-recovery.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/parser-error-recovery.md"
     },
     {
       "from": "doc:docs/Knowledge-Bases/phase-4-parser-ast-plan.md",
@@ -19534,6 +19853,20 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/Knowledge-Bases/v1-reserved-keywords.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/value-state-annotations.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/value-state-annotations.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/value-state-annotations.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/value-state-annotations.md"
     },
     {
       "from": "doc:docs/LEARNING_MODE.md",
@@ -25032,6 +25365,41 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:EffectDiagnostic",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/effect-checker.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:EffectCheckResult",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/effect-checker.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:checkEffects",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/effect-checker.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:checkFlowEffects",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/effect-checker.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:effectResultsToDiagnostics",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/effect-checker.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:CompilerInput",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -25042,7 +25410,7 @@
       "to": "type:logicn-core-compiler:SourceLocation",
       "kind": "provides",
       "confidence": "EXTRACTED",
-      "evidencePath": "packages-logicn/logicn-core-compiler/src/index.ts"
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/parser.ts"
     },
     {
       "from": "package:logicn-core-compiler",
@@ -25568,6 +25936,97 @@
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/index.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:TokenKind",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/lexer.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:Token",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/lexer.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LexerDiagnostic",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/lexer.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LexResult",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/lexer.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:V1_ACTIVE_KEYWORDS",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/lexer.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:V1_FUTURE_RESERVED",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/lexer.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:lex",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/lexer.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:AstNodeKind",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/parser.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:AstNode",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/parser.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ParseDiagnostic",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/parser.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:FlowMeta",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/parser.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ParseResult",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/parser.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:parseProgram",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/parser.ts"
     },
     {
       "from": "package:logicn-core-compiler",

@@ -468,6 +468,27 @@ class Parser {
         case "return": return this.parseReturnStmt();
         case "if":     return this.parseIfStmt();
         case "match":  return this.parseMatchExpr();
+        // Safety-prefix binding forms:
+        //   unsafe let name: Type = expr
+        //   unsafe mut name: Type = expr
+        //   safe   let name: Type = expr
+        //   safe   mut name       = gate(name)?
+        case "unsafe":
+        case "safe": {
+          const safetyPrefix = tok.value as "unsafe" | "safe";
+          this.advance(); // consume "unsafe" / "safe"
+          this.skipNewlines();
+          const next = this.current();
+          if (next.kind === "keyword" && next.value === "let") {
+            return this.parseLetDecl(safetyPrefix);
+          }
+          if (next.kind === "keyword" && next.value === "mut") {
+            return this.parseMutDecl(safetyPrefix);
+          }
+          // Not a binding — fall through and emit diagnostic
+          this.emitUnexpected(`Expected 'let' or 'mut' after '${safetyPrefix}'.`);
+          return undefined;
+        }
         default: break;
       }
     }
@@ -492,7 +513,7 @@ class Parser {
     return undefined;
   }
 
-  private parseLetDecl(): AstNode {
+  private parseLetDecl(safetyPrefix?: "unsafe" | "safe"): AstNode {
     const loc = this.loc();
     this.advance(); // consume "let"
 
@@ -503,7 +524,7 @@ class Parser {
     let typeValue = "";
     if (this.currentIs("symbol", ":")) {
       this.advance();
-      // Consume optional value-state annotations (safe/unsafe, validated/unvalidated)
+      // Consume type ref with optional postfix value-state annotations
       const typeNode = this.parseTypeRefWithValueState();
       typeValue = typeNode.value ?? "";
     }
@@ -511,11 +532,14 @@ class Parser {
     this.expect("operator", "=");
     const init = this.parseExpression();
 
-    const value = typeValue !== "" ? `${name}: ${typeValue}` : name;
+    // Encode safety prefix in the value field as a leading qualifier
+    // e.g. "unsafe rawEmail: String" or just "rawEmail: String"
+    const nameWithType = typeValue !== "" ? `${name}: ${typeValue}` : name;
+    const value = safetyPrefix ? `${safetyPrefix} ${nameWithType}` : nameWithType;
     return { kind: "letDecl", value, location: loc, children: [init] };
   }
 
-  private parseMutDecl(): AstNode {
+  private parseMutDecl(safetyPrefix?: "unsafe" | "safe"): AstNode {
     const loc = this.loc();
     this.advance(); // consume "mut"
 
@@ -532,29 +556,40 @@ class Parser {
     this.expect("operator", "=");
     const init = this.parseExpression();
 
-    const value = typeValue !== "" ? `${name}: ${typeValue}` : name;
+    const nameWithType = typeValue !== "" ? `${name}: ${typeValue}` : name;
+    const value = safetyPrefix ? `${safetyPrefix} ${nameWithType}` : nameWithType;
     return { kind: "mutDecl", value, location: loc, children: [init] };
   }
 
   /**
-   * Parses a type reference that may include value-state annotations:
-   *   `String unsafe unvalidated`
-   *   `Email safe validated`
+   * Parses a type reference that may include postfix value-state annotations.
+   *
+   * Primary syntax (v1):
+   *   `unsafe let name: Type = expr`   — safety prefix before binding keyword
+   *   `safe   mut name = gate(name)?`  — upgrade prefix before mut
+   *
+   * Postfix annotations (tainted, secret, protected, tainted) still supported
+   * for secondary qualifiers after the type:
+   *   `SecureString secret`
+   *   `Bytes tainted`
    */
   private parseTypeRefWithValueState(): AstNode {
     const loc = this.loc();
     const typeRef = this.parseTypeRef();
     let value = typeRef.value ?? "";
 
-    // Optional value-state: "unsafe unvalidated" | "safe validated"
-    if (this.currentIs("keyword", "unsafe") || this.currentIs("keyword", "safe")) {
-      const state = this.current().value;
+    // Postfix secondary qualifiers: secret, protected, tainted
+    // Note: safe/unsafe as prefixes are handled by parseStatement() before
+    // reaching here. If they appear postfix (legacy/backward compat), still
+    // consume them to avoid parser confusion.
+    const postfixStates = new Set([
+      "secret", "protected", "tainted", "readonly",
+      // backward-compat: also consume safe/unsafe in postfix position
+      "safe", "unsafe", "validated", "unvalidated",
+    ]);
+    while (this.current().kind === "keyword" && postfixStates.has(this.current().value)) {
+      value += " " + this.current().value;
       this.advance();
-      value += " " + state;
-      if (this.currentIs("keyword", "unvalidated") || this.currentIs("keyword", "validated")) {
-        value += " " + this.current().value;
-        this.advance();
-      }
     }
 
     return { kind: "typeRef", value, location: loc };

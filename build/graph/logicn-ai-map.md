@@ -23,6 +23,11 @@ Provides:
 LogicN compiler pipeline contracts for parsing, checking, IR, diagnostics and reports.
 
 Provides:
+- EffectDiagnostic
+- EffectCheckResult
+- checkEffects
+- checkFlowEffects
+- effectResultsToDiagnostics
 - CompilerInput
 - SourceLocation
 - CompilerDiagnostic
@@ -30,11 +35,6 @@ Provides:
 - CompilerSourceText
 - CoreSyntaxSafetyOptions
 - CompilerSafetyLevel
-- IntentMismatchKind
-- IntentMismatch
-- IntentCheckResult
-- LLN_INTENT_001
-- LLN_INTENT_002
 
 ## logicn-core-runtime
 

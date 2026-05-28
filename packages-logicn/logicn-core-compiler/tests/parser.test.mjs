@@ -180,17 +180,22 @@ effects [database.write] {
     assert.ok(node !== undefined, "Expected mutDecl node");
   });
 
-  it("parses value-state annotations on let bindings", () => {
+  it("parses safety-prefix bindings: unsafe let and safe mut", () => {
     const result = parseOk(`
 secure flow readInput(raw: String) -> Result<Email, ValidationError>
 effects [database.read] {
-  let rawEmail: String unsafe unvalidated = raw
-  let email: Email safe validated = rawEmail
-  return Ok(email)
+  unsafe let rawEmail: String = raw
+  safe   mut rawEmail = validate.email(rawEmail)
+  return Ok(rawEmail)
 }
 `);
-    // No parse errors expected — value-state annotations are handled
-    assert.equal(result.diagnostics.filter((d) => d.severity === "error").length, 0);
+    // No parse errors expected — safety prefix syntax is handled
+    assert.equal(result.diagnostics.filter((d) => d.severity === "error").length, 0,
+      `Unexpected errors: ${result.diagnostics.filter((d) => d.severity === "error").map((d) => d.message).join("; ")}`);
+    // Verify the unsafe let node carries the prefix in its value
+    const letNode = findNode(result.ast, "letDecl");
+    assert.ok(letNode !== undefined, "Expected letDecl node");
+    assert.ok(letNode.value?.startsWith("unsafe "), `Expected letDecl.value to start with 'unsafe', got: ${letNode.value}`);
   });
 });
 

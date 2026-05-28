@@ -81,6 +81,8 @@ export const V1_ACTIVE_KEYWORDS: ReadonlySet<string> = new Set([
   "block", "fallback", "reason",
   // Value-state keywords (Phase 4)
   "safe", "validated", "unvalidated",
+  // Value-state trust/secrecy markers (v1)
+  "tainted", "secret", "protected",
 ]);
 
 /** Words reserved for post-v1 grammar — produce LLN-SYNTAX-003 if used as identifiers. */

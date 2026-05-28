@@ -27,6 +27,20 @@ describe("Lexer — keyword table", () => {
     assert.ok(V1_ACTIVE_KEYWORDS.has("unvalidated"));
   });
 
+  it("active keywords include trust and secrecy state markers", () => {
+    assert.ok(V1_ACTIVE_KEYWORDS.has("tainted"),   "expected 'tainted' in V1_ACTIVE_KEYWORDS");
+    assert.ok(V1_ACTIVE_KEYWORDS.has("secret"),    "expected 'secret' in V1_ACTIVE_KEYWORDS");
+    assert.ok(V1_ACTIVE_KEYWORDS.has("protected"), "expected 'protected' in V1_ACTIVE_KEYWORDS");
+  });
+
+  it("active keywords include flow sub-declaration keywords", () => {
+    assert.ok(V1_ACTIVE_KEYWORDS.has("effects"),    "expected 'effects' in V1_ACTIVE_KEYWORDS");
+    assert.ok(V1_ACTIVE_KEYWORDS.has("intent"),     "expected 'intent' in V1_ACTIVE_KEYWORDS");
+    assert.ok(V1_ACTIVE_KEYWORDS.has("governance"), "expected 'governance' in V1_ACTIVE_KEYWORDS");
+    assert.ok(V1_ACTIVE_KEYWORDS.has("api"),        "expected 'api' in V1_ACTIVE_KEYWORDS");
+    assert.ok(V1_ACTIVE_KEYWORDS.has("package"),    "expected 'package' in V1_ACTIVE_KEYWORDS");
+  });
+
   it("future-reserved set includes async and await", () => {
     assert.ok(V1_FUTURE_RESERVED.has("async"));
     assert.ok(V1_FUTURE_RESERVED.has("await"));

@@ -163,8 +163,9 @@ node compiler/logicn.js run examples/hello.lln
 ## Annotated Code Examples
 
 The examples below cover the v1 syntax subset runnable today. For full
-governance model examples — `intent`, `governance` blocks, `safe`/`unsafe`
-flows, `Tainted<T>`, runtime target planning and audit proof records — see the
+governance model examples — `intent`, `governance` blocks, value-state
+annotations (`unsafe unvalidated`, `safe validated`), runtime target planning
+and audit proof records — see the
 Knowledge Base:
 [`docs/Knowledge-Bases/logicn-code-examples-full-flow.md`](../../docs/Knowledge-Bases/logicn-code-examples-full-flow.md)
 
@@ -402,34 +403,40 @@ intent "Validate webhook signature and route to handler" {
 ### 6 — Unsafe variables: boundary data
 
 Data crossing into the system from the outside world — HTTP request bodies,
-webhook payloads, API responses, file reads, environment variables — arrives
-as raw, unvalidated bytes. LogicN marks these values `unsafe` at the point
-they enter the program.
+webhook payloads, API responses, file reads — arrives as raw, unvalidated
+bytes. LogicN marks these bindings with a **safety prefix** at the point they
+enter the program.
 
-The compiler tracks `unsafe` values and **prevents them from being used as
-typed values** until they pass through an explicit decode or validate step.
-This is the trust-boundary model: the type system tracks where data came
-from, not just what shape it has.
+The syntax puts the safety qualifier **before** the binding keyword:
+
+```
+unsafe let name: Type = boundaryValue     // declared unsafe at entry
+safe   mut name = validate(name)?         // upgraded to safe in-place
+```
+
+`unsafe let` marks that the data is boundary-origin. The compiler prevents
+`unsafe` values from reaching governed sinks (databases, external APIs,
+audit logs) until they pass through an explicit validate or decode step.
+`safe mut` upgrades the binding once validation has passed.
 
 ```logicn
 // ── Incoming HTTP request — body is unsafe until decoded ──────────────────
 //
-// req.rawBody is untrusted bytes from a client. The type annotation does
-// not make it safe — `unsafe let` marks that the data is boundary-origin.
+// req.rawBody is untrusted bytes from a client.
+// `unsafe let` marks it as boundary-origin at the point of binding.
 //
 secure flow createOrderFromRequest(req: Request) -> Result<Response, ApiError>
 effects [network.inbound, database.write]
 intent "Accept and process a new order from an HTTP request" {
 
-  // Boundary data: unsafe until validated
+  // Boundary data: unsafe at entry point
   unsafe let rawBody: Bytes = req.rawBody
 
-  // Explicit decode: unsafe Bytes → typed CreateOrderRequest
-  // If the body doesn't match the schema, returns Err — no unsafe value escapes
-  let input: CreateOrderRequest = json.decode<CreateOrderRequest>(rawBody)?
+  // Upgrade: decode + validate in one step
+  // Err returned if schema doesn't match — no unsafe value escapes
+  safe mut rawBody = json.decode<CreateOrderRequest>(rawBody)?
 
-  // From here, `input` is fully typed and safe. `rawBody` cannot be used again.
-  match createOrder(input) {
+  match createOrder(rawBody) {
     Ok(orderId) => return JsonResponse({ "id": orderId, "status": "created" })
     Err(err)    => return ApiError.response(err)
   }
@@ -449,9 +456,9 @@ intent "Fetch customer risk score from the risk evaluation service" {
   unsafe let rawResponse: Bytes = http.get("https://risk.internal/score/" + customerId)
 
   // Decode to typed value — returns Err if shape doesn't match
-  let score: RiskScore = json.decode<RiskScore>(rawResponse)?
+  safe mut rawResponse = json.decode<RiskScore>(rawResponse)?
 
-  return Ok(score)
+  return Ok(rawResponse)
 }
 
 
@@ -463,11 +470,26 @@ intent "Load application configuration from disk" {
 
   unsafe let rawFile: String = fs.readText(path)
 
-  let config: AppConfig = toml.decode<AppConfig>(rawFile)?
+  safe mut rawFile = toml.decode<AppConfig>(rawFile)?
 
-  return Ok(config)
+  return Ok(rawFile)
 }
 ```
+
+**Safety prefix vocabulary (v1):**
+
+| Prefix | Applies to | Meaning |
+|---|---|---|
+| `unsafe let` | New bindings | Binding is boundary-origin; compiler blocks it from governed sinks |
+| `safe mut` | Existing bindings | Upgrades an `unsafe` binding to safe after a validation/decode step |
+| `unsafe mut` | Mutable bindings | Mutable boundary data (e.g. a buffer being filled) |
+| (none) | Internal values | Internally constructed values — treated as safe by default |
+
+The full grammar and state transition rules are in
+[`docs/Knowledge-Bases/value-state-annotations.md`](../../docs/Knowledge-Bases/value-state-annotations.md).
+
+The full grammar and all state transition rules are in
+[`docs/Knowledge-Bases/value-state-annotations.md`](../../docs/Knowledge-Bases/value-state-annotations.md).
 
 ---
 

@@ -443,25 +443,75 @@ Diagnostic: `LLN-SECRET-001`, `LLN-SECRET-002`, `LLN-SECRET-003`
 
 ## 13. Required Diagnostics
 
-The type checker emits from these series. The `LLN-TYPE-*` and `LLN-MATCH-*`
-series are defined in `docs/Knowledge-Bases/compiler-diagnostics.md`.
+Canonical source: `docs/Knowledge-Bases/logicn_type_checker_design.md`
+Full reference: `docs/Knowledge-Bases/compiler-diagnostics.md`
+
+### LLN-TYPE-* series (22 codes)
 
 | Code | Name | Description |
 |---|---|---|
-| `LLN-TYPE-001` | `TYPE_MISMATCH` | Expected type X, got Y |
-| `LLN-TYPE-002` | `UNKNOWN_TYPE` | Type not defined in current scope |
-| `LLN-TYPE-003` | `ARITY_MISMATCH` | Wrong number of type arguments |
-| `LLN-TYPE-004` | `RETURN_TYPE_MISMATCH` | Return value does not match declared return type |
-| `LLN-TYPE-005` | `FIELD_NOT_FOUND` | Field X not found on type Y |
-| `LLN-TYPE-006` | `IMMUTABLE_REASSIGNMENT` | Cannot reassign `let` binding |
-| `LLN-TYPE-007` | `INVALID_OPERATOR` | Operator not defined for these operand types |
-| `LLN-TYPE-008` | `GENERIC_CONSTRAINT_FAIL` | Type does not satisfy generic constraint |
+| `LLN-TYPE-001` | `UnknownType` | Referenced type does not exist in the current scope; emit fuzzy suggestions |
+| `LLN-TYPE-002` | `TypeMismatch` | Cannot assign or convert type X to type Y |
+| `LLN-TYPE-003` | `InvalidNominalConversion` | Cannot implicitly convert nominal alias (e.g. `String` → `Email` requires a validation gate) |
+| `LLN-TYPE-004` | `InvalidBinaryOperation` | Operator `op` cannot be applied to operands of type X and Y |
+| `LLN-TYPE-005` | `InvalidUnaryOperation` | Unary operator `op` requires operand of type X |
+| `LLN-TYPE-006` | `InvalidCallArgument` | Argument N expected type X but received Y |
+| `LLN-TYPE-007` | `InvalidArgumentCount` | Expected N arguments but received M |
+| `LLN-TYPE-008` | `InvalidReturnType` | Flow declared return type X but returned Y |
+| `LLN-TYPE-009` | `InvalidGenericInstantiation` | Generic type `G<T>` expects N type parameters but received M |
+| `LLN-TYPE-010` | `UnsatisfiedGenericConstraint` | Type X does not satisfy constraint Y on type parameter |
+| `LLN-TYPE-011` | `InvalidCollectionElement` | Collection `G<T>` cannot contain element of type X |
+| `LLN-TYPE-012` | `InvalidResultType` | `Ok`/`Err` branch type does not match declared `Result<T, E>` |
+| `LLN-TYPE-013` | `InvalidSecretOperation` | Protected secret value cannot use operator `op`; use `constantTimeEquals()` |
+| `LLN-TYPE-014` | `MissingRequiredEffect` | Calling `f` requires effect `e`; current flow does not declare it |
+| `LLN-TYPE-015` | `GovernedSinkViolation` | Governed sink requires a safe binding; received an `unsafe let` binding that has not been upgraded with `safe mut` |
+| `LLN-TYPE-016` | `TensorShapeMismatch` | Tensor shapes incompatible for operation (e.g. `matmul` shape mismatch) |
+| `LLN-TYPE-017` | `QuantizedPrecisionMismatch` | Cannot mix `Quantized<Int8>` with `Float32` without `dequantize()` |
+| `LLN-TYPE-018` | `InvalidRuntimeTargetType` | Type X cannot exist in compute target Y (e.g. `CpuTensor` inside `gpu` block) |
+| `LLN-TYPE-019` | `UnknownSymbol` | Symbol `x` is not defined in the current scope |
+| `LLN-TYPE-020` | `ShadowedBinding` | Local binding `x` shadows outer-scope variable `x` (warning) |
+| `LLN-TYPE-021` | `NonExhaustiveMatch` | `match` does not handle variant(s): X |
+| `LLN-TYPE-022` | `UnreachablePattern` | Pattern is unreachable due to a previous wildcard or exhaustive arm |
+
+### LLN-NAME-* series
+
+| Code | Name | Description |
+|---|---|---|
 | `LLN-NAME-001` | `UNDECLARED_NAME` | Name not defined in current scope |
 | `LLN-NAME-002` | `DUPLICATE_NAME` | Name already declared in this scope |
 | `LLN-NAME-003` | `USE_BEFORE_DECLARATION` | Name referenced before its declaration point |
-| `LLN-MATCH-001` | `NON_EXHAUSTIVE_MATCH` | `match` is missing case(s): X |
-| `LLN-MATCH-002` | `UNREACHABLE_PATTERN` | Pattern is unreachable |
+
+### LLN-MATCH-* series
+
+| Code | Name | Description |
+|---|---|---|
+| `LLN-MATCH-001` | `NON_EXHAUSTIVE_MATCH` | `match` is missing case(s): X (alias of `LLN-TYPE-021`) |
+| `LLN-MATCH-002` | `UNREACHABLE_PATTERN` | Pattern is unreachable (alias of `LLN-TYPE-022`) |
 | `LLN-MATCH-003` | `INVALID_PATTERN_TYPE` | Pattern cannot match against this type |
+
+### Compilation pipeline order
+
+```text
+source
+    ↓
+lexer
+    ↓
+parser
+    ↓
+AST
+    ↓
+symbol resolution     ← LLN-NAME-*
+    ↓
+type checker          ← LLN-TYPE-001..022
+    ↓
+value-state checker   ← LLN-VALUESTATE-001..005, LLN-SECRET-001..003
+    ↓
+effect checker        ← LLN-EFFECT-001..006
+    ↓
+governance verifier   ← LLN-GOV-*
+    ↓
+IR generation
+```
 
 ---
 
@@ -514,10 +564,10 @@ Phase 5 defers:
 
 ## 16. Relationship to Value-State Annotations
 
-Value-state annotations (`safe`, `unsafe`, `validated`, etc.) are orthogonal
-to the base type system. A binding carries both a type (`String`) and an
-optional set of state annotations (`unsafe unvalidated`). The value-state
-checker runs as a separate pass after type inference.
+Safety prefixes (`unsafe let`, `safe mut`) are orthogonal to the base type
+system. A binding carries a type (`String`) and an optional safety prefix.
+The safety prefix is a property of the **binding declaration**, not the type.
+The value-state checker runs as a separate pass after type inference.
 
 See: `docs/Knowledge-Bases/value-state-annotations.md`
 
