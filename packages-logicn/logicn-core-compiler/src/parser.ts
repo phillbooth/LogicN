@@ -55,7 +55,8 @@ export type AstNodeKind =
   | "stringLiteral"
   | "numberLiteral"
   | "boolLiteral"
-  | "errorPropagation";
+  | "errorPropagation"
+  | "computeTargetBlock";
 
 export interface SourceLocation {
   readonly file: string;
@@ -96,6 +97,35 @@ export interface ParseResult {
   /** Extracted flow metadata — available even with partial parse errors. */
   readonly flows: readonly FlowMeta[];
 }
+
+// ---------------------------------------------------------------------------
+// Pratt operator table
+//
+// Each infix operator maps to its binding precedence and associativity.
+// Higher precedence binds tighter: * (60) > + (50) > == (30) > && (20) > || (10).
+// Ref: docs/Knowledge-Bases/operator-precedence.md
+// ---------------------------------------------------------------------------
+
+interface InfixEntry {
+  readonly precedence: number;
+  readonly associativity: "left" | "right";
+}
+
+const INFIX_OPERATOR_TABLE: ReadonlyMap<string, InfixEntry> = new Map([
+  ["||", { precedence: 10, associativity: "left" }],
+  ["&&", { precedence: 20, associativity: "left" }],
+  ["==", { precedence: 30, associativity: "left" }],
+  ["!=", { precedence: 30, associativity: "left" }],
+  ["<",  { precedence: 40, associativity: "left" }],
+  ["<=", { precedence: 40, associativity: "left" }],
+  [">",  { precedence: 40, associativity: "left" }],
+  [">=", { precedence: 40, associativity: "left" }],
+  ["+",  { precedence: 50, associativity: "left" }],
+  ["-",  { precedence: 50, associativity: "left" }],
+  ["*",  { precedence: 60, associativity: "left" }],
+  ["/",  { precedence: 60, associativity: "left" }],
+  ["%",  { precedence: 60, associativity: "left" }],
+]);
 
 // ---------------------------------------------------------------------------
 // Parser
@@ -153,6 +183,7 @@ class Parser {
         case "intent":   return this.parseGenericBlock("intentDecl");
         case "governance": return this.parseGenericBlock("governanceDecl");
         case "api":      return this.parseGenericBlock("apiDecl");
+        case "compute":  return this.parseComputeTarget();
         // Skip unknown keywords at top level
         default:
           this.emitUnexpected(`Unexpected keyword "${tok.value}" at top level.`);
@@ -468,6 +499,7 @@ class Parser {
         case "return": return this.parseReturnStmt();
         case "if":     return this.parseIfStmt();
         case "match":  return this.parseMatchExpr();
+        case "compute":  return this.parseComputeTarget();
         // Safety-prefix binding forms:
         //   unsafe let name: Type = expr
         //   unsafe mut name: Type = expr
@@ -687,51 +719,56 @@ class Parser {
   // ── Expressions ────────────────────────────────────────────────────────────
 
   /**
-   * Expression parser.
-   * Handles: assignment, comparison, additive, unary, primary.
-   * Simplified for Phase 4 — full operator precedence in Phase 5.
+   * Pratt expression parser (Phase 6).
+   *
+   * Replaces the Phase 4 ad-hoc `parseComparison → parseAdditive → parseUnary`
+   * chain with a table-driven precedence-climbing loop.
+   *
+   * Precedence table: INFIX_OPERATOR_TABLE (module level)
+   * Ref: docs/Knowledge-Bases/operator-precedence.md
+   *
+   * @param minPrecedence  Minimum precedence for the next infix operator.
+   *                       Callers pass 0 (the default) to parse a full expression.
    */
-  private parseExpression(): AstNode {
-    return this.parseComparison();
-  }
+  private parseExpression(minPrecedence = 0): AstNode {
+    let left = this.parsePrefixExpression();
 
-  private parseComparison(): AstNode {
-    let left = this.parseAdditive();
+    while (true) {
+      const tok = this.current();
+      if (tok.kind !== "operator") break;
+      const entry = INFIX_OPERATOR_TABLE.get(tok.value);
+      if (entry === undefined || entry.precedence < minPrecedence) break;
 
-    while (this.currentIsOneOf("operator", ["==", "!=", "<", ">", "<=", ">=", "&&", "||"])) {
-      const op = this.current().value;
+      const op = tok.value;
       const loc = this.loc();
       this.advance();
-      const right = this.parseAdditive();
+
+      // Left-associative: next call requires strictly higher precedence.
+      // Right-associative: same precedence is allowed.
+      const nextMin = entry.associativity === "left"
+        ? entry.precedence + 1
+        : entry.precedence;
+      const right = this.parseExpression(nextMin);
+
       left = { kind: "binaryExpr", value: op, location: loc, children: [left, right] };
     }
 
     return left;
   }
 
-  private parseAdditive(): AstNode {
-    let left = this.parseUnary();
-
-    while (this.currentIsOneOf("operator", ["+", "-"])) {
-      const op = this.current().value;
-      const loc = this.loc();
-      this.advance();
-      const right = this.parseUnary();
-      left = { kind: "binaryExpr", value: op, location: loc, children: [left, right] };
-    }
-
-    return left;
-  }
-
-  private parseUnary(): AstNode {
+  /**
+   * Handles prefix operators (`!`, unary `-`) before delegating to postfix.
+   * Right-associative: `!(!x)` and `-(-(x))` both parse correctly.
+   */
+  private parsePrefixExpression(): AstNode {
     if (this.currentIs("operator", "!") || this.currentIs("operator", "-")) {
       const loc = this.loc();
       const op = this.current().value;
       this.advance();
-      const operand = this.parsePostfix();
+      // Recursive for chained prefix ops: !!x, --x
+      const operand = this.parsePrefixExpression();
       return { kind: "unaryExpr", value: op, location: loc, children: [operand] };
     }
-
     return this.parsePostfix();
   }
 
@@ -914,6 +951,53 @@ class Parser {
         this.advance();
       }
     }
+  }
+
+  // ── Compute target block ──────────────────────────────────────────────────
+
+  /**
+   * Parses a `compute target <kind> { ... }` block.
+   *
+   * Syntax: compute target (cpu | gpu | npu | best) { body }
+   *
+   * This is a post-v1 runtime feature. The parser accepts the syntax now so
+   * that LogicN source files with compute blocks can be parsed without errors.
+   * Semantic enforcement (effect routing, tensor type checking) is Phase 7+.
+   *
+   * Ref: docs/Knowledge-Bases/governed-compute-chain.md
+   */
+  private parseComputeTarget(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "compute"
+    this.skipNewlines();
+
+    // Expect "target" as an identifier (not a keyword)
+    if (this.current().kind === "identifier" && this.current().value === "target") {
+      this.advance();
+    } else {
+      this.emitUnexpected(`Expected "target" after "compute", got "${this.current().value}".`);
+    }
+
+    this.skipNewlines();
+
+    // Target kind: cpu | gpu | npu | best — identifiers or keywords
+    let targetKind = "cpu";
+    if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+      targetKind = this.current().value;
+      this.advance();
+    } else {
+      this.emitUnexpected(`Expected compute target kind (cpu, gpu, npu, best), got "${this.current().value}".`);
+    }
+
+    this.skipNewlines();
+    const body = this.parseBlock();
+
+    return {
+      kind: "computeTargetBlock",
+      value: targetKind,
+      location: loc,
+      children: [body],
+    };
   }
 
   // ── Import / type / enum stubs ────────────────────────────────────────────

@@ -41,6 +41,20 @@ export {
   type EffectDiagnostic,
 } from "./effect-checker.js";
 
+// Phase 6 — Value-State Checker
+export {
+  checkValueStates,
+  type ValueStateDiagnostic,
+  type ValueStateCheckResult,
+} from "./value-state-checker.js";
+
+// Phase 6 — Type Checker
+export {
+  checkTypes,
+  type TypeDiagnostic,
+  type TypeCheckResult,
+} from "./type-checker.js";
+
 export interface CompilerInput {
   readonly projectRoot: string;
   readonly entryFiles: readonly string[];

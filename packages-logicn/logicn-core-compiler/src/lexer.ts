@@ -83,6 +83,8 @@ export const V1_ACTIVE_KEYWORDS: ReadonlySet<string> = new Set([
   "safe", "validated", "unvalidated",
   // Value-state trust/secrecy markers (v1)
   "tainted", "secret", "protected",
+  // Compute target (post-v1 runtime; reserved now)
+  "compute",
 ]);
 
 /** Words reserved for post-v1 grammar — produce LLN-SYNTAX-003 if used as identifiers. */
@@ -99,7 +101,7 @@ const TWO_CHAR_OPERATORS: readonly string[] = [
 ];
 
 // Single-character operators
-const ONE_CHAR_OPERATORS = new Set(["+", "-", "*", "/", "=", "<", ">", "!", "&", "|", "?"]);
+const ONE_CHAR_OPERATORS = new Set(["+", "-", "*", "/", "%", "=", "<", ">", "!", "&", "|", "?"]);
 
 // Punctuation / symbols
 const SYMBOLS = new Set(["(", ")", "{", "}", "[", "]", ",", ":", ";", "."]);
