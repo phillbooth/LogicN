@@ -12,8 +12,22 @@ boundaries, memory ownership, and effects should be **declared in source and
 enforced by tooling** — not inferred, guessed, or left to convention.
 
 ```text
-intent  →  governed execution plan  →  coordinated compute  →  audit proof
+intent
+    ↓
+governed execution plan
+    ↓
+coordinated compute
+    ↓
+audit proof
 ```
+
+**[Intent](docs/Knowledge-Bases/logicn-concept-intent.md)** — The explicit declaration of what a flow or system is *for*: its purpose, the authority it requires, the effects it may produce, the boundaries it must respect, and the outcomes it intends to deliver. Intent is machine-readable, compiler-visible, and enforceable — not documentation.
+
+**[Governed Execution Plan](docs/Knowledge-Bases/logicn-concept-governed-execution-plan.md)** — The compiler/runtime-generated operational contract that defines how execution is *permitted* to occur: which capabilities are granted, which effects are allowed, which resources may be accessed, which runtime targets are approved, and which behaviors are explicitly denied. The bridge between declared intent and actual execution.
+
+**[Coordinated Compute](docs/Knowledge-Bases/logicn-concept-coordinated-compute.md)** — The runtime orchestration layer that transforms a governed execution plan into actual execution across CPU, GPU, NPU, APU, WASM, native and future targets. Responsible for target selection, fallback coordination, memory isolation, accelerator dispatch and runtime verification — all within declared authority constraints.
+
+**[Audit Proof](docs/Knowledge-Bases/logicn-concept-audit-proof.md)** — The structured, verifiable runtime evidence that execution occurred within declared authority, respected governance policy, enforced runtime constraints and satisfied safety guarantees. Not logs — provable evidence.
 
 ---
 
@@ -428,6 +442,62 @@ managed memory and runtime safety inherited from the JS ecosystem.
 
 ---
 
+### Broader Governance Architecture
+
+The four-stage execution pipeline (`intent → governed execution plan → coordinated compute → audit proof`) is the runtime spine. The full governance architecture adds layers that operate across the entire software lifecycle — from source to deployment to compliance:
+
+```text
+intent                       declared purpose, authority, denied boundaries
+    ↓
+authority tracking           maps where authority enters and flows
+    ↓
+capability propagation       tracks transitive authority through call chains
+    ↓
+effect propagation           traces effects across flows, packages, boundaries
+    ↓
+intent verification          compares declared intent vs actual behavior
+    ↓
+governance diffing           semantic change report between builds
+    ↓
+AI system comprehension      queryable semantic model for AI tools
+    ↓
+compliance generation        SOC2/GDPR artefacts derived from source
+    ↓
+runtime governance           enforces the governed plan at execution time
+    ↓
+unsafe boundary visibility   tracks all native/FFI/unsafe code explicitly
+    ↓
+resource flow tracking       maps which components touch which data and secrets
+    ↓
+deployment planning          infrastructure requirements from declared semantics
+    ↓
+runtime target planning      governed CPU/GPU/NPU/WASM target selection
+    ↓
+package governance           tracks authority and effects introduced by dependencies
+    ↓
+build-time explainability    `logicn explain <flow>` — live queryable system model
+    ↓
+negative guarantees          proves what the system CANNOT do
+    ↓
+runtime evidence correlation connects runtime events back to intent graph nodes
+    ↓
+AI context compression       compact semantic graph instead of raw source
+    ↓
+threat modelling             attack surface + secret exposure derived from graph
+    ↓
+architectural visualization  live diagrams from the intent graph, not manual docs
+    ↓
+governed execution plan      operational contract: what execution is permitted
+    ↓
+coordinated compute          orchestrated execution across targets within authority
+    ↓
+audit proof                  verifiable evidence that governed execution occurred
+```
+
+Each stage is specified in [`docs/Knowledge-Bases/logicn-governance-architecture.md`](docs/Knowledge-Bases/logicn-governance-architecture.md).
+
+---
+
 ## Project Structure
 
 ```text
@@ -498,6 +568,17 @@ See that package README for the full command list.
 | `docs/Knowledge-Bases/compiler-diagnostics.md` | All LLN-* diagnostic codes |
 | `packages-logicn/logicn-core/examples/examples-manifest.md` | V1 vs post-v1 example classification |
 | `AGENTS.md` | AI coding tool instructions |
+
+**Core concept deep-dives:**
+
+| Document | Concept |
+|---|---|
+| `docs/Knowledge-Bases/logicn-governance-architecture.md` | Full 23-stage governance pipeline with descriptions and examples |
+| `docs/Knowledge-Bases/logicn-concept-intent.md` | Intent — semantic purpose, the intent graph, verification |
+| `docs/Knowledge-Bases/logicn-concept-governed-execution-plan.md` | Governed Execution Plan — operational contract, negative guarantees |
+| `docs/Knowledge-Bases/logicn-concept-coordinated-compute.md` | Coordinated Compute — runtime orchestration across targets |
+| `docs/Knowledge-Bases/logicn-concept-audit-proof.md` | Audit Proof — verifiable governance evidence |
+| `docs/Knowledge-Bases/logicn-code-examples-full-flow.md` | 12 full code examples: intent, governance, safe/unsafe, tainted input, audit proof |
 
 ---
 

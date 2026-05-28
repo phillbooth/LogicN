@@ -1,5 +1,7 @@
 # LogicN — Machine-Readable Intent Graph
 
+> **See also:** [logicn-concept-intent.md](logicn-concept-intent.md) — full specification of the `intent` concept, the semantic layers, intent verification and the intent graph's role in the governance pipeline (`intent → governed execution plan → coordinated compute → audit proof`).
+
 ## Overview
 
 Every LogicN build emits a machine-readable intent graph as a structured artefact.

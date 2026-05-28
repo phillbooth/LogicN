@@ -73,3 +73,26 @@ changes that preserve those declarations.
 
 When LogicN accepts a feature, it should be visible to humans, AI and tools
 through types, permissions, policies, effects, source maps or reports.
+
+---
+
+## Governance Execution Pipeline
+
+Declared intent is the first stage of LogicN's four-stage governance pipeline:
+
+```text
+intent                  — why this system exists; declared purpose and authority
+    ↓
+governed execution plan — how execution is permitted to occur; the operational contract
+    ↓
+coordinated compute     — how governed execution actually occurs across targets
+    ↓
+audit proof             — verifiable evidence that execution respected all declared guarantees
+```
+
+Each stage has a full specification:
+
+- [logicn-concept-intent.md](logicn-concept-intent.md)
+- [logicn-concept-governed-execution-plan.md](logicn-concept-governed-execution-plan.md)
+- [logicn-concept-coordinated-compute.md](logicn-concept-coordinated-compute.md)
+- [logicn-concept-audit-proof.md](logicn-concept-audit-proof.md)

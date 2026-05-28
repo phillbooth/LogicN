@@ -16,6 +16,36 @@ The concept map is part of the AI-understandable architecture policy: AI tools
 should read stable concept definitions, indexes and project graph output rather
 than infer architecture from folder names alone.
 
+---
+
+## Governance Architecture Pipeline
+
+LogicN's execution model follows a four-stage semantic pipeline. Each stage has
+a full specification document:
+
+```text
+intent
+    ↓
+governed execution plan
+    ↓
+coordinated compute
+    ↓
+audit proof
+```
+
+| Stage | What it answers | Document |
+|---|---|---|
+| **Intent** | *Why does this system exist?* Purpose, required authority, denied boundaries, expected outcomes. Machine-readable, compiler-enforceable. | [logicn-concept-intent.md](logicn-concept-intent.md) |
+| **Governed Execution Plan** | *How is the system allowed to execute?* Capabilities granted, effects allowed, resources permitted, behaviors denied. The operational contract. | [logicn-concept-governed-execution-plan.md](logicn-concept-governed-execution-plan.md) |
+| **Coordinated Compute** | *How does governed execution actually occur?* Target selection, fallback coordination, memory isolation, accelerator dispatch, runtime verification. | [logicn-concept-coordinated-compute.md](logicn-concept-coordinated-compute.md) |
+| **Audit Proof** | *What can be proven about execution?* Structured, verifiable runtime evidence of authority, policy compliance and safety guarantees. Not logs. | [logicn-concept-audit-proof.md](logicn-concept-audit-proof.md) |
+
+The intent graph — the machine-readable semantic map of the entire system — is the data structure that connects these stages. See [logicn-intent-graph.md](logicn-intent-graph.md).
+
+For the full 23-stage governance architecture (authority tracking, capability propagation, effect propagation, governance diffing, compliance generation, threat modelling and more), see [logicn-governance-architecture.md](logicn-governance-architecture.md).
+
+---
+
 ## Core Model
 
 | Core concept | Detailed concepts |

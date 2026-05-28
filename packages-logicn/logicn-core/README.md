@@ -9,6 +9,30 @@ Node.js.
 
 ---
 
+## Governance Architecture
+
+LogicN's execution model follows a four-stage semantic pipeline:
+
+```text
+intent
+    ↓
+governed execution plan
+    ↓
+coordinated compute
+    ↓
+audit proof
+```
+
+**[Intent](../../docs/Knowledge-Bases/logicn-concept-intent.md)** — The explicit declaration of what a flow or system is *for*: its purpose, the authority it requires, the effects it may produce, the boundaries it must respect, and the outcomes it intends to deliver. Intent is machine-readable, compiler-visible, and enforceable — not documentation.
+
+**[Governed Execution Plan](../../docs/Knowledge-Bases/logicn-concept-governed-execution-plan.md)** — The compiler/runtime-generated operational contract that defines how execution is *permitted* to occur: which capabilities are granted, which effects are allowed, which resources may be accessed, which runtime targets are approved, and which behaviors are explicitly denied. The bridge between declared intent and actual execution.
+
+**[Coordinated Compute](../../docs/Knowledge-Bases/logicn-concept-coordinated-compute.md)** — The runtime orchestration layer that transforms a governed execution plan into actual execution across CPU, GPU, NPU, APU, WASM, native and future targets. Responsible for target selection, fallback coordination, memory isolation, accelerator dispatch and runtime verification — all within declared authority constraints.
+
+**[Audit Proof](../../docs/Knowledge-Bases/logicn-concept-audit-proof.md)** — The structured, verifiable runtime evidence that execution occurred within declared authority, respected governance policy, enforced runtime constraints and satisfied safety guarantees. Not logs — provable evidence.
+
+---
+
 ## Run It Now — No Installation Required
 
 LogicN runs on **Node.js 18+**. The prototype compiler is a plain Node.js
@@ -137,6 +161,12 @@ node compiler/logicn.js run examples/hello.lln
 ---
 
 ## Annotated Code Examples
+
+The examples below cover the v1 syntax subset runnable today. For full
+governance model examples — `intent`, `governance` blocks, `safe`/`unsafe`
+flows, `Tainted<T>`, runtime target planning and audit proof records — see the
+Knowledge Base:
+[`docs/Knowledge-Bases/logicn-code-examples-full-flow.md`](../../docs/Knowledge-Bases/logicn-code-examples-full-flow.md)
 
 ### 1 — Types, records and errors
 
@@ -843,6 +873,63 @@ Each layer contributes its own safety guarantees. LogicN's layer is the most exp
 - Effects are declared in source — the compiler does not infer them silently.
 - `unsafe` requires `reason` + `fallback` — always.
 - GPU, NPU, APU, photonic, AI accelerators are backend profiles — not core syntax.
+
+---
+
+### Broader Governance Architecture
+
+The four-stage execution pipeline is the runtime spine. The full governance architecture covers the entire software lifecycle — source through deployment through compliance. Each stage builds on the last:
+
+```text
+intent                       declared purpose, authority, denied boundaries
+    ↓
+authority tracking           maps where authority enters and flows
+    ↓
+capability propagation       tracks transitive authority through call chains
+    ↓
+effect propagation           traces effects across flows, packages, boundaries
+    ↓
+intent verification          compares declared intent vs actual behavior
+    ↓
+governance diffing           semantic change report between builds
+    ↓
+AI system comprehension      queryable semantic model for AI tools
+    ↓
+compliance generation        SOC2/GDPR artefacts derived from source
+    ↓
+runtime governance           enforces the governed plan at execution time
+    ↓
+unsafe boundary visibility   tracks all native/FFI/unsafe code explicitly
+    ↓
+resource flow tracking       maps which components touch which data and secrets
+    ↓
+deployment planning          infrastructure requirements from declared semantics
+    ↓
+runtime target planning      governed CPU/GPU/NPU/WASM target selection
+    ↓
+package governance           tracks authority and effects introduced by dependencies
+    ↓
+build-time explainability    `logicn explain <flow>` — live queryable system model
+    ↓
+negative guarantees          proves what the system CANNOT do
+    ↓
+runtime evidence correlation connects runtime events back to intent graph nodes
+    ↓
+AI context compression       compact semantic graph instead of raw source
+    ↓
+threat modelling             attack surface + secret exposure derived from graph
+    ↓
+architectural visualization  live diagrams from the intent graph, not manual docs
+    ↓
+governed execution plan      operational contract: what execution is permitted
+    ↓
+coordinated compute          orchestrated execution across targets within authority
+    ↓
+audit proof                  verifiable evidence that governed execution occurred
+```
+
+Full specification with descriptions and examples for every stage:
+[`docs/Knowledge-Bases/logicn-governance-architecture.md`](../../docs/Knowledge-Bases/logicn-governance-architecture.md)
 
 ---
 
