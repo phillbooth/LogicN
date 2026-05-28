@@ -1,29 +1,53 @@
 # LogicN — Full Flow Code Examples
 
-Intent, governance, safe/unsafe boundaries, audit proof and the complete
-governance model shown in practical code.
+Intent, governance, safe/unsafe value states, and the complete governance model
+shown in practical code.
 
-These examples are written as **proposed/full LogicN syntax** — the complete
-language as intended, not the current Node.js prototype subset. They show how
-`intent`, `governance`, `safe`/`unsafe` flows, `readonly`, `let mut`, tainted
-input, runtime target planning, negative guarantees and audit proof all compose
-into real programs.
+These examples use current v0.1 flow syntax together with `intent`,
+`governance`, and `audit` shown as proposed semantic blocks — the full design
+direction, not just the current Node.js prototype subset.
 
 ---
 
 ## Syntax Used in These Examples
 
-```logicn
-intent        — declares semantic purpose, required authority, denied behaviors
-governance    — declares effects, capabilities, resources, runtime policy
-safe flow     — flow that stays within governed safe runtime rules
-unsafe flow   — flow crossing a native, external, or trust-changing boundary
-let           — immutable binding (default)
-let mut       — mutable binding, explicitly visible at the declaration site
-readonly      — parameter passed as read-only view; caller retains ownership
-Tainted<T>    — input that has not yet been sanitized; cannot go to typed sinks
-audit { }     — declares what evidence the runtime must produce or verify
+### Current v0.1 Flow Prefixes
+
+```text
+flow           — normal flow
+secure flow    — security-sensitive logic (credentials, access control, payments)
+pure flow      — deterministic, zero-effects computation
 ```
+
+These are the only active flow prefixes in the v0.1 grammar. `safe flow`,
+`unsafe flow`, and `guard flow` are not valid current syntax.
+
+### Value-State Annotations
+
+`safe` and `unsafe` annotate **values**, not flows:
+
+```logicn
+let rawEmail: String unsafe unvalidated = form.email
+let email: Email safe validated = validate.email(rawEmail)?
+```
+
+A value that crosses a host, platform, or external boundary is marked
+`unsafe unvalidated`. Validation converts it to `safe validated`.
+
+### Mutation and Immutable Bindings
+
+```logicn
+mut count: Int = 0       // mutable — declare with mut
+let name: String = "x"   // immutable — declare with let (default)
+```
+
+Use `mut`, not `let mut`.
+
+### Proposed Semantic Blocks
+
+`intent { }` and `governance { }` are standalone declarations. The
+`audit { }` block is a post-v1 proposed annotation. All three appear in these
+examples to show the full design direction.
 
 ---
 
@@ -36,7 +60,9 @@ governed response with structured audit evidence.
 intent GetOrderStatus {
   purpose "Return the current status of a customer order"
 
-  requires [orders.read]
+  requires [
+    orders.read
+  ]
 
   denies [
     database.write,
@@ -46,48 +72,51 @@ intent GetOrderStatus {
     network.unlisted
   ]
 
-  produces [OrderStatusReturned]
+  produces [
+    OrderStatusReturned
+  ]
 }
 
 governance GetOrderStatusGovernance {
-  effects     [database.read, audit.write]
-  capabilities [orders.read]
-  resources   [OrdersDB, AuditLog]
+  effects [
+    database.read,
+    audit.write
+  ]
 
-  denies [database.write, filesystem.write, process.spawn]
+  capabilities [
+    orders.read
+  ]
 
-  runtime {
-    memory request_scoped
-    secret_redaction enabled
-  }
+  resources [
+    OrdersDB,
+    AuditLog
+  ]
+
+  denies [
+    database.write,
+    filesystem.write,
+    process.spawn
+  ]
 }
 
 api OrdersApi {
   GET "/orders/{orderId}/status" {
-    handler  getOrderStatus
-    request  GetOrderStatusRequest
+    request GetOrderStatusRequest
     response ApiResponse<OrderStatusResponse>
+    errors [OrderError, ApiError]
+    timeout 5s
+    max_body_size 64kb
+    handler getOrderStatus
   }
 }
 
-safe flow getOrderStatus(
-  readonly request: GetOrderStatusRequest
-) -> Result<ApiResponse<OrderStatusResponse>, ApiError>
-intent    GetOrderStatus
-governance GetOrderStatusGovernance
-audit {
-  require [
-    capability_verified,
-    database_read_recorded,
-    response_emitted,
-    no_denied_effects
-  ]
-} {
-  let orderId: OrderId = request.orderId
+secure flow getOrderStatus(req: GetOrderStatusRequest) -> Result<ApiResponse<OrderStatusResponse>, ApiError>
+effects [database.read, audit.write] {
+  let orderId: OrderId = req.orderId
 
   let order: Order = OrdersDB.findById(orderId)?
 
-  let response = OrderStatusResponse {
+  let response: OrderStatusResponse = OrderStatusResponse {
     orderId:   order.id,
     status:    order.status,
     updatedAt: order.updatedAt
@@ -123,17 +152,19 @@ audit {
 
 ---
 
-## 2. Desktop User — Unsafe Host API Boundary
+## 2. Desktop User — Host Platform Boundary
 
-Reads the current signed-in OS user. Marked `unsafe` because it crosses into
-host OS / platform-specific native APIs. A safe wrapper exposes only the
-permitted fields to application code.
+Reads the current signed-in OS user. The host API call returns an
+`unsafe unvalidated` value — it must be validated before being used as a
+typed application value. A separate wrapper exposes only the permitted fields.
 
 ```logicn
 intent GetDesktopUser {
   purpose "Read the current signed-in desktop user"
 
-  requires [desktop.user.read]
+  requires [
+    desktop.user.read
+  ]
 
   denies [
     network.external,
@@ -142,64 +173,63 @@ intent GetDesktopUser {
     process.spawn
   ]
 
-  produces [DesktopUserLoaded]
+  produces [
+    DesktopUserLoaded
+  ]
 }
 
 governance DesktopUserGovernance {
-  effects     [desktop.user.read, audit.write]
-  capabilities [desktop.user.read]
-  resources   [DesktopSession, AuditLog]
-
-  denies [network.external, process.spawn, filesystem.write]
-
-  runtime {
-    target desktop
-    memory request_scoped
-    secret_redaction enabled
-  }
-}
-
-// Unsafe: crosses into host OS runtime APIs.
-// May behave differently on Windows, macOS, Linux.
-unsafe flow readDesktopUserFromHost()
-  -> Result<DesktopUser, DesktopUserError>
-effects     [desktop.user.read, unsafe.host_api]
-capabilities [desktop.user.read]
-audit {
-  require [unsafe_boundary_recorded, capability_verified]
-} {
-  let user = Host.currentUser()?
-
-  return Ok(DesktopUser {
-    id:            user.id,
-    displayName:   user.displayName,
-    homeDirectory: user.homeDirectory
-  })
-}
-
-// Safe wrapper — most application code calls this, not the unsafe flow directly.
-// Exposes only permitted fields; homeDirectory is omitted from the public view.
-safe flow getDesktopUser()
-  -> Result<DesktopUserView, DesktopUserError>
-intent    GetDesktopUser
-governance DesktopUserGovernance
-audit {
-  require [
-    unsafe_boundary_recorded,
-    no_network_access,
-    no_filesystem_write,
-    result_returned
+  effects [
+    desktop.user.read,
+    audit.write
   ]
-} {
-  let user = readDesktopUserFromHost()?
 
-  let view = DesktopUserView {
+  capabilities [
+    desktop.user.read
+  ]
+
+  resources [
+    DesktopSession,
+    AuditLog
+  ]
+
+  denies [
+    network.external,
+    process.spawn,
+    filesystem.write
+  ]
+}
+
+// Use secure flow because reading desktop identity is security-sensitive.
+// The unsafe part is the value returned from the host boundary — not the flow itself.
+secure flow readDesktopUserFromHost() -> Result<DesktopUser, DesktopUserError>
+effects [desktop.user.read] {
+  // Host.currentUser() crosses a platform boundary.
+  // Mark the result as unsafe/untrusted until it is normalised.
+  let rawUser: HostUser unsafe unvalidated = Host.currentUser()?
+
+  // Validation converts the unsafe host value into a safe application value.
+  let user: DesktopUser safe validated = validate.desktopUser(rawUser)?
+
+  return Ok(user)
+}
+
+// Safe wrapper — most application code calls this, not the lower-level flow directly.
+// Only safe fields are exposed; homeDirectory is intentionally omitted.
+secure flow getDesktopUser() -> Result<DesktopUserView, DesktopUserError>
+effects [desktop.user.read, audit.write] {
+  let user: DesktopUser = readDesktopUserFromHost()?
+
+  let view: DesktopUserView = DesktopUserView {
     id:          user.id,
     displayName: user.displayName
     // homeDirectory intentionally omitted
   }
 
-  AuditLog.write({ event: "DesktopUserLoaded", userId: user.id })
+  AuditLog.write({
+    event:  "DesktopUserLoaded",
+    userId: user.id
+  })
 
   return Ok(view)
 }
@@ -207,16 +237,20 @@ audit {
 
 ---
 
-## 3. Form Submission — Tainted Input Handling
+## 3. Form Submission — Unsafe Input Sanitization
 
-Receives a form submission from an external API. Input is `Tainted<T>` — it
-cannot reach the database until explicitly sanitized through a pure flow.
+Receives a form submission from an external API. Raw string inputs are marked
+`unsafe unvalidated` at the boundary. A pure sanitizer converts them to
+`safe validated` values before any database operation.
 
 ```logicn
 intent SaveContactForm {
   purpose "Validate and store a submitted contact form"
 
-  requires [forms.create, database.write]
+  requires [
+    forms.create,
+    database.write
+  ]
 
   denies [
     payment.charge,
@@ -225,92 +259,98 @@ intent SaveContactForm {
     network.unlisted
   ]
 
-  produces [ContactFormSaved]
+  produces [
+    ContactFormSaved
+  ]
 }
 
-governance SaveContactFormGovernance {
-  effects     [input.external, database.write, audit.write]
-  capabilities [forms.create, database.write]
-  resources   [ContactFormsDB, AuditLog]
-
-  denies [payment.charge, filesystem.write, process.spawn]
-
-  runtime {
-    memory request_scoped
-    secret_redaction enabled
-  }
-}
-
-// Tainted<T> marks input as boundary-origin.
-// It cannot be passed to typed database sinks without going through sanitization.
-type ContactFormRequest = {
-  name:    Tainted<String>
-  email:   Tainted<String>
-  message: Tainted<String>
-}
-
-type SanitizedContactForm = {
+type ContactFormRequest {
   name:    String
-  email:   EmailAddress
+  email:   String
   message: String
 }
 
-// Pure sanitizer — zero effects. Compiler enforces this.
-safe pure flow sanitizeContactForm(
-  readonly input: ContactFormRequest
-) -> Result<SanitizedContactForm, ValidationError>
-effects      []
-capabilities [] {
-  let name    = sanitize.text(input.name)?
-  let email   = sanitize.email(input.email)?
-  let message = sanitize.text(input.message)?
+type SanitizedContactForm {
+  name:    String
+  email:   Email
+  message: String
+}
 
-  if message.length > 2000 {
-    return Err(ValidationError.TooLong("message"))
-  }
+governance SaveContactFormGovernance {
+  effects [
+    database.write,
+    audit.write
+  ]
 
-  return Ok(SanitizedContactForm { name, email, message })
+  capabilities [
+    forms.create,
+    database.write
+  ]
+
+  resources [
+    ContactFormsDB,
+    AuditLog
+  ]
+
+  denies [
+    payment.charge,
+    filesystem.write,
+    process.spawn
+  ]
 }
 
 api FormsApi {
   POST "/forms/contact" {
-    handler  saveContactForm
     request  ContactFormRequest
     response ApiResponse<FormSavedResponse>
+    errors   [ValidationError, DatabaseError]
+    timeout  5s
+    max_body_size 1mb
+    handler  saveContactForm
   }
 }
 
-safe flow saveContactForm(
-  readonly request: ContactFormRequest
-) -> Result<ApiResponse<FormSavedResponse>, ApiError>
-intent    SaveContactForm
-governance SaveContactFormGovernance
-audit {
-  require [
-    tainted_input_sanitized,
-    database_write_recorded,
-    audit_event_written,
-    no_denied_effects
-  ]
-} {
-  // Input is Tainted here — must be sanitized before database.write.
-  let form = sanitizeContactForm(request)?
+// Pure sanitizer — zero effects. Compiler enforces this.
+pure flow sanitizeContactForm(input: ContactFormRequest) -> Result<SanitizedContactForm, ValidationError> {
+  // API input is treated as unsafe/unvalidated at the boundary.
+  let rawName:    String unsafe unvalidated = input.name
+  let rawEmail:   String unsafe unvalidated = input.email
+  let rawMessage: String unsafe unvalidated = input.message
 
-  // Explicit mut makes local state changes visible.
-  let mut status: FormStatus = FormStatus.PendingReview
+  // Validation converts unsafe unvalidated values into safe validated values.
+  let name:    String safe validated = sanitize.text(rawName)?
+  let email:   Email  safe validated = validate.email(rawEmail)?
+  let message: String safe validated = sanitize.text(rawMessage)?
+
+  return Ok(SanitizedContactForm {
+    name:    name,
+    email:   email,
+    message: message
+  })
+}
+
+secure flow saveContactForm(req: ContactFormRequest) -> Result<ApiResponse<FormSavedResponse>, ApiError>
+effects [database.write, audit.write] {
+  let form: SanitizedContactForm = sanitizeContactForm(req)?
+
+  // Mutable local state — use mut, not let mut.
+  mut status: FormStatus = FormStatus.PendingReview
 
   if form.email.domain == "trusted.example" {
     status = FormStatus.AutoApproved
   }
 
-  let saved = ContactFormsDB.insert({
+  let saved: ContactForm = ContactFormsDB.insert({
     name:    form.name,
     email:   form.email,
     message: form.message,
     status:  status
   })?
 
-  AuditLog.write({ event: "ContactFormSaved", formId: saved.id })
+  AuditLog.write({
+    event:  "ContactFormSaved",
+    formId: saved.id
+  })
 
   return Ok(ApiResponse.created(FormSavedResponse {
     formId: saved.id,
@@ -342,34 +382,18 @@ intent CalculateInvoiceTotal {
     process.spawn
   ]
 
-  produces [InvoiceTotalCalculated]
-}
-
-governance PureCalculationGovernance {
-  effects      []
-  capabilities []
-  resources    []
-
-  denies [
-    database.read, database.write, network.external,
-    filesystem.write, secret.read, process.spawn
+  produces [
+    InvoiceTotalCalculated
   ]
-
-  runtime { deterministic true }
 }
 
-safe pure flow calculateInvoiceTotal(
-  readonly subtotal: Money,
-  readonly taxRate:  Decimal,
-  readonly discount: Money
-) -> Money
-intent    CalculateInvoiceTotal
-governance PureCalculationGovernance
-audit {
-  require [deterministic_execution, no_effects]
-} {
-  let tax   = subtotal * taxRate
-  let total = subtotal + tax - discount
+pure flow calculateInvoiceTotal(
+  subtotal: Money<GBP>,
+  taxRate:  Decimal,
+  discount: Money<GBP>
+) -> Money<GBP> {
+  let tax:   Money<GBP> = subtotal * taxRate
+  let total: Money<GBP> = subtotal + tax - discount
 
   return Money.round(total)
 }
@@ -388,70 +412,192 @@ let total = calculateInvoiceTotal(
 
 ---
 
-## 5. Webhook Signature Verification — Constant-Time Secret Comparison
+## 5. Guard-Style Authorization — Decision Flow
 
-Verifies a webhook signature using HMAC. The `==` operator on secrets is
-rejected by the compiler — timing-safe `constantTimeEquals` is required.
+Authorization logic returns a typed `Decision`. `guard flow` is not current
+v0.1 syntax — model guard logic as a `secure flow` returning a typed decision.
+
+```logicn
+intent AuthorizeRefund {
+  purpose "Decide whether a user may refund a payment"
+
+  requires [
+    auth.check,
+    payment.refund
+  ]
+
+  denies [
+    database.write,
+    network.unlisted,
+    process.spawn
+  ]
+
+  produces [
+    RefundAuthorizationDecision
+  ]
+}
+
+enum AuthDecision {
+  Allow
+  Deny
+  Review
+}
+
+secure flow authorizeRefund(user: User, refund: RefundRequest) -> Result<AuthDecision, AuthError>
+effects [database.read, audit.write] {
+  let role: UserRole = UsersDB.getRole(user.id)?
+
+  match role {
+    Admin        => return Ok(Allow)
+    SupportAgent => return Ok(Review)
+    Customer     => return Ok(Deny)
+  }
+}
+```
+
+A future grammar extension could add `guard flow` as first-class syntax. For
+now, `secure flow` returning `Result<Decision, E>` is the correct pattern.
+
+---
+
+## 6. Webhook Signature — Constant-Time Secret Comparison
+
+Verifies a webhook signature using HMAC-SHA256. The provided signature is
+`unsafe unvalidated` at the boundary. The `==` operator on secure values is
+rejected by the compiler — `constantTimeEquals` is required.
 
 ```logicn
 intent VerifyWebhookSignature {
-  purpose "Verify that a webhook payload came from the expected provider"
+  purpose "Verify webhook signature without leaking secret timing information"
 
-  requires [secret.read, webhook.verify]
+  requires [
+    secret.read,
+    webhook.verify
+  ]
 
-  denies [filesystem.write, process.spawn, network.external]
+  denies [
+    filesystem.write,
+    process.spawn,
+    network.external
+  ]
 
-  produces [WebhookSignatureVerified]
+  produces [
+    WebhookSignatureVerified
+  ]
 }
 
 governance WebhookGovernance {
-  effects     [secret.read, audit.write]
-  capabilities [webhook.verify]
-  resources   [SecretVault, AuditLog]
+  effects [
+    secret.read,
+    audit.write
+  ]
 
-  denies [filesystem.write, process.spawn, network.external]
+  capabilities [
+    webhook.verify
+  ]
+
+  resources [
+    SecretVault,
+    AuditLog
+  ]
+
+  denies [
+    filesystem.write,
+    process.spawn,
+    network.external
+  ]
 }
 
-safe flow verifyWebhookSignature(
-  readonly payload:           Bytes,
-  readonly providedSignature: ProtectedSecret<Bytes>
+secure flow verifyWebhookSignature(
+  payload:           Bytes,
+  providedSignature: Bytes unsafe unvalidated
 ) -> Result<VerifiedWebhook, WebhookError>
-intent    VerifyWebhookSignature
-governance WebhookGovernance
-audit {
-  require [
-    constant_time_comparison,
-    secret_not_logged,
-    no_secret_declassification
-  ]
-} {
-  let signingSecret = vault.secret("WEBHOOK_SIGNING_SECRET")
+effects [secret.read, audit.write] {
+  let signingSecret: SecureString = env.secret("WEBHOOK_SIGNING_SECRET")
 
-  let expectedSignature = crypto.hmacSha256(
+  let expectedSignature: SecureBytes = crypto.hmacSha256(
     key:  signingSecret,
     data: payload
   )
 
-  // REJECTED by compiler:
-  //   if expectedSignature == providedSignature { ... }
-  //   → LLN-SAFETY-001: timing-unsafe comparison on ProtectedSecret
-  //
-  // CORRECT: timing-safe comparison
-  let valid = expectedSignature.constantTimeEquals(providedSignature)
+  // Do not use:
+  //   expectedSignature == providedSignature
+  // Correct: explicit constant-time comparison.
+  let valid: Bool = expectedSignature.constantTimeEquals(providedSignature)
 
   if !valid {
     return Err(WebhookError.InvalidSignature)
   }
 
+  let verified: VerifiedWebhook safe validated = VerifiedWebhook(payload)
+
   AuditLog.write({ event: "WebhookSignatureVerified" })
 
-  return Ok(VerifiedWebhook(payload))
+  return Ok(verified)
 }
 ```
 
 ---
 
-## 6. Local AI Inference — Governed NPU Target Planning
+## 7. Negative Guarantee — Filesystem Write Blocked by Intent
+
+A report-view flow whose intent explicitly denies `filesystem.write`. Any
+attempt to write a file is rejected at compile time with `LLN-INTENT-001`.
+
+```logicn
+intent ViewReportOnly {
+  purpose "Generate a report for viewing only"
+
+  requires [
+    report.read
+  ]
+
+  denies [
+    filesystem.write,
+    network.external,
+    process.spawn
+  ]
+
+  produces [
+    ReportViewed
+  ]
+}
+
+governance ViewReportGovernance {
+  effects [
+    database.read
+  ]
+
+  capabilities [
+    report.read
+  ]
+
+  resources [
+    ReportsDB
+  ]
+
+  denies [
+    filesystem.write,
+    network.external,
+    process.spawn
+  ]
+}
+
+secure flow viewReport(reportId: ReportId) -> Result<ReportView, ReportError>
+effects [database.read] {
+  let report: Report = ReportsDB.findById(reportId)?
+
+  // REJECTED at compile time:
+  //   FileSystem.write("/tmp/report.csv", report.csv)
+  //   → LLN-INTENT-001: filesystem.write denied by ViewReportOnly
+
+  return Ok(ReportView(report))
+}
+```
+
+---
+
+## 8. Local AI Inference — Governed Compute Target
 
 Fraud scoring using a local model. The intent explicitly denies
 `remote.execution` — this becomes a negative guarantee enforced at runtime and
@@ -475,39 +621,39 @@ intent LocalFraudScoring {
 }
 
 governance LocalFraudGovernance {
-  effects     [ai.inference, npu.compute, audit.write]
-  capabilities [fraud.score, compute.npu]
-  resources   [LocalFraudModel, AuditLog]
+  effects [
+    ai.inference,
+    npu.compute,
+    audit.write
+  ]
 
-  denies [remote.execution, network.external, process.spawn]
+  capabilities [
+    fraud.score,
+    compute.npu
+  ]
 
-  runtime {
-    local_execution_only true
-    memory request_scoped
-  }
+  resources [
+    LocalFraudModel,
+    AuditLog
+  ]
+
+  denies [
+    remote.execution,
+    network.external,
+    process.spawn
+  ]
 }
 
-safe flow scoreFraud(
-  readonly transaction: Transaction
-) -> Result<FraudScore, FraudError>
-intent    LocalFraudScoring
-governance LocalFraudGovernance
-audit {
-  require [
-    local_execution_verified,
-    runtime_target_recorded,
-    no_remote_execution,
-    no_network_access
-  ]
-} {
+secure flow scoreFraud(transaction: Transaction) -> Result<FraudScore, FraudError>
+effects [ai.inference, npu.compute, audit.write] {
   compute target best {
     prefer [npu, gpu, cpu]
 
-    // Remote fallback is intentionally absent from the prefer list.
-    // The deny here matches the intent's negative guarantee.
+    // Remote fallback is intentionally absent.
+    // The deny matches the intent's negative guarantee.
     deny [remote.execution]
 
-    let score = LocalFraudModel.run(transaction)
+    let score: FraudScore = LocalFraudModel.run(transaction)
   }
 
   AuditLog.write({ event: "FraudScoreCalculated" })
@@ -530,10 +676,12 @@ audit:
 
 ---
 
-## 7. Native Image Processing — Unsafe Boundary with Safe Wrapper
+## 9. Native Image Processing — FFI Boundary
 
-An unsafe native image resize call (FFI to a C image library) is isolated and
-wrapped in a safe governed flow. Application code calls the safe wrapper only.
+An unsafe FFI call to a native C image library is wrapped in a secure governed
+flow. Application code calls only the safe wrapper. The FFI boundary is
+declared through the `effects [unsafe.native]` annotation and isolated from
+the rest of the governance model.
 
 ```logicn
 intent ResizeUserAvatar {
@@ -547,52 +695,54 @@ intent ResizeUserAvatar {
 }
 
 governance AvatarGovernance {
-  effects     [filesystem.temp, image.process, audit.write]
-  capabilities [image.process]
-  resources   [TempImageBuffer, AuditLog]
-
-  denies [network.external, payment.charge, secret.read]
-
-  runtime {
-    sandbox required
-    memory request_scoped
-  }
-}
-
-// Unsafe: crosses into native image library code.
-// Required: reason (implicit from unsafe native declaration) + sandbox.
-unsafe native flow resizeImageNative(
-  readonly image:  Bytes,
-  readonly width:  Int,
-  readonly height: Int
-) -> Result<Bytes, ImageError>
-effects     [unsafe.native, filesystem.temp, image.process]
-capabilities [image.process]
-audit {
-  require [unsafe_boundary_recorded, sandbox_verified]
-} {
-  return NativeImage.resize(image, width, height)
-}
-
-// Safe wrapper validates input constraints before crossing the unsafe boundary.
-safe flow resizeUserAvatar(
-  readonly upload: UploadedFile
-) -> Result<AvatarImage, ImageError>
-intent    ResizeUserAvatar
-governance AvatarGovernance
-audit {
-  require [
-    unsafe_boundary_recorded,
-    sandbox_verified,
-    no_network_access,
-    no_secret_access
+  effects [
+    filesystem.temp,
+    image.process,
+    audit.write
   ]
-} {
+
+  capabilities [
+    image.process
+  ]
+
+  resources [
+    TempImageBuffer,
+    AuditLog
+  ]
+
+  denies [
+    network.external,
+    payment.charge,
+    secret.read
+  ]
+}
+
+// Crosses into native image library code.
+// effects [unsafe.native] declares the FFI boundary in the governance model.
+// Must be isolated — call only from the safe wrapper below.
+secure flow resizeImageNative(
+  image:  Bytes,
+  width:  Int,
+  height: Int
+) -> Result<Bytes, ImageError>
+effects [unsafe.native, filesystem.temp, image.process] {
+  // Result from native is unsafe until validated.
+  let raw: Bytes unsafe unvalidated = NativeImage.resize(image, width, height)?
+
+  let resized: Bytes safe validated = validate.imageBytes(raw)?
+
+  return Ok(resized)
+}
+
+// Safe wrapper — validates input constraints before crossing the native boundary.
+// Application code always calls this, never resizeImageNative directly.
+secure flow resizeUserAvatar(upload: UploadedFile) -> Result<AvatarImage, ImageError>
+effects [filesystem.temp, image.process, audit.write] {
   if upload.sizeBytes > 2_000_000 {
     return Err(ImageError.FileTooLarge)
   }
 
-  let resized = resizeImageNative(
+  let resized: Bytes = resizeImageNative(
     image:  upload.bytes,
     width:  256,
     height: 256
@@ -606,10 +756,10 @@ audit {
 
 ---
 
-## 8. User Profile Update — readonly Input and Explicit mut
+## 10. User Profile Update — Explicit Mutation
 
-Shows `readonly` input binding and explicit `let mut` for a draft object.
-Mutations are visible because `draft` is declared `let mut`.
+Shows explicit `mut` for a draft object. Mutations are visible because `draft`
+is declared with `mut`, not `let`.
 
 ```logicn
 intent UpdateUserProfile {
@@ -623,36 +773,44 @@ intent UpdateUserProfile {
 }
 
 governance UserProfileGovernance {
-  effects     [database.read, database.write, audit.write]
-  capabilities [user.write]
-  resources   [UsersDB, AuditLog]
+  effects [
+    database.read,
+    database.write,
+    audit.write
+  ]
 
-  denies [payment.charge, secret.read, process.spawn]
+  capabilities [
+    user.write
+  ]
+
+  resources [
+    UsersDB,
+    AuditLog
+  ]
+
+  denies [
+    payment.charge,
+    secret.read,
+    process.spawn
+  ]
 }
 
-safe flow updateUserProfile(
-  readonly request: UpdateUserProfileRequest
-) -> Result<UserProfileResponse, UserError>
-intent    UpdateUserProfile
-governance UserProfileGovernance
-audit {
-  require [
-    database_write_recorded,
-    audit_event_written,
-    no_denied_effects
-  ]
-} {
-  let existing = UsersDB.findById(request.userId)?
+secure flow updateUserProfile(request: UpdateUserProfileRequest) -> Result<UserProfileResponse, UserError>
+effects [database.read, database.write, audit.write] {
+  let existing: UserProfile = UsersDB.findById(request.userId)?
 
   // Explicit mutable draft — mutations are visible at the declaration site.
-  let mut draft = existing.profile
+  mut draft: UserProfile = existing.profile
 
   draft.displayName = sanitize.text(request.displayName)?
   draft.bio         = sanitize.text(request.bio)?
 
-  let saved = UsersDB.updateProfile(request.userId, draft)?
+  let saved: UserProfile = UsersDB.updateProfile(request.userId, draft)?
 
-  AuditLog.write({ event: "UserProfileUpdated", userId: request.userId })
+  AuditLog.write({
+    event:  "UserProfileUpdated",
+    userId: request.userId
+  })
 
   return Ok(UserProfileResponse(saved))
 }
@@ -660,51 +818,7 @@ audit {
 
 ---
 
-## 9. Negative Guarantee — Filesystem Write Blocked by Intent
-
-A report-view flow whose intent explicitly denies `filesystem.write`. Any
-attempt to write a file is rejected at compile time with `LLN-INTENT-001`.
-
-```logicn
-intent ViewReportOnly {
-  purpose "Generate a report for viewing only"
-
-  requires [report.read]
-
-  denies [filesystem.write, network.external, process.spawn]
-
-  produces [ReportViewed]
-}
-
-governance ViewReportGovernance {
-  effects     [database.read]
-  capabilities [report.read]
-  resources   [ReportsDB]
-
-  denies [filesystem.write, network.external, process.spawn]
-}
-
-safe flow viewReport(
-  readonly reportId: ReportId
-) -> Result<ReportView, ReportError>
-intent    ViewReportOnly
-governance ViewReportGovernance
-audit {
-  require [no_filesystem_write, no_network_access]
-} {
-  let report = ReportsDB.findById(reportId)?
-
-  // REJECTED at compile time:
-  //   FileSystem.write("/tmp/report.csv", report.csv)
-  //   → LLN-INTENT-001: filesystem.write denied by ViewReportOnly
-
-  return Ok(ReportView(report))
-}
-```
-
----
-
-## 10. Package Governance — Authority Propagation from Import
+## 11. Package Governance — Authority Propagation from Import
 
 Importing a package introduces its authority into the calling module. The
 governance diff shows exactly what authority enters with the import.
@@ -728,28 +842,37 @@ package "@logicn/stripe-adapter" {
 import StripeAdapter from "@logicn/stripe-adapter"
 
 governance PaymentAdapterGovernance {
-  effects     [network.external, secret.read, payment.charge, audit.write]
-  capabilities [payment.charge]
-  resources   [StripeAPI, SecretVault, AuditLog]
+  effects [
+    network.external,
+    secret.read,
+    payment.charge,
+    audit.write
+  ]
 
-  denies [filesystem.write, process.spawn]
+  capabilities [
+    payment.charge
+  ]
+
+  resources [
+    StripeAPI,
+    SecretVault,
+    AuditLog
+  ]
+
+  denies [
+    filesystem.write,
+    process.spawn
+  ]
 }
 
-safe flow chargeCustomer(
-  readonly payment: PaymentRequest
-) -> Result<PaymentReceipt, PaymentError>
-intent    UsePaymentAdapter
-governance PaymentAdapterGovernance
-audit {
-  require [
-    package_authority_recorded,
-    secret_access_recorded,
-    external_network_recorded
-  ]
-} {
-  let receipt = StripeAdapter.charge(payment)?
+secure flow chargeCustomer(payment: PaymentRequest) -> Result<PaymentReceipt, PaymentError>
+effects [network.external, secret.read, payment.charge, audit.write] {
+  let receipt: PaymentReceipt = StripeAdapter.charge(payment)?
 
-  AuditLog.write({ event: "PaymentCharged", paymentId: receipt.id })
+  AuditLog.write({
+    event:     "PaymentCharged",
+    paymentId: receipt.id
+  })
 
   return Ok(receipt)
 }
@@ -768,126 +891,49 @@ Importing @logicn/stripe-adapter introduces:
 
 ---
 
-## 11. Audit Proof Record
+## 12. Audit Proof Record
 
-What the runtime generates after executing `chargeCustomer` (example 10):
+What the runtime generates after executing `saveContactForm` (example 3):
 
 ```yaml
 auditProof:
-  flow:   chargeCustomer
-  intent: UsePaymentAdapter
+  flow:   saveContactForm
+  intent: SaveContactForm
+
+  values:
+    unsafeInputs:
+      - req.name    (unsafe unvalidated)
+      - req.email   (unsafe unvalidated)
+      - req.message (unsafe unvalidated)
+
+    validatedValues:
+      - form.name    (safe validated)
+      - form.email   (safe validated)
+      - form.message (safe validated)
 
   capabilitiesUsed:
-    - payment.charge
+    - forms.create
+    - database.write
 
   effectsExecuted:
-    - secret.read
-    - network.external
-    - payment.charge
+    - database.write
     - audit.write
 
   resourcesAccessed:
-    - SecretVault
-    - StripeAPI
+    - ContactFormsDB
     - AuditLog
 
-  deniedEffectsTriggered: none
-  unsafeBoundaries:       none
-  governanceViolations:   none
+  deniedEffectsTriggered:
+    none
 
-  status: verified
-```
+  unsafeBoundaries:
+    none
 
----
+  governanceViolations:
+    none
 
-## 12. Full Flow — API Request to Audit Proof
-
-A complete governed flow from external HTTP input through tainted input
-sanitization to database write and structured audit proof.
-
-```logicn
-intent CreateSupportTicket {
-  purpose "Create a support ticket from customer-submitted API data"
-
-  requires [ticket.create, database.write]
-
-  denies [payment.charge, process.spawn, filesystem.write]
-
-  produces [SupportTicketCreated]
-}
-
-governance SupportTicketGovernance {
-  effects     [input.external, database.write, audit.write]
-  capabilities [ticket.create, database.write]
-  resources   [SupportTicketsDB, AuditLog]
-
-  denies [payment.charge, process.spawn, filesystem.write]
-
-  runtime {
-    memory request_scoped
-    secret_redaction enabled
-  }
-}
-
-// Tainted input from the external API.
-type SupportTicketRequest = {
-  subject: Tainted<String>
-  body:    Tainted<String>
-  email:   Tainted<String>
-}
-
-// Pure sanitizer — zero effects, compiler-enforced.
-safe pure flow sanitizeTicket(
-  readonly input: SupportTicketRequest
-) -> Result<SanitizedTicket, ValidationError>
-effects      []
-capabilities [] {
-  return Ok(SanitizedTicket {
-    subject: sanitize.text(input.subject)?,
-    body:    sanitize.text(input.body)?,
-    email:   sanitize.email(input.email)?
-  })
-}
-
-safe flow createSupportTicket(
-  readonly request: SupportTicketRequest
-) -> Result<ApiResponse<TicketCreatedResponse>, TicketError>
-intent    CreateSupportTicket
-governance SupportTicketGovernance
-audit {
-  require [
-    tainted_input_sanitized,
-    database_write_recorded,
-    audit_event_written,
-    no_denied_effects
-  ]
-} {
-  // Tainted input sanitized before any database operation.
-  let ticket = sanitizeTicket(request)?
-
-  let saved = SupportTicketsDB.insert(ticket)?
-
-  AuditLog.write({ event: "SupportTicketCreated", ticketId: saved.id })
-
-  return Ok(ApiResponse.created(TicketCreatedResponse {
-    ticketId: saved.id
-  }))
-}
-```
-
-**API response:**
-
-```json
-{
-  "ok": true,
-  "data": { "ticketId": "ticket_123" },
-  "audit": {
-    "intent": "CreateSupportTicket",
-    "taintedInputSanitized": true,
-    "effectsExecuted": ["input.external", "database.write", "audit.write"],
-    "deniedEffectsTriggered": []
-  }
-}
+  status:
+    verified
 ```
 
 ---
@@ -899,30 +945,53 @@ These examples show all major LogicN governance concepts in combination:
 | Concept | Demonstrated in |
 |---|---|
 | `intent` block | All examples |
-| `governance` block | All examples |
-| `safe flow` | 1, 2, 3, 4, 5, 6, 8, 9, 10, 12 |
-| `unsafe flow` / `unsafe native` | 2, 7 |
-| `readonly` parameter | 1, 3, 4, 5, 7, 8, 9, 10, 12 |
-| `let mut` explicit mutation | 3, 8 |
-| `Tainted<T>` boundary input | 3, 12 |
-| Pure sanitizer flow | 3, 12 |
-| Runtime target planning (`compute target best`) | 6 |
-| Negative guarantees (`denies`) | 1, 4, 6, 9 |
-| Package authority propagation | 10 |
-| Audit proof record | 1, 6, 11 |
-| Constant-time secret comparison | 5 |
+| `governance` block | 1, 2, 3, 6, 7, 8, 9, 10, 11 |
+| `secure flow` | 1, 2, 3, 5, 6, 7, 8, 9, 10, 11 |
+| `pure flow` (zero effects) | 3, 4 |
+| Value-state annotations (`unsafe unvalidated`, `safe validated`) | 2, 3, 6, 9 |
+| `mut` explicit mutation | 3, 10 |
+| Unsafe input sanitization via pure flow | 3 |
+| Guard-style decision flow | 5 |
+| Constant-time secret comparison | 6 |
+| Negative guarantee (`denies`) | 1, 4, 7, 8 |
+| `compute target best` (runtime target planning) | 8 |
+| FFI boundary (`effects [unsafe.native]`) | 9 |
+| Package authority propagation | 11 |
+| Audit proof record | 12 |
 
-LogicN code declares not just *what to execute* but:
+---
 
-```text
-why execution exists       → intent
-what authority it needs    → requires
-what it must never do      → denies
-what boundaries it crosses → unsafe flow / Tainted<T>
-what evidence it produces  → audit { require [...] }
+## Key Syntax Corrections
+
+Replace these patterns:
+
+```logicn
+// WRONG — safe/unsafe/guard are not flow prefixes in v0.1
+safe flow getOrderStatus(...)
+unsafe flow readDesktopUserFromHost()
+guard flow validateAccess(...)
+safe pure flow sanitize(...)
+
+// WRONG — let mut is not the mutation syntax
+let mut status: FormStatus = PendingReview
 ```
 
-That is the core of LogicN's governed programming model.
+With the correct forms:
+
+```logicn
+// CORRECT — use secure flow, pure flow, or flow
+secure flow getOrderStatus(...)
+secure flow readDesktopUserFromHost()
+secure flow validateAccess(...) -> Result<Decision, AuthError>
+pure flow sanitize(...)
+
+// CORRECT — mut at declaration
+mut status: FormStatus = FormStatus.PendingReview
+
+// CORRECT — unsafe/safe on values, not flow names
+let rawUser: HostUser unsafe unvalidated = Host.currentUser()?
+let user: DesktopUser safe validated = validate.desktopUser(rawUser)?
+```
 
 ---
 
@@ -935,3 +1004,4 @@ That is the core of LogicN's governed programming model.
 | [logicn-concept-audit-proof.md](logicn-concept-audit-proof.md) | Audit proof specification |
 | [logicn-governance-architecture.md](logicn-governance-architecture.md) | Full 23-stage governance pipeline |
 | [compiler-diagnostics.md](compiler-diagnostics.md) | `LLN-INTENT-*`, `LLN-SAFETY-*` diagnostic codes |
+| [v1-reserved-keywords.md](v1-reserved-keywords.md) | V1 keyword table and lexer rules |

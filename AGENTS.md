@@ -6,171 +6,136 @@ This file gives guidance to AI coding tools working on this repository.
 
 ## Project Type
 
-This is a LogicN application template.
+This is the LogicN governance-first programming language — implementation,
+specification, and documentation.
 
-The repository contains:
+LogicN source files use the `.lln` extension. The Node.js prototype implements
+the compiler pipeline in TypeScript. Each stage is covered by `node:test` tests.
 
-- LogicN language/package files in `packages-logicn/logicn-core/`
-- Active reusable LogicN package collection files in `packages-logicn/`
-- LogicN secure runtime kernel design files in `packages-logicn/logicn-framework-app-kernel/`
-- Bespoke app files in `packages-logicn/logicn-framework-example-app/`
-- App documentation in `docs/`
-- Helper scripts and generators in `tools/`
+Governance model:
+
+```text
+intent → governed execution plan → coordinated compute → audit proof
+```
+
+## Build Pipeline Status
+
+| Phase | Name | Status |
+|---|---|---|
+| 1 | Project graph + CLI | Complete |
+| 2 | Typed content blocks + string/char/byte safety | Complete |
+| 3 | Scanner-level safety enforcement | Complete (28/28 tests) |
+| 4 | Lexer + Parser + AST | **In progress** |
+| 5 | Type + Effect Checker | Planned |
+| 6 | IR + Target Planner | Planned |
+
+## Grammar — Current v0.1 Flow Forms
+
+```text
+flow_decl =
+  [flow_qualifier] "flow" identifier "(" [params] ")" "->" type_ref
+  [effects_decl] block
+
+flow_qualifier = "secure" | "pure"
+```
+
+Only these three forms are active in v0.1:
+
+```logicn
+flow add(a: Int, b: Int) -> Int { ... }
+
+secure flow processPayment(order: Order) -> Result<PaymentReceipt, PaymentError>
+effects [network.outbound, secret.read] { ... }
+
+pure flow calculateVat(amount: Money<GBP>) -> Money<GBP> { ... }
+```
+
+`safe flow`, `unsafe flow`, and `guard flow` are **not** valid v0.1 syntax.
+`safe`/`unsafe` annotate **values** inside a flow body, not the flow itself.
+
+## Authoritative Sources for AI Tools
+
+| What | File |
+|---|---|
+| Keyword table (lexer source of truth) | `docs/Knowledge-Bases/v1-reserved-keywords.md` |
+| Diagnostic codes | `docs/Knowledge-Bases/compiler-diagnostics.md` |
+| AST contract (AstNodeKind, Token, etc.) | `packages-logicn/logicn-core/src/index.ts` |
+| Phase 4 plan | `docs/Knowledge-Bases/phase-4-parser-ast-plan.md` |
+| Concept model | `docs/Knowledge-Bases/logicn-concept-map.md` |
+| Code examples (corrected) | `docs/Knowledge-Bases/logicn-code-examples-full-flow.md` |
+
+## Package Map
+
+| Package | Role |
+|---|---|
+| `packages-logicn/logicn-core/` | Canonical shared types: Token, AstNode, AstNodeKind, diagnostics |
+| `packages-logicn/logicn-core-compiler/` | Compiler pipeline: scanner, lexer, parser, effect checker |
+| `packages-logicn/logicn-core-cli/` | CLI entry point and graph commands |
+| `packages-logicn/logicn-core-tasks/` | Task dependency resolution |
+| `packages-logicn/logicn-devtools-project-graph/` | Workspace knowledge graph |
+| `packages-logicn/logicn-framework-app-kernel/` | Secure app kernel design |
+| `packages-logicn/logicn-framework-example-app/` | Example app source |
+
+## Diagnostic Code Format
+
+All Phase 4+ diagnostics use `LLN-CATEGORY-NNN` format. Key series:
+
+```text
+LLN-PARSE-*     parser errors (001–014 defined)
+LLN-TYPE-*      type checker (001–008 defined)
+LLN-NAME-*      name resolution (001–005 defined)
+LLN-MATCH-*     exhaustive match (001–004 defined)
+LLN-EFFECT-*    effect checker (001–004 defined)
+LLN-SAFETY-*    safety rules (001–008 defined)
+LLN-BINDING-*   binding mutability (001–004 defined)
+LLN-MEMORY-*    memory model (001–008 defined)
+```
+
+See `docs/Knowledge-Bases/compiler-diagnostics.md` for the full index.
 
 ## Important Rules
 
+- Do not use `safe flow`, `unsafe flow`, or `guard flow` in `.lln` examples.
+- `mut name: Type = value` — not `let mut`.
+- Use `LLN-CATEGORY-NNN` for all new diagnostic codes; do not extend `LogicN_COMPILER_*`.
 - Do not place app-specific documentation inside `packages-logicn/logicn-core/`.
-- Do not place full-framework, CMS, admin UI, ORM or frontend framework design inside `packages-logicn/logicn-core/`.
 - Do not place LogicN language documentation inside `docs/`.
-- Do not treat `packages-logicn/` as production-installed by default; use it for
-  explicit LogicN package collection planning only.
 - Finance, electrical and OT package planning is archived under
-  `C:\laragon\www\LogicN_Archive\packages-logicn\` and must not be treated as part of
-  the active v1 build graph.
-- Keep the repository root clean.
-- Do not commit secrets.
-- Do not invent LogicN syntax without documenting it.
-- Update relevant docs when changing architecture, requirements, security, API or deployment behaviour.
+  `C:\laragon\www\LogicN_Archive\packages-logicn\` — not part of the active v1 build.
+- Keep the repository root clean. Do not commit secrets.
+- Do not invent LogicN syntax without documenting it in a KB doc.
+- Update relevant docs when changing architecture, requirements, security, or API behaviour.
 
 ## Project Graph for AI Tools
 
-Use the generated project graph to understand package ownership, docs, reports
-and relationships before making broad architecture or package changes.
-
 Primary graph outputs:
 
-- `build/graph/logicn-devtools-project-graph.json`
-- `build/graph/LogicN_GRAPH_REPORT.md`
-- `build/graph/logicn-ai-map.md`
-- `build/graph/logicn-devtools-project-graph.html`
+```text
+build/graph/logicn-devtools-project-graph.json
+build/graph/LogicN_GRAPH_REPORT.md
+build/graph/logicn-ai-map.md
+```
 
-If `build/graph/logicn-devtools-project-graph.json` is missing, or if the graph appears out
-of date after changes to `AGENTS.md`, `logicn.workspace.json`, `docs/`, package
-READMEs, package TODOs, package manifests or package source contracts, run from
-the repository root:
+Regenerate after changes to `AGENTS.md`, `logicn.workspace.json`, `docs/`, package
+READMEs, or package source contracts:
 
 ```powershell
 node packages-logicn\logicn-core-cli\dist\index.js graph --out build\graph
 ```
 
-Use graph query commands when package ownership or relationships are unclear:
-
-```powershell
-node packages-logicn\logicn-core-cli\dist\index.js graph query logicn-core-security --out build\graph
-node packages-logicn\logicn-core-cli\dist\index.js graph explain package:logicn-core-security --out build\graph
-node packages-logicn\logicn-core-cli\dist\index.js graph path package:logicn-devtools-project-graph report:project-graph --out build\graph
-```
-
-The project graph is advisory. It helps AI and humans navigate the repository,
-but it does not replace compiler checks, security rules, tests or package
-boundary instructions in this file.
-
 ## Coding Rules
 
-- Use strict typing.
-- Handle undefined values explicitly.
-- Handle errors explicitly.
-- Keep files focused.
-- Prefer small modules over large files.
-- Keep compiler output out of Git unless specifically required.
-
-## Documentation Rules
-
-When adding or changing features, update:
-
-- `docs/REQUIREMENTS.md`
-- `docs/ARCHITECTURE.md`
-- `docs/TASKS.md`
-- `docs/CHANGELOG.md`
+- Use strict TypeScript (`strict: true`, `noUncheckedIndexedAccess: true`).
+- Handle `undefined` explicitly — no implicit index access.
+- Use `readonly` on all data structures that must not change after construction.
+- Handle errors explicitly; prefer `Result<T, E>` patterns.
+- Keep files focused; prefer small modules over large files.
+- Test with `node:test` — same runner as the rest of the compiler.
+- Keep compiler build output out of Git unless specifically required.
 
 ## Security Rules
 
 - Never store real secrets in source control.
 - Use `.env.example` for placeholder environment variables.
-- Validate inputs.
-- Avoid unsafe dynamic code execution.
+- Validate inputs. Avoid unsafe dynamic code execution.
 - Keep runtime configuration separate from compiled output.
-
-## Package Boundaries
-
-### `packages-logicn/logicn-core/`
-
-Use for:
-
-- LogicN language rules
-- syntax
-- type system
-- compiler notes
-- memory safety model
-- examples
-- standard library notes
-
-### `packages-logicn/logicn-framework-app-kernel/`
-
-Use for:
-
-- optional LogicN Secure App Kernel design
-- request lifecycle policy
-- typed API boundary enforcement
-- validation, auth and rate-limit policy
-- idempotency and replay protection policy
-- queue/job contracts
-- runtime and audit reports
-
-Do not use for:
-
-- CMS features
-- admin dashboards
-- page builders
-- mandatory ORM design
-- mandatory template engines
-- React, Angular or other frontend framework syntax
-
-### `packages-logicn/logicn-framework-example-app/`
-
-Use for:
-
-- the actual app source
-- app routes
-- app modules
-- app tests
-- app build output
-- app config
-
-### `packages-logicn/`
-
-Use for:
-
-- proposed reusable LogicN package collection layout
-- active core package and tooling package planning
-- archived package references that point outside this workspace
-- future nested repository or submodule planning
-
-Do not use for:
-
-- normal npm/vendor app packages
-- app-specific source, except the current template `logicn-framework-example-app/`
-- secrets
-- production-only packages that have not been selected by a LogicN package profile
-
-### `docs/`
-
-Use for:
-
-- requirements
-- design
-- architecture
-- security
-- API
-- database
-- deployment
-- decisions
-- changelog
-
-### `tools/`
-
-Use for:
-
-- helper scripts
-- generators
-- local build utilities

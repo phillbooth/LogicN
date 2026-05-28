@@ -39,9 +39,29 @@ These keywords are active in the v1 grammar. The lexer must classify them as
 | `enum` | `enumDecl` | Enum declaration |
 | `import` | `importDecl` | Module import |
 | `use` | `useDecl` | Capability or module use declaration |
-| `flow` | `flowDecl` | Flow declaration |
 | `true` | `boolLiteral` | Boolean literal |
 | `false` | `boolLiteral` | Boolean literal |
+
+---
+
+## V1 Value-State Keywords (Phase 4)
+
+These words annotate the trust state of a value. They appear after the type in a
+binding declaration and cannot be used as identifiers.
+
+```logicn
+let rawInput: String unsafe unvalidated = form.email
+let email:    Email  safe   validated   = validate.email(rawInput)?
+```
+
+| Keyword | Role | Description |
+|---|---|---|
+| `safe` | Value-state annotation | Value has been validated or produced by a safe source |
+| `unvalidated` | Value-state qualifier | Value has not yet been validated; paired with `unsafe` |
+| `validated` | Value-state qualifier | Value has passed an explicit validation step; paired with `safe` |
+
+> `unsafe` as a value-state annotation reuses the existing `unsafe` keyword.
+> `safe`, `unvalidated`, and `validated` are new additions in Phase 4.
 
 ---
 

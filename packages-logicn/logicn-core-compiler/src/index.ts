@@ -5,9 +5,41 @@
 // Role:    Parsing, checking, diagnostics, and IR contracts for the
 //          LogicN compiler pipeline.
 //
-// Intent/effects checking (LLN-INTENT-*) is specified here.
-// Parser implementation lives in compiler/logicn.js (Stage 1 CJS runtime).
+// Phase 3: scanner-level safety rules (validateCoreSyntaxSafety)
+// Phase 4: lexer + parser (lex, parseProgram)
+// Phase 5: effect checker (checkEffects, checkFlowEffects)
 // =============================================================================
+
+// Phase 4 — Lexer
+export {
+  lex,
+  V1_ACTIVE_KEYWORDS,
+  V1_FUTURE_RESERVED,
+  type Token,
+  type TokenKind,
+  type LexResult,
+  type LexerDiagnostic,
+} from "./lexer.js";
+
+// Phase 4 — Parser
+export {
+  parseProgram,
+  type AstNode,
+  type AstNodeKind,
+  type ParseResult,
+  type ParseDiagnostic,
+  type FlowMeta,
+  type SourceLocation as ParserSourceLocation,
+} from "./parser.js";
+
+// Phase 5 — Effect Checker
+export {
+  checkEffects,
+  checkFlowEffects,
+  effectResultsToDiagnostics,
+  type EffectCheckResult,
+  type EffectDiagnostic,
+} from "./effect-checker.js";
 
 export interface CompilerInput {
   readonly projectRoot: string;

@@ -210,6 +210,26 @@ Both humans and AI tools can act on diagnostics.
 All Phase 4+ diagnostics use the `LLN-CATEGORY-NNN` format. These replace and extend the
 older `LNN-*` codes as the compiler matures.
 
+| LLN Series | Purpose |
+|---|---|
+| `LLN-PARSE-*` | Parser: unexpected tokens, malformed syntax |
+| `LLN-AST-*` | AST schema validation |
+| `LLN-INTENT-GRAPH-*` | Intent graph structural errors |
+| `LLN-TYPE-*` | Core type checker (Phase 5) |
+| `LLN-NAME-*` | Name resolution (Phase 5) |
+| `LLN-MATCH-*` | Match exhaustiveness (Phase 5) |
+| `LLN-EFFECT-*` | Effect checker |
+| `LLN-INTENT-*` | Intent declaration errors |
+| `LLN-PIPELINE-*` | Pipeline chain type errors |
+| `LLN-BINDING-*` | Binding mutability |
+| `LLN-MEMORY-*` | Memory model |
+| `LLN-SAFETY-*` | Safety rule violations |
+| `LLN-SYNTAX-*` | Syntax rule violations |
+| `LLN-RAWPTR-*` | Raw pointer ban |
+| `LLN-FUSE-*` | Pipeline fusion optimisation reports |
+| `LLN-GRAPH-*` | lln-graph library (graph structure) |
+| `LLN-RUNTIME-*` | Runtime enforcement |
+
 ### Parser (Phase 4)
 
 ```text
@@ -351,6 +371,52 @@ LLN-INTENT-002   MISSING_REQUIRED_INTENT         Governed surface requires an in
 LLN-INTENT-003   UNSAFE_MISSING_REASON_OR_FALLBACK  Unsafe block must declare reason and fallback
 LLN-INTENT-004   PRIVILEGED_MISSING_CAPABILITY   Privileged flow must declare its required capability
 LLN-INTENT-005   EXPERIMENTAL_IN_PRODUCTION      Experimental code in a production build target
+```
+
+### Type Checker (canonical series: LLN-TYPE-*)
+
+Core type errors for Phase 5. Replaces the older `LNN-ERR-TYPE-*` codes for
+all new type-checking work. `LNN-ERR-TYPE-*` codes are frozen — do not extend.
+`LLN-TYPE-NUMERIC-*` remains a separate sub-series for GPU/tensor numeric types.
+
+```text
+LLN-TYPE-001   TYPE_MISMATCH            Expected type X, got Y
+LLN-TYPE-002   UNKNOWN_TYPE             Type not defined in current scope
+LLN-TYPE-003   ARITY_MISMATCH           Wrong number of arguments (expected N, got M)
+LLN-TYPE-004   RETURN_TYPE_MISMATCH     Return value does not match declared return type
+LLN-TYPE-005   FIELD_NOT_FOUND          Field X not found on type Y
+LLN-TYPE-006   IMMUTABLE_REASSIGNMENT   Cannot reassign let binding (use mut for mutable)
+LLN-TYPE-007   INVALID_OPERATOR         Operator not defined for these operand types
+LLN-TYPE-008   GENERIC_CONSTRAINT_FAIL  Type does not satisfy generic constraint
+```
+
+### Name Resolution (canonical series: LLN-NAME-*)
+
+```text
+LLN-NAME-001   UNDECLARED_NAME          Name not defined in current scope
+LLN-NAME-002   DUPLICATE_NAME           Name already declared in this scope
+LLN-NAME-003   USE_BEFORE_DECLARATION   Name referenced before its declaration point
+LLN-NAME-004   PRIVATE_ACCESS           Name is not exported from its defining package
+LLN-NAME-005   AMBIGUOUS_NAME           Name resolves to multiple candidates
+```
+
+### Match Exhaustiveness (canonical series: LLN-MATCH-*)
+
+```text
+LLN-MATCH-001   NON_EXHAUSTIVE_MATCH    match is missing case(s): X
+LLN-MATCH-002   UNREACHABLE_PATTERN     Pattern is unreachable — already covered by earlier arm
+LLN-MATCH-003   INVALID_PATTERN_TYPE    Pattern cannot match against this type
+LLN-MATCH-004   CATCH_ALL_HIDES_CASES   Wildcard _ arm prevents exhaustiveness check of remaining cases
+```
+
+Note: `LLN-SAFETY-006` covers Tri-specific match exhaustiveness (`TRI_MATCH_NOT_EXHAUSTIVE`).
+`LLN-MATCH-001` covers general enum and union match exhaustiveness.
+
+### Value-State (canonical series: LLN-SAFETY-*, extended)
+
+```text
+LLN-SAFETY-007   UNSAFE_VALUE_IN_SAFE_CONTEXT     unsafe unvalidated value used where safe validated required
+LLN-SAFETY-008   BOUNDARY_VALUE_NOT_VALIDATED     Value from external boundary used before validation
 ```
 
 ### Pipeline (canonical series: LLN-PIPELINE-*)
@@ -515,12 +581,12 @@ LLN-COMPTIME-006   Target-dependent comptime result detected
 LLN-COMPTIME-007   Recursive comptime evaluation exceeded limit
 LLN-COMPTIME-008   Unsupported type for compile-time serialization
 
-LLN-PIPELINE-001   Pipeline fused successfully (report)
-LLN-PIPELINE-002   Fusion skipped — effect ordering conflict
-LLN-PIPELINE-003   Fusion skipped — intermediate materialisation required
-LLN-PIPELINE-004   Fusion skipped — lifetime escape
-LLN-PIPELINE-005   Fusion skipped — error order ambiguity
-LLN-PIPELINE-006   Fusion would change short-circuit behavior
+LLN-FUSE-001   Pipeline fused successfully (report)
+LLN-FUSE-002   Fusion skipped — effect ordering conflict
+LLN-FUSE-003   Fusion skipped — intermediate materialisation required
+LLN-FUSE-004   Fusion skipped — lifetime escape
+LLN-FUSE-005   Fusion skipped — error order ambiguity
+LLN-FUSE-006   Fusion would change short-circuit behavior
 
 LLN-BOUNDS-001   Bounds check eliminated by range proof
 LLN-BOUNDS-002   Bounds check retained — collection may mutate

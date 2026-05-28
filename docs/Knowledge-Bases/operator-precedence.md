@@ -1,0 +1,278 @@
+# LogicN — Operator Precedence
+
+## Status
+
+```
+Phase 5 prerequisite
+Source of truth for the expression parser
+```
+
+This document is the authoritative table for LogicN operator precedence and
+associativity. The Phase 5 expression parser must be built from this table.
+No operator may be added without a corresponding entry here.
+
+---
+
+## Design Decision: Table-Driven Pratt Parser
+
+Phase 5 uses a **table-driven Pratt (top-down operator precedence) parser**
+for all expression parsing.
+
+Reasons:
+
+- Precedence is auditable from a single table rather than scattered across
+  recursive-descent call depth.
+- Adding new operators only requires a new table entry — no parser restructuring.
+- Pratt parsing composes cleanly with prefix/infix/postfix categories.
+- The table is machine-readable, making it available for AI context and
+  generated documentation.
+
+The Phase 4 expression parser uses an ad-hoc call hierarchy
+(`parseComparison → parseAdditive → parseUnary → parsePostfix → parsePrimary`).
+Phase 5 replaces that with a single `parseExpression(minPrecedence)` loop
+driven by this table.
+
+---
+
+## Precedence Levels
+
+Higher number = tighter binding. Operators at the same level use the stated
+associativity to resolve ties.
+
+| Level | Operator(s) | Associativity | AST node kind | Notes |
+|---|---|---|---|---|
+| 10 | `\|\|` | left | `binaryExpr` (op=`\|\|`) | Logical OR |
+| 20 | `&&` | left | `binaryExpr` (op=`&&`) | Logical AND |
+| 30 | `==` `!=` | left | `binaryExpr` | Equality |
+| 40 | `<` `<=` `>` `>=` | left | `binaryExpr` | Comparison |
+| 50 | `+` `-` | left | `binaryExpr` | Additive |
+| 60 | `*` `/` `%` | left | `binaryExpr` | Multiplicative |
+| 70 | `!` `-` (unary) | right (prefix) | `unaryExpr` | Unary prefix |
+| 80 | `.` (member) `()` (call) `?` (error-prop) | left (postfix) | `memberExpr` / `callExpr` / `errorPropagation` | Postfix |
+
+---
+
+## TypeScript Table (source of truth for the parser)
+
+```typescript
+export type Associativity = "left" | "right";
+
+export interface OperatorEntry {
+  readonly precedence: number;
+  readonly associativity: Associativity;
+  readonly astKind: string;
+}
+
+export const INFIX_OPERATOR_TABLE: Readonly<Record<string, OperatorEntry>> = {
+  "||": { precedence: 10, associativity: "left",  astKind: "binaryExpr" },
+  "&&": { precedence: 20, associativity: "left",  astKind: "binaryExpr" },
+  "==": { precedence: 30, associativity: "left",  astKind: "binaryExpr" },
+  "!=": { precedence: 30, associativity: "left",  astKind: "binaryExpr" },
+  "<":  { precedence: 40, associativity: "left",  astKind: "binaryExpr" },
+  "<=": { precedence: 40, associativity: "left",  astKind: "binaryExpr" },
+  ">":  { precedence: 40, associativity: "left",  astKind: "binaryExpr" },
+  ">=": { precedence: 40, associativity: "left",  astKind: "binaryExpr" },
+  "+":  { precedence: 50, associativity: "left",  astKind: "binaryExpr" },
+  "-":  { precedence: 50, associativity: "left",  astKind: "binaryExpr" },
+  "*":  { precedence: 60, associativity: "left",  astKind: "binaryExpr" },
+  "/":  { precedence: 60, associativity: "left",  astKind: "binaryExpr" },
+  "%":  { precedence: 60, associativity: "left",  astKind: "binaryExpr" },
+} as const;
+
+export const PREFIX_OPERATOR_TABLE: Readonly<Record<string, OperatorEntry>> = {
+  "!":  { precedence: 70, associativity: "right", astKind: "unaryExpr" },
+  "-":  { precedence: 70, associativity: "right", astKind: "unaryExpr" },
+} as const;
+```
+
+Postfix operators (`.`, `()`, `?`) are handled separately in `parsePostfix()`
+because they bind to the left side of an already-parsed expression and do
+not fit a simple precedence integer.
+
+---
+
+## Precedence Examples
+
+### Multiplicative tighter than additive
+
+```logicn
+a + b * c
+```
+
+Parses as:
+
+```
+a + (b * c)
+```
+
+### Parentheses override precedence
+
+```logicn
+(a + b) * c
+```
+
+Parses as:
+
+```
+(a + b) * c
+```
+
+### Logical AND tighter than logical OR
+
+```logicn
+a || b && c
+```
+
+Parses as:
+
+```
+a || (b && c)
+```
+
+### Comparison tighter than equality
+
+```logicn
+a == b < c
+```
+
+Parses as:
+
+```
+a == (b < c)
+```
+
+### Unary minus
+
+```logicn
+-a * b
+```
+
+Parses as:
+
+```
+(-a) * b
+```
+
+### Error propagation binds tightest
+
+```logicn
+validate.email(raw)?
+```
+
+Parses as:
+
+```
+(validate.email(raw))?
+```
+
+### Member access chain
+
+```logicn
+user.profile.email
+```
+
+Parses as:
+
+```
+(user.profile).email
+```
+
+---
+
+## Pratt Parser Algorithm
+
+The Pratt loop in pseudocode:
+
+```
+parseExpression(minPrecedence):
+  left = parsePrimary()     // or parsePrefix() for unary operators
+
+  loop:
+    op = currentToken()
+    entry = INFIX_OPERATOR_TABLE[op.value]
+    if entry is undefined: break
+    if entry.precedence < minPrecedence: break
+
+    advance()               // consume operator
+
+    // Right-associative: recurse with same level
+    // Left-associative: recurse with level + 1
+    nextMin = entry.associativity == "left"
+                ? entry.precedence + 1
+                : entry.precedence
+    right = parseExpression(nextMin)
+
+    left = { kind: entry.astKind, value: op.value, children: [left, right] }
+
+  return left
+```
+
+---
+
+## Currently Excluded Operators (Phase 5)
+
+These operators are NOT in the Phase 5 table. They are reserved for later phases:
+
+| Operator | Reserved use |
+|---|---|
+| `=` | Assignment (statement-level, not expression) |
+| `->` | Flow return type arrow (declaration-level) |
+| `=>` | Match arm arrow (match expression-level) |
+| `..` | Range operator (future) |
+| `&` `\|` | Bitwise (future) |
+| `%` | Present in table but not in Phase 4 lexer ONE_CHAR_OPERATORS — add when needed |
+
+---
+
+## Edge Cases
+
+### Generic type arguments vs comparison
+
+`<` and `>` also appear in type references (`Result<T, E>`). The parser must
+distinguish context:
+
+- After a type-position token (identifier following `->`, `:`, or `as`):
+  parse as generic arguments.
+- After a value-position expression: parse as comparison operator.
+
+The Phase 4 `parseTypeRef()` handles this by counting angle-bracket depth
+separately. The Pratt expression parser must not treat `<` as a comparison
+operator inside a type reference.
+
+### Unary minus vs subtraction
+
+`-` appears in both the prefix table (unary minus) and the infix table
+(subtraction). The parser disambiguates by position: if the previous token
+was an operator, `(`, `,`, or start-of-expression, treat `-` as prefix.
+Otherwise treat it as infix subtraction.
+
+### Error propagation inside complex expressions
+
+```logicn
+let email = validate.email(raw)? || fallback
+```
+
+`?` binds tighter than `||`, so this parses as:
+
+```
+(validate.email(raw)?) || fallback
+```
+
+---
+
+## Relationship to Phase 4
+
+Phase 4 implemented a simplified ad-hoc precedence hierarchy sufficient to
+parse the test suite. Phase 5 replaces that with the Pratt loop above.
+
+The existing AST node kinds (`binaryExpr`, `unaryExpr`, `callExpr`,
+`memberExpr`, `errorPropagation`) are preserved. Only the parsing mechanism
+changes.
+
+---
+
+## See Also
+
+- `docs/Knowledge-Bases/parser-error-recovery.md` — sync token policy
+- `docs/Knowledge-Bases/formal-type-system-spec.md` — types used in expressions
+- `packages-logicn/logicn-core-compiler/src/parser.ts` — Phase 4 implementation
