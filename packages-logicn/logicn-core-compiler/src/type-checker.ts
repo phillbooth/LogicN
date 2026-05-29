@@ -31,6 +31,8 @@ export interface TypeDiagnostic {
   readonly message: string;
   readonly location?: SourceLocation;
   readonly suggestedFix?: string;
+  /** Machine-applicable fix — the exact LogicN snippet to insert/replace, without prose. */
+  readonly suggestedCode?: string;
 }
 
 export interface TypeCheckResult {
@@ -42,6 +44,7 @@ export interface TypeCheckResult {
 //
 // Branches explicitly on location/suggestedFix to satisfy
 // exactOptionalPropertyTypes without assigning undefined to optional fields.
+// suggestedCode is added via conditional spread — same safe pattern as parser.
 // ---------------------------------------------------------------------------
 
 function makeTCDiag(
@@ -50,18 +53,33 @@ function makeTCDiag(
   message: string,
   location: SourceLocation | undefined,
   suggestedFix: string | undefined,
+  suggestedCode?: string,
 ): TypeDiagnostic {
+  const sc = suggestedCode !== undefined ? { suggestedCode } : {};
   if (location !== undefined && suggestedFix !== undefined) {
-    return { code, name, severity: "error", message, location, suggestedFix };
+    return { code, name, severity: "error", message, location, suggestedFix, ...sc };
   }
   if (location !== undefined) {
-    return { code, name, severity: "error", message, location };
+    return { code, name, severity: "error", message, location, ...sc };
   }
   if (suggestedFix !== undefined) {
-    return { code, name, severity: "error", message, suggestedFix };
+    return { code, name, severity: "error", message, suggestedFix, ...sc };
   }
-  return { code, name, severity: "error", message };
+  return { code, name, severity: "error", message, ...sc };
 }
+
+// ---------------------------------------------------------------------------
+// Inference markers
+//
+// These are NOT types — they are compile-time keywords that tell the type
+// checker to defer resolution to the inference pass.
+// Do NOT emit LLN-TYPE-001 for these names.
+// Canonical source: docs/Knowledge-Bases/formal-type-system-spec.md §Auto
+// ---------------------------------------------------------------------------
+
+const INFERENCE_MARKERS: ReadonlySet<string> = new Set([
+  "Auto",
+]);
 
 // ---------------------------------------------------------------------------
 // Built-in type registry
@@ -80,7 +98,7 @@ const BUILT_IN_TYPES: ReadonlySet<string> = new Set([
   // Temporal
   "Timestamp", "Duration",
   // Binary
-  "Bytes",
+  "Byte", "Bytes", "ReadOnlyView",
   // JSON
   "Json", "JsonNull", "JsonBool", "JsonNumber", "JsonString", "JsonArray", "JsonObject",
   // Collections
@@ -88,13 +106,16 @@ const BUILT_IN_TYPES: ReadonlySet<string> = new Set([
   // Algebraic
   "Option", "Result",
   // Numeric science / compute
-  "Vector", "Matrix", "Tensor",
+  "Vector", "Matrix", "Tensor", "AnyTensor",
   // Domain / financial
   "Money", "GBP", "USD", "EUR", "JPY",
   // HTTP / API
   "Request", "Response",
   // Error types
   "Error", "ApiError", "EmailError", "PaymentError", "ValidationError", "WebhookError",
+  "DecodeError",
+  // Branded types
+  "Brand",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -103,28 +124,35 @@ const BUILT_IN_TYPES: ReadonlySet<string> = new Set([
 // ---------------------------------------------------------------------------
 
 const GENERIC_ARITY: ReadonlyMap<string, number> = new Map([
-  ["Option",  1],
-  ["Result",  2],
-  ["Array",   1],
-  ["Set",     1],
-  ["Map",     2],
-  ["Channel", 1],
-  ["Vector",  2],
-  ["Matrix",  3],
-  ["Money",   1],
+  ["Option",       1],
+  ["Result",       2],
+  ["Array",        1],
+  ["Set",          1],
+  ["Map",          2],
+  ["Channel",      1],
+  ["Vector",       2],
+  ["Matrix",       3],
+  ["Money",        1],
+  ["Tensor",       2],  // Tensor<ElementType, Shape> — see logicn-tensor-arity-decision.md
+  ["ReadOnlyView", 1],  // ReadOnlyView<T>
+  ["Brand",        2],  // Brand<T, "Name">
 ]);
 
-// Example strings for each generic type — used in fix suggestions
+// Example strings for each generic type — used in fix suggestions (suggestedFix prose)
+// and as suggestedCode (machine-applicable snippet)
 const GENERIC_EXAMPLES: ReadonlyMap<string, string> = new Map([
-  ["Option",  "Option<T>"],
-  ["Result",  "Result<T, E>"],
-  ["Array",   "Array<T>"],
-  ["Set",     "Set<T>"],
-  ["Map",     "Map<K, V>"],
-  ["Channel", "Channel<T>"],
-  ["Vector",  "Vector<T, N>"],
-  ["Matrix",  "Matrix<T, R, C>"],
-  ["Money",   "Money<GBP>"],
+  ["Option",       "Option<T>"],
+  ["Result",       "Result<T, E>"],
+  ["Array",        "Array<T>"],
+  ["Set",          "Set<T>"],
+  ["Map",          "Map<K, V>"],
+  ["Channel",      "Channel<T>"],
+  ["Vector",       "Vector<T, N>"],
+  ["Matrix",       "Matrix<T, R, C>"],
+  ["Money",        "Money<GBP>"],
+  ["Tensor",       "Tensor<Float32, [Batch, Features]>"],
+  ["ReadOnlyView", "ReadOnlyView<T>"],
+  ["Brand",        "Brand<String, \"MyType\">"],
 ]);
 
 // ---------------------------------------------------------------------------
@@ -275,15 +303,20 @@ class TypeChecker {
     // Skip numeric literals used as dimension args (Matrix<Float32, 4, 4>)
     if (/^\d/.test(base)) return;
 
+    // Skip inference markers — Auto defers to the inference pass, never LLN-TYPE-001
+    if (INFERENCE_MARKERS.has(base)) return;
+
     // ── LLN-TYPE-001: Unknown type ──────────────────────────────────────────
     if (!BUILT_IN_TYPES.has(base) && !this.userDefinedTypes.has(base)) {
       const suggestion = this.fuzzyTypeSuggestion(base);
+      const singleCandidate = this.fuzzySingleCandidate(base);
       this.diagnostics.push(makeTCDiag(
         "LLN-TYPE-001",
         "UnknownType",
         `Type '${base}' is not defined. It is not a built-in type and no 'type ${base}' or 'enum ${base}' declaration was found in scope.`,
         location,
         suggestion,
+        singleCandidate,  // suggestedCode: unambiguous single match, undefined otherwise
       ));
       // Don't check arity of an unknown type — it would be noise
       return;
@@ -301,6 +334,7 @@ class TypeChecker {
           `Generic type '${base}' expects ${expectedArity} type argument${expectedArity === 1 ? "" : "s"} but received ${argCount}.`,
           location,
           `${base} requires exactly ${expectedArity} type argument${expectedArity === 1 ? "" : "s"}. Example: ${example}`,
+          example,  // suggestedCode: the canonical example form, without prose
         ));
       }
     }
@@ -337,6 +371,28 @@ class TypeChecker {
       return `Did you mean one of: ${candidates.map((c) => `'${c}'`).join(", ")}?`;
     }
     return undefined;
+  }
+
+  /**
+   * Returns the single unambiguous candidate type name when there is exactly
+   * one fuzzy match — used as suggestedCode so tooling can apply the fix
+   * directly without parsing prose.
+   */
+  private fuzzySingleCandidate(typeName: string): string | undefined {
+    const lower = typeName.toLowerCase();
+    const candidates: string[] = [];
+
+    for (const t of BUILT_IN_TYPES) {
+      const tLower = t.toLowerCase();
+      if (
+        (lower.length >= 3 && tLower.startsWith(lower.slice(0, 3))) ||
+        levenshtein(tLower, lower) <= 2
+      ) {
+        candidates.push(t);
+      }
+    }
+
+    return candidates.length === 1 ? candidates[0] : undefined;
   }
 }
 

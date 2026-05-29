@@ -35,6 +35,8 @@ export interface ValueStateDiagnostic {
   readonly message: string;
   readonly location?: SourceLocation;
   readonly suggestedFix?: string;
+  /** Machine-applicable fix — the exact LogicN snippet to insert/replace, without prose. */
+  readonly suggestedCode?: string;
 }
 
 export interface ValueStateCheckResult {
@@ -53,11 +55,13 @@ function makeVSDiag(
   message: string,
   location: SourceLocation | undefined,
   suggestedFix: string,
+  suggestedCode?: string,
 ): ValueStateDiagnostic {
+  const sc = suggestedCode !== undefined ? { suggestedCode } : {};
   if (location !== undefined) {
-    return { code, name, severity: "error", message, location, suggestedFix };
+    return { code, name, severity: "error", message, location, suggestedFix, ...sc };
   }
-  return { code, name, severity: "error", message, suggestedFix };
+  return { code, name, severity: "error", message, suggestedFix, ...sc };
 }
 
 // ---------------------------------------------------------------------------
@@ -65,6 +69,11 @@ function makeVSDiag(
 //
 // Calls whose arguments must not be unsafe bindings.
 // Matched on the reconstructed full call name (receiver.method or method).
+//
+// Canonical registry (source of truth):
+//   docs/Knowledge-Bases/stdlib-gates.yaml  §sinks
+//
+// When adding a new sink, update stdlib-gates.yaml first, then mirror here.
 // ---------------------------------------------------------------------------
 
 function isGovernedSink(node: AstNode): boolean {
@@ -91,6 +100,9 @@ function isGovernedSink(node: AstNode): boolean {
 // Log / print functions
 //
 // Calls whose arguments must not include SecureString bindings.
+//
+// Canonical registry (source of truth):
+//   docs/Knowledge-Bases/stdlib-gates.yaml  §sinks  (log_receiver, print_output)
 // ---------------------------------------------------------------------------
 
 function isLogCall(node: AstNode): boolean {
@@ -110,7 +122,12 @@ function isLogCall(node: AstNode): boolean {
 // Gate function recognition
 //
 // The right-hand side of `safe mut name = gate(name)?` must match one of these.
-// Phase 6 uses prefix-based matching; a full registry is Phase 7+.
+//
+// Canonical registry (source of truth):
+//   docs/Knowledge-Bases/stdlib-gates.yaml  §gates
+//
+// Phase 6 uses prefix-based matching. Phase 7+ should load from the registry.
+// When adding a new gate, update stdlib-gates.yaml first, then mirror here.
 // ---------------------------------------------------------------------------
 
 const GATE_PREFIXES = [
@@ -327,6 +344,7 @@ class ValueStateChecker {
           `'safe mut ${info.name}' requires a recognised gate function on the right-hand side (validate.*, sanitize.*, json.decode<T>, parse.*).`,
           node.location,
           `Use: safe mut ${info.name} = validate.${info.name}(${info.name})?`,
+          `safe mut ${info.name} = validate.${info.name}(${info.name})?`,
         ));
       }
     }
@@ -390,6 +408,7 @@ class ValueStateChecker {
           `Unsafe binding '${binding.name}' cannot flow into governed sink '${sinkName}'. Upgrade with 'safe mut ${binding.name} = gate(${binding.name})?'.`,
           location,
           `Add before the sink call: safe mut ${binding.name} = validate.${binding.name}(${binding.name})?`,
+          `safe mut ${binding.name} = validate.${binding.name}(${binding.name})?`,
         ));
       }
     }
@@ -417,6 +436,7 @@ class ValueStateChecker {
           `SecureString binding '${binding.name}' must not be passed to '${callName}'. Use redact(${binding.name}) to produce a safe log placeholder.`,
           location,
           `Replace with: log.info("...", { key: redact(${binding.name}) })`,
+          `redact(${binding.name})`,
         ));
       }
     }
@@ -450,6 +470,7 @@ class ValueStateChecker {
           `SecureString binding '${binding.name}' must not be compared with == / !=. Use constantTimeEquals(${binding.name}, other) instead.`,
           location,
           `Replace with: let valid: Bool = constantTimeEquals(${binding.name}, other)`,
+          `constantTimeEquals(${binding.name}, other)`,
         ));
       }
     }

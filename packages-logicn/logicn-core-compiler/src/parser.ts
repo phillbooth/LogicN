@@ -78,6 +78,8 @@ export interface ParseDiagnostic {
   readonly message: string;
   readonly location?: SourceLocation;
   readonly suggestedFix?: string;
+  /** Machine-applicable fix — the exact LogicN snippet to insert/replace, without prose. */
+  readonly suggestedCode?: string;
 }
 
 /** Metadata extracted from a flow declaration header. */
@@ -1048,10 +1050,12 @@ class Parser {
     message: string,
     location: SourceLocation,
     suggestedFix?: string,
+    suggestedCode?: string,
   ): void {
     const d: ParseDiagnostic = {
       code, name, severity: "error", message, location,
       ...(suggestedFix === undefined ? {} : { suggestedFix }),
+      ...(suggestedCode === undefined ? {} : { suggestedCode }),
     };
     this.diagnostics.push(d);
   }
