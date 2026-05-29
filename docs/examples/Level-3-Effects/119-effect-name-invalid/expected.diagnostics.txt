@@ -1,0 +1,5 @@
+﻿LLN-EFFECT-XXX
+
+Unknown effect: network.
+Did you mean network.outbound?
+Effect names must use the canonical dotted form.

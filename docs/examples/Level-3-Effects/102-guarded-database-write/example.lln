@@ -1,0 +1,12 @@
+﻿/// example: 102-guarded-database-write
+/// level: 3
+/// concept: guarded flow declaring database.write effect
+/// expected_diagnostics: none
+/// ai_rule: Declare database.write when writing to a database.
+
+guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
+  with effects [database.write]
+{
+  let orderId = OrdersDB.insert(order)?
+  return Ok(orderId)
+}

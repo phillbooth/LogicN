@@ -1,0 +1,7 @@
+﻿/// example: 067-result-error
+/// level: 2
+/// concept: Result<T,E> Err variant
+/// expected_diagnostics: none
+/// ai_rule: Use Err(errorValue) to represent a typed failure in Result<T,E>.
+
+let result: Result<User, UserError> = Err(UserError.NotFound)

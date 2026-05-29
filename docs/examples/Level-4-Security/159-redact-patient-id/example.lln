@@ -1,0 +1,7 @@
+﻿/// example: 159-redact-patient-id
+/// level: 4
+/// concept: redact() converts protected PatientId to redacted PatientId
+/// expected_diagnostics: none
+/// ai_rule: Use redact() to safely prepare protected PatientId for audit logs.
+
+let auditPatientId: redacted PatientId = redact(patientId)

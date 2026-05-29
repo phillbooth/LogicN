@@ -12,6 +12,18 @@ type checker, diagnostic engine, schema generator, and later compiler phases.
 
 ---
 
+## Rules at a Glance
+
+- `Auto` is an inference marker — never emit `LLN-TYPE-001` for it; defer to the inference pass
+- `Tensor<T, Shape>` has arity 2 — bare `Tensor` emits `LLN-TYPE-009`; use `AnyTensor` for erased form
+- `Money<C>` arithmetic requires the same currency `C` — cross-currency is `LLN-TYPE-004`
+- `SecureString` cannot use `==`, `!=`, or appear in log calls — see LLN-SECRET-001/002
+- `Option<T>` arity 1 · `Result<T,E>` arity 2 · `Map<K,V>` arity 2 · `Brand<T,Name>` arity 2
+- `null` and `undefined` are not in the language — any occurrence emits `LLN-TYPE-008`
+- Only `Bool` may appear as an `if`/`while` condition — `Tri` and all other types are errors
+
+---
+
 ## 1. Type Categories
 
 LogicN types are divided into:
@@ -80,7 +92,9 @@ User-defined
 
 | Type | Description |
 |---|---|
+| `Byte` | Single unsigned 8-bit raw value (alias for `UInt8` in binary context) |
 | `Bytes` | Raw byte sequence |
+| `ReadOnlyView<T>` | Non-mutating view of a value — mutation requires `clone()` |
 
 ### JSON types
 
@@ -116,7 +130,8 @@ User-defined
 |---|---|
 | `Vector<T, N>` | Fixed-length numeric vector |
 | `Matrix<T, R, C>` | R×C numeric matrix |
-| `Tensor` | Multi-dimensional numeric array |
+| `Tensor<T, Shape>` | Multi-dimensional numeric array — use `AnyTensor` for fully erased form |
+| `AnyTensor` | Fully type-erased tensor value — element type and shape unknown |
 
 ### Domain / financial
 
@@ -145,6 +160,19 @@ User-defined
 | `PaymentError` | Payment processing error |
 | `ValidationError` | Input validation error |
 | `WebhookError` | Webhook processing error |
+| `DecodeError` | Decode failure (String/Char/Byte decode operations) |
+
+### Inference marker
+
+| Type | Description |
+|---|---|
+| `Auto` | Compile-time inference marker — compiler resolves to a concrete type from the initializer. Not a normal nominal type. Do not emit `LLN-TYPE-001` for `Auto`. |
+
+### Branded types
+
+| Type | Description |
+|---|---|
+| `Brand<T, Name>` | Compile-time branded type giving a plain representation a distinct domain identity |
 
 ---
 
@@ -154,15 +182,18 @@ Each generic type has a fixed arity. The type checker must reject incorrect arit
 
 ```typescript
 export const GENERIC_ARITY: Readonly<Record<string, number>> = {
-  Option:  1,
-  Result:  2,
-  Array:   1,
-  Set:     1,
-  Map:     2,
-  Channel: 1,
-  Vector:  2,
-  Matrix:  3,
-  Money:   1,
+  Option:       1,
+  Result:       2,
+  Array:        1,
+  Set:          1,
+  Map:          2,
+  Channel:      1,
+  Vector:       2,
+  Matrix:       3,
+  Money:        1,
+  Tensor:       2,  // Tensor<ElementType, Shape>
+  ReadOnlyView: 1,  // ReadOnlyView<T>
+  Brand:        2,  // Brand<T, "Name">
 } as const;
 ```
 
@@ -443,8 +474,8 @@ Diagnostic: `LLN-SECRET-001`, `LLN-SECRET-002`, `LLN-SECRET-003`
 
 ## 13. Required Diagnostics
 
-Canonical source: `docs/Knowledge-Bases/logicn_type_checker_design.md`
-Full reference: `docs/Knowledge-Bases/compiler-diagnostics.md`
+Full reference: `docs/Knowledge-Bases/compiler-diagnostics.md` (summaries only — defers to this document for LLN-TYPE-* numbering)
+Numbering strategy: `docs/Knowledge-Bases/logicn-diagnostic-numbering-strategy.md`
 
 ### LLN-TYPE-* series (22 codes)
 

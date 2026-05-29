@@ -7,7 +7,7 @@
 </head>
 <body>
 <h1>LogicN Project Graph</h1>
-<p>1610 nodes, 2610 relationships.</p>
+<p>1625 nodes, 2624 relationships.</p>
 <h2>Nodes</h2>
 <ul><li><strong>logicn-core</strong> <span>Package</span></li>
 <li><strong>logicn-core-compiler</strong> <span>Package</span></li>
@@ -134,6 +134,7 @@
 <li><strong>architecture-good-taste-principles.md</strong> <span>Document</span></li>
 <li><strong>architecture-self-verification-questions.md</strong> <span>Document</span></li>
 <li><strong>arrays-and-string-operations.md</strong> <span>Document</span></li>
+<li><strong>ast-value-encoding.md</strong> <span>Document</span></li>
 <li><strong>async-task-model.md</strong> <span>Document</span></li>
 <li><strong>audit-actor-model.md</strong> <span>Document</span></li>
 <li><strong>authority-model.md</strong> <span>Document</span></li>
@@ -182,6 +183,7 @@
 <li><strong>generative-runtime-mapper.md</strong> <span>Document</span></li>
 <li><strong>generic-types.md</strong> <span>Document</span></li>
 <li><strong>governed-capability-modules.md</strong> <span>Document</span></li>
+<li><strong>governed-compute-chain.md</strong> <span>Document</span></li>
 <li><strong>governed-event-driven-execution.md</strong> <span>Document</span></li>
 <li><strong>governed-execution-director.md</strong> <span>Document</span></li>
 <li><strong>governed-streams.md</strong> <span>Document</span></li>
@@ -189,8 +191,10 @@
 <li><strong>hello-world-api-pattern.md</strong> <span>Document</span></li>
 <li><strong>http-method-declarations.md</strong> <span>Document</span></li>
 <li><strong>hybrid-electronic-optical-compute.md</strong> <span>Document</span></li>
+<li><strong>ihsa-storage-policy.md</strong> <span>Document</span></li>
 <li><strong>layered-rate-limits.md</strong> <span>Document</span></li>
 <li><strong>legacy-pattern-restrictions.md</strong> <span>Document</span></li>
+<li><strong>lifecycle-state-system.md</strong> <span>Document</span></li>
 <li><strong>list-operations.md</strong> <span>Document</span></li>
 <li><strong>local-ai-review.md</strong> <span>Document</span></li>
 <li><strong>local-low-bit-ai-review.md</strong> <span>Document</span></li>
@@ -246,8 +250,10 @@
 <li><strong>logicn-design-primitive-obsession.md</strong> <span>Document</span></li>
 <li><strong>logicn-developer-tooling-advanced.md</strong> <span>Document</span></li>
 <li><strong>logicn-developer-tools.md</strong> <span>Document</span></li>
+<li><strong>logicn-diagnostic-numbering-strategy.md</strong> <span>Document</span></li>
 <li><strong>logicn-framework-api-server-implementation.md</strong> <span>Document</span></li>
 <li><strong>logicn-framework-api-server-v02.md</strong> <span>Document</span></li>
+<li><strong>logicn-glossary.md</strong> <span>Document</span></li>
 <li><strong>logicn-governance-architecture.md</strong> <span>Document</span></li>
 <li><strong>logicn-governance-diff-ci.md</strong> <span>Document</span></li>
 <li><strong>logicn-intent-graph.md</strong> <span>Document</span></li>
@@ -266,6 +272,7 @@
 <li><strong>logicn-supply-chain-package-governance.md</strong> <span>Document</span></li>
 <li><strong>logicn-syntax-if-match-optional.md</strong> <span>Document</span></li>
 <li><strong>logicn-syntax-loops-iteration.md</strong> <span>Document</span></li>
+<li><strong>logicn-tensor-arity-decision.md</strong> <span>Document</span></li>
 <li><strong>logicn-type-system-compute-extensions.md</strong> <span>Document</span></li>
 <li><strong>logicn-v1-memory-model.md</strong> <span>Document</span></li>
 <li><strong>lsgr-runtime-components.md</strong> <span>Document</span></li>
@@ -287,6 +294,7 @@
 <li><strong>numeric-and-compute-types.md</strong> <span>Document</span></li>
 <li><strong>observability-and-monitoring.md</strong> <span>Document</span></li>
 <li><strong>operator-precedence.md</strong> <span>Document</span></li>
+<li><strong>operator-type-rules.md</strong> <span>Document</span></li>
 <li><strong>package-completion-status.md</strong> <span>Document</span></li>
 <li><strong>package-declaration-syntax.md</strong> <span>Document</span></li>
 <li><strong>package-resolver.md</strong> <span>Document</span></li>
@@ -348,6 +356,7 @@
 <li><strong>untrusted-file-asset-processing.md</strong> <span>Document</span></li>
 <li><strong>v1-reserved-keywords.md</strong> <span>Document</span></li>
 <li><strong>value-state-annotations.md</strong> <span>Document</span></li>
+<li><strong>value-state-checker.md</strong> <span>Document</span></li>
 <li><strong>variable-mutation-vault-design.md</strong> <span>Document</span></li>
 <li><strong>vault-write-syntax.md</strong> <span>Document</span></li>
 <li><strong>verified-fast-paths.md</strong> <span>Document</span></li>
@@ -738,6 +747,12 @@
 <li><strong>FlowMeta</strong> <span>Type</span></li>
 <li><strong>ParseResult</strong> <span>Type</span></li>
 <li><strong>parseProgram</strong> <span>Flow</span></li>
+<li><strong>TypeDiagnostic</strong> <span>Type</span></li>
+<li><strong>TypeCheckResult</strong> <span>Type</span></li>
+<li><strong>checkTypes</strong> <span>Flow</span></li>
+<li><strong>ValueStateDiagnostic</strong> <span>Type</span></li>
+<li><strong>ValueStateCheckResult</strong> <span>Type</span></li>
+<li><strong>checkValueStates</strong> <span>Flow</span></li>
 <li><strong>TODO.md</strong> <span>Document</span></li>
 <li><strong>tsconfig.json</strong> <span>Document</span></li>
 <li><strong>checked-runtime-context.json</strong> <span>Document</span></li>
@@ -1845,6 +1860,8 @@
 <li>doc:docs/Knowledge-Bases/ai-compute-plan.md <code>documents</code> package:logicn-core-reports</li>
 <li>doc:docs/Knowledge-Bases/ai-compute-plan.md <code>documents</code> package:logicn-core-compute</li>
 <li>doc:docs/Knowledge-Bases/ai-compute-plan.md <code>documents</code> package:logicn-ai</li>
+<li>doc:docs/Knowledge-Bases/ast-value-encoding.md <code>documents</code> package:logicn-core</li>
+<li>doc:docs/Knowledge-Bases/ast-value-encoding.md <code>documents</code> package:logicn-core-compiler</li>
 <li>doc:docs/Knowledge-Bases/benchmark-success-plan.md <code>documents</code> package:logicn-core</li>
 <li>doc:docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md <code>documents</code> package:logicn-core</li>
 <li>doc:docs/Knowledge-Bases/bit-width-and-base64-asset-policy.md <code>documents</code> package:logicn-core-vector</li>
@@ -2049,6 +2066,8 @@
 <li>doc:docs/Knowledge-Bases/logicn-framework-api-server-implementation.md <code>documents</code> package:logicn-framework-app-kernel</li>
 <li>doc:docs/Knowledge-Bases/logicn-framework-api-server-implementation.md <code>documents</code> package:logicn-framework-api-server</li>
 <li>doc:docs/Knowledge-Bases/logicn-framework-api-server-v02.md <code>documents</code> package:logicn-framework-api-server</li>
+<li>doc:docs/Knowledge-Bases/logicn-glossary.md <code>documents</code> package:logicn-core</li>
+<li>doc:docs/Knowledge-Bases/logicn-glossary.md <code>documents</code> package:logicn-core-logic</li>
 <li>doc:docs/Knowledge-Bases/logicn-governance-diff-ci.md <code>documents</code> package:logicn-core</li>
 <li>doc:docs/Knowledge-Bases/logicn-governance-diff-ci.md <code>documents</code> package:logicn-core-compiler</li>
 <li>doc:docs/Knowledge-Bases/logicn-governance-diff-ci.md <code>documents</code> package:logicn-core-security</li>
@@ -2115,10 +2134,6 @@
 <li>doc:docs/Knowledge-Bases/logicn-security-secret-safety.md <code>documents</code> package:logicn-core-compiler</li>
 <li>doc:docs/Knowledge-Bases/logicn-security-secret-safety.md <code>documents</code> package:logicn-core-runtime</li>
 <li>doc:docs/Knowledge-Bases/logicn-security-secret-safety.md <code>documents</code> package:logicn-core-security</li>
-<li>doc:docs/Knowledge-Bases/logicn-security-secret-safety.md <code>documents</code> package:logicn-core-config</li>
-<li>doc:docs/Knowledge-Bases/logicn-security-secret-safety.md <code>documents</code> package:logicn-core-reports</li>
-<li>doc:docs/Knowledge-Bases/logicn-security-secret-safety.md <code>documents</code> package:logicn-target-native</li>
-<li>doc:docs/Knowledge-Bases/logicn-security-secret-safety.md <code>documents</code> package:logicn-target-wasm</li>
-<li>doc:docs/Knowledge-Bases/logicn-security-taint-types.md <code>documents</code> package:logicn-core</li></ul>
+<li>doc:docs/Knowledge-Bases/logicn-security-secret-safety.md <code>documents</code> package:logicn-core-config</li></ul>
 </body>
 </html>

@@ -1,0 +1,14 @@
+﻿/// example: 104-multiple-effects
+/// level: 3
+/// concept: flow declaring multiple effects
+/// expected_diagnostics: none
+/// ai_rule: List all required effects in the with effects [...] declaration.
+
+guarded flow syncOrder(order: Order) -> Result<Unit, SyncError>
+  with effects [database.write, network.outbound, audit.write]
+{
+  let orderId = OrdersDB.insert(order)?
+  let _ = http.post("https://sync.example.com/orders", order)?
+  AuditLog.write({ action: "syncOrder", orderId: orderId })
+  return Ok(unit)
+}

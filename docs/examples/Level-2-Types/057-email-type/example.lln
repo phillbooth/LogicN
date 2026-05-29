@@ -1,0 +1,8 @@
+﻿/// example: 057-email-type
+/// level: 2
+/// concept: protected Email domain type
+/// expected_diagnostics: none
+/// ai_rule: Email values come from validate.email().
+
+unsafe let rawEmail: String = req.body.email
+let email: protected Email = validate.email(rawEmail)?

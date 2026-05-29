@@ -1,0 +1,9 @@
+﻿/// example: 169-secret-comparison
+/// level: 4
+/// concept: direct equality comparison on secrets is forbidden
+/// expected_diagnostics: LLN-SEC-XXX
+/// ai_rule: Never compare secrets with ==. Use constantTimeEquals(...) to prevent timing attacks.
+
+if apiKey == suppliedKey {
+  return Ok(unit)
+}

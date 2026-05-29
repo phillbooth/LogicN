@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-05-28T13:31:25.380Z",
+  "generatedAt": "2026-05-29T07:43:40.294Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -1182,6 +1182,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/ast-value-encoding.md",
+      "kind": "Document",
+      "label": "ast-value-encoding.md",
+      "sourcePath": "docs/Knowledge-Bases/ast-value-encoding.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/async-task-model.md",
       "kind": "Document",
       "label": "async-task-model.md",
@@ -1614,6 +1623,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/governed-compute-chain.md",
+      "kind": "Document",
+      "label": "governed-compute-chain.md",
+      "sourcePath": "docs/Knowledge-Bases/governed-compute-chain.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/governed-event-driven-execution.md",
       "kind": "Document",
       "label": "governed-event-driven-execution.md",
@@ -1677,6 +1695,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/ihsa-storage-policy.md",
+      "kind": "Document",
+      "label": "ihsa-storage-policy.md",
+      "sourcePath": "docs/Knowledge-Bases/ihsa-storage-policy.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/layered-rate-limits.md",
       "kind": "Document",
       "label": "layered-rate-limits.md",
@@ -1690,6 +1717,15 @@
       "kind": "Document",
       "label": "legacy-pattern-restrictions.md",
       "sourcePath": "docs/Knowledge-Bases/legacy-pattern-restrictions.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/lifecycle-state-system.md",
+      "kind": "Document",
+      "label": "lifecycle-state-system.md",
+      "sourcePath": "docs/Knowledge-Bases/lifecycle-state-system.md",
       "tags": [
         "document"
       ]
@@ -2190,6 +2226,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-diagnostic-numbering-strategy.md",
+      "kind": "Document",
+      "label": "logicn-diagnostic-numbering-strategy.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-diagnostic-numbering-strategy.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-framework-api-server-implementation.md",
       "kind": "Document",
       "label": "logicn-framework-api-server-implementation.md",
@@ -2203,6 +2248,15 @@
       "kind": "Document",
       "label": "logicn-framework-api-server-v02.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-framework-api-server-v02.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-glossary.md",
+      "kind": "Document",
+      "label": "logicn-glossary.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-glossary.md",
       "tags": [
         "document"
       ]
@@ -2365,6 +2419,15 @@
       "kind": "Document",
       "label": "logicn-syntax-loops-iteration.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-syntax-loops-iteration.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-tensor-arity-decision.md",
+      "kind": "Document",
+      "label": "logicn-tensor-arity-decision.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-tensor-arity-decision.md",
       "tags": [
         "document"
       ]
@@ -2554,6 +2617,15 @@
       "kind": "Document",
       "label": "operator-precedence.md",
       "sourcePath": "docs/Knowledge-Bases/operator-precedence.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/operator-type-rules.md",
+      "kind": "Document",
+      "label": "operator-type-rules.md",
+      "sourcePath": "docs/Knowledge-Bases/operator-type-rules.md",
       "tags": [
         "document"
       ]
@@ -3103,6 +3175,15 @@
       "kind": "Document",
       "label": "value-state-annotations.md",
       "sourcePath": "docs/Knowledge-Bases/value-state-annotations.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/value-state-checker.md",
+      "kind": "Document",
+      "label": "value-state-checker.md",
+      "sourcePath": "docs/Knowledge-Bases/value-state-checker.md",
       "tags": [
         "document"
       ]
@@ -6942,6 +7023,66 @@
       "kind": "Flow",
       "label": "parseProgram",
       "sourcePath": "packages-logicn/logicn-core-compiler/src/parser.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:TypeDiagnostic",
+      "kind": "Type",
+      "label": "TypeDiagnostic",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/type-checker.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:TypeCheckResult",
+      "kind": "Type",
+      "label": "TypeCheckResult",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/type-checker.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:checkTypes",
+      "kind": "Flow",
+      "label": "checkTypes",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/type-checker.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ValueStateDiagnostic",
+      "kind": "Type",
+      "label": "ValueStateDiagnostic",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/value-state-checker.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ValueStateCheckResult",
+      "kind": "Type",
+      "label": "ValueStateCheckResult",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/value-state-checker.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:checkValueStates",
+      "kind": "Flow",
+      "label": "checkValueStates",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/value-state-checker.ts",
       "tags": [
         "function",
         "logicn-core-compiler"
@@ -17335,6 +17476,20 @@
       "evidencePath": "docs/Knowledge-Bases/ai-compute-plan.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/ast-value-encoding.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/ast-value-encoding.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/ast-value-encoding.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/ast-value-encoding.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/benchmark-success-plan.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -18763,6 +18918,20 @@
       "evidencePath": "docs/Knowledge-Bases/logicn-framework-api-server-v02.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/logicn-glossary.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-glossary.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-glossary.md",
+      "to": "package:logicn-core-logic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-glossary.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/logicn-governance-diff-ci.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -19386,6 +19555,20 @@
       "evidencePath": "docs/Knowledge-Bases/logicn-syntax-loops-iteration.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/logicn-tensor-arity-decision.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-tensor-arity-decision.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-tensor-arity-decision.md",
+      "to": "package:logicn-core-compute",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-tensor-arity-decision.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/logicn-type-system-compute-extensions.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -19482,6 +19665,20 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/Knowledge-Bases/operator-precedence.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/operator-type-rules.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/operator-type-rules.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/operator-type-rules.md",
+      "to": "package:logicn-core-logic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/operator-type-rules.md"
     },
     {
       "from": "doc:docs/Knowledge-Bases/package-completion-status.md",
@@ -26027,6 +26224,48 @@
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/parser.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:TypeDiagnostic",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/type-checker.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:TypeCheckResult",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/type-checker.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:checkTypes",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/type-checker.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ValueStateDiagnostic",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/value-state-checker.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ValueStateCheckResult",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/value-state-checker.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:checkValueStates",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/value-state-checker.ts"
     },
     {
       "from": "package:logicn-core-compiler",

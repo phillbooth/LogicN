@@ -1,0 +1,11 @@
+﻿/// example: 117-effectful-operation-in-pure-flow
+/// level: 3
+/// concept: filesystem.read in a pure flow is forbidden
+/// expected_diagnostics: LLN-EFFECT-XXX
+/// ai_rule: Pure flows cannot perform any I/O, including filesystem reads.
+
+pure flow loadConfig(path: String) -> Result<Config, ConfigError> {
+  unsafe let rawFile = fs.readText(path)?
+  let config: Config = toml.decode(rawFile)?
+  return Ok(config)
+}

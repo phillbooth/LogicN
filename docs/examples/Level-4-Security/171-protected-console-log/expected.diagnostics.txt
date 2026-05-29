@@ -1,0 +1,4 @@
+﻿LLN-SEC-XXX
+
+Protected value sent to console sink.
+Do not log protected values. Use redact(email) or omit from output.

@@ -1,0 +1,9 @@
+﻿/// example: 006-mut-binding
+/// level: 1
+/// concept: mut binding
+/// expected_diagnostics: none
+/// ai_rule: mut declares a mutable binding that can be reassigned.
+
+mut count: Int = 0
+
+count = count + 1

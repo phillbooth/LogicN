@@ -1,0 +1,13 @@
+﻿/// example: 201-intent-basic
+/// level: 5
+/// concept: intent declaration on a guarded flow
+/// expected_diagnostics: none
+/// ai_rule: Use intent to describe what the flow is allowed to do. The compiler checks declared intent against observed behaviour.
+
+guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
+  with effects [database.write]
+  intent "Save a customer order"
+{
+  let orderId = OrdersDB.insert(order)?
+  return Ok(orderId)
+}

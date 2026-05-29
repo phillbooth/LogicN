@@ -1,0 +1,8 @@
+﻿/// example: 009-unsafe-let-boundary
+/// level: 1
+/// concept: unsafe let — boundary input
+/// expected_diagnostics: none
+/// ai_rule: Data from external boundaries starts as unsafe.
+
+unsafe let rawBody: String =
+  req.body

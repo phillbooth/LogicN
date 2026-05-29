@@ -1,0 +1,9 @@
+﻿/// example: 011-option-return
+/// level: 1
+/// concept: Option return type
+/// expected_diagnostics: none
+/// ai_rule: Use Option<T> instead of null.
+
+pure flow findUser(id: UserId) -> Option<User> {
+  return None
+}

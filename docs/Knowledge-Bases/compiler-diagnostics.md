@@ -375,19 +375,33 @@ LLN-INTENT-005   EXPERIMENTAL_IN_PRODUCTION      Experimental code in a producti
 
 ### Type Checker (canonical series: LLN-TYPE-*)
 
-Core type errors for Phase 5. Replaces the older `LNN-ERR-TYPE-*` codes for
-all new type-checking work. `LNN-ERR-TYPE-*` codes are frozen — do not extend.
+> **Canonical source for `LLN-TYPE-*` diagnostic numbering and semantics:**
+> `docs/Knowledge-Bases/formal-type-system-spec.md`
+>
+> This document provides an operational summary only. It does **not** redefine
+> or duplicate `LLN-TYPE-*` numbering. The formal type-system spec is the single
+> source of truth for all `LLN-TYPE-*` codes — 22 codes defined there, not here.
+> See `docs/Knowledge-Bases/logicn-diagnostic-numbering-strategy.md` for the
+> ownership rationale.
+
+The `LNN-ERR-TYPE-*` codes (older series) are frozen — do not extend.
 `LLN-TYPE-NUMERIC-*` remains a separate sub-series for GPU/tensor numeric types.
 
+Summary of key codes — full definitions in `formal-type-system-spec.md`:
+
 ```text
-LLN-TYPE-001   TYPE_MISMATCH            Expected type X, got Y
-LLN-TYPE-002   UNKNOWN_TYPE             Type not defined in current scope
-LLN-TYPE-003   ARITY_MISMATCH           Wrong number of arguments (expected N, got M)
-LLN-TYPE-004   RETURN_TYPE_MISMATCH     Return value does not match declared return type
-LLN-TYPE-005   FIELD_NOT_FOUND          Field X not found on type Y
-LLN-TYPE-006   IMMUTABLE_REASSIGNMENT   Cannot reassign let binding (use mut for mutable)
-LLN-TYPE-007   INVALID_OPERATOR         Operator not defined for these operand types
-LLN-TYPE-008   GENERIC_CONSTRAINT_FAIL  Type does not satisfy generic constraint
+LLN-TYPE-001   UnknownType                  Referenced type not in scope
+LLN-TYPE-002   TypeMismatch                 Cannot assign/convert type X to type Y
+LLN-TYPE-003   InvalidNominalConversion     Implicit nominal alias conversion denied
+LLN-TYPE-004   InvalidBinaryOperation       Operator not valid for these operand types
+LLN-TYPE-005   InvalidUnaryOperation        Unary operator requires different operand type
+LLN-TYPE-006   InvalidCallArgument          Argument type mismatch at call site
+LLN-TYPE-007   InvalidArgumentCount         Wrong number of arguments
+LLN-TYPE-008   InvalidReturnType            Return type does not match declaration
+LLN-TYPE-009   InvalidGenericInstantiation  Wrong number of generic type arguments
+LLN-TYPE-020   ShadowedBinding              Binding shadows outer-scope name (warning)
+LLN-TYPE-021   NonExhaustiveMatch           match missing variant(s)
+LLN-TYPE-022   UnreachablePattern           Pattern already covered by earlier arm
 ```
 
 ### Name Resolution (canonical series: LLN-NAME-*)

@@ -1,0 +1,7 @@
+﻿/// example: 163-unsafe-audit-log
+/// level: 4
+/// concept: passing unsafe value to audit sink
+/// expected_diagnostics: LLN-SEC-XXX
+/// ai_rule: Unsafe values must be validated before reaching any sink.
+
+AuditLog.write({ email: rawEmail })

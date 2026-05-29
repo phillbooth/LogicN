@@ -1,0 +1,7 @@
+﻿/// example: 167-unsafe-network-send
+/// level: 4
+/// concept: unsafe value crossing a trust boundary via network
+/// expected_diagnostics: LLN-SEC-XXX
+/// ai_rule: Unsafe values cannot cross trust boundaries. Validate before sending externally.
+
+http.post("/customer", rawEmail)?

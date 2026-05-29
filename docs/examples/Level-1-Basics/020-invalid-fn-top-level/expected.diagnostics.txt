@@ -1,0 +1,4 @@
+﻿LLN-SYNTAX-XXX
+
+Top-level fn declarations are not permitted.
+Use pure flow, guarded flow, or secure flow.

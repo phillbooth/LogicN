@@ -1,0 +1,4 @@
+﻿LLN-GOV-XXX
+
+Declared purpose does not match observed behaviour.
+Purpose is "appointment_reminder" but template "marketing-offer" was used.

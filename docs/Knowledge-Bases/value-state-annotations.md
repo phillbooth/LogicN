@@ -9,6 +9,17 @@ Phase 5 prerequisite
 
 ---
 
+## Rules at a Glance
+
+- `unsafe let` marks a boundary-origin binding — it cannot reach governed sinks without a gate upgrade
+- `safe mut` upgrade requires a recognised gate on the RHS (`validate.*`, `sanitize.*`, `json.decode`, `parse.*`) — emits `LLN-VALUESTATE-001` if missing
+- Unsafe binding passed directly to a governed sink emits `LLN-VALUESTATE-003`
+- `SecureString` must not be passed to `print`, `log.*`, `Logger.*`, `console.*` — use `redact()` instead
+- `SecureString` must not be compared with `==` or `!=` — use `constantTimeEquals()` instead
+- Gate and sink registry: `docs/Knowledge-Bases/stdlib-gates.yaml`
+
+---
+
 ## Purpose
 
 Value-state annotations let LogicN attach **trust, safety, validation, and

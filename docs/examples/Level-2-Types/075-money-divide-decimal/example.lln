@@ -1,0 +1,7 @@
+﻿/// example: 075-money-divide-decimal
+/// level: 2
+/// concept: Money<GBP> divided by Decimal
+/// expected_diagnostics: none
+/// ai_rule: Money<GBP> / Decimal is valid and yields Money<GBP>.
+
+let share: Money<GBP> = total / Decimal("4")

@@ -1,0 +1,4 @@
+﻿LLN-GOV-XXX
+
+Intent requires audit evidence but no audit.write sink was used.
+Add audit.write to the effect list and call AuditLog.write.

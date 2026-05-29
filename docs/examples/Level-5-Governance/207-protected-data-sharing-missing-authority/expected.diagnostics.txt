@@ -1,0 +1,4 @@
+﻿LLN-GOV-XXX
+
+Protected data sent externally without authority.
+Add an authority block declaring permission to share protected PatientData with the external service.

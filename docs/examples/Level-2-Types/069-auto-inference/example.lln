@@ -1,0 +1,7 @@
+﻿/// example: 069-auto-inference
+/// level: 2
+/// concept: Auto type inference
+/// expected_diagnostics: none
+/// ai_rule: Auto means infer the type from the initializer expression.
+
+let count: Auto = 42

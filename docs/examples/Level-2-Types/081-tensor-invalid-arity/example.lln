@@ -1,0 +1,7 @@
+﻿/// example: 081-tensor-invalid-arity
+/// level: 2
+/// concept: Tensor requires exactly two type parameters
+/// expected_diagnostics: LLN-TYPE-009
+/// ai_rule: Tensor<Dtype, Shape> requires both element type and shape parameters.
+
+let embedding: Tensor<Float32>

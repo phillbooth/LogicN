@@ -1,0 +1,14 @@
+﻿/// example: 207-protected-data-sharing-missing-authority
+/// level: 5
+/// concept: sending protected data externally without authority block
+/// expected_diagnostics: LLN-GOV-XXX
+/// ai_rule: Protected data cannot be sent externally without an authority block granting permission.
+
+secure flow sendReferral(patient: PatientRecord) -> Result<ReferralId, ReferralError>
+  with effects [network.outbound, audit.write]
+  intent "Send a patient referral"
+{
+  let referralId = http.post("https://specialist.example.nhs.uk/referrals", patient.referralPacket)?
+  AuditLog.write({ action: "sendReferral", referralId: referralId })
+  return Ok(referralId)
+}

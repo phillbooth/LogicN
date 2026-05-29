@@ -1,0 +1,12 @@
+﻿/// example: 108-guarded-flow-calls-effectful-flow
+/// level: 3
+/// concept: guarded flow can call effectful flow when it declares the same effects
+/// expected_diagnostics: none
+/// ai_rule: A guarded flow may call effectful flows provided it declares all required effects.
+
+guarded flow buildPriceQuote(orderId: OrderId) -> Result<Money<GBP>, RateError>
+  with effects [network.outbound]
+{
+  let rate = fetchRate("GBP")?
+  return Ok(Money.gbp("100.00") * rate)
+}

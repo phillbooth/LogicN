@@ -1,0 +1,17 @@
+/// example: 002-guarded-flow
+/// level: 1
+/// concept: guarded flow
+/// expected_diagnostics: none
+/// ai_rule: Use guarded flow when the flow performs declared effects.
+
+guarded flow fetchRate(currency: CurrencyCode) -> Result<Decimal, NetworkError>
+effects [network.outbound] {
+
+  unsafe let rawResponse: String =
+    http.get("/rates/" + currency)?
+
+  let rate: Decimal =
+    json.decode<Decimal>(rawResponse)?
+
+  return Ok(rate)
+}

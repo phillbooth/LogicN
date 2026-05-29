@@ -1,0 +1,12 @@
+﻿/// example: 119-effect-name-invalid
+/// level: 3
+/// concept: non-canonical effect name is rejected
+/// expected_diagnostics: LLN-EFFECT-XXX
+/// ai_rule: Effect names must use the canonical dotted form (e.g. network.outbound, not network).
+
+guarded flow fetchRate(currency: String) -> Result<Decimal, RateError>
+  with effects [network]
+{
+  unsafe let rawResponse = http.get("https://rates.example.com/" + currency)?
+  return json.decode(rawResponse)
+}

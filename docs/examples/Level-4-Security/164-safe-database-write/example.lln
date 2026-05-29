@@ -1,0 +1,14 @@
+﻿/// example: 164-safe-database-write
+/// level: 4
+/// concept: protected value is safe to write to database
+/// expected_diagnostics: none
+/// ai_rule: Validated protected values can be stored in a database sink with database.write declared.
+
+guarded flow savePatient(req: Request) -> Result<PatientId, PatientError>
+  with effects [database.write]
+{
+  unsafe let rawEmail: String = req.body.email
+  let email: protected Email = validate.email(rawEmail)?
+  let id = PatientsDB.insert({ email: email })?
+  return Ok(id)
+}

@@ -1,0 +1,7 @@
+﻿/// example: 078-money-ratio-cross-currency-invalid
+/// level: 2
+/// concept: cross-currency Money ratio is forbidden
+/// expected_diagnostics: LLN-TYPE-004
+/// ai_rule: Money ratio requires matching currency parameters.
+
+let ratio = revenue / usdRevenue

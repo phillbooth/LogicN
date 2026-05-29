@@ -1,0 +1,7 @@
+﻿/// example: 005-let-binding
+/// level: 1
+/// concept: let binding
+/// expected_diagnostics: none
+/// ai_rule: let declares an immutable binding.
+
+let count: Int = 42

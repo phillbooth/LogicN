@@ -1,0 +1,18 @@
+﻿/// example: 116-effect-propagation-missing-parent
+/// level: 3
+/// concept: caller missing effect required by callee
+/// expected_diagnostics: LLN-EFFECT-XXX
+/// ai_rule: If a callee declares an effect, the caller must declare it too.
+
+guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
+  with effects [database.write]
+{
+  return Ok(OrdersDB.insert(order)?)
+}
+
+guarded flow processOrder(order: Order) -> Result<OrderId, ProcessError>
+  with effects []
+{
+  let orderId = saveOrder(order)?
+  return Ok(orderId)
+}

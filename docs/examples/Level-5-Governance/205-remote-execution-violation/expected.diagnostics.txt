@@ -1,0 +1,4 @@
+﻿LLN-GOV-XXX
+
+Remote execution violates governance policy.
+Intent declares on-premises processing only, but compute target is remote.

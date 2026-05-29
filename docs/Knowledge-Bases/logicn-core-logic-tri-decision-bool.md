@@ -1,5 +1,10 @@
 # LogicN Core Logic: Tri Logic, Decision Logic, and Bool Boundary Rules
 
+> **Canonical name:** `Tri` — LogicN's three-valued truth type (`True`, `False`, `Unknown`).
+> Older docs may say `tristate`, `tri-decision`, or `TriState` — all refer to the same type.
+> `Tri` is **not** a trie (prefix-tree data structure). The names are unrelated.
+> For operator rules on `Tri`, see `docs/Knowledge-Bases/operator-type-rules.md`.
+
 ## Status
 
 ```text

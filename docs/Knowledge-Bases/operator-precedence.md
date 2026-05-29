@@ -13,6 +13,18 @@ No operator may be added without a corresponding entry here.
 
 ---
 
+## Rules at a Glance
+
+- Higher precedence number = tighter binding (e.g. `*` at 60 binds tighter than `+` at 50)
+- All infix operators are **left-associative** except unary prefix operators (right-associative)
+- `||`=10 · `&&`=20 · `==`/`!=`=30 · comparisons=40 · `+`/`-`=50 · `*`/`/`/`%`=60 · unary=70 · postfix=80
+- `<` and `>` are comparison operators in expression position; in type position they are generic brackets
+- `?` is a postfix error-propagation operator — binds tighter than all infix operators
+- No `++`/`--`, no ternary `? :`, no assignment expressions (only assignment statements)
+- `|>` pipeline operator is reserved but not active in v1
+
+---
+
 ## Design Decision: Table-Driven Pratt Parser
 
 Phase 5 uses a **table-driven Pratt (top-down operator precedence) parser**

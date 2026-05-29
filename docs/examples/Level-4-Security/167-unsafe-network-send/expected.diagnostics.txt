@@ -1,0 +1,4 @@
+﻿LLN-SEC-XXX
+
+Unsafe value crossing trust boundary.
+Validate rawEmail before sending to external endpoint.

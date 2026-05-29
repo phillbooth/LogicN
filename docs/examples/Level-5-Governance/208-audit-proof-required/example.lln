@@ -1,0 +1,19 @@
+﻿/// example: 208-audit-proof-required
+/// level: 5
+/// concept: delete flow with full audit evidence
+/// expected_diagnostics: none
+/// ai_rule: Destructive operations on sensitive data require audit evidence. Declare audit.write and call AuditLog.write.
+
+secure flow deletePatient(patientId: protected PatientId) -> Result<Unit, DeleteError>
+  with effects [database.write, audit.write]
+  intent "Delete a patient record with full audit trail"
+{
+  PatientDB.delete(patientId)?
+  let auditId: redacted PatientId = redact(patientId)
+  AuditLog.write({
+    action: "deletePatient",
+    patientId: auditId,
+    timestamp: Clock.now()
+  })
+  return Ok(unit)
+}

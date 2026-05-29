@@ -1,0 +1,7 @@
+﻿/// example: 160-protected-not-redacted
+/// level: 4
+/// concept: protected value cannot be directly assigned to redacted binding
+/// expected_diagnostics: LLN-TYPE-XXX
+/// ai_rule: Protected values must be explicitly redacted. Use redact(email).
+
+let auditEmail: redacted Email = email

@@ -1,0 +1,28 @@
+﻿/// example: 174-multiple-protected-values
+/// level: 4
+/// concept: multiple protected values all validated and redacted in audit
+/// expected_diagnostics: none
+/// ai_rule: Each protected value must be individually validated and individually redacted for audit.
+
+secure flow createPatientRecord(req: Request) -> Result<PatientId, PatientError>
+  with effects [database.write, audit.write]
+{
+  unsafe let rawEmail: String = req.body.email
+  unsafe let rawNhsNumber: String = req.body.nhsNumber
+
+  let email: protected Email = validate.email(rawEmail)?
+  let nhsNumber: protected NhsNumber = validate.nhsNumber(rawNhsNumber)?
+
+  let id = PatientsDB.insert({ email: email, nhsNumber: nhsNumber })?
+
+  let auditEmail: redacted Email = redact(email)
+  let auditNhsNumber: redacted NhsNumber = redact(nhsNumber)
+
+  AuditLog.write({
+    action: "createPatientRecord",
+    email: auditEmail,
+    nhsNumber: auditNhsNumber
+  })
+
+  return Ok(id)
+}

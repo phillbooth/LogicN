@@ -1,0 +1,7 @@
+﻿/// example: 083-readonly-view-invalid
+/// level: 2
+/// concept: ReadOnlyView requires exactly one type parameter
+/// expected_diagnostics: LLN-TYPE-009
+/// ai_rule: ReadOnlyView takes exactly 1 type parameter.
+
+let users: ReadOnlyView<User, Config>

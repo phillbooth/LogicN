@@ -1,0 +1,7 @@
+﻿/// example: 074-money-times-decimal
+/// level: 2
+/// concept: Money<GBP> multiplied by Decimal
+/// expected_diagnostics: none
+/// ai_rule: Money<GBP> * Decimal is valid and scales the monetary amount.
+
+let vat: Money<GBP> = price * Decimal("0.20")

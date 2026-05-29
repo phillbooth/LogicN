@@ -1,0 +1,9 @@
+﻿/// example: 101-pure-no-effects
+/// level: 3
+/// concept: pure flow has no effects
+/// expected_diagnostics: none
+/// ai_rule: Pure flows cannot perform I/O or call effectful operations.
+
+pure flow calculateVat(price: Money<GBP>) -> Money<GBP> {
+  return price * Decimal("0.20")
+}

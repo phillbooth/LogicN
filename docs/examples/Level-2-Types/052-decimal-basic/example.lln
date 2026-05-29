@@ -1,0 +1,7 @@
+﻿/// example: 052-decimal-basic
+/// level: 2
+/// concept: Decimal type
+/// expected_diagnostics: none
+/// ai_rule: Use Decimal("...") constructor for exact decimal values. Avoids floating-point rounding.
+
+let vatRate: Decimal = Decimal("0.20")

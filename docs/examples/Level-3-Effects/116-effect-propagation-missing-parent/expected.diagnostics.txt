@@ -1,0 +1,4 @@
+﻿LLN-EFFECT-XXX
+
+processOrder calls saveOrder which requires database.write, but database.write is not declared by processOrder.
+Add database.write to processOrder's with effects [...] list.

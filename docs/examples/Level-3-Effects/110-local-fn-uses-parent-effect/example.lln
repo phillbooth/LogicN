@@ -1,0 +1,17 @@
+﻿/// example: 110-local-fn-uses-parent-effect
+/// level: 3
+/// concept: local fn may use effects declared by the containing flow
+/// expected_diagnostics: none
+/// ai_rule: Local fn may use effects only when the containing flow declares them.
+
+guarded flow syncOrders(orders: List<Order>) -> Result<Unit, SyncError>
+  with effects [network.outbound, database.write]
+{
+  fn fetchRate(currency: String) -> Result<Decimal, RateError> {
+    unsafe let rawResponse = http.get("https://rates.example.com/" + currency)?
+    return json.decode(rawResponse)
+  }
+  let rate = fetchRate("GBP")?
+  let _ = OrdersDB.insert(orders[0])?
+  return Ok(unit)
+}

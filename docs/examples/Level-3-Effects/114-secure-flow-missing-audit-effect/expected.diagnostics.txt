@@ -1,0 +1,4 @@
+﻿LLN-EFFECT-XXX
+
+Effect audit.write is used but not declared.
+Add audit.write to the with effects [...] list.

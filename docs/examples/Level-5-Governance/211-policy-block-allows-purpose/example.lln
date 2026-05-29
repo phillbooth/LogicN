@@ -1,0 +1,19 @@
+﻿/// example: 211-policy-block-allows-purpose
+/// level: 5
+/// concept: policy block declaring allowed purpose for data sharing
+/// expected_diagnostics: none
+/// ai_rule: Use a policy block to declare allowed data-sharing purposes for patient communications.
+
+secure flow emailPatient(patient: PatientRecord) -> Result<Unit, EmailError>
+  with effects [network.outbound, audit.write]
+  intent "Send an appointment reminder to a patient"
+  policy {
+    purpose "appointment_reminder"
+    allow protected Email to "patient"
+  }
+{
+  let email: protected Email = patient.email
+  let sent = EmailGateway.send(email, Template.appointmentReminder)?
+  AuditLog.write({ action: "emailPatient", purpose: "appointment_reminder" })
+  return Ok(unit)
+}

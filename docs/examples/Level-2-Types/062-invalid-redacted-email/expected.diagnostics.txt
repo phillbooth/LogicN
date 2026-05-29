@@ -1,0 +1,4 @@
+﻿LLN-TYPE-XXX
+
+Protected value cannot be assigned to redacted binding directly.
+Use redact(email) to produce a redacted Email value.

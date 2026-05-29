@@ -1,0 +1,7 @@
+﻿/// example: 066-result-success
+/// level: 2
+/// concept: Result<T,E> Ok variant
+/// expected_diagnostics: none
+/// ai_rule: Result<T, E> represents success (Ok) or failure (Err). Use Ok(value) for success.
+
+let result: Result<User, UserError> = Ok(user)

@@ -360,7 +360,7 @@ streamable           — forwardable to SIEM/OTel
   "timestamp": "2026-01-01T12:00:00Z",
   "runtime": "logicn-runtime",
   "module": "app/users/service",
-  "function": "get_profile",
+  "flow": "get_profile",
   "effects": ["storage"],
   "capabilities": ["Database"],
   "target": "cpu",

@@ -1,0 +1,4 @@
+﻿LLN-EFFECT-XXX
+
+Pure flow cannot call effectful flow fetchRate.
+fetchRate declares effects [network.outbound].

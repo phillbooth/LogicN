@@ -1,0 +1,14 @@
+﻿/// example: 013-match-option
+/// level: 1
+/// concept: match on Option
+/// expected_diagnostics: none
+/// ai_rule: Every match on Option must handle both Some and None.
+
+match user {
+
+  Some(value) =>
+    print(value.name)
+
+  None =>
+    print("Missing")
+}

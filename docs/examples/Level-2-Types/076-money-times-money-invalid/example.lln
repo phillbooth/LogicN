@@ -1,0 +1,7 @@
+﻿/// example: 076-money-times-money-invalid
+/// level: 2
+/// concept: Money multiplied by Money is forbidden
+/// expected_diagnostics: LLN-TYPE-004
+/// ai_rule: Money cannot be multiplied by Money. Use Decimal for scaling factors.
+
+let result = price * vat

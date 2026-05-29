@@ -1,0 +1,4 @@
+﻿LLN-TYPE-XXX
+
+Validation required. Cannot assign String directly to protected Email.
+Use validate.email(rawEmail)? to produce a validated Email value.

@@ -1,0 +1,6 @@
+﻿/// example: 016-type-alias
+/// level: 1
+/// concept: type alias
+/// expected_diagnostics: none
+
+type UserId = String

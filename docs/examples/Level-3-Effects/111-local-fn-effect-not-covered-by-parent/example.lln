@@ -1,0 +1,16 @@
+﻿/// example: 111-local-fn-effect-not-covered-by-parent
+/// level: 3
+/// concept: local fn cannot use effects not declared by the containing flow
+/// expected_diagnostics: LLN-EFFECT-XXX
+/// ai_rule: A local fn is bound by the containing flow's effect declarations.
+
+guarded flow saveOrderOnly(order: Order) -> Result<Unit, SaveError>
+  with effects [database.write]
+{
+  fn fetchRate(currency: String) -> Result<Decimal, RateError> {
+    unsafe let rawResponse = http.get("https://rates.example.com/" + currency)?
+    return json.decode(rawResponse)
+  }
+  let _ = OrdersDB.insert(order)?
+  return Ok(unit)
+}

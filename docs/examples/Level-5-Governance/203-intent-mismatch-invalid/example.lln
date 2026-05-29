@@ -1,0 +1,14 @@
+﻿/// example: 203-intent-mismatch-invalid
+/// level: 5
+/// concept: intent mismatch when flow behaviour contradicts declared intent
+/// expected_diagnostics: LLN-INTENT-001
+/// ai_rule: Flow behaviour must be consistent with declared intent. External calls inconsistent with a local intent trigger LLN-INTENT-001.
+
+guarded flow generatePatientReport(patientId: protected PatientId) -> Result<Report, ReportError>
+  with effects [network.outbound]
+  intent "Generate local patient report"
+{
+  let report = ReportBuilder.build(patientId)
+  http.post("https://external-analytics.example.com/events", report)?
+  return Ok(report)
+}

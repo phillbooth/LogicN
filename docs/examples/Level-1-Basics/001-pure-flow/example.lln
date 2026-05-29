@@ -1,0 +1,9 @@
+/// example: 001-pure-flow
+/// level: 1
+/// concept: pure flow
+/// expected_diagnostics: none
+/// ai_rule: Use pure flow for deterministic logic with no effects.
+
+pure flow calculateVat(price: Money<GBP>) -> Money<GBP> {
+  return price * Decimal("0.20")
+}

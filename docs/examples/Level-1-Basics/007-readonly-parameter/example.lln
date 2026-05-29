@@ -1,0 +1,9 @@
+﻿/// example: 007-readonly-parameter
+/// level: 1
+/// concept: readonly parameter
+/// expected_diagnostics: none
+/// ai_rule: readonly parameters cannot be reassigned inside the flow.
+
+pure flow greet(readonly name: String) -> String {
+  return "Hello " + name
+}

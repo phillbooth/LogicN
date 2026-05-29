@@ -1,0 +1,7 @@
+﻿/// example: 051-int-basic
+/// level: 2
+/// concept: Int type
+/// expected_diagnostics: none
+/// ai_rule: Int is the standard integer type in LogicN.
+
+let count: Int = 42

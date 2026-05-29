@@ -1,0 +1,4 @@
+﻿LLN-SEC-XXX
+
+Secret value sent to console sink.
+Never log secret values such as API keys, passwords, or tokens.

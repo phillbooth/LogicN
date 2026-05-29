@@ -1,0 +1,12 @@
+﻿/// example: 153-environment-boundary
+/// level: 4
+/// concept: environment variables enter as unsafe
+/// expected_diagnostics: none
+/// ai_rule: Environment values are unsafe. Treat them as untrusted external input.
+
+guarded flow connectToApi() -> Result<ApiClient, ConfigError>
+  with effects [network.outbound]
+{
+  unsafe let apiKey: String = Env.get("API_KEY")?
+  return Ok(ApiClient.connect(apiKey)?)
+}

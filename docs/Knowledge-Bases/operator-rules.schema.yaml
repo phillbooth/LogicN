@@ -1,0 +1,539 @@
+# LogicN — Operator Rules Schema
+# Machine-readable source for LLN-TYPE-004 and LLN-TYPE-005 implementation.
+# Human-readable version: docs/Knowledge-Bases/operator-type-rules.md
+#
+# Schema:
+#   operator:             the operator token string
+#   category:             arithmetic | string_concat | equality | ordering | logical | unary | special
+#   operands:             left and right type descriptors (right omitted for unary)
+#   result:               result type or "none" if denied
+#   allowed:              true | false
+#   diagnostic_on_failure: LLN code emitted when allowed: false
+#   phase:                7B | deferred | future
+#   notes:                plain English note for AI tooling and humans
+
+policy:
+  user_defined_operators: false   # operators are built-in only in v1
+  operator_overloading: false     # no user type may redefine an operator's meaning
+  version: "v1"
+
+# Type aliases used in rule operand/result fields.
+# These are not LogicN types — they are schema-level descriptors for rule matching.
+type_aliases:
+  Numeric:     "Any of the numeric type_group: Int, Int8..Int64, UInt8..UInt64, Float, Float16..Float64, Decimal"
+  Integer:     "Any of the integer type_group: Int, Int8..Int64, UInt8..UInt64"
+  Primitive:   "Any scalar type: Bool, Numeric, String, Char, Byte, Bytes, Timestamp"
+  SameAsLeft:  "Exactly the same type as the left operand — no implicit widening"
+  SameNumeric: "Numeric result type matching the input numeric types"
+  MoneyC:      "Money<C> for a specific currency tag C (GBP, USD, EUR, JPY)"
+  SameCurrency: "Both operands must be Money<C> with the same currency C"
+
+type_groups:
+  Numeric:
+    - Int
+    - Int8
+    - Int16
+    - Int32
+    - Int64
+    - UInt8
+    - UInt16
+    - UInt32
+    - UInt64
+    - Float
+    - Float16
+    - Float32
+    - Float64
+    - Decimal
+  Integer:
+    - Int
+    - Int8
+    - Int16
+    - Int32
+    - Int64
+    - UInt8
+    - UInt16
+    - UInt32
+    - UInt64
+  Primitive:
+    - Bool
+    - Int
+    - Int8
+    - Int16
+    - Int32
+    - Int64
+    - UInt8
+    - UInt16
+    - UInt32
+    - UInt64
+    - Float
+    - Float16
+    - Float32
+    - Float64
+    - Decimal
+    - String
+    - Char
+    - Byte
+    - Bytes
+    - Timestamp
+
+rules:
+
+  # ── Arithmetic ──────────────────────────────────────────────────────────────
+
+  - operator: "+"
+    category: arithmetic
+    operands:
+      left: Numeric
+      right: SameAsLeft
+    result: SameAsLeft
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Same-type numeric addition. No implicit widening."
+
+  - operator: "-"
+    category: arithmetic
+    operands:
+      left: Numeric
+      right: SameAsLeft
+    result: SameAsLeft
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Same-type numeric subtraction."
+
+  - operator: "*"
+    category: arithmetic
+    operands:
+      left: Numeric
+      right: SameAsLeft
+    result: SameAsLeft
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Same-type numeric multiplication."
+
+  - operator: "/"
+    category: arithmetic
+    operands:
+      left: Numeric
+      right: SameAsLeft
+    result: SameAsLeft
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Same-type numeric division. Integer division truncates toward zero."
+
+  - operator: "%"
+    category: arithmetic
+    operands:
+      left: Integer
+      right: Integer
+    result: Integer
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Integer modulo only. Float modulo is denied — use Float.rem()."
+
+  # ── String concatenation ─────────────────────────────────────────────────────
+
+  - operator: "+"
+    category: string_concat
+    operands:
+      left: String
+      right: String
+    result: String
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "String + String is the only allowed string concatenation. No implicit conversion from Int or other types."
+
+  - operator: "+"
+    category: string_concat
+    operands:
+      left: String
+      right: "not String"
+    result: none
+    allowed: false
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Implicit string conversion is denied. Use format() for mixed types."
+
+  # ── Money arithmetic ─────────────────────────────────────────────────────────
+
+  - operator: "+"
+    category: money_arithmetic
+    operands:
+      left: "Money<C>"
+      right: "Money<C> where same C"
+    result: "Money<C>"
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Same-currency Money addition only."
+
+  - operator: "-"
+    category: money_arithmetic
+    operands:
+      left: "Money<C>"
+      right: "Money<C> where same C"
+    result: "Money<C>"
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Same-currency Money subtraction only."
+
+  - operator: "+"
+    category: money_arithmetic
+    operands:
+      left: "Money<C1>"
+      right: "Money<C2> where C1 != C2"
+    result: none
+    allowed: false
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Cross-currency arithmetic is denied. Use fx.convert() explicitly."
+
+  # ── Equality ─────────────────────────────────────────────────────────────────
+
+  - operator: "=="
+    category: equality
+    operands:
+      left: Primitive
+      right: SameAsLeft
+    result: Bool
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Primitive equality — both operands must be the same type."
+
+  - operator: "!="
+    category: equality
+    operands:
+      left: Primitive
+      right: SameAsLeft
+    result: Bool
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Primitive inequality — both operands must be the same type."
+
+  - operator: "=="
+    category: equality
+    operands:
+      left: Timestamp
+      right: Timestamp
+    result: Bool
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Temporal equality."
+
+  - operator: "=="
+    category: equality
+    operands:
+      left: SecureString
+      right: any
+    result: none
+    allowed: false
+    diagnostic_on_failure: LLN-SECRET-002
+    phase: 7B
+    notes: "SecureString equality via == is denied. Use constantTimeEquals()."
+
+  - operator: "!="
+    category: equality
+    operands:
+      left: SecureString
+      right: any
+    result: none
+    allowed: false
+    diagnostic_on_failure: LLN-SECRET-002
+    phase: 7B
+    notes: "SecureString inequality via != is denied. Use constantTimeEquals()."
+
+  - operator: "=="
+    category: equality
+    operands:
+      left: Tri
+      right: Tri
+    result: Bool
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Tri equality comparison is allowed — comparing enum-like Tri values."
+
+  - operator: "!="
+    category: equality
+    operands:
+      left: Tri
+      right: Tri
+    result: Bool
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Tri inequality comparison is allowed."
+
+  - operator: "=="
+    category: equality
+    operands:
+      left: user_defined_record
+      right: user_defined_record
+    result: none
+    allowed: false
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: deferred
+    notes: "Record equality is denied by default. Requires 'derives Eq' — Phase 7+ feature."
+
+  # ── Ordering ─────────────────────────────────────────────────────────────────
+
+  - operator: "<"
+    category: ordering
+    operands:
+      left: Numeric
+      right: SameAsLeft
+    result: Bool
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Numeric less-than. Same type required."
+
+  - operator: "<="
+    category: ordering
+    operands:
+      left: Numeric
+      right: SameAsLeft
+    result: Bool
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Numeric less-than-or-equal. Same type required."
+
+  - operator: ">"
+    category: ordering
+    operands:
+      left: Numeric
+      right: SameAsLeft
+    result: Bool
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Numeric greater-than. Same type required."
+
+  - operator: ">="
+    category: ordering
+    operands:
+      left: Numeric
+      right: SameAsLeft
+    result: Bool
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Numeric greater-than-or-equal. Same type required."
+
+  - operator: "<"
+    category: ordering
+    operands:
+      left: Timestamp
+      right: Timestamp
+    result: Bool
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Temporal ordering."
+
+  - operator: "<="
+    category: ordering
+    operands:
+      left: Timestamp
+      right: Timestamp
+    result: Bool
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Temporal ordering."
+
+  - operator: ">"
+    category: ordering
+    operands:
+      left: Timestamp
+      right: Timestamp
+    result: Bool
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Temporal ordering."
+
+  - operator: ">="
+    category: ordering
+    operands:
+      left: Timestamp
+      right: Timestamp
+    result: Bool
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Temporal ordering."
+
+  - operator: "<"
+    category: ordering
+    operands:
+      left: Tri
+      right: any
+    result: none
+    allowed: false
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Tri is not ordered. Use match."
+
+  - operator: "<"
+    category: ordering
+    operands:
+      left: String
+      right: String
+    result: none
+    allowed: false
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "String ordering via < is denied. Use String.compareTo()."
+
+  # ── Logical (Bool) ───────────────────────────────────────────────────────────
+
+  - operator: "&&"
+    category: logical
+    operands:
+      left: Bool
+      right: Bool
+    result: Bool
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Boolean AND. Short-circuit — right side only evaluated if left is true."
+
+  - operator: "||"
+    category: logical
+    operands:
+      left: Bool
+      right: Bool
+    result: Bool
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Boolean OR. Short-circuit — right side only evaluated if left is false."
+
+  # ── Logical (Tri) — DENIED ───────────────────────────────────────────────────
+
+  - operator: "&&"
+    category: logical
+    operands:
+      left: Tri
+      right: any
+    result: none
+    allowed: false
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: >
+      Tri && Tri is denied in v1. Tri must be matched explicitly.
+      K3 (Kleene-style) Tri logic may be added in a future version via a formal
+      KB proposal, but is not in scope for Phase 7B.
+
+  - operator: "||"
+    category: logical
+    operands:
+      left: Tri
+      right: any
+    result: none
+    allowed: false
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Tri || Tri is denied in v1. Same reasoning as Tri &&."
+
+  # ── Unary ────────────────────────────────────────────────────────────────────
+
+  - operator: "!"
+    category: unary
+    operands:
+      left: Bool
+    result: Bool
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-005
+    phase: 7B
+    notes: "Boolean NOT."
+
+  - operator: "!"
+    category: unary
+    operands:
+      left: Tri
+    result: none
+    allowed: false
+    diagnostic_on_failure: LLN-TYPE-005
+    phase: 7B
+    notes: "Tri negation via ! is denied. Use match or Tri.not() if explicitly defined."
+
+  - operator: "-"
+    category: unary
+    operands:
+      left: Numeric
+    result: SameAsLeft
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-005
+    phase: 7B
+    notes: "Unary numeric negation."
+
+  # ── Branch condition ─────────────────────────────────────────────────────────
+
+  - operator: "branch-condition"
+    category: control_flow
+    operands:
+      left: Bool
+    result: control_flow
+    allowed: true
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Only Bool may appear as a condition in if/while. No truthy/falsy coercion."
+
+  - operator: "branch-condition"
+    category: control_flow
+    operands:
+      left: Tri
+    result: none
+    allowed: false
+    diagnostic_on_failure: LLN-SAFETY-001
+    phase: 7B
+    notes: >
+      Tri must not be used as a branch condition.
+      Tri contains uncertainty — treating Unknown as truthy or falsy hides
+      governance risk. Always use explicit match over all three Tri values.
+
+  - operator: "branch-condition"
+    category: control_flow
+    operands:
+      left: "not Bool"
+    result: none
+    allowed: false
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: 7B
+    notes: "Non-Bool in branch condition. No truthy/falsy coercion. Int, String, Option etc. are not branch conditions."
+
+  # ── Deferred (do not implement in 7B) ────────────────────────────────────────
+
+  - operator: "+"
+    category: tensor_arithmetic
+    operands:
+      left: "Tensor<T, S>"
+      right: "Tensor<T, S>"
+    result: "Tensor<T, S>"
+    allowed: deferred
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: deferred
+    notes: "Tensor arithmetic deferred until tensor shape model is finalized."
+
+  - operator: "=="
+    category: equality
+    operands:
+      left: "Tensor<T, S>"
+      right: "Tensor<T, S>"
+    result: none
+    allowed: deferred
+    diagnostic_on_failure: LLN-TYPE-004
+    phase: deferred
+    notes: "Tensor equality deferred. Shape compatibility rules not yet defined."

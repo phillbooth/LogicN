@@ -1,0 +1,22 @@
+﻿/// example: 113-secure-flow-with-effects
+/// level: 3
+/// concept: secure flow with full effects pattern
+/// expected_diagnostics: none
+/// ai_rule: Secure flows require audit.write alongside operational effects.
+
+secure flow createPatient(req: Request) -> Result<PatientId, PatientError>
+  with effects [database.write, audit.write]
+{
+  unsafe let rawEmail: String = req.body.email
+  unsafe let rawPatientId: String = req.body.patientId
+
+  let email: protected Email = validate.email(rawEmail)?
+  let patientId: protected PatientId = validate.patientId(rawPatientId)?
+
+  let id = PatientsDB.insert({ email: email, patientId: patientId })?
+
+  let auditEmail: redacted Email = redact(email)
+  AuditLog.write({ action: "createPatient", email: auditEmail, patientId: id })
+
+  return Ok(id)
+}

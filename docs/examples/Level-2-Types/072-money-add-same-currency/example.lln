@@ -1,0 +1,7 @@
+﻿/// example: 072-money-add-same-currency
+/// level: 2
+/// concept: Money<GBP> addition with same currency
+/// expected_diagnostics: none
+/// ai_rule: Money<GBP> + Money<GBP> is valid and yields Money<GBP>.
+
+let total: Money<GBP> = subtotal + vat

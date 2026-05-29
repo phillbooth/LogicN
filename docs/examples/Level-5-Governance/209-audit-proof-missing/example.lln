@@ -1,0 +1,13 @@
+﻿/// example: 209-audit-proof-missing
+/// level: 5
+/// concept: intent requires audit but no audit.write sink used
+/// expected_diagnostics: LLN-GOV-XXX
+/// ai_rule: If intent or policy requires audit evidence, AuditLog.write must be called.
+
+secure flow deletePatient(patientId: protected PatientId) -> Result<Unit, DeleteError>
+  with effects [database.write]
+  intent "Delete a patient record with full audit trail"
+{
+  PatientDB.delete(patientId)?
+  return Ok(unit)
+}

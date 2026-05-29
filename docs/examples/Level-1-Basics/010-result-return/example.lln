@@ -1,0 +1,9 @@
+﻿/// example: 010-result-return
+/// level: 1
+/// concept: Result return type
+/// expected_diagnostics: none
+/// ai_rule: Use Result<T, E> for fallible operations instead of exceptions.
+
+pure flow parseAge(value: String) -> Result<Int, ParseError> {
+  return Int.parse(value)
+}

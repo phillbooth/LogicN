@@ -1,0 +1,18 @@
+﻿/// example: 206-protected-data-sharing-authority
+/// level: 5
+/// concept: authority block for sharing protected data externally
+/// expected_diagnostics: none
+/// ai_rule: Use an authority block to declare permission to share protected data externally.
+
+secure flow sendReferral(patient: PatientRecord) -> Result<ReferralId, ReferralError>
+  with effects [network.outbound, audit.write]
+  intent "Send a patient referral to an approved specialist service"
+  authority {
+    sharing protected PatientData to "specialist-service"
+    approved_by "data-governance-board"
+  }
+{
+  let referralId = http.post("https://specialist.example.nhs.uk/referrals", patient.referralPacket)?
+  AuditLog.write({ action: "sendReferral", referralId: referralId })
+  return Ok(referralId)
+}

@@ -1,0 +1,4 @@
+﻿LLN-SEC-XXX
+
+Unsafe value passed to audit sink.
+Validate rawEmail before writing to AuditLog.

@@ -1,6 +1,12 @@
 # LogicN Core Logic v0.2
 ## Tri Logic `if` and `match` Developer Guide
 
+> **Canonical name:** `Tri` — LogicN's three-valued truth type.
+> This file uses the older name `tristate` in places — the canonical type name is `Tri`.
+> `Tri` is **not** a trie (prefix-tree data structure). The names are unrelated.
+> For operator compatibility rules, see `docs/Knowledge-Bases/operator-type-rules.md`.
+> For the authoritative spec, see `docs/Knowledge-Bases/logicn-core-logic-tri-decision-bool.md`.
+
 This document is the v0.2 developer guide for Tri Logic runtime behaviour,
 safe conditional handling, operator semantics, and Decision conversion.
 

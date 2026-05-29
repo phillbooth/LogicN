@@ -1,0 +1,13 @@
+﻿/// example: 106-missing-network-effect
+/// level: 3
+/// concept: undeclared network.outbound effect
+/// expected_diagnostics: LLN-EFFECT-XXX
+/// ai_rule: http.get and similar calls require network.outbound to be declared.
+
+guarded flow fetchRate(baseCurrency: String) -> Result<Decimal, RateError>
+  with effects []
+{
+  unsafe let rawResponse = http.get("https://rates.example.com/" + baseCurrency)?
+  let rate: Decimal = json.decode(rawResponse)?
+  return Ok(rate)
+}

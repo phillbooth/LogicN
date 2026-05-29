@@ -152,12 +152,27 @@ Numeric dimension generics for AI and compute packages:
 | --- | --- | --- |
 | `Vector<T, N>` | type + integer | Fixed-length vector |
 | `Matrix<T, R, C>` | type + 2 integers | R×C matrix |
-| `Tensor<T, Shape>` | type + shape | Multi-dimensional tensor |
+| `Tensor<T, Shape>` | type + shape (arity 2) | Multi-dimensional tensor |
+| `AnyTensor` | (none) | Fully erased tensor — element type and shape unknown |
 
 ```logicn
-let embedding: Vector<Float32, 768>  = model.embed(text)
-let weights:   Matrix<Float32, 4, 4> = Matrix.identity()
+let embedding:  Vector<Float32, 768>        = model.embed(text)
+let weights:    Matrix<Float32, 4, 4>       = Matrix.identity()
+let logits:     Tensor<Float32, [Batch, 10]> = model.forward(input)
+let erased:     AnyTensor                   = dynamicLoad()
 ```
+
+`Tensor` is a generic type with arity 2. Bare `Tensor` without type parameters is not valid syntax.
+
+| Valid | Invalid | Error |
+|---|---|---|
+| `Tensor<Float32, [1, 128]>` | `Tensor` | `LLN-TYPE-009` — expected 2 type arguments |
+| `Tensor<Float16, DynamicShape>` | `Tensor<Float32>` | `LLN-TYPE-009` — expected 2 type arguments |
+| `AnyTensor` | `Tensor<Float32, [1, 128], Gpu>` | `LLN-TYPE-009` — expected 2 type arguments |
+
+Use `AnyTensor` when both element type and shape are unknown at compile time.
+Use `Tensor<T, DynamicShape>` when the element type is known but shape is dynamic.
+Backend/device/layout details (GPU, photonic, NPU) belong in `compute target` governance blocks, not in the tensor type.
 
 Numeric generic arguments are only valid for types that explicitly accept
 dimensions. Using numeric arguments on standard types is a compile error:

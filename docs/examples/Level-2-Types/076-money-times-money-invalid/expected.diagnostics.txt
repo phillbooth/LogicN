@@ -1,0 +1,4 @@
+﻿LLN-TYPE-004
+
+Money cannot be multiplied by Money.
+Use Decimal for scaling factors (e.g., price * Decimal("0.20")).

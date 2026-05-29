@@ -1,0 +1,30 @@
+/// example: 003-secure-flow
+/// level: 1
+/// concept: secure flow
+/// expected_diagnostics: none
+/// ai_rule: Use secure flow at trust boundaries such as HTTP/API requests.
+
+type Email = Brand<String, EmailAddress>
+
+secure flow createPatient(readonly req: Request) -> Result<Response, ApiError>
+effects [database.write, audit.write] {
+
+  unsafe let rawEmail: String =
+    req.body.email
+
+  let email: protected Email =
+    validate.email(rawEmail)?
+
+  let saved =
+    PatientsDB.insert({
+      email: email
+    })?
+
+  AuditLog.write({
+    event: "PatientCreated",
+    patientId: saved.id,
+    email: redact(email)
+  })
+
+  return Ok(Response.created(saved.id))
+}

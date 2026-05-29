@@ -1,0 +1,4 @@
+﻿LLN-TYPE-XXX
+
+Cannot infer type: Auto requires an initializer expression.
+Provide a value or use an explicit type annotation.

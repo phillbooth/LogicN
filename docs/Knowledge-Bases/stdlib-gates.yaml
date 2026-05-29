@@ -1,0 +1,559 @@
+# LogicN standard library gate and sink registry
+# Proposed path:
+#   docs/Knowledge-Bases/stdlib-gates.yaml
+#
+# Purpose:
+#   Machine-readable registry for value-state checking, AI code generation,
+#   diagnostics, and IDE tooling.
+#
+# Status:
+#   Draft registry for Phase 7A / value-state stabilization.
+#
+# Design rule:
+#   Gate and sink behavior should be data-driven here, not hardcoded only
+#   inside value-state-checker.ts.
+
+version: 0.1
+schema: logicn.stdlib.gates.v1
+
+metadata:
+  owner: LogicN
+  canonical_name: stdlib-gates
+  purpose: >
+    Defines recognized value-state gates, sanitizers, validators,
+    redaction helpers, constant-time comparison helpers, and governed sinks.
+  intended_consumers:
+    - value-state-checker
+    - type-checker
+    - diagnostics
+    - AI code generation
+    - IDE quick fixes
+    - documentation tooling
+  diagnostic_ranges:
+    value_state: LLN-VALUESTATE-*
+    safety: LLN-SAFETY-*
+    type: LLN-TYPE-*
+
+value_states:
+  unsafe:
+    description: Boundary-origin or untrusted value. Must not flow to governed sinks.
+  validated:
+    description: Value has passed validation and may be used as typed input.
+  sanitized:
+    description: Value has been transformed into a safe representation.
+  redacted:
+    description: Value has had sensitive parts removed or masked.
+  protected:
+    description: Secret-bearing value requiring restricted operations.
+  safe:
+    description: Value is safe for ordinary typed use.
+  unknown:
+    description: Checker cannot prove the value-state. Treat conservatively.
+
+gate_categories:
+  validation:
+    description: Checks an unsafe value and produces a typed safe or validated value.
+  sanitization:
+    description: Transforms an unsafe value into a safe representation.
+  decoding:
+    description: Parses raw data into a typed value, returning an error on failure.
+  redaction:
+    description: Removes or masks sensitive data before logging or output.
+  comparison:
+    description: Safe comparison for secret/protected values.
+  declassification:
+    description: Explicitly lowers secrecy or protection level under policy control.
+
+gates:
+  - id: validate_any_prefix
+    kind: prefix
+    prefix: "validate."
+    category: validation
+    example: "validate.email(rawEmail)?"
+    input_state:
+      accepts:
+        - unsafe
+        - unknown
+    output_state:
+      success: validated
+      failure: unchanged
+    output_type: "Result<T, ValidationError>"
+    effect: pure
+    allowed_in:
+      - pure flow
+      - guarded flow
+      - secure flow
+    notes: >
+      Generic validation gate prefix. Concrete functions such as validate.email,
+      validate.rawInput, validate.customerId may be resolved by standard library
+      or project-specific validation modules.
+
+  - id: sanitize_any_prefix
+    kind: prefix
+    prefix: "sanitize."
+    category: sanitization
+    example: "sanitize.text(rawMessage)?"
+    input_state:
+      accepts:
+        - unsafe
+        - unknown
+        - validated
+    output_state:
+      success: sanitized
+      failure: unchanged
+    output_type: "Result<T, SanitizeError>"
+    effect: pure
+    allowed_in:
+      - pure flow
+      - guarded flow
+      - secure flow
+    notes: >
+      Generic sanitization gate prefix. Used before display, persistence,
+      search indexing, or other sinks that require safe representation.
+
+  - id: json_decode
+    kind: generic_function
+    name: "json.decode"
+    category: decoding
+    example: "json.decode<CreateOrderRequest>(rawBody)?"
+    input_state:
+      accepts:
+        - unsafe
+        - unknown
+    output_state:
+      success: safe
+      failure: unchanged
+    input_type: "Bytes | String"
+    output_type: "Result<T, DecodeError>"
+    effect: pure
+    allowed_in:
+      - guarded flow
+      - secure flow
+      - pure flow
+    notes: >
+      Converts raw JSON boundary data into a typed value. Successful decode
+      prevents unsafe raw value from flowing directly into typed sinks.
+
+  - id: toml_decode
+    kind: generic_function
+    name: "toml.decode"
+    category: decoding
+    example: "toml.decode<AppConfig>(rawFile)?"
+    input_state:
+      accepts:
+        - unsafe
+        - unknown
+    output_state:
+      success: safe
+      failure: unchanged
+    input_type: "String"
+    output_type: "Result<T, DecodeError>"
+    effect: pure
+    allowed_in:
+      - guarded flow
+      - secure flow
+      - pure flow
+
+  - id: parse_any_prefix
+    kind: prefix
+    prefix: "parse."
+    category: decoding
+    example: "parse.integer(rawCount)?"
+    input_state:
+      accepts:
+        - unsafe
+        - unknown
+    output_state:
+      success: safe
+      failure: unchanged
+    output_type: "Result<T, ParseError>"
+    effect: pure
+    allowed_in:
+      - pure flow
+      - guarded flow
+      - secure flow
+    notes: >
+      Generic parse gate prefix. Used for type-safe conversion of raw string/byte
+      values into structured or numeric types.
+
+  - id: redact
+    kind: function
+    name: "redact"
+    category: redaction
+    example: "redact(secretValue)"
+    input_state:
+      accepts:
+        - protected
+        - unsafe
+        - validated
+        - sanitized
+        - safe
+    output_state:
+      success: redacted
+      failure: unchanged
+    output_type: "Redacted<T>"
+    effect: pure
+    allowed_in:
+      - guarded flow
+      - secure flow
+      - pure flow
+    notes: >
+      Produces a value safe for logs, diagnostics, audit messages, and other
+      human-visible sinks. Does not declassify the original value.
+
+  - id: constant_time_equals
+    kind: function
+    name: "constantTimeEquals"
+    category: comparison
+    example: "constantTimeEquals(expectedToken, providedToken)"
+    input_type:
+      accepts:
+        - "SecureString"
+        - "ProtectedSecret<Bytes>"
+        - "Secret"
+        - "Bytes"
+    output_type: "Bool"
+    effect: pure
+    allowed_in:
+      - guarded flow
+      - secure flow
+      - pure flow
+    notes: >
+      Required for equality checks over secret/protected values. Direct == over
+      SecureString or protected secrets is denied — see LLN-SECRET-002.
+
+  - id: declassify_explicit
+    kind: function
+    name: "declassify"
+    category: declassification
+    example: "declassify(value, reason: \"safe public identifier\")"
+    input_state:
+      accepts:
+        - protected
+        - redacted
+    output_state:
+      success: safe
+      failure: unchanged
+    output_type: "Result<T, DeclassificationError>"
+    effect: governance.declassify
+    allowed_in:
+      - secure flow
+    requires:
+      - reason
+      - audit_record
+      - explicit_policy
+    notes: >
+      Optional future gate. Included so AI/tooling knows declassification must be
+      explicit and audited, not inferred from ordinary casts or formatting.
+
+sink_categories:
+  persistence:
+    description: Writes data into a durable store.
+  audit:
+    description: Writes structured audit evidence.
+  logging:
+    description: Writes human-visible logs or diagnostics.
+  network:
+    description: Sends data across a process or network boundary.
+  filesystem:
+    description: Writes data to a file or local storage.
+  display:
+    description: Sends data to UI/user-visible output.
+
+sinks:
+  - id: database_insert
+    kind: method_pattern
+    pattern: "*.insert"
+    regex: "\\w*DB\\.insert$"
+    category: persistence
+    examples:
+      - "UsersDB.insert(user)"
+      - "ContactFormsDB.insert(form)"
+      - "DB.insert(record)"
+    accepts_states:
+      - safe
+      - validated
+      - sanitized
+    rejects_states:
+      - unsafe
+      - protected
+      - unknown
+    required_effects:
+      - database.write
+    diagnostic_on_reject: LLN-VALUESTATE-003
+    notes: >
+      Unsafe boundary data must pass validation, sanitization, or decoding before
+      being inserted into a database.
+
+  - id: database_update
+    kind: method_pattern
+    pattern: "*.update*"
+    regex: "\\w*DB\\.update\\w*$"
+    category: persistence
+    examples:
+      - "UsersDB.update(user)"
+      - "OrdersDB.updateStatus(id, status)"
+    accepts_states:
+      - safe
+      - validated
+      - sanitized
+    rejects_states:
+      - unsafe
+      - protected
+      - unknown
+    required_effects:
+      - database.write
+    diagnostic_on_reject: LLN-VALUESTATE-003
+
+  - id: database_delete
+    kind: method_pattern
+    pattern: "*.delete"
+    regex: "\\w*DB\\.delete$"
+    category: persistence
+    examples:
+      - "UsersDB.delete(id)"
+    accepts_states:
+      - safe
+      - validated
+      - sanitized
+    rejects_states:
+      - unsafe
+      - protected
+      - unknown
+    required_effects:
+      - database.write
+    diagnostic_on_reject: LLN-VALUESTATE-003
+
+  - id: database_write
+    kind: method_pattern
+    pattern: "*.write"
+    regex: "\\w*DB\\.write$"
+    category: persistence
+    examples:
+      - "DB.write(record)"
+    accepts_states:
+      - safe
+      - validated
+      - sanitized
+    rejects_states:
+      - unsafe
+      - protected
+      - unknown
+    required_effects:
+      - database.write
+    diagnostic_on_reject: LLN-VALUESTATE-003
+
+  - id: audit_log_write
+    kind: method
+    name: "AuditLog.write"
+    category: audit
+    accepts_states:
+      - safe
+      - validated
+      - sanitized
+      - redacted
+    rejects_states:
+      - unsafe
+      - protected
+      - unknown
+    required_effects:
+      - audit.write
+    diagnostic_on_reject: LLN-VALUESTATE-003
+    notes: >
+      Audit logs may include redacted values. They must not include raw unsafe
+      values or unredacted protected secrets.
+
+  - id: shell_exec
+    kind: function
+    name: "shell.exec"
+    category: filesystem
+    accepts_states:
+      - safe
+      - validated
+      - sanitized
+    rejects_states:
+      - unsafe
+      - protected
+      - unknown
+    required_effects:
+      - shell.exec
+    diagnostic_on_reject: LLN-VALUESTATE-003
+    notes: >
+      Shell execution is a high-risk governed sink. Command arguments must be
+      fully validated before use. Direct interpolation of unsafe values into
+      shell commands must be rejected.
+
+  - id: filesystem_write
+    kind: function
+    name: "FileSystem.write"
+    category: filesystem
+    accepts_states:
+      - safe
+      - sanitized
+      - redacted
+    rejects_states:
+      - unsafe
+      - protected
+      - unknown
+    required_effects:
+      - filesystem.write
+    diagnostic_on_reject: LLN-VALUESTATE-003
+
+  - id: log_receiver
+    kind: receiver_pattern
+    receivers:
+      - "log"
+      - "Logger"
+      - "console"
+    category: logging
+    accepts_states:
+      - safe
+      - sanitized
+      - redacted
+    rejects_states:
+      - protected
+    required_effects:
+      - log.write
+    diagnostic_on_reject: LLN-SECRET-001
+    notes: >
+      SecureString and protected values must not be passed to log receivers.
+      Use redact() to produce a log-safe placeholder.
+
+  - id: print_output
+    kind: function
+    name: "print"
+    category: display
+    accepts_states:
+      - safe
+      - sanitized
+      - redacted
+    rejects_states:
+      - protected
+    required_effects:
+      - console.write
+    diagnostic_on_reject: LLN-SECRET-001
+
+unsafe_sources:
+  - id: request_raw_body
+    kind: property_pattern
+    pattern: "*.rawBody"
+    output_state: unsafe
+    output_type: "Bytes"
+    notes: "HTTP request raw body is boundary-origin and must be decoded."
+
+  - id: request_body
+    kind: property_pattern
+    pattern: "*.body"
+    output_state: unsafe
+    output_type: "Bytes | String"
+    notes: "Request body is boundary-origin unless route contract already proves typed decoding."
+
+  - id: http_get
+    kind: function_pattern
+    pattern: "http.get"
+    output_state: unsafe
+    output_type: "Bytes | String"
+    effect: network.outbound
+    notes: "External service responses are unsafe until decoded."
+
+  - id: fs_read_text
+    kind: function_pattern
+    pattern: "fs.readText"
+    output_state: unsafe
+    output_type: "String"
+    effect: filesystem.read
+    notes: "File content is unsafe until parsed or decoded."
+
+  - id: env_get
+    kind: function_pattern
+    pattern: "env.*"
+    output_state: protected
+    output_type: "Secret | String"
+    effect: secret.read
+    notes: "Environment secrets are protected and must not be logged or compared directly."
+
+transitions:
+  - from: unsafe
+    via_categories:
+      - validation
+      - sanitization
+      - decoding
+    to:
+      - validated
+      - sanitized
+      - safe
+
+  - from: protected
+    via_categories:
+      - redaction
+    to:
+      - redacted
+
+  - from: protected
+    via_categories:
+      - comparison
+    to:
+      - safe
+    notes: "Comparison returns Bool, not the secret value itself."
+
+  - from: protected
+    via_categories:
+      - declassification
+    to:
+      - safe
+    requires:
+      - governance approval
+      - audit evidence
+
+ai_guidance:
+  summary:
+    - "Never send unsafe values to sinks directly."
+    - "Use validate.*, sanitize.*, or decode functions before persistence/network/log sinks."
+    - "Use redact() before logging protected values."
+    - "Use constantTimeEquals() for secret comparison."
+    - "Do not generate direct == for SecureString or ProtectedSecret."
+    - "Prefer explicit Result handling with ? after gates that can fail."
+  safe_example: |
+    unsafe let rawEmail: String = req.body.email
+    let email: Email = validate.email(rawEmail)?
+    UsersDB.insert({ email: email })?
+  unsafe_example: |
+    unsafe let rawEmail: String = req.body.email
+    UsersDB.insert({ email: rawEmail })?  // LLN-VALUESTATE-003
+
+test_fixtures:
+  accepted:
+    - name: validate_before_insert
+      source: |
+        unsafe let rawEmail: String = req.body.email
+        let email: Email = validate.email(rawEmail)?
+        UsersDB.insert({ email: email })?
+
+    - name: redact_before_log
+      source: |
+        let secret: SecureString = env.secret("API_KEY")
+        log.info(redact(secret))
+
+    - name: constant_time_secret_compare
+      source: |
+        let valid: Bool = constantTimeEquals(expected, provided)
+
+  rejected:
+    - name: unsafe_direct_database_insert
+      expected_diagnostic: LLN-VALUESTATE-003
+      source: |
+        unsafe let rawEmail: String = req.body.email
+        UsersDB.insert({ email: rawEmail })?
+
+    - name: protected_direct_log
+      expected_diagnostic: LLN-SECRET-001
+      source: |
+        let secret: SecureString = env.secret("API_KEY")
+        log.info(secret)
+
+    - name: direct_secret_equality
+      expected_diagnostic: LLN-SECRET-002
+      source: |
+        if expected == provided {
+          return Ok()
+        }

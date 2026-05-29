@@ -1,0 +1,19 @@
+﻿/// example: 173-validation-chain
+/// level: 4
+/// concept: complete canonical trust flow chain
+/// expected_diagnostics: none
+/// ai_rule: This is the canonical LogicN trust flow: unsafe -> validate -> protected -> redact -> audit.
+
+secure flow processUserEmail(req: Request) -> Result<Unit, UserError>
+  with effects [database.write, audit.write]
+{
+  unsafe let rawEmail: String = req.body.email
+
+  let email: protected Email = validate.email(rawEmail)?
+
+  let auditEmail: redacted Email = redact(email)
+
+  AuditLog.write({ action: "processUserEmail", email: auditEmail })
+
+  return Ok(unit)
+}

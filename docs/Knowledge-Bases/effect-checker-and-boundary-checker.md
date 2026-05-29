@@ -284,10 +284,10 @@ Effects propagate through the call graph.
 If:
 
 ```text
-route handler -> service function -> repository function
+route -> flow -> fn
 ```
 
-and the repository function performs `database.write`, then the route handler also has a transitive `database.write` effect.
+and the `fn` performs `database.write`, then the `flow` — and by extension the `route` that called it — also has a transitive `database.write` effect.
 
 ---
 
@@ -613,7 +613,7 @@ Compiler result:
 
 ```json
 {
-  "function": "load_profile",
+  "flow": "load_profile",
   "declaredEffects": ["network"],
   "inferredEffects": ["network.http.request"],
   "transitiveEffects": [],

@@ -1,0 +1,4 @@
+﻿LLN-SEC-XXX
+
+Direct equality comparison on secret value is forbidden.
+Use constantTimeEquals(apiKey, suppliedKey) to prevent timing attacks.

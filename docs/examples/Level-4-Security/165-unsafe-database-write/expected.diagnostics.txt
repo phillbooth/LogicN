@@ -1,0 +1,4 @@
+﻿LLN-SEC-XXX
+
+Unsafe value passed to database sink.
+Validate rawEmail before inserting into PatientsDB.

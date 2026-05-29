@@ -1,0 +1,10 @@
+﻿/// example: 014-enum-basic
+/// level: 1
+/// concept: enum declaration
+/// expected_diagnostics: none
+
+enum Status {
+  Pending
+  Active
+  Suspended
+}

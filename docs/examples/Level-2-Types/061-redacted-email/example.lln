@@ -1,0 +1,7 @@
+﻿/// example: 061-redacted-email
+/// level: 2
+/// concept: redacted Email label
+/// expected_diagnostics: none
+/// ai_rule: Use redact() to convert a protected value to a redacted value for audit logging.
+
+let auditEmail: redacted Email = redact(email)

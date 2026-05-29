@@ -1,0 +1,4 @@
+﻿LLN-EFFECT-XXX
+
+Pure flow cannot perform filesystem.read.
+Use a guarded flow with effects [filesystem.read] instead.

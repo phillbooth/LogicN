@@ -1,0 +1,12 @@
+﻿/// example: 152-file-boundary
+/// level: 4
+/// concept: file content enters as unsafe
+/// expected_diagnostics: none
+/// ai_rule: External files are unsafe. Use unsafe let for data read from the filesystem.
+
+guarded flow importUsers(filePath: String) -> Result<List<UserId>, ImportError>
+  with effects [filesystem.read, database.write]
+{
+  unsafe let rawCsv: String = File.read(filePath)?
+  return Ok(parseCsv(rawCsv)?)
+}

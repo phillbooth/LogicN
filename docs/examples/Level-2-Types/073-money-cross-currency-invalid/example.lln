@@ -1,0 +1,7 @@
+﻿/// example: 073-money-cross-currency-invalid
+/// level: 2
+/// concept: cross-currency Money addition is forbidden
+/// expected_diagnostics: LLN-TYPE-004
+/// ai_rule: Money types with different currency parameters cannot be added together.
+
+let total = gbp + usd

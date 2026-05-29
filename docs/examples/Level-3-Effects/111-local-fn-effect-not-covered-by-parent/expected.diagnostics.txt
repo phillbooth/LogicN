@@ -1,0 +1,4 @@
+﻿LLN-EFFECT-XXX
+
+Effect network.outbound is used inside local fn fetchRate but not declared by containing flow saveOrderOnly.
+Add network.outbound to the containing flow's with effects [...] list.

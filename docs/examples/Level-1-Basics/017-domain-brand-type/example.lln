@@ -1,0 +1,8 @@
+﻿/// example: 017-domain-brand-type
+/// level: 1
+/// concept: branded domain type
+/// expected_diagnostics: none
+/// ai_rule: Use Brand<String, Name> to make domain types distinct at compile time.
+
+type Email =
+  Brand<String, EmailAddress>

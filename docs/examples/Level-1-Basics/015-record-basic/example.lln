@@ -1,0 +1,9 @@
+﻿/// example: 015-record-basic
+/// level: 1
+/// concept: record type
+/// expected_diagnostics: none
+
+record User {
+  id: UserId
+  email: Email
+}

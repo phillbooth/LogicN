@@ -1,0 +1,12 @@
+﻿/// example: 168-redacted-network-send
+/// level: 4
+/// concept: redacted value is safe to send to audit endpoints
+/// expected_diagnostics: none
+/// ai_rule: Redacted values are safe to transmit to audit or logging endpoints.
+
+guarded flow forwardAuditEvent(email: protected Email) -> Result<Unit, AuditError>
+  with effects [network.outbound]
+{
+  http.post("/audit", redact(email))?
+  return Ok(unit)
+}
