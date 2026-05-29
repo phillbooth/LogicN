@@ -1,0 +1,322 @@
+# LogicN v1 Formal Grammar (EBNF)
+
+## Status
+
+```text
+Spec status: v1 canonical grammar
+Implementation status: Phase 4 parser is partial; guarded flow, route, fn,
+intent, compute target, and some expression forms remain Phase 7+ work.
+```
+
+This grammar defines the intended v1 surface syntax for the Canonical Example
+Corpus. It is more complete than the current TypeScript prototype parser.
+
+## Lexical Conventions
+
+```ebnf
+letter              = "A".."Z" | "a".."z" | "_" ;
+digit               = "0".."9" ;
+identifier          = letter , { letter | digit } ;
+type_identifier     = "A".."Z" , { letter | digit } ;
+enum_case           = type_identifier ;
+
+integer_literal     = digit , { digit } ;
+decimal_literal     = digit , { digit } , "." , digit , { digit } ;
+string_literal      = '"' , { character | escape_sequence } , '"' ;
+char_literal        = "'" , character , "'" ;
+bool_literal        = "true" | "false" ;
+
+literal             = decimal_literal
+                    | integer_literal
+                    | string_literal
+                    | char_literal
+                    | bool_literal ;
+
+comment             = line_comment | doc_comment ;
+line_comment        = "//" , { character } ;
+doc_comment         = "///" , { character } ;
+```
+
+Whitespace and comments separate tokens and are otherwise insignificant except
+where examples use newlines for readability.
+
+## Compilation Unit
+
+```ebnf
+compilation_unit    = { top_level_item } ;
+
+top_level_item      = type_decl
+                    | record_decl
+                    | enum_decl
+                    | flow_decl
+                    | route_decl
+                    | import_decl ;
+
+import_decl         = "import" , qualified_name , [ "as" , identifier ] ;
+```
+
+`fn` is intentionally absent from `top_level_item`; helper functions may only
+appear inside a flow body.
+
+## Types
+
+```ebnf
+type_decl           = "type" , type_identifier , ( type_alias | type_body ) ;
+record_decl         = "record" , type_identifier , type_body ;
+
+type_alias          = "=" , type_ref ;
+type_body           = "{" , { field_decl } , "}" ;
+field_decl          = identifier , ":" , type_ref ;
+
+type_ref            = [ type_governance_qualifier ] , primary_type_ref ,
+                      { type_state_qualifier } ;
+
+type_governance_qualifier
+                    = "protected" | "redacted" ;
+
+primary_type_ref    = type_identifier , [ generic_args ]
+                    | "Brand" , "<" , type_ref , "," , string_literal , ">"
+                    | "(" , type_ref , ")" ;
+
+generic_args        = "<" , type_ref , { "," , type_ref } , ">" ;
+
+type_state_qualifier
+                    = "unsafe" | "safe" | "validated" | "unvalidated"
+                    | "secure" | "secret" ;
+```
+
+`protected` and `redacted` are prefix governance qualifiers. `String unsafe` is
+a postfix value-state type annotation. `Email protected` and `Email redacted`
+are invalid.
+
+## Enums, Option, Result, and Match
+
+```ebnf
+enum_decl           = "enum" , type_identifier , "{" ,
+                      [ enum_case_list ] , "}" ;
+
+enum_case_list      = enum_case , { enum_separator , enum_case } ,
+                      [ enum_separator ] ;
+enum_separator      = "," | newline ;
+
+match_expr          = "match" , expression , "{" , { match_arm } , "}" ;
+match_arm           = pattern , "=>" , expression , [ "," ] ;
+
+pattern             = "_"
+                    | enum_case
+                    | qualified_enum_case
+                    | option_pattern
+                    | result_pattern
+                    | literal
+                    | identifier ;
+
+qualified_enum_case = type_identifier , "." , enum_case ;
+option_pattern      = "Some" , "(" , pattern , ")" | "None" ;
+result_pattern      = "Ok" , "(" , pattern , ")" | "Err" , "(" , pattern , ")" ;
+```
+
+`Option<T>` and `Result<T, E>` are standard generic types. Matches over enums,
+`Option`, and `Result` must be exhaustive unless a wildcard arm is accepted by
+policy. General exhaustiveness diagnostics use `LLN-MATCH-*`; type-level
+match diagnostics may also report `LLN-TYPE-021`.
+
+## Flow Declarations
+
+```ebnf
+flow_decl           = [ flow_qualifier ] , "flow" , identifier ,
+                      "(" , [ param_list ] , ")" , "->" , type_ref ,
+                      { flow_clause } , block ;
+
+flow_qualifier      = "pure" | "guarded" | "secure" ;
+
+param_list          = param , { "," , param } ;
+param               = [ "readonly" ] , identifier , ":" , type_ref ;
+
+flow_clause         = effects_clause
+                    | intent_clause
+                    | compute_target_block ;
+
+effects_clause      = [ "with" ] , "effects" , "[" ,
+                      [ effect_name , { "," , effect_name } ] , "]" ;
+
+effect_name         = identifier , "." , identifier ,
+                      { "." , identifier } ;
+
+intent_clause       = "intent" , string_literal ;
+```
+
+Canonical v1 examples use `with effects [...]`; earlier examples and docs also
+show `effects [...]`. The parser should accept both during migration and the
+formatter should emit `with effects [...]` for guarded/secure flows.
+
+Rules:
+
+- `pure flow` must not declare or observe effects.
+- `guarded flow` must declare every effect it uses, including effects used by
+  local `fn` helpers.
+- `secure flow` is the trust-boundary form and may declare effects, intent,
+  governance, authority, and audit requirements.
+
+## Local fn
+
+```ebnf
+fn_decl             = "fn" , identifier , "(" , [ param_list ] , ")" ,
+                      "->" , type_ref , block ;
+```
+
+`fn_decl` is valid only as a `statement` inside a flow body. It cannot appear
+at top level, cannot declare `effects`, cannot request authority, is always
+synchronous, and cannot spawn tasks.
+
+## Routes
+
+```ebnf
+route_decl          = "route" , route_method , string_literal , "{" ,
+                      route_request ,
+                      route_response ,
+                      route_flow ,
+                      "}" ;
+
+route_method        = "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
+                    | "HEAD" | "OPTIONS" | identifier ;
+
+route_request       = "request" , type_ref ;
+route_response      = "response" , type_ref ;
+route_flow          = "flow" , identifier ;
+```
+
+Routes contain no business logic. They expose an external entry point and
+delegate entirely to a named flow.
+
+## Compute Target Blocks
+
+```ebnf
+compute_target_block
+                    = "compute" , "target" , compute_target_selector ,
+                      "{" , { compute_target_clause } , "}" ;
+
+compute_target_selector
+                    = "best" | compute_target_name ;
+
+compute_target_clause
+                    = "prefer" , "[" , target_list , "]"
+                    | "deny" , "[" , deny_list , "]"
+                    | "fallback" , compute_target_name ;
+
+target_list         = compute_target_name , { "," , compute_target_name } ;
+deny_list           = deny_item , { "," , deny_item } ;
+
+compute_target_name = "cpu" | "gpu" | "npu" | "wasm" | "photonic"
+                    | "ai_accelerator" | identifier ;
+
+deny_item           = qualified_name | identifier ;
+```
+
+Compute target blocks constrain planning. They must not change security,
+governance, authority, effects, validation, redaction, or program meaning.
+
+## Blocks and Statements
+
+```ebnf
+block               = "{" , { statement } , "}" ;
+
+statement           = binding_stmt
+                    | assignment_stmt
+                    | return_stmt
+                    | if_stmt
+                    | match_stmt
+                    | fn_decl
+                    | expression_stmt ;
+
+binding_stmt        = binding_prefix , identifier ,
+                      [ ":" , type_ref ] , "=" , expression ;
+
+binding_prefix      = "let"
+                    | "mut"
+                    | "readonly"
+                    | "unsafe" , ( "let" | "mut" )
+                    | "safe" , "mut" ;
+
+assignment_stmt     = assignable , "=" , expression ;
+return_stmt         = "return" , expression ;
+
+if_stmt             = "if" , expression , block , [ "else" , ( block | if_stmt ) ] ;
+match_stmt          = match_expr ;
+expression_stmt     = expression ;
+
+assignable          = identifier , { "." , identifier | "[" , expression , "]" } ;
+```
+
+`unsafe let` marks boundary-origin data. `safe mut` is the controlled upgrade
+form after an approved validation/decode gate.
+
+## Expressions and Operators
+
+The expression grammar follows the precedence table in
+`docs/Knowledge-Bases/operator-precedence.md`.
+
+```ebnf
+expression          = logical_or ;
+
+logical_or          = logical_and , { "||" , logical_and } ;
+logical_and         = equality , { "&&" , equality } ;
+equality            = comparison , { ( "==" | "!=" ) , comparison } ;
+comparison          = additive , { ( "<" | "<=" | ">" | ">=" ) , additive } ;
+additive            = multiplicative , { ( "+" | "-" ) , multiplicative } ;
+multiplicative      = unary , { ( "*" | "/" | "%" ) , unary } ;
+unary               = ( "!" | "-" ) , unary | postfix ;
+postfix             = primary , { member_access | call_suffix
+                                  | index_suffix | error_propagation } ;
+
+member_access       = "." , identifier ;
+call_suffix         = "(" , [ argument_list ] , ")" ;
+index_suffix        = "[" , expression , "]" ;
+error_propagation   = "?" ;
+
+primary             = literal
+                    | identifier
+                    | qualified_name
+                    | object_literal
+                    | list_literal
+                    | match_expr
+                    | "(" , expression , ")" ;
+
+argument_list       = expression , { "," , expression } ;
+qualified_name      = identifier , { "." , identifier } ;
+
+object_literal      = "{" , [ object_field , { "," , object_field } ] ,
+                      [ "," ] , "}" ;
+object_field        = identifier , ":" , expression ;
+
+list_literal        = "[" , [ expression , { "," , expression } ] ,
+                      [ "," ] , "]" ;
+```
+
+Operator precedence, tightest last:
+
+| Level | Operators | Associativity |
+|---|---|---|
+| 10 | `||` | left |
+| 20 | `&&` | left |
+| 30 | `==` `!=` | left |
+| 40 | `<` `<=` `>` `>=` | left |
+| 50 | `+` `-` | left |
+| 60 | `*` `/` `%` | left |
+| 70 | prefix `!` `-` | right |
+| 80 | `.` `()` `[]` postfix `?` | left/postfix |
+
+`?` is postfix error propagation. It binds tighter than all infix operators:
+`validate.email(raw)? || fallback` parses as `(validate.email(raw)?) || fallback`.
+
+## Explicitly Excluded From v1
+
+```text
+safe flow, unsafe flow, guard flow
+top-level fn
+fn effects clauses
+assignment expressions
+++ / --
+ternary ?:
+pipeline operator |>
+```
+

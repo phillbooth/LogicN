@@ -84,11 +84,15 @@ flow checkout_order(order: Order) -> Receipt
 `fn` is reserved for local helper logic only. A helper function has no runtime
 authority.
 
+A `fn` may only be declared inside a `flow` body. It is not a top-level
+declaration form.
+
 A `fn` cannot:
 
 ```text
 request permissions
 declare uses
+declare effects [...]
 access GlobalVault
 perform network operations
 access databases
@@ -102,6 +106,9 @@ use task or wait (async work)
 create background work
 ```
 
+If a local `fn` uses an operation with effects, those effects are attributed to
+the containing flow. The `fn` itself still cannot declare effects or authority.
+
 The purpose of `fn` is purely:
 
 ```text
@@ -114,8 +121,94 @@ local reusable logic
 Example:
 
 ```logicn
-fn calculate_total(order: Order) -> Decimal {
-  order.items.sum(item -> item.price * item.qty)
+pure flow calculateTotal(price: Money<GBP>) -> Money<GBP> {
+  fn calculateVat(value: Money<GBP>) -> Money<GBP> {
+    return value * Decimal("0.20")
+  }
+
+  return price + calculateVat(price)
+}
+```
+
+## fn Scope Rules
+
+- `fn` may only appear inside a `flow` body.
+- Top-level `fn` is a compiler error: `LLN-SYNTAX-005`.
+- `fn` may not declare `effects [...]` or `with effects [...]`; this is
+  `LLN-SEC-014`.
+- `fn` may not request authority, capabilities, permissions, or `uses`.
+- `fn` may use effects only when the containing flow declares those effects.
+- Effects used inside a `fn` count as observed effects of the containing flow.
+- `fn` is always synchronous.
+- `fn` cannot spawn tasks and cannot use `task`, `wait`, `async`, or `await`.
+
+Correct local helper, from CEC example 004:
+
+```logicn
+pure flow calculateTotal(price: Money<GBP>) -> Money<GBP> {
+  fn calculateVat(value: Money<GBP>) -> Money<GBP> {
+    return value * Decimal("0.20")
+  }
+
+  return price + calculateVat(price)
+}
+```
+
+Correct pure local helper, from CEC example 109:
+
+```logicn
+pure flow calculateTotal(prices: List<Money<GBP>>) -> Money<GBP> {
+  fn sum(acc: Money<GBP>, item: Money<GBP>) -> Money<GBP> {
+    return acc + item
+  }
+  return prices.reduce(Money.gbp("0.00"), sum)
+}
+```
+
+Correct effect use through containing flow, from CEC example 110:
+
+```logicn
+guarded flow syncOrders(orders: List<Order>) -> Result<Unit, SyncError>
+  with effects [network.outbound, database.write]
+{
+  fn fetchRate(currency: String) -> Result<Decimal, RateError> {
+    unsafe let rawResponse = http.get("https://rates.example.com/" + currency)?
+    return json.decode(rawResponse)
+  }
+  let rate = fetchRate("GBP")?
+  let _ = OrdersDB.insert(orders[0])?
+  return Ok(unit)
+}
+```
+
+Invalid: local `fn` observes an effect not declared by the parent flow, from CEC
+example 111:
+
+```logicn
+guarded flow saveOrderOnly(order: Order) -> Result<Unit, SaveError>
+  with effects [database.write]
+{
+  fn fetchRate(currency: String) -> Result<Decimal, RateError> {
+    unsafe let rawResponse = http.get("https://rates.example.com/" + currency)?
+    return json.decode(rawResponse)
+  }
+  let _ = OrdersDB.insert(order)?
+  return Ok(unit)
+}
+```
+
+Invalid: local `fn` declares its own effects, from CEC example 112:
+
+```logicn
+guarded flow processOrder(order: Order) -> Result<Unit, ProcessError>
+  with effects [database.write]
+{
+  fn save(o: Order) -> Result<Unit, SaveError>
+    with effects [database.write]
+  {
+    return OrdersDB.insert(o)
+  }
+  return save(order)
 }
 ```
 
@@ -156,7 +249,7 @@ fn get_secret(user_id: Id) -> Secret
 Compiler error:
 
 ```text
-LNN-SEC-014:
+LLN-SEC-014:
 fn declarations cannot request runtime authority.
 Move this operation into a flow or pass the required value as an argument.
 ```
@@ -223,7 +316,7 @@ flow build_report(user_id: safe Id) -> Report
 
 // Compiler error — fn cannot use task
 fn bad_helper(id: safe Id) -> safe User {
-  let t = task database.users.get(id)  // ERROR: LNN-SEC-014
+  let t = task database.users.get(id)  // ERROR: LLN-SEC-014
   return wait t
 }
 ```

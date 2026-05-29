@@ -219,6 +219,7 @@ older `LNN-*` codes as the compiler matures.
 | `LLN-NAME-*` | Name resolution (Phase 5) |
 | `LLN-MATCH-*` | Match exhaustiveness (Phase 5) |
 | `LLN-EFFECT-*` | Effect checker |
+| `LLN-SEC-*` | Security and authority rule violations |
 | `LLN-INTENT-*` | Intent declaration errors |
 | `LLN-PIPELINE-*` | Pipeline chain type errors |
 | `LLN-BINDING-*` | Binding mutability |
@@ -278,6 +279,13 @@ LLN-EFFECT-001   Undeclared effect used inside flow
 LLN-EFFECT-002   Effect propagation: transitive effect not declared
 LLN-EFFECT-003   Effect boundary violation
 LLN-EFFECT-004   Forbidden effect inside compute-restricted flow
+```
+
+### Security and Authority
+
+```text
+LLN-SEC-014      FN_AUTHORITY_OR_EFFECTS_DENIED  fn declarations cannot request
+                 runtime authority, declare effects, or spawn governed work
 ```
 
 ### Capability Checker
@@ -352,6 +360,7 @@ LLN-SYNTAX-001   VAR_NOT_SUPPORTED       var is not a valid LogicN keyword
 LLN-SYNTAX-002   CONST_NOT_SUPPORTED     const is not a valid LogicN keyword
 LLN-SYNTAX-003   FUTURE_RESERVED_KEYWORD Future-reserved keyword used as identifier
 LLN-SYNTAX-004   ACTIVE_KEYWORD_AS_IDENT Active keyword used as identifier
+LLN-SYNTAX-005   TOP_LEVEL_FN_DENIED     fn may only appear inside a flow body
 ```
 
 ### Binding (canonical series: LLN-BINDING-*)

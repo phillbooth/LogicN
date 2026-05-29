@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-05-29T07:43:40.294Z",
+  "generatedAt": "2026-05-29T09:46:43.627Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -817,6 +817,1086 @@
       "kind": "Document",
       "label": "ERROR_HANDLING.md",
       "sourcePath": "docs/ERROR_HANDLING.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/001-pure-flow/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/001-pure-flow/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/002-guarded-flow/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/002-guarded-flow/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/003-secure-flow/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/003-secure-flow/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/004-local-fn-helper/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/004-local-fn-helper/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/005-let-binding/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/005-let-binding/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/006-mut-binding/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/006-mut-binding/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/007-readonly-parameter/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/007-readonly-parameter/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/008-readonly-local-binding/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/008-readonly-local-binding/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/009-unsafe-let-boundary/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/009-unsafe-let-boundary/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/010-result-return/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/010-result-return/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/011-option-return/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/011-option-return/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/012-match-result/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/012-match-result/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/013-match-option/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/013-match-option/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/014-enum-basic/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/014-enum-basic/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/015-record-basic/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/015-record-basic/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/016-type-alias/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/016-type-alias/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/017-domain-brand-type/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/017-domain-brand-type/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/018-protected-type-label/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/018-protected-type-label/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/019-redacted-type-label/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/019-redacted-type-label/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/020-invalid-fn-top-level/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/020-invalid-fn-top-level/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/051-int-basic/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/051-int-basic/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/052-decimal-basic/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/052-decimal-basic/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/053-string-basic/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/053-string-basic/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/054-bool-basic/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/054-bool-basic/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/055-byte-basic/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/055-byte-basic/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/056-char-basic/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/056-char-basic/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/057-email-type/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/057-email-type/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/058-patient-id-type/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/058-patient-id-type/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/059-nhs-number-type/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/059-nhs-number-type/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/060-invalid-email-assignment/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/060-invalid-email-assignment/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/061-redacted-email/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/061-redacted-email/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/062-invalid-redacted-email/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/062-invalid-redacted-email/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/063-option-some/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/063-option-some/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/064-option-none/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/064-option-none/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/065-option-invalid-arity/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/065-option-invalid-arity/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/066-result-success/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/066-result-success/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/067-result-error/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/067-result-error/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/068-result-invalid-arity/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/068-result-invalid-arity/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/069-auto-inference/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/069-auto-inference/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/070-auto-invalid/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/070-auto-invalid/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/071-money-gbp/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/071-money-gbp/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/072-money-add-same-currency/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/072-money-add-same-currency/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/073-money-cross-currency-invalid/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/073-money-cross-currency-invalid/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/074-money-times-decimal/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/074-money-times-decimal/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/075-money-divide-decimal/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/075-money-divide-decimal/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/076-money-times-money-invalid/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/076-money-times-money-invalid/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/077-money-ratio/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/077-money-ratio/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/078-money-ratio-cross-currency-invalid/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/078-money-ratio-cross-currency-invalid/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/079-tensor-basic/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/079-tensor-basic/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/080-tensor-dynamic-shape/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/080-tensor-dynamic-shape/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/081-tensor-invalid-arity/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/081-tensor-invalid-arity/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/082-readonly-view/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/082-readonly-view/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/083-readonly-view-invalid/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/083-readonly-view-invalid/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/084-unknown-type/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/084-unknown-type/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/085-type-mismatch/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/085-type-mismatch/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/086-protected-not-redacted/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/086-protected-not-redacted/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/087-protected-email-audit/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/087-protected-email-audit/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/101-pure-no-effects/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/101-pure-no-effects/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/102-guarded-database-write/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/102-guarded-database-write/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/103-guarded-network-outbound/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/103-guarded-network-outbound/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/104-multiple-effects/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/104-multiple-effects/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/105-missing-database-effect/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/105-missing-database-effect/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/106-missing-network-effect/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/106-missing-network-effect/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/107-pure-flow-calls-effectful-flow/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/107-pure-flow-calls-effectful-flow/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/108-guarded-flow-calls-effectful-flow/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/108-guarded-flow-calls-effectful-flow/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/109-local-fn-pure-helper/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/109-local-fn-pure-helper/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/110-local-fn-uses-parent-effect/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/110-local-fn-uses-parent-effect/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/111-local-fn-effect-not-covered-by-parent/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/111-local-fn-effect-not-covered-by-parent/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/112-local-fn-cannot-declare-effects/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/112-local-fn-cannot-declare-effects/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/113-secure-flow-with-effects/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/113-secure-flow-with-effects/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/114-secure-flow-missing-audit-effect/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/114-secure-flow-missing-audit-effect/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/115-effect-propagation-through-call/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/115-effect-propagation-through-call/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/116-effect-propagation-missing-parent/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/116-effect-propagation-missing-parent/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/117-effectful-operation-in-pure-flow/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/117-effectful-operation-in-pure-flow/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/118-filesystem-read-guarded/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/118-filesystem-read-guarded/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/119-effect-name-invalid/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/119-effect-name-invalid/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-3-Effects/120-effect-summary-example/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-3-Effects/120-effect-summary-example/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/151-http-request-boundary/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/151-http-request-boundary/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/152-file-boundary/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/152-file-boundary/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/153-environment-boundary/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/153-environment-boundary/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/154-validate-email/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/154-validate-email/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/155-validate-patient-id/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/155-validate-patient-id/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/156-validate-nhs-number/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/156-validate-nhs-number/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/157-invalid-email-assignment/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/157-invalid-email-assignment/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/158-redact-email/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/158-redact-email/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/159-redact-patient-id/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/159-redact-patient-id/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/160-protected-not-redacted/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/160-protected-not-redacted/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/161-safe-audit-log/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/161-safe-audit-log/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/162-invalid-audit-log/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/162-invalid-audit-log/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/163-unsafe-audit-log/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/163-unsafe-audit-log/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/164-safe-database-write/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/164-safe-database-write/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/165-unsafe-database-write/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/165-unsafe-database-write/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/166-safe-network-send/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/166-safe-network-send/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/167-unsafe-network-send/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/167-unsafe-network-send/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/168-redacted-network-send/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/168-redacted-network-send/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/169-secret-comparison/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/169-secret-comparison/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/170-constant-time-comparison/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/170-constant-time-comparison/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/171-protected-console-log/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/171-protected-console-log/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/172-secret-console-log/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/172-secret-console-log/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/173-validation-chain/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/173-validation-chain/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/174-multiple-protected-values/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/174-multiple-protected-values/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/175-security-summary-example/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/175-security-summary-example/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/201-intent-basic/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/201-intent-basic/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/202-secure-intent-boundary/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/202-secure-intent-boundary/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/203-intent-mismatch-invalid/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/203-intent-mismatch-invalid/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/204-remote-execution-denied/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/204-remote-execution-denied/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/205-remote-execution-violation/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/205-remote-execution-violation/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/206-protected-data-sharing-authority/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/206-protected-data-sharing-authority/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/207-protected-data-sharing-missing-authority/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/207-protected-data-sharing-missing-authority/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/208-audit-proof-required/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/208-audit-proof-required/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/209-audit-proof-missing/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/209-audit-proof-missing/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/210-governed-execution-plan/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/210-governed-execution-plan/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/211-policy-block-allows-purpose/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/211-policy-block-allows-purpose/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/212-policy-purpose-mismatch/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/212-policy-purpose-mismatch/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/213-governance-summary-example/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/213-governance-summary-example/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-6-Compute/PLANNED.md",
+      "kind": "Document",
+      "label": "PLANNED.md",
+      "sourcePath": "docs/examples/Level-6-Compute/PLANNED.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/PLANNED.md",
+      "kind": "Document",
+      "label": "PLANNED.md",
+      "sourcePath": "docs/examples/Level-7-AI/PLANNED.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-8-Targets/PLANNED.md",
+      "kind": "Document",
+      "label": "PLANNED.md",
+      "sourcePath": "docs/examples/Level-8-Targets/PLANNED.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/PLANNED.md",
+      "kind": "Document",
+      "label": "PLANNED.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/PLANNED.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/README.md",
+      "kind": "Document",
+      "label": "README.md",
+      "sourcePath": "docs/examples/README.md",
       "tags": [
         "document"
       ]
@@ -1668,6 +2748,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/guarded-flow-spec.md",
+      "kind": "Document",
+      "label": "guarded-flow-spec.md",
+      "sourcePath": "docs/Knowledge-Bases/guarded-flow-spec.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/hello-world-api-pattern.md",
       "kind": "Document",
       "label": "hello-world-api-pattern.md",
@@ -2248,6 +3337,15 @@
       "kind": "Document",
       "label": "logicn-framework-api-server-v02.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-framework-api-server-v02.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-gir-schema.md",
+      "kind": "Document",
+      "label": "logicn-gir-schema.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-gir-schema.md",
       "tags": [
         "document"
       ]
@@ -2838,6 +3936,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/route-spec.md",
+      "kind": "Document",
+      "label": "route-spec.md",
+      "sourcePath": "docs/Knowledge-Bases/route-spec.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/runtime-assembler.md",
       "kind": "Document",
       "label": "runtime-assembler.md",
@@ -3130,6 +4237,15 @@
       "kind": "Document",
       "label": "type-manifest.md",
       "sourcePath": "docs/Knowledge-Bases/type-manifest.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/type-qualifiers.md",
+      "kind": "Document",
+      "label": "type-qualifiers.md",
+      "sourcePath": "docs/Knowledge-Bases/type-qualifiers.md",
       "tags": [
         "document"
       ]
