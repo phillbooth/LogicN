@@ -11,6 +11,45 @@ from the ground up around the principle that execution intent, capability
 boundaries, memory ownership, and effects should be **declared in source and
 enforced by tooling** — not inferred, guessed, or left to convention.
 
+---
+
+## Build Progress
+
+**TypeScript Runtime** — compiler pipeline + execution engine running on Node.js
+
+```
+▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░  41%
+```
+
+| Layer | Status | % |
+|---|---|---|
+| Specification / KB | Formal grammar, type system, CEC (175 examples), glossary | 97% |
+| Lexer | All v1 keywords, char/hex literals, full token suite | 99% |
+| Parser | Flows, fn, routes, enums with variants, match, types | 65% |
+| Type checker | 7 codes — unknown types, arity, null, match exhaustiveness | 40% |
+| Value-state checker | Gates, sinks, secrets, taint propagation | 42% |
+| Effect checker | 4 codes, guarded/pure/secure flows, propagation | 65% |
+| Symbol resolver | LLN-NAME-001/002, scope tracking, standard prelude | 80% |
+| IR / Code generation | Schema specified, emitter not yet built | 3% |
+| Runtime execution | Architecture specified, interpreter not yet built | 2% |
+| Route / HTTP dispatch | Spec complete, wiring not yet built | 2% |
+| Standard library | Types defined, implementations pending | 5% |
+| Governance / audit / proof | Spec complete, runtime wiring pending | 10% |
+
+---
+
+**Runtime written in LogicN** — the language compiles and runs its own compiler
+
+```
+▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  10%
+```
+
+*Stage A (TypeScript Runtime) must be complete before Stage B begins.
+At Stage B the compiler and runtime are rewritten in LogicN, removing the
+TypeScript bootstrap entirely and proving the governance model is real.*
+
+---
+
 ```text
 intent
     ↓
@@ -39,8 +78,9 @@ LogicN is three things building toward one platform:
 declared effects, no hidden nulls, no silent failures. Source files use `.lln`.
 
 **2. A compiler and checker** — a pipeline that enforces the language rules
-before code runs. Phase 3 scanner-level checks are live today. Phase 4 (real
-parser and AST) is the current build target.
+before code runs. Phases 3–7A are complete (195 tests, 0 failures). The
+current build target is completing Phase 7B (type inference, operator checking)
+before moving to IR generation and the runtime execution engine.
 
 **3. A governed runtime architecture** — a model for coordinating compute
 across targets (CPU, WASM, GPU, accelerators) with capability-based authority,
@@ -65,177 +105,103 @@ execution**:
 
 ---
 
-## Status — Prototype (v0.1-beta)
+## Status — Active Development (v0.1-beta)
 
-LogicN is a **language-design and prototype project**. It is not a production
-compiler.
+LogicN is a **language-design and active compiler project**. It is not a production runtime.
 
-**What works today:**
+**What works today (195 tests, 0 failures):**
 
-- Run simple `.lln` programs using Node.js (no installation required beyond
-  `npm install`)
-- Scanner-level safety checks (Phase 3): binding rules, `mut` in pure flow,
-  unsafe block enforcement, raw pointer detection
-- Diagnostic codes (`LLN-MEMORY-*`, `LLN-SAFETY-*`, `LLN-BINDING-*`, etc.)
-- JSON schema and OpenAPI generation from type definitions
-- Source map output and AI-readable project context generation
-- Build manifests, memory reports, execution reports
-- Project graph and task automation tooling
+- Full lexer — all v1 keywords, char/hex/binary literals, doc comments
+- Full parser — all flow qualifiers, match with exhaustiveness, enums with variants, record types with fields, fn helpers, route declarations, `protected`/`redacted` type qualifiers
+- Type checker — LLN-TYPE-001 (unknown types), LLN-TYPE-008 (null/undefined), LLN-TYPE-009 (generic arity), LLN-TYPE-020 (shadowing), LLN-TYPE-021 (non-exhaustive match), LLN-TYPE-022 (unreachable patterns)
+- Symbol resolver — LLN-NAME-001 (undeclared names), LLN-NAME-002 (duplicate declarations)
+- Value-state checker — LLN-VALUESTATE-001/003, LLN-SECRET-001/002 (unsafe→sink, SecureString rules)
+- Effect checker — LLN-EFFECT-001..004 with guarded/pure/secure flow support and inter-flow propagation
+- Scanner-level safety checks — binding rules, `mut` in pure flow, unsafe block enforcement, raw pointer detection
+- Canonical Example Corpus — 175 `.lln` examples across 9 levels with expected diagnostics
+
+**What is actively being built:**
+
+- Phase 7B — type inference, operator type rules (LLN-TYPE-004), call argument checking
+- IR generation — AST → GIR (Governed Intermediate Representation)
+- Runtime execution engine — AST interpreter for Stage A
 
 **What is not yet implemented:**
 
-- Real lexer and parser (Phase 4 — next)
-- Full type and effect checker (Phase 5)
-- Production code generation
+- IR emitter and backend lowering
+- Runtime execution engine
+- Route / HTTP dispatch
+- Standard library implementations
 - GPU, AI accelerator, photonic targets (post-v1)
-
----
-
-## Running LogicN Today
-
-LogicN runs on **Node.js 18+** using the prototype compiler in
-`packages-logicn/logicn-core/`.
-
-```bash
-# From the logicn-core package
-cd packages-logicn/logicn-core
-
-# Install dependencies
-npm install
-
-# Run a .lln file
-node compiler/logicn.js run examples/hello.lln
-
-# Check a file for errors
-node compiler/logicn.js check examples/result.lln
-
-# Run all example checks and tests
-npm test
-
-# Build examples and generate reports
-npm run build:examples
-
-# Generate AI-readable project context
-node compiler/logicn.js ai-context examples --out build/examples
-
-# Verify build artefacts
-npm run verify -- build/examples
-```
-
-No special toolchain, no Rust, no LLVM. The v0.1 prototype runs entirely on
-Node.js. The full compiler pipeline (Phase 4 onwards) will replace this with a
-real parser and checker.
 
 ---
 
 ## Code Example
 
 ```logicn
-// ── Bindings: three visibility levels ──────────────────────────────────────
+// ── Boundary data: unsafe until validated ────────────────────────────────────
 //
-//  let      — immutable. Cannot be reassigned (LLN-BINDING-001 if you try).
-//  mut      — mutable. Reassignment is intentional and visible.
-//  readonly — read-only view of a value owned elsewhere. Cannot mutate
-//             properties through this reference (LLN-BINDING-003).
+// Data arriving from outside (HTTP, file, env) is marked `unsafe let`.
+// The compiler prevents it reaching typed sinks without a validation gate.
 //
-flow demonstrateBindings(cfg: Config) {
-  let    maxRetries: Int    = 3            // fixed — cannot reassign
-  mut    attempts:   Int    = 0            // reassignable: attempts = attempts + 1
-  readonly settings: Config = cfg          // view only — cfg.timeout = 5 is rejected
+secure flow createPatient(readonly req: Request) -> Result<Response, ApiError>
+with effects [database.write, audit.write]
+intent "Create a patient record with protected PII handling" {
+
+  unsafe let rawEmail: String =
+    req.body.email
+
+  let email: protected Email =
+    validate.email(rawEmail)?
+
+  let saved =
+    PatientsDB.insert({ email: email })?
+
+  AuditLog.write({
+    event: "PatientCreated",
+    patientId: saved.id,
+    email: redact(email)
+  })
+
+  return Ok(Response.created(saved.id))
 }
 
 
-// ── Intent: declare what a flow is for ─────────────────────────────────────
+// ── Pure flows: zero side effects ────────────────────────────────────────────
 //
-// Intent makes purpose machine-readable — the effect checker, audit system
-// and AI tooling all consume intent declarations. A flow whose inferred
-// behavior conflicts with its declared intent is rejected (LLN-INTENT-001).
+// The compiler enforces: no I/O, no effectful calls, no mutation.
 //
-/// intent: "Process a customer order and charge payment"
-/// trust:  "input is pre-validated at the API boundary"
-guarded flow processOrder(input: CreateOrderRequest) -> Result<OrderId, OrderError>
-effects [database.write, payment.charge]
-intent "Process a customer order and charge payment" {
-
-  let order: Order = Order {
-    id:         generateId()
-    customerId: input.customerId
-    total:      input.total
-  }
-
-  // Result must be explicitly handled — silent failure is a compile error
-  match saveOrder(order) {
-    Ok(saved) => return Ok(saved.id)
-    Err(_)    => return Err(OrderError.DatabaseFailed)
-  }
+pure flow calculateVat(price: Money<GBP>) -> Money<GBP> {
+  return price * Decimal("0.20")
 }
 
 
-// ── Unsafe variables — boundary data stays unsafe until sanitised ───────────
+// ── Guarded flows: declared effects ──────────────────────────────────────────
 //
-// Any value that arrives from outside the system (HTTP, webhook, file, env)
-// is marked `unsafe let` — it is untrusted bytes with no type guarantee.
-// The compiler prevents unsafe values from being passed to typed parameters
-// without going through an explicit decode/validate step first.
+// Every effect must be declared. Missing effects are LLN-EFFECT-001.
 //
-// This is LogicN's trust-boundary model: the type system tracks where data
-// came from, not just what shape it has.
-//
-guarded flow fetchOrderStatus(orderId: OrderId) -> Result<OrderStatus, ApiError>
-effects [network.outbound]
-intent "Fetch live order status from the payment provider API" {
+guarded flow fetchRate(currency: CurrencyCode) -> Result<Decimal, NetworkError>
+with effects [network.outbound] {
 
-  // Raw response from an external service — untrusted, untyped
-  unsafe let rawResponse: Bytes = http.get("https://api.payments.com/orders/" + orderId)
+  unsafe let rawResponse: String =
+    http.get("/rates/" + currency)?
 
-  // Explicit decode: unsafe Bytes → typed OrderStatus
-  // Decode returns Err if the response does not match the expected schema
-  let status: OrderStatus = json.decode<OrderStatus>(rawResponse)?
+  let rate: Decimal =
+    json.decode<Decimal>(rawResponse)?
 
-  // `status` is now fully typed and safe. `rawResponse` cannot be used further.
-  return Ok(status)
+  return Ok(rate)
 }
 
 
-// ── Pure flows — zero side effects ─────────────────────────────────────────
+// ── Match: exhaustive by default ─────────────────────────────────────────────
 //
-// `pure flow` cannot: perform I/O, call effectful flows, use `mut`, or `await`.
-// The compiler enforces this at Phase 3. `mut` inside pure flow → LLN-BINDING-004.
+// Missing arms emit LLN-TYPE-021. Wildcard before other arms: LLN-TYPE-022.
 //
-pure flow applyDiscount(total: Float, pct: Float) -> Float {
-  return total * (pct / 100.0)
-}
-
-
-// ── Memory: borrow — temporary read-only access ────────────────────────────
-//
-// `borrow buf` passes read-only access without transferring ownership.
-// The borrow expires when this flow returns; the caller keeps the buffer.
-//
-pure flow peekFirstByte(borrow buf: Buffer) -> Option<UInt8> {
-  return buf.data.get(0)
-}
-
-
-// ── Memory: move — explicit ownership transfer ─────────────────────────────
-//
-// `move conn` transfers ownership. The caller's binding is invalidated.
-// Using `conn` after this call is LLN-MEMORY-001 (USE_AFTER_MOVE).
-//
-secure flow closeConnection(move conn: Connection) -> Result<Void, ConnError> {
-  return conn.close()
-}
-
-
-// ── Unsafe blocks — always declared, always justified ──────────────────────
-//
-// `unsafe block` requires both `reason` and `fallback` on the opening line.
-// Missing `reason` → LLN-MEMORY-008.  Raw pointer outside unsafe → LLN-RAWPTR-001.
-//
-flow readRegister(addr: UInt32) -> Result<UInt32, HardwareError> {
-  unsafe block readMMIO reason "MMIO register requires direct memory read" fallback safeDefault {
-    let value: UInt32 = *mmio_ptr(addr)
-    return Ok(value)
+pure flow describeStatus(s: Status) -> String {
+  match s {
+    Active    => "live"
+    Suspended => "paused"
+    Deleted   => "removed"
   }
 }
 ```
@@ -244,112 +210,77 @@ flow readRegister(addr: UInt32) -> Result<UInt32, HardwareError> {
 
 ## Roadmap
 
-LogicN builds the language foundation before expanding into domain packages,
-advanced targets or full frameworks.
-
 ```
-Phase 0 — Workspace Freeze                              ✅ complete
-  Active packages limited to core, compiler, tooling.
-  Finance, electrical, OT packages archived.
-  GPU/AI accelerator/photonic labelled post-v1.
+Phase 3 — Memory Model and Scanner                       ✅ complete
+  Hybrid ownership model: borrow, move, pinned.
+  Scanner-level enforcement: LLN-MEMORY-*, LLN-SAFETY-*, LLN-BINDING-*.
+  LLN-RAWPTR-001: raw pointer detection outside unsafe.
 
-Phase 1 — V1 Syntax Freeze                             ✅ complete
-  V1 grammar draft defined.
-  Reserved keyword table authoritative.
-  One preferred spelling for each core construct.
+Phase 4 — Lexer and Parser                              ✅ complete
+  Full v1 lexer: keywords, operators, char/hex literals.
+  Recursive descent parser with Pratt expression engine.
+  All flow qualifiers, enum variants, record fields, fn helpers.
+  protected / redacted prefix type qualifiers.
 
-Phase 2 — Example Corpus                               ✅ complete
-  20 v1 .lln examples across 5 categories:
-    basic, type-system, API/JSON, memory, concurrency.
-  Examples manifest classifies all files as v1 or post-v1.
-  Rejection fixtures with expected diagnostic codes.
+Phase 5 — Effect Checker                                ✅ complete
+  LLN-EFFECT-001..004.
+  Pure/guarded/secure flow effect validation.
+  Inter-flow effect propagation.
+  Canonical effect name validation.
 
-Phase 3 — Memory Model Commitment                      ✅ complete
-  Hybrid ownership model documented and committed.
-  LLN-MEMORY-001..008 defined and exported.
-  Scanner-level enforcement implemented:
-    mut in pure flow    → LLN-BINDING-004
-    unsafe without reason → LLN-MEMORY-008
-    raw pointer outside unsafe → LLN-RAWPTR-001
-  borrow, move, pinned reserved keywords.
-  AstNodeKind memory vocabulary committed.
-  28/28 compiler contract tests passing.
+Phase 6 — Value-State and Type Checkers                 ✅ complete
+  Value-state: LLN-VALUESTATE-001/003, LLN-SECRET-001/002.
+  Type checker: LLN-TYPE-001, LLN-TYPE-009.
+  BUILT_IN_TYPES: 50+ types including Byte, Brand, Tensor<T,Shape>.
 
-Phase 4 — Parser and AST                               ⬜ next
-  Lexer for the v1 keyword table.
-  Parser for the v1 grammar.
-  Stable AST with source spans.
-  Parser tests for every v1 example.
-  Rejection tests for post-v1 syntax.
+Phase 7A — Symbol Resolution and Type Expansion         ✅ complete
+  Symbol resolver: LLN-NAME-001/002.
+  Type checker: LLN-TYPE-008/020/021/022.
+  Auto inference marker, protected/redacted qualifier suppression.
+  Enum variant capture; match exhaustiveness and unreachable patterns.
+  Canonical Example Corpus: 175 .lln examples across 9 levels.
+  Formal grammar (EBNF), glossary, AST encoding spec.
 
-Phase 5 — Type and Effect Checker                      ⬜ future
-  Name resolution and symbol table.
-  Type checking: primitives, records, variants, Result, Option, Tri.
-  Exhaustive match checks.
-  Effect propagation and pure-flow enforcement.
-  Full lifetime and borrow analysis (borrow checker).
+Phase 7B — Type Inference and Operator Checking          ⬜ in progress
+  LLN-TYPE-002 TypeMismatch (assignment compatibility).
+  LLN-TYPE-004 InvalidBinaryOperation (operator type rules).
+  LLN-TYPE-006/007 InvalidCallArgument/Count.
+  Money<C> * Decimal operator rule.
+  Tri operator denial (&&/||/! on Tri values).
 
-Phase 6 — Runtime and Reports                          ⬜ future
-  CPU-compatible checked execution for the v1 subset.
-  WASM target planning report.
-  Build/check report: syntax, type, effect, memory diagnostics.
-  Source map output for checked examples.
-  AI-readable project summary from real parser/checker facts.
+Phase 8 — IR Generation and Runtime                     ⬜ next
+  AST → GIR (Governed Intermediate Representation).
+  AST interpreter — execute LogicN flows in TypeScript.
+  Route / HTTP dispatch.
+  JSONL audit writer and proof chain generation.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Stage A — TypeScript / Node.js Runtime                  ⬜ post-foundation
-  Phase 6 delivers the first real execution layer.
-  LogicN source is compiled to governed TypeScript output.
-  Programs run on the Node.js runtime backed by V8.
-
-  The full execution stack at this stage:
+Stage A — TypeScript / Node.js Runtime                   ⬜ building (41%)
+  LogicN source compiles through the full pipeline.
+  Programs execute in the Node.js runtime via the AST interpreter.
+  Effects enforced at runtime. Audit records written as JSONL.
+  Proof chain generated after each execution.
 
   LogicN Syntax
        ↓  governed checks: types, effects, memory, intent
   TypeScript runtime / compiler layer
        ↓  managed language safety, type erasure
-  JavaScript output
-       ↓  managed runtime semantics
   Node.js runtime
        ↓  host APIs, native bridges, event loop
-  V8 JavaScript engine
-       ↓  memory-managed JS execution
-  C++ native internals
+  V8 / C++ native internals
 
-  This creates a layered memory-safety model — each layer contributes
-  its own guarantees before reaching the hardware:
-
-  LogicN Syntax      → intended safety model (ownership, effects, intent)
-  TypeScript         → managed language safety (types, null checks)
-  JavaScript         → managed runtime semantics (GC, bounds)
-  Node.js            → host runtime, APIs, native bridges
-  V8                 → memory-managed JS engine
-  C++                → native implementation layer
-
-  The LogicN layer provides the strongest, most explicit guarantees.
-  The layers beneath it inherit managed safety from the JS ecosystem.
-  This means the TypeScript runtime is a credible first execution target —
-  not a compromise, but a deliberate foundation.
-
-Stage B — LogicN Compiles Itself                        ⬜ long-term
-  The LogicN compiler and runtime are rewritten in LogicN.
-  The TypeScript bootstrap layer is no longer needed for production.
-  LogicN becomes self-hosting: the language proves its own model.
-
-  The execution stack at this stage:
+Stage B — Runtime in LogicN                             ⬜ long-term (10%)
+  The compiler and runtime are rewritten in LogicN.
+  The TypeScript bootstrap layer is no longer needed.
+  LogicN becomes self-hosted: the language proves its own model.
 
   LogicN Syntax
        ↓  governed checks: types, effects, memory, intent
   LogicN compiler (written in LogicN)
        ↓  real code generation: CPU binary, WASM, target IR
-  CPU / WASM / NPU / APU / GPU target
+  CPU / WASM / NPU / APU / GPU / Photonic target
        ↓  hardware execution
-  Physical compute
-
-  Self-hosting is the maturity gate: if LogicN can compile LogicN
-  safely — enforcing its own memory model, effects and intent
-  declarations — then the governance model is real, not theoretical.
 ```
 
 **Deferred until after the foundation phases:**
@@ -373,7 +304,7 @@ LogicN Core
   language, type system, effects, memory safety, diagnostics, source maps
 
 LogicN Compiler
-  lexer, parser, AST, type checker, effect checker, memory checker, IR
+  lexer, parser, AST, type checker, effect checker, symbol resolver, IR, GIR
 
 LogicN Runtime
   checked execution, effect dispatch, runtime errors, structured await
@@ -395,6 +326,7 @@ LogicN Target Packages
   APU (post-v1)            — AMD/Intel integrated GPU+AI silicon
   TPU / AI Accelerator (post-v1) — Google TPU, Intel Gaudi, AWS Trainium
   Photonic (post-v1)       — optical interconnect and compute planning
+  Quantum (post-v1)        — quantum bridge via QIR/OpenQASM
 
 LogicN Secure App Kernel
   optional runtime layer — APIs, auth, rate limits, jobs
@@ -409,29 +341,19 @@ Full Frameworks (post-v1)
   CMS, admin UI, ORMs, page builders, frontend adapters
 ```
 
-### Current execution stack (Stage A — TypeScript runtime)
-
-While the real compiler is being built, LogicN programs run via Node.js:
+### Five-layer architecture
 
 ```
-LogicN Syntax
-     ↓  governed checks: types, effects, memory, intent
-TypeScript runtime / compiler layer
-     ↓  managed language safety
-JavaScript output
-     ↓  managed runtime semantics
-Node.js runtime
-     ↓  host APIs, native bridges
-V8 JavaScript engine
-     ↓  memory-managed execution
-C++ native internals
+Layer 1: LogicN Source AST        — what the developer writes
+       ↓ (compiler passes 1–8)
+Layer 2: Governed IR (GIR)        — compiler's verified governance contract
+       ↓ (target bridge)
+Layer 3: Backend Lowering IR      — target-specific execution (CPU/WASM/GPU/…)
+       ↓ (runtime)
+Layer 4: Runtime Execution Report — what actually ran (JSONL audit stream)
+       ↓ (proof chain)
+Layer 5: Audit Proof              — cryptographic evidence chain
 ```
-
-Each layer contributes its own safety guarantees. LogicN's layer is the
-most explicit — ownership, effects, intent. The layers below provide
-managed memory and runtime safety inherited from the JS ecosystem.
-
-**Active v1 targets:** CPU and WASM (planning). Everything else is post-v1.
 
 **Boundary rules:**
 - `logicn-core` is the language. It must not become a web framework.
@@ -442,118 +364,55 @@ managed memory and runtime safety inherited from the JS ecosystem.
 
 ---
 
-### Broader Governance Architecture
-
-The four-stage execution pipeline (`intent → governed execution plan → coordinated compute → audit proof`) is the runtime spine. The full governance architecture adds layers that operate across the entire software lifecycle — from source to deployment to compliance:
-
-```text
-intent                       declared purpose, authority, denied boundaries
-    ↓
-authority tracking           maps where authority enters and flows
-    ↓
-capability propagation       tracks transitive authority through call chains
-    ↓
-effect propagation           traces effects across flows, packages, boundaries
-    ↓
-intent verification          compares declared intent vs actual behavior
-    ↓
-governance diffing           semantic change report between builds
-    ↓
-AI system comprehension      queryable semantic model for AI tools
-    ↓
-compliance generation        SOC2/GDPR artefacts derived from source
-    ↓
-runtime governance           enforces the governed plan at execution time
-    ↓
-unsafe boundary visibility   tracks all native/FFI/unsafe code explicitly
-    ↓
-resource flow tracking       maps which components touch which data and secrets
-    ↓
-deployment planning          infrastructure requirements from declared semantics
-    ↓
-runtime target planning      governed CPU/GPU/NPU/WASM target selection
-    ↓
-package governance           tracks authority and effects introduced by dependencies
-    ↓
-build-time explainability    `logicn explain <flow>` — live queryable system model
-    ↓
-negative guarantees          proves what the system CANNOT do
-    ↓
-runtime evidence correlation connects runtime events back to intent graph nodes
-    ↓
-AI context compression       compact semantic graph instead of raw source
-    ↓
-threat modelling             attack surface + secret exposure derived from graph
-    ↓
-architectural visualization  live diagrams from the intent graph, not manual docs
-    ↓
-governed execution plan      operational contract: what execution is permitted
-    ↓
-coordinated compute          orchestrated execution across targets within authority
-    ↓
-audit proof                  verifiable evidence that governed execution occurred
-```
-
-Each stage is specified in [`docs/Knowledge-Bases/logicn-governance-architecture.md`](docs/Knowledge-Bases/logicn-governance-architecture.md).
-
----
-
 ## Project Structure
 
 ```text
 C:\laragon\www\LO\
-├── docs/                          architecture, KB, roadmaps, decisions
-│   └── Knowledge-Bases/           compiler diagnostics, memory model, keyword table
+├── docs/
+│   ├── Knowledge-Bases/           260+ spec docs, grammar, glossary, operator rules
+│   └── Examples/                  175 canonical .lln examples across 9 levels
 ├── packages-logicn/
-│   ├── logicn-core/               language, examples, prototype compiler ← start here
-│   ├── logicn-core-compiler/      compiler pipeline contracts and scanner
+│   ├── logicn-core-compiler/      compiler pipeline — lexer, parser, all checkers ← active
+│   ├── logicn-core/               language examples and prototype
 │   ├── logicn-core-runtime/       execution contracts
 │   ├── logicn-core-security/      security primitives, redaction
-│   ├── logicn-core-config/        project configuration
 │   ├── logicn-core-reports/       report schemas and writer contracts
 │   ├── logicn-core-logic/         Tri, Decision, RiskLevel
 │   ├── logicn-core-vector/        Vector, Matrix, Tensor
 │   ├── logicn-core-compute/       compute planning and target selection
-│   ├── logicn-core-cli/           developer CLI (graph, tasks, check, run)
+│   ├── logicn-core-cli/           developer CLI
 │   ├── logicn-core-tasks/         safe task automation with declared effects
 │   ├── logicn-devtools-project-graph/  project knowledge graph
-│   ├── logicn-target-cpu/         CPU capabilities and fallback
-│   ├── logicn-target-wasm/        WASM target planning
-│   ├── logicn-target-gpu/         GPU target planning (post-v1)
-│   ├── logicn-ai/                 AI inference contracts (post-v1)
+│   ├── logicn-target-*/           CPU, WASM, GPU, NPU target packages
 │   └── logicn-framework-*/        app kernel, API server (post-v1 active)
 ├── build/                         generated graph, reports
 └── tools/
 ```
 
-**Archived** (outside active workspace — post-v2 domain planning):
-```text
-C:\laragon\www\LogicN_Archive\packages-logicn\logicn-finance-core
-C:\laragon\www\LogicN_Archive\packages-logicn\logicn-electrical-core
-C:\laragon\www\LogicN_Archive\packages-logicn\logicn-ot-core
-```
-
 ---
 
-## Quick Start — Root Tooling
+## Running the Compiler
 
-Generate or refresh the project graph:
+The active compiler is in `packages-logicn/logicn-core-compiler/`.
 
-```powershell
-node packages-logicn\logicn-core-cli\dist\index.js graph --out build\graph
+```bash
+cd packages-logicn/logicn-core-compiler
+npm install
+npm run build
+npm test
 ```
 
-Run the packages that have executable tests:
+195 tests, 0 failures. The compiler accepts `.lln` source via `parseProgram()` and runs all checker passes.
 
-```powershell
-npm --prefix packages-logicn\logicn-core test
-npm --prefix packages-logicn\logicn-core-compiler test
-npm --prefix packages-logicn\logicn-devtools-project-graph test
-npm --prefix packages-logicn\logicn-core-tasks test
+```typescript
+import { parseProgram, checkTypes, checkValueStates, checkEffects, resolveSymbols } from "@logicn/core-compiler";
+
+const result = parseProgram(source, "myfile.lln");
+const symbols = resolveSymbols(result.ast);
+const types   = checkTypes(result.ast);
+const vs      = checkValueStates(result.ast);
+const effects = checkEffects(result.flows, result.ast);
 ```
-
-For the LogicN prototype compiler, work from `packages-logicn/logicn-core/`.
-See that package README for the full command list.
 
 ---
 
@@ -561,32 +420,38 @@ See that package README for the full command list.
 
 | Document | Purpose |
 |---|---|
-| `packages-logicn/logicn-core/README.md` | Language introduction, syntax, commands |
-| `docs/CORE_FOUNDATION_ROADMAP.md` | Phase-by-phase build plan |
-| `docs/Knowledge-Bases/logicn-v1-memory-model.md` | Memory model specification |
-| `docs/Knowledge-Bases/v1-reserved-keywords.md` | Authoritative keyword table for lexer |
-| `docs/Knowledge-Bases/compiler-diagnostics.md` | All LLN-* diagnostic codes |
-| `packages-logicn/logicn-core/examples/examples-manifest.md` | V1 vs post-v1 example classification |
+| `docs/Knowledge-Bases/logicn-grammar.ebnf` | Authoritative v1 formal grammar |
+| `docs/Knowledge-Bases/v1-reserved-keywords.md` | Canonical keyword table for lexer |
+| `docs/Knowledge-Bases/formal-type-system-spec.md` | Type system — all 22 LLN-TYPE-* codes |
+| `docs/Knowledge-Bases/compiler-diagnostics.md` | All LLN-* diagnostic series index |
+| `docs/Knowledge-Bases/logicn-glossary.md` | Canonical term definitions and aliases |
+| `docs/Knowledge-Bases/ast-value-encoding.md` | What `.value` means per AstNodeKind |
+| `docs/Knowledge-Bases/stdlib-gates.yaml` | Gate functions and governed sinks registry |
+| `docs/Knowledge-Bases/logicn-compiler-pipeline.md` | Compiler passes 1–10 in order |
+| `docs/Knowledge-Bases/logicn-architecture-layers.md` | Five-layer architecture |
+| `docs/Examples/README.md` | Canonical Example Corpus index |
 | `AGENTS.md` | AI coding tool instructions |
 
 **Core concept deep-dives:**
 
 | Document | Concept |
 |---|---|
-| `docs/Knowledge-Bases/logicn-governance-architecture.md` | Full 23-stage governance pipeline with descriptions and examples |
 | `docs/Knowledge-Bases/logicn-concept-intent.md` | Intent — semantic purpose, the intent graph, verification |
-| `docs/Knowledge-Bases/logicn-concept-governed-execution-plan.md` | Governed Execution Plan — operational contract, negative guarantees |
-| `docs/Knowledge-Bases/logicn-concept-coordinated-compute.md` | Coordinated Compute — runtime orchestration across targets |
+| `docs/Knowledge-Bases/logicn-concept-governed-execution-plan.md` | Governed Execution Plan — operational contract |
+| `docs/Knowledge-Bases/logicn-concept-coordinated-compute.md` | Coordinated Compute — runtime orchestration |
 | `docs/Knowledge-Bases/logicn-concept-audit-proof.md` | Audit Proof — verifiable governance evidence |
-| `docs/Knowledge-Bases/logicn-code-examples-full-flow.md` | 12 full code examples: intent, governance, safe/unsafe, tainted input, audit proof |
+| `docs/Knowledge-Bases/flow-vs-fn-security-model.md` | route → flow → fn execution hierarchy |
+| `docs/Knowledge-Bases/value-state-annotations.md` | unsafe/safe/protected/redacted value-state model |
+| `docs/Knowledge-Bases/logicn-adaptive-runtime-profiles.md` | Adaptive vs deterministic runtime modes |
+| `docs/Knowledge-Bases/logicn-quantum-target-bridge.md` | Quantum computing as a governed target |
 
 ---
 
 ## What LogicN Is Not (Yet)
 
 ```text
-Not a production compiler         — Phase 4 parser not yet built
-Not a production runtime          — Phases 5 and 6 are future work
+Not a production compiler         — IR generation not yet built (Phase 8)
+Not a production runtime          — execution engine not yet built (Phase 8)
 Not a web framework               — logicn-framework-* is optional post-v1
 Not a database ORM                — data packages are separate
 Not faster hardware               — compute planning ≠ hardware speed
