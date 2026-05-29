@@ -27,6 +27,7 @@ export interface EffectCheckResult {
   readonly flowName: string;
   readonly qualifier: "flow" | "secure" | "pure" | "guarded";
   readonly declaredEffects: readonly string[];
+  readonly observedEffects: readonly string[];
   readonly diagnostics: readonly EffectDiagnostic[];
 }
 
@@ -155,6 +156,7 @@ export function checkFlowEffects(
 ): EffectCheckResult {
   const diagnostics: EffectDiagnostic[] = [];
   const flowNode = findFlowNode(ast, flow.name);
+  const observedEffects = flowNode === undefined ? new Set<string>() : inferEffectsFromNode(flowNode);
 
   validateDeclaredEffectNames(flow, diagnostics);
 
@@ -171,8 +173,7 @@ export function checkFlowEffects(
   }
 
   if (flow.qualifier === "pure" && flowNode !== undefined) {
-    const usedEffects = inferEffectsFromNode(flowNode);
-    for (const effect of usedEffects) {
+    for (const effect of observedEffects) {
       if (PURE_FORBIDDEN_EFFECTS.has(effect)) {
         diagnostics.push({
           code: "LLN-EFFECT-003",
@@ -200,10 +201,9 @@ export function checkFlowEffects(
   }
 
   if ((flow.qualifier === "secure" || flow.qualifier === "guarded") && flowNode !== undefined) {
-    const usedEffects = inferEffectsFromNode(flowNode);
     const declared = new Set(flow.declaredEffects);
 
-    for (const effect of usedEffects) {
+    for (const effect of observedEffects) {
       if (!declared.has(effect)) {
         diagnostics.push({
           code: "LLN-EFFECT-001",
@@ -218,7 +218,7 @@ export function checkFlowEffects(
     }
 
     for (const effect of flow.declaredEffects) {
-      if (!usedEffects.has(effect) && !hasTransitiveEffect(flow.name, effect, allFlows, callGraph, new Set())) {
+      if (!observedEffects.has(effect) && !hasTransitiveEffect(flow.name, effect, allFlows, callGraph, new Set())) {
         diagnostics.push({
           code: "LLN-EFFECT-002",
           name: "OVERDECLARED_EFFECT",
@@ -253,6 +253,7 @@ export function checkFlowEffects(
     flowName: flow.name,
     qualifier: flow.qualifier,
     declaredEffects: flow.declaredEffects,
+    observedEffects: [...observedEffects],
     diagnostics,
   };
 }

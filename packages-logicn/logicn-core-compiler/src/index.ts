@@ -61,6 +61,42 @@ export {
   type SymbolResolveResult,
 } from "./symbol-resolver.js";
 
+// Pass 8 - GIR Emitter
+export {
+  emitGIR,
+  type GIRFlow,
+  type GIRProgram,
+  type GIREmitResult,
+} from "./gir-emitter.js";
+
+// Stage A - AST Interpreter
+export {
+  executeFlow,
+  LLN_VOID,
+  LLN_NONE,
+  type LogicNValue,
+  type ExecutionResult,
+  type ExecutionAuditRecord,
+  type FlowExecutionResult,
+  type RuntimeAuditEntry,
+} from "./interpreter.js";
+
+// Stage A - Audit Writer
+export {
+  createAuditWriter,
+  buildFlowAuditEvent,
+  type AuditEvent,
+  type AuditWriter,
+} from "./audit-writer.js";
+
+// Stage A - Runtime Pipeline
+export {
+  run,
+  type RuntimeResult,
+  type RuntimeOptions,
+  type RuntimeMode,
+} from "./runtime.js";
+
 export interface CompilerInput {
   readonly projectRoot: string;
   readonly entryFiles: readonly string[];

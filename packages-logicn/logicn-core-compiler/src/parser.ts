@@ -193,7 +193,7 @@ class Parser {
         case "secure":   return this.parseSecureOrPureFlow();
         case "pure":     return this.parsePureFlow();
         case "guarded":  return this.parseGuardedFlow();
-        case "intent":   return this.parseGenericBlock("intentDecl");
+        case "intent":   return this.parseIntentDecl();
         case "governance": return this.parseGenericBlock("governanceDecl");
         case "api":      return this.parseGenericBlock("apiDecl");
         case "compute":  return this.parseComputeTarget();
@@ -277,6 +277,21 @@ class Parser {
       effectNames = result.names;
     }
 
+    // Optional governance/runtime clauses before the body.
+    const flowClauses: AstNode[] = [];
+    while (true) {
+      this.skipNewlines();
+      if (this.currentIs("keyword", "intent")) {
+        flowClauses.push(this.parseIntentDecl());
+        continue;
+      }
+      if (this.currentIs("keyword", "compute")) {
+        flowClauses.push(this.parseComputeTarget());
+        continue;
+      }
+      break;
+    }
+
     // Body block
     this.skipNewlines();
     const body = this.parseBlock();
@@ -296,6 +311,7 @@ class Parser {
       ...params,
       retTypeNode,
       ...(effectsNode !== undefined ? [effectsNode] : []),
+      ...flowClauses,
       body,
     ];
 
@@ -1051,6 +1067,19 @@ class Parser {
     }
 
     return { kind, value: `${keyword} ${name}`.trim(), location: loc };
+  }
+
+  private parseIntentDecl(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "intent"
+
+    let value = "";
+    if (this.current().kind === "string" || this.current().kind === "identifier") {
+      value = this.current().value;
+      this.advance();
+    }
+
+    return { kind: "intentDecl", value, location: loc };
   }
 
   /** Skips a balanced `{ ... }` block without parsing the interior. */
