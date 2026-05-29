@@ -7,7 +7,7 @@
 </head>
 <body>
 <h1>LogicN Project Graph</h1>
-<p>1749 nodes, 2624 relationships.</p>
+<p>1766 nodes, 2709 relationships.</p>
 <h2>Nodes</h2>
 <ul><li><strong>logicn-core</strong> <span>Package</span></li>
 <li><strong>logicn-core-compiler</strong> <span>Package</span></li>
@@ -320,12 +320,16 @@
 <li><strong>local-ai-review.md</strong> <span>Document</span></li>
 <li><strong>local-low-bit-ai-review.md</strong> <span>Document</span></li>
 <li><strong>logic-architecture-policy.md</strong> <span>Document</span></li>
+<li><strong>logicn-adaptive-runtime-profiles.md</strong> <span>Document</span></li>
 <li><strong>logicn-ai-neural-npu-targets.md</strong> <span>Document</span></li>
 <li><strong>logicn-api-boundary-architecture.md</strong> <span>Document</span></li>
 <li><strong>logicn-ast-published-schema.md</strong> <span>Document</span></li>
+<li><strong>logicn-ast-to-gir.md</strong> <span>Document</span></li>
+<li><strong>logicn-audit-writer-spec.md</strong> <span>Document</span></li>
 <li><strong>logicn-code-examples-full-flow.md</strong> <span>Document</span></li>
 <li><strong>logicn-compiler-enforcement-compute.md</strong> <span>Document</span></li>
 <li><strong>logicn-compiler-optimizations.md</strong> <span>Document</span></li>
+<li><strong>logicn-compiler-pipeline.md</strong> <span>Document</span></li>
 <li><strong>logicn-compliance-governance.md</strong> <span>Document</span></li>
 <li><strong>logicn-concept-audit-proof.md</strong> <span>Document</span></li>
 <li><strong>logicn-concept-coordinated-compute.md</strong> <span>Document</span></li>
@@ -378,6 +382,7 @@
 <li><strong>logicn-glossary.md</strong> <span>Document</span></li>
 <li><strong>logicn-governance-architecture.md</strong> <span>Document</span></li>
 <li><strong>logicn-governance-diff-ci.md</strong> <span>Document</span></li>
+<li><strong>logicn-governance-verifier-spec.md</strong> <span>Document</span></li>
 <li><strong>logicn-intent-graph.md</strong> <span>Document</span></li>
 <li><strong>logicn-memory-borrow-move-pinned.md</strong> <span>Document</span></li>
 <li><strong>logicn-memory-request-scope-arenas.md</strong> <span>Document</span></li>
@@ -386,12 +391,21 @@
 <li><strong>logicn-native-module-system.md</strong> <span>Document</span></li>
 <li><strong>logicn-native-runtime-roadmap.md</strong> <span>Document</span></li>
 <li><strong>logicn-natural-language-governance-summary.md</strong> <span>Document</span></li>
+<li><strong>logicn-package-manifest-spec.md</strong> <span>Document</span></li>
+<li><strong>logicn-package-naming.md</strong> <span>Document</span></li>
 <li><strong>logicn-photonic-distinct-compute-model.md</strong> <span>Document</span></li>
+<li><strong>logicn-proof-chain-spec.md</strong> <span>Document</span></li>
+<li><strong>logicn-quantum-target-bridge.md</strong> <span>Document</span></li>
+<li><strong>logicn-route-runtime-spec.md</strong> <span>Document</span></li>
+<li><strong>logicn-runtime-lifecycle.md</strong> <span>Document</span></li>
 <li><strong>logicn-runtime-rationale.md</strong> <span>Document</span></li>
+<li><strong>logicn-runtime-value-model.md</strong> <span>Document</span></li>
 <li><strong>logicn-security-compile-time-crypto.md</strong> <span>Document</span></li>
 <li><strong>logicn-security-secret-safety.md</strong> <span>Document</span></li>
 <li><strong>logicn-security-taint-types.md</strong> <span>Document</span></li>
+<li><strong>logicn-stdlib-reference.md</strong> <span>Document</span></li>
 <li><strong>logicn-supply-chain-package-governance.md</strong> <span>Document</span></li>
+<li><strong>logicn-symbol-resolver-spec.md</strong> <span>Document</span></li>
 <li><strong>logicn-syntax-if-match-optional.md</strong> <span>Document</span></li>
 <li><strong>logicn-syntax-loops-iteration.md</strong> <span>Document</span></li>
 <li><strong>logicn-tensor-arity-decision.md</strong> <span>Document</span></li>
@@ -871,6 +885,9 @@
 <li><strong>FlowMeta</strong> <span>Type</span></li>
 <li><strong>ParseResult</strong> <span>Type</span></li>
 <li><strong>parseProgram</strong> <span>Flow</span></li>
+<li><strong>SymbolDiagnostic</strong> <span>Type</span></li>
+<li><strong>SymbolResolveResult</strong> <span>Type</span></li>
+<li><strong>resolveSymbols</strong> <span>Flow</span></li>
 <li><strong>TypeDiagnostic</strong> <span>Type</span></li>
 <li><strong>TypeCheckResult</strong> <span>Type</span></li>
 <li><strong>checkTypes</strong> <span>Flow</span></li>
@@ -2028,6 +2045,9 @@
 <li>doc:docs/Knowledge-Bases/logicn-ast-published-schema.md <code>documents</code> package:logicn-core-reports</li>
 <li>doc:docs/Knowledge-Bases/logicn-ast-published-schema.md <code>documents</code> package:logicn-core-cli</li>
 <li>doc:docs/Knowledge-Bases/logicn-ast-published-schema.md <code>documents</code> package:logicn-devtools-project-graph</li>
+<li>doc:docs/Knowledge-Bases/logicn-ast-to-gir.md <code>documents</code> package:logicn-core</li>
+<li>doc:docs/Knowledge-Bases/logicn-audit-writer-spec.md <code>documents</code> package:logicn-core</li>
+<li>doc:docs/Knowledge-Bases/logicn-audit-writer-spec.md <code>documents</code> package:logicn-core-reports</li>
 <li>doc:docs/Knowledge-Bases/logicn-compiler-enforcement-compute.md <code>documents</code> package:logicn-core</li>
 <li>doc:docs/Knowledge-Bases/logicn-compiler-enforcement-compute.md <code>documents</code> package:logicn-core-compiler</li>
 <li>doc:docs/Knowledge-Bases/logicn-compiler-enforcement-compute.md <code>documents</code> package:logicn-core-runtime</li>
@@ -2047,6 +2067,8 @@
 <li>doc:docs/Knowledge-Bases/logicn-compiler-optimizations.md <code>documents</code> package:logicn-target-wasm</li>
 <li>doc:docs/Knowledge-Bases/logicn-compiler-optimizations.md <code>documents</code> package:logicn-target-gpu</li>
 <li>doc:docs/Knowledge-Bases/logicn-compiler-optimizations.md <code>documents</code> package:logicn-tools-benchmark</li>
+<li>doc:docs/Knowledge-Bases/logicn-compiler-pipeline.md <code>documents</code> package:logicn-core</li>
+<li>doc:docs/Knowledge-Bases/logicn-compiler-pipeline.md <code>documents</code> package:logicn-core-compiler</li>
 <li>doc:docs/Knowledge-Bases/logicn-compliance-governance.md <code>documents</code> package:logicn-core</li>
 <li>doc:docs/Knowledge-Bases/logicn-compliance-governance.md <code>documents</code> package:logicn-core-compiler</li>
 <li>doc:docs/Knowledge-Bases/logicn-compliance-governance.md <code>documents</code> package:logicn-core-security</li>
@@ -2241,23 +2263,18 @@
 <li>doc:docs/Knowledge-Bases/logicn-natural-language-governance-summary.md <code>documents</code> package:logicn-ai</li>
 <li>doc:docs/Knowledge-Bases/logicn-natural-language-governance-summary.md <code>documents</code> package:logicn-core-cli</li>
 <li>doc:docs/Knowledge-Bases/logicn-natural-language-governance-summary.md <code>documents</code> package:logicn-devtools-project-graph</li>
-<li>doc:docs/Knowledge-Bases/logicn-photonic-distinct-compute-model.md <code>documents</code> package:logicn-core</li>
-<li>doc:docs/Knowledge-Bases/logicn-photonic-distinct-compute-model.md <code>documents</code> package:logicn-core-reports</li>
-<li>doc:docs/Knowledge-Bases/logicn-photonic-distinct-compute-model.md <code>documents</code> package:logicn-core-compute</li>
-<li>doc:docs/Knowledge-Bases/logicn-photonic-distinct-compute-model.md <code>documents</code> package:logicn-core-photonic</li>
-<li>doc:docs/Knowledge-Bases/logicn-photonic-distinct-compute-model.md <code>documents</code> package:logicn-target-photonic</li>
-<li>doc:docs/Knowledge-Bases/logicn-photonic-distinct-compute-model.md <code>documents</code> package:logicn-tools-benchmark</li>
-<li>doc:docs/Knowledge-Bases/logicn-security-compile-time-crypto.md <code>documents</code> package:logicn-core</li>
-<li>doc:docs/Knowledge-Bases/logicn-security-compile-time-crypto.md <code>documents</code> package:logicn-core-compiler</li>
-<li>doc:docs/Knowledge-Bases/logicn-security-compile-time-crypto.md <code>documents</code> package:logicn-core-runtime</li>
-<li>doc:docs/Knowledge-Bases/logicn-security-compile-time-crypto.md <code>documents</code> package:logicn-core-network</li>
-<li>doc:docs/Knowledge-Bases/logicn-security-compile-time-crypto.md <code>documents</code> package:logicn-core-security</li>
-<li>doc:docs/Knowledge-Bases/logicn-security-compile-time-crypto.md <code>documents</code> package:logicn-core-config</li>
-<li>doc:docs/Knowledge-Bases/logicn-security-compile-time-crypto.md <code>documents</code> package:logicn-core-reports</li>
-<li>doc:docs/Knowledge-Bases/logicn-security-secret-safety.md <code>documents</code> package:logicn-core</li>
-<li>doc:docs/Knowledge-Bases/logicn-security-secret-safety.md <code>documents</code> package:logicn-core-compiler</li>
-<li>doc:docs/Knowledge-Bases/logicn-security-secret-safety.md <code>documents</code> package:logicn-core-runtime</li>
-<li>doc:docs/Knowledge-Bases/logicn-security-secret-safety.md <code>documents</code> package:logicn-core-security</li>
-<li>doc:docs/Knowledge-Bases/logicn-security-secret-safety.md <code>documents</code> package:logicn-core-config</li></ul>
+<li>doc:docs/Knowledge-Bases/logicn-package-manifest-spec.md <code>documents</code> package:logicn-core</li>
+<li>doc:docs/Knowledge-Bases/logicn-package-manifest-spec.md <code>documents</code> package:logicn-core-compiler</li>
+<li>doc:docs/Knowledge-Bases/logicn-package-manifest-spec.md <code>documents</code> package:logicn-db-postgres</li>
+<li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-core</li>
+<li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-core-compiler</li>
+<li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-core-runtime</li>
+<li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-core-network</li>
+<li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-core-security</li>
+<li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-core-config</li>
+<li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-core-reports</li>
+<li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-core-logic</li>
+<li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-core-vector</li>
+<li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-core-compute</li></ul>
 </body>
 </html>

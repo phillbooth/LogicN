@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-05-29T09:46:43.627Z",
+  "generatedAt": "2026-05-29T16:54:55.027Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -2856,6 +2856,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-adaptive-runtime-profiles.md",
+      "kind": "Document",
+      "label": "logicn-adaptive-runtime-profiles.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-adaptive-runtime-profiles.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-ai-neural-npu-targets.md",
       "kind": "Document",
       "label": "logicn-ai-neural-npu-targets.md",
@@ -2883,6 +2892,24 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-ast-to-gir.md",
+      "kind": "Document",
+      "label": "logicn-ast-to-gir.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-ast-to-gir.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-audit-writer-spec.md",
+      "kind": "Document",
+      "label": "logicn-audit-writer-spec.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-audit-writer-spec.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-code-examples-full-flow.md",
       "kind": "Document",
       "label": "logicn-code-examples-full-flow.md",
@@ -2905,6 +2932,15 @@
       "kind": "Document",
       "label": "logicn-compiler-optimizations.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-compiler-optimizations.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-compiler-pipeline.md",
+      "kind": "Document",
+      "label": "logicn-compiler-pipeline.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-compiler-pipeline.md",
       "tags": [
         "document"
       ]
@@ -3378,6 +3414,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-governance-verifier-spec.md",
+      "kind": "Document",
+      "label": "logicn-governance-verifier-spec.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-governance-verifier-spec.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-intent-graph.md",
       "kind": "Document",
       "label": "logicn-intent-graph.md",
@@ -3450,6 +3495,24 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-package-manifest-spec.md",
+      "kind": "Document",
+      "label": "logicn-package-manifest-spec.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-package-manifest-spec.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "kind": "Document",
+      "label": "logicn-package-naming.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-package-naming.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-photonic-distinct-compute-model.md",
       "kind": "Document",
       "label": "logicn-photonic-distinct-compute-model.md",
@@ -3459,10 +3522,55 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-proof-chain-spec.md",
+      "kind": "Document",
+      "label": "logicn-proof-chain-spec.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-proof-chain-spec.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-quantum-target-bridge.md",
+      "kind": "Document",
+      "label": "logicn-quantum-target-bridge.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-quantum-target-bridge.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-route-runtime-spec.md",
+      "kind": "Document",
+      "label": "logicn-route-runtime-spec.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-route-runtime-spec.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-runtime-lifecycle.md",
+      "kind": "Document",
+      "label": "logicn-runtime-lifecycle.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-runtime-lifecycle.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-runtime-rationale.md",
       "kind": "Document",
       "label": "logicn-runtime-rationale.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-runtime-rationale.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-runtime-value-model.md",
+      "kind": "Document",
+      "label": "logicn-runtime-value-model.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-runtime-value-model.md",
       "tags": [
         "document"
       ]
@@ -3495,10 +3603,28 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-stdlib-reference.md",
+      "kind": "Document",
+      "label": "logicn-stdlib-reference.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-stdlib-reference.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-supply-chain-package-governance.md",
       "kind": "Document",
       "label": "logicn-supply-chain-package-governance.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-supply-chain-package-governance.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-symbol-resolver-spec.md",
+      "kind": "Document",
+      "label": "logicn-symbol-resolver-spec.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-symbol-resolver-spec.md",
       "tags": [
         "document"
       ]
@@ -8139,6 +8265,36 @@
       "kind": "Flow",
       "label": "parseProgram",
       "sourcePath": "packages-logicn/logicn-core-compiler/src/parser.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:SymbolDiagnostic",
+      "kind": "Type",
+      "label": "SymbolDiagnostic",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/symbol-resolver.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:SymbolResolveResult",
+      "kind": "Type",
+      "label": "SymbolResolveResult",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/symbol-resolver.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:resolveSymbols",
+      "kind": "Flow",
+      "label": "resolveSymbols",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/symbol-resolver.ts",
       "tags": [
         "function",
         "logicn-core-compiler"
@@ -18900,6 +19056,27 @@
       "evidencePath": "docs/Knowledge-Bases/logicn-ast-published-schema.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/logicn-ast-to-gir.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-ast-to-gir.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-audit-writer-spec.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-audit-writer-spec.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-audit-writer-spec.md",
+      "to": "package:logicn-core-reports",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-audit-writer-spec.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/logicn-compiler-enforcement-compute.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -19031,6 +19208,20 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/Knowledge-Bases/logicn-compiler-optimizations.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-compiler-pipeline.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-compiler-pipeline.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-compiler-pipeline.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-compiler-pipeline.md"
     },
     {
       "from": "doc:docs/Knowledge-Bases/logicn-compliance-governance.md",
@@ -20391,6 +20582,405 @@
       "evidencePath": "docs/Knowledge-Bases/logicn-natural-language-governance-summary.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-manifest-spec.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-manifest-spec.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-manifest-spec.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-manifest-spec.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-manifest-spec.md",
+      "to": "package:logicn-db-postgres",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-manifest-spec.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-core-runtime",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-core-config",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-core-reports",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-core-logic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-core-vector",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-core-compute",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-ai",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-ai-lowbit",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-ai-agent",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-ai-neural",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-ai-neuromorphic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-data",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-data-html",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-data-search",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-data-archive",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-data-db",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-data-model",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-data-query",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-data-response",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-data-json",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-data-database",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-data-pipeline",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-data-reports",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-web",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-web-render",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-web-state",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-web-components",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-web-router",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-web-events",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-db-postgres",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-db-mysql",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-db-sqlite",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-db-opensearch",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-db-firestore",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-core-photonic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-target-cpu",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-cpu-kernels",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-target-native",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-target-js",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-target-wasm",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-target-gpu",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-target-ai-accelerator",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-target-photonic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-framework-app-kernel",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-framework-api-server",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-core-cli",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-core-tasks",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-tools-benchmark",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-devtools-project-graph",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-package-naming.md",
+      "to": "package:logicn-framework-example-app",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-package-naming.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/logicn-photonic-distinct-compute-model.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -20431,6 +21021,125 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/Knowledge-Bases/logicn-photonic-distinct-compute-model.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-proof-chain-spec.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-proof-chain-spec.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-proof-chain-spec.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-proof-chain-spec.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-proof-chain-spec.md",
+      "to": "package:logicn-core-reports",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-proof-chain-spec.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-quantum-target-bridge.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-quantum-target-bridge.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-quantum-target-bridge.md",
+      "to": "package:logicn-core-compute",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-quantum-target-bridge.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-quantum-target-bridge.md",
+      "to": "package:logicn-core-photonic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-quantum-target-bridge.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-quantum-target-bridge.md",
+      "to": "package:logicn-target-cpu",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-quantum-target-bridge.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-quantum-target-bridge.md",
+      "to": "package:logicn-target-native",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-quantum-target-bridge.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-quantum-target-bridge.md",
+      "to": "package:logicn-target-wasm",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-quantum-target-bridge.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-quantum-target-bridge.md",
+      "to": "package:logicn-target-gpu",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-quantum-target-bridge.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-quantum-target-bridge.md",
+      "to": "package:logicn-target-photonic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-quantum-target-bridge.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-route-runtime-spec.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-route-runtime-spec.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-route-runtime-spec.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-route-runtime-spec.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-route-runtime-spec.md",
+      "to": "package:logicn-framework-api-server",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-route-runtime-spec.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-lifecycle.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-lifecycle.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-lifecycle.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-lifecycle.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-value-model.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-value-model.md"
     },
     {
       "from": "doc:docs/Knowledge-Bases/logicn-security-compile-time-crypto.md",
@@ -20566,6 +21275,13 @@
       "evidencePath": "docs/Knowledge-Bases/logicn-security-taint-types.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/logicn-stdlib-reference.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-stdlib-reference.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/logicn-supply-chain-package-governance.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -20613,6 +21329,20 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/Knowledge-Bases/logicn-supply-chain-package-governance.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-symbol-resolver-spec.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-symbol-resolver-spec.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-symbol-resolver-spec.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-symbol-resolver-spec.md"
     },
     {
       "from": "doc:docs/Knowledge-Bases/logicn-syntax-if-match-optional.md",
@@ -27340,6 +28070,27 @@
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/parser.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:SymbolDiagnostic",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/symbol-resolver.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:SymbolResolveResult",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/symbol-resolver.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:resolveSymbols",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/symbol-resolver.ts"
     },
     {
       "from": "package:logicn-core-compiler",

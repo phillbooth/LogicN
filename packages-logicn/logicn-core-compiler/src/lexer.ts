@@ -16,6 +16,7 @@ export type TokenKind =
   | "identifier"
   | "keyword"
   | "string"
+  | "char"
   | "number"
   | "boolean"
   | "operator"
@@ -65,14 +66,18 @@ export interface LexResult {
 export const V1_ACTIVE_KEYWORDS: ReadonlySet<string> = new Set([
   // Flow qualifiers + declaration
   "flow", "secure", "pure", "guarded", "privileged", "unsafe", "experimental",
+  // Local helpers + external entry points
+  "fn", "route",
   // Flow sub-declarations
-  "effects", "intent", "governance", "api", "package",
+  "effects", "with", "intent", "governance", "api", "package",
+  // Governance declarations
+  "authority", "policy",
   // Binding
   "let", "mut", "readonly",
   // Control flow
   "match", "if", "else", "return",
   // Declarations
-  "type", "enum", "import", "use",
+  "type", "record", "enum", "import", "use",
   // Booleans
   "true", "false",
   // Memory keywords (Phase 3–4)
@@ -82,9 +87,9 @@ export const V1_ACTIVE_KEYWORDS: ReadonlySet<string> = new Set([
   // Value-state keywords (Phase 4)
   "safe", "validated", "unvalidated",
   // Value-state trust/secrecy markers (v1)
-  "tainted", "secret", "protected",
-  // Compute target (post-v1 runtime; reserved now)
-  "compute",
+  "tainted", "secret", "protected", "redacted",
+  // Compute target declarations
+  "compute", "target",
 ]);
 
 /** Words reserved for post-v1 grammar — produce LLN-SYNTAX-003 if used as identifiers. */
@@ -208,6 +213,42 @@ export function lex(source: string, file: string): LexResult {
       continue;
     }
 
+    // ── Char literal 'x' ───────────────────────────────────────────────────
+    if (ch === "'") {
+      advance(); // consume opening single quote
+      let value = "";
+      if (peek() === "\\" && pos < source.length) {
+        value += advance(); // backslash
+        if (pos < source.length) value += advance(); // escaped char
+      } else if (peek() !== "'" && peek() !== "\n") {
+        value += advance(); // single character
+      }
+      if (peek() === "'") {
+        if (value === "") {
+          diag(
+            "LLN-CHAR-003",
+            "MULTI_CHAR_LITERAL",
+            "Char literal must contain exactly one character unit.",
+            startLine,
+            startCol,
+            `Provide one character, or use an empty string: ""`,
+          );
+        }
+        advance(); // consume closing single quote
+      } else {
+        diag(
+          "LLN-CHAR-003",
+          "MULTI_CHAR_LITERAL",
+          "Char literal must contain exactly one character unit.",
+          startLine,
+          startCol,
+          `Use double quotes for strings: "${value}"`,
+        );
+      }
+      tokens.push(tok("char", value, startPos, startLine, startCol));
+      continue;
+    }
+
     // ── String literal "..." ───────────────────────────────────────────────
     if (ch === '"') {
       advance(); // consume opening quote
@@ -236,9 +277,49 @@ export function lex(source: string, file: string): LexResult {
       continue;
     }
 
-    // ── Number literal (integer, decimal, underscore separators) ──────────
+    // ── Number literal (integer, decimal, base-prefixed, separators) ───────
     if (ch >= "0" && ch <= "9") {
       let value = "";
+
+      // Hex: 0x...
+      if (ch === "0" && (peek(1) === "x" || peek(1) === "X")) {
+        value += advance(); // 0
+        value += advance(); // x
+        while (
+          pos < source.length &&
+          ((peek() >= "0" && peek() <= "9") ||
+            (peek() >= "a" && peek() <= "f") ||
+            (peek() >= "A" && peek() <= "F"))
+        ) {
+          value += advance();
+        }
+        tokens.push(tok("number", value, startPos, startLine, startCol));
+        continue;
+      }
+
+      // Binary: 0b...
+      if (ch === "0" && (peek(1) === "b" || peek(1) === "B")) {
+        value += advance(); // 0
+        value += advance(); // b
+        while (pos < source.length && (peek() === "0" || peek() === "1")) {
+          value += advance();
+        }
+        tokens.push(tok("number", value, startPos, startLine, startCol));
+        continue;
+      }
+
+      // Octal: 0o...
+      if (ch === "0" && (peek(1) === "o" || peek(1) === "O")) {
+        value += advance(); // 0
+        value += advance(); // o
+        while (pos < source.length && peek() >= "0" && peek() <= "7") {
+          value += advance();
+        }
+        tokens.push(tok("number", value, startPos, startLine, startCol));
+        continue;
+      }
+
+      // Decimal (keep underscore support)
       while (pos < source.length && ((peek() >= "0" && peek() <= "9") || peek() === "_")) {
         value += advance();
       }

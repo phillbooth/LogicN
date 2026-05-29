@@ -23,6 +23,10 @@ function effectWarnings(results) {
   return results.flatMap((r) => r.diagnostics.filter((d) => d.severity === "warning"));
 }
 
+function hasEffectDiag(results, code) {
+  return results.flatMap((r) => r.diagnostics).some((d) => d.code === code);
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe("Effect Checker — pure flow rules", () => {
@@ -159,5 +163,234 @@ effects [database.read] {
     assert.equal(effectResults.length, 2);
     assert.equal(effectErrors([effectResults[0]]).length, 0);
     assert.ok(effectErrors([effectResults[1]]).length > 0);
+  });
+});
+
+describe("Effect checker - guarded flow", () => {
+  it("accepts guarded flow with declared effects", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
+  with effects [database.write]
+{
+  let orderId = OrdersDB.insert(order)?
+  return Ok(orderId)
+}
+`);
+    assert.equal(effectErrors(effectResults).length, 0);
+  });
+
+  it("emits LLN-EFFECT-001 for guarded flow missing a declared effect", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
+  with effects []
+{
+  let orderId = OrdersDB.insert(order)?
+  return Ok(orderId)
+}
+`);
+    assert.ok(hasEffectDiag(effectResults, "LLN-EFFECT-001"));
+  });
+
+  it("warns for a guarded flow with an overdeclared effect", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow noOp(order: Order) -> Result<OrderId, OrderError>
+  with effects [database.write]
+{
+  return Ok(order.id)
+}
+`);
+    assert.ok(effectWarnings(effectResults).some((d) => d.name === "OVERDECLARED_EFFECT"));
+  });
+});
+
+describe("Effect checker - pure flow calls effectful flow", () => {
+  it("emits LLN-EFFECT-003 when pure flow calls a guarded flow", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
+  with effects [database.write]
+{
+  return Ok(OrdersDB.insert(order)?)
+}
+
+pure flow calculate(order: Order) -> Result<OrderId, OrderError> {
+  return saveOrder(order)
+}
+`);
+    assert.ok(hasEffectDiag(effectResults, "LLN-EFFECT-003"));
+  });
+
+  it("allows pure flow calling another pure flow", () => {
+    const { effectResults } = parseAndCheck(`
+pure flow add(a: Int, b: Int) -> Int {
+  return a + b
+}
+
+pure flow calculate(a: Int, b: Int) -> Int {
+  return add(a, b)
+}
+`);
+    assert.equal(effectErrors(effectResults).length, 0);
+  });
+
+  it("allows guarded flow calling guarded flow when same effects are declared", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
+  with effects [database.write]
+{
+  return Ok(OrdersDB.insert(order)?)
+}
+
+guarded flow processOrder(order: Order) -> Result<OrderId, ProcessError>
+  with effects [database.write]
+{
+  let orderId = saveOrder(order)?
+  return Ok(orderId)
+}
+`);
+    assert.equal(effectErrors(effectResults).length, 0);
+  });
+});
+
+describe("Effect checker - canonical effect names", () => {
+  it("effects [network] emits LLN-EFFECT-004 with suggestion network.outbound", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow fetchRate(currency: String) -> Result<Decimal, RateError>
+  with effects [network]
+{
+  unsafe let rawResponse = http.get("https://rates.example.com/" + currency)?
+  return json.decode(rawResponse)
+}
+`);
+    const diag = effectResults.flatMap((r) => r.diagnostics).find((d) => d.code === "LLN-EFFECT-004");
+    assert.equal(diag?.suggestedCode, "network.outbound");
+  });
+
+  it("effects [database] emits LLN-EFFECT-004 with suggestion database.read", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow loadOrder(order: Order) -> Result<Order, OrderError>
+  with effects [database]
+{
+  return Ok(OrdersDB.find(order.id)?)
+}
+`);
+    const diag = effectResults.flatMap((r) => r.diagnostics).find((d) => d.code === "LLN-EFFECT-004");
+    assert.equal(diag?.suggestedCode, "database.read");
+  });
+
+  it("effects [network.outbound] has no canonical-name diagnostic", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow fetchRate(currency: String) -> Result<Decimal, RateError>
+  with effects [network.outbound]
+{
+  unsafe let rawResponse = http.get("https://rates.example.com/" + currency)?
+  return json.decode(rawResponse)
+}
+`);
+    assert.ok(!effectResults.flatMap((r) => r.diagnostics).some((d) => d.code === "LLN-EFFECT-004"));
+  });
+});
+
+describe("Effect checker - inter-flow propagation", () => {
+  it("flow A calls flow B and declares B's effect: no diagnostics", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
+  with effects [database.write]
+{
+  return Ok(OrdersDB.insert(order)?)
+}
+
+guarded flow processOrder(order: Order) -> Result<OrderId, ProcessError>
+  with effects [database.write]
+{
+  let orderId = saveOrder(order)?
+  return Ok(orderId)
+}
+`);
+    assert.equal(effectErrors(effectResults).length, 0);
+  });
+
+  it("flow A calls flow B and misses B's effect: LLN-EFFECT-002", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
+  with effects [database.write]
+{
+  return Ok(OrdersDB.insert(order)?)
+}
+
+guarded flow processOrder(order: Order) -> Result<OrderId, ProcessError>
+  with effects []
+{
+  let orderId = saveOrder(order)?
+  return Ok(orderId)
+}
+`);
+    assert.ok(hasEffectDiag(effectResults, "LLN-EFFECT-002"));
+  });
+
+  it("two-hop propagation requires the root caller to declare inherited effects", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow writeOrder(order: Order) -> Result<OrderId, OrderError>
+  with effects [database.write]
+{
+  return Ok(OrdersDB.insert(order)?)
+}
+
+guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
+  with effects [database.write]
+{
+  return writeOrder(order)
+}
+
+guarded flow processOrder(order: Order) -> Result<OrderId, ProcessError>
+  with effects []
+{
+  return saveOrder(order)
+}
+`);
+    assert.ok(hasEffectDiag(effectResults, "LLN-EFFECT-002"));
+  });
+});
+
+describe("Effect checker - extended call patterns", () => {
+  it("http.get in pure flow body emits LLN-EFFECT-003", () => {
+    const { effectResults } = parseAndCheck(`
+pure flow fetchRate(currency: String) -> Result<Decimal, RateError> {
+  unsafe let rawResponse = http.get("https://rates.example.com/" + currency)?
+  return json.decode(rawResponse)
+}
+`);
+    assert.ok(hasEffectDiag(effectResults, "LLN-EFFECT-003"));
+  });
+
+  it("http.post in guarded flow with network.outbound declared has no diagnostics", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow syncOrder(order: Order) -> Result<Unit, SyncError>
+  with effects [network.outbound]
+{
+  let _ = http.post("https://sync.example.com/orders", order)?
+  return Ok(unit)
+}
+`);
+    assert.equal(effectErrors(effectResults).length, 0);
+  });
+
+  it("fs.readText in pure flow emits LLN-EFFECT-003", () => {
+    const { effectResults } = parseAndCheck(`
+pure flow readFile(path: String) -> Result<String, FileError> {
+  return fs.readText(path)
+}
+`);
+    assert.ok(hasEffectDiag(effectResults, "LLN-EFFECT-003"));
+  });
+
+  it("Env.get in guarded flow without secret.read emits LLN-EFFECT-001", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow loadSecret(name: String) -> Result<String, Error>
+  with effects []
+{
+  return Env.get(name)
+}
+`);
+    assert.ok(hasEffectDiag(effectResults, "LLN-EFFECT-001"));
   });
 });

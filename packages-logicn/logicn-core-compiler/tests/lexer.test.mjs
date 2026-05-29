@@ -35,10 +35,22 @@ describe("Lexer — keyword table", () => {
 
   it("active keywords include flow sub-declaration keywords", () => {
     assert.ok(V1_ACTIVE_KEYWORDS.has("effects"),    "expected 'effects' in V1_ACTIVE_KEYWORDS");
+    assert.ok(V1_ACTIVE_KEYWORDS.has("with"),       "expected 'with' in V1_ACTIVE_KEYWORDS");
     assert.ok(V1_ACTIVE_KEYWORDS.has("intent"),     "expected 'intent' in V1_ACTIVE_KEYWORDS");
     assert.ok(V1_ACTIVE_KEYWORDS.has("governance"), "expected 'governance' in V1_ACTIVE_KEYWORDS");
     assert.ok(V1_ACTIVE_KEYWORDS.has("api"),        "expected 'api' in V1_ACTIVE_KEYWORDS");
     assert.ok(V1_ACTIVE_KEYWORDS.has("package"),    "expected 'package' in V1_ACTIVE_KEYWORDS");
+  });
+
+  it("active keywords include v1 route, fn, qualifier, governance, record, and target words", () => {
+    for (const keyword of ["fn", "route", "redacted", "record", "authority", "policy", "with", "target"]) {
+      assert.ok(V1_ACTIVE_KEYWORDS.has(keyword), `expected '${keyword}' in V1_ACTIVE_KEYWORDS`);
+    }
+  });
+
+  it("active keywords and future-reserved keywords do not overlap", () => {
+    const overlap = [...V1_ACTIVE_KEYWORDS].filter((keyword) => V1_FUTURE_RESERVED.has(keyword));
+    assert.deepEqual(overlap, []);
   });
 
   it("future-reserved set includes async and await", () => {
@@ -69,6 +81,23 @@ describe("Lexer — token production", () => {
     assert.equal(nonEof.map((t) => t.value).join(" "), "flow secure pure let mut");
   });
 
+  it("classifies new v1 reserved words as keywords", () => {
+    const source = "fn route redacted record authority policy with target";
+    const result = lex(source, "test.lln");
+    const nonEof = result.tokens.filter((t) => t.kind !== "eof" && t.kind !== "newline");
+    assert.ok(nonEof.every((t) => t.kind === "keyword"),
+      `Expected all keyword tokens, got: ${nonEof.map((t) => `${t.value}:${t.kind}`).join(", ")}`);
+    assert.equal(nonEof.map((t) => t.value).join(" "), source);
+  });
+
+  it("does not classify new v1 reserved words as identifiers", () => {
+    const result = lex("let fn = route", "test.lln");
+    const fnToken = result.tokens.find((t) => t.value === "fn");
+    const routeToken = result.tokens.find((t) => t.value === "route");
+    assert.equal(fnToken?.kind, "keyword");
+    assert.equal(routeToken?.kind, "keyword");
+  });
+
   it("classifies identifiers that are not keywords", () => {
     const result = lex("getOrderStatus OrderId MyType", "test.lln");
     const nonEof = result.tokens.filter((t) => t.kind !== "eof" && t.kind !== "newline");
@@ -80,6 +109,21 @@ describe("Lexer — token production", () => {
     const str = result.tokens.find((t) => t.kind === "string");
     assert.ok(str !== undefined);
     assert.equal(str.value, '"hello world"');
+  });
+
+  it("tokenises char literals", () => {
+    const result = lex("'A' 'L' '\\n'", "test.lln");
+    const chars = result.tokens.filter((t) => t.kind === "char");
+    assert.equal(chars.length, 3);
+    assert.equal(chars[0]?.value, "A");
+    assert.equal(chars[1]?.value, "L");
+    assert.equal(chars[2]?.value, "\\n");
+  });
+
+  it("reports LLN-CHAR-003 for an empty char literal", () => {
+    const result = lex("''", "test.lln");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-CHAR-003");
+    assert.ok(diag !== undefined, "Expected LLN-CHAR-003 diagnostic");
   });
 
   it("reports LLN-PARSE-003 for unterminated string", () => {
@@ -95,6 +139,40 @@ describe("Lexer — token production", () => {
     assert.equal(numbers[0]?.value, "42");
     assert.equal(numbers[1]?.value, "3.14");
     assert.equal(numbers[2]?.value, "1_000_000");
+  });
+
+  it("tokenises hex number literals", () => {
+    const result = lex("0xFF 0x1A 0x00", "test.lln");
+    const numbers = result.tokens.filter((t) => t.kind === "number");
+    assert.deepEqual(numbers.map((t) => t.value), ["0xFF", "0x1A", "0x00"]);
+  });
+
+  it("tokenises binary number literals", () => {
+    const result = lex("0b1010", "test.lln");
+    const number = result.tokens.find((t) => t.kind === "number");
+    assert.equal(number?.value, "0b1010");
+  });
+
+  it("tokenises octal number literals", () => {
+    const result = lex("0o755", "test.lln");
+    const number = result.tokens.find((t) => t.kind === "number");
+    assert.equal(number?.value, "0o755");
+  });
+
+  it("keeps a Byte hex initializer as an operator followed by one number token", () => {
+    const result = lex("let byte: Byte = 0xFF", "test.lln");
+    const nonEof = result.tokens.filter((t) => t.kind !== "eof" && t.kind !== "newline");
+    assert.deepEqual(
+      nonEof.map((t) => `${t.kind}:${t.value}`),
+      [
+        "keyword:let",
+        "identifier:byte",
+        "symbol::",
+        "identifier:Byte",
+        "operator:=",
+        "number:0xFF",
+      ],
+    );
   });
 
   it("tokenises two-char operators", () => {

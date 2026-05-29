@@ -24,7 +24,9 @@ export type AstNodeKind =
   | "program"
   | "importDecl"
   | "typeDecl"
+  | "recordDecl"
   | "enumDecl"
+  | "enumVariant"
   | "intentDecl"
   | "governanceDecl"
   | "apiDecl"
@@ -32,6 +34,8 @@ export type AstNodeKind =
   | "flowDecl"
   | "secureFlowDecl"
   | "pureFlowDecl"
+  | "guardedFlowDecl"
+  | "fnDecl"
   // Flow sub-nodes
   | "paramDecl"
   | "typeRef"
@@ -85,7 +89,7 @@ export interface ParseDiagnostic {
 /** Metadata extracted from a flow declaration header. */
 export interface FlowMeta {
   readonly name: string;
-  readonly qualifier: "flow" | "secure" | "pure";
+  readonly qualifier: "flow" | "secure" | "pure" | "guarded";
   readonly params: readonly string[];
   readonly returnType: string;
   readonly declaredEffects: readonly string[];
@@ -178,10 +182,12 @@ class Parser {
       switch (tok.value) {
         case "import":   return this.parseImportDecl();
         case "type":     return this.parseTypeDecl();
+        case "record":   return this.parseRecordDecl();
         case "enum":     return this.parseEnumDecl();
         case "flow":     return this.parseFlowDecl("flow");
         case "secure":   return this.parseSecureOrPureFlow();
         case "pure":     return this.parsePureFlow();
+        case "guarded":  return this.parseGuardedFlow();
         case "intent":   return this.parseGenericBlock("intentDecl");
         case "governance": return this.parseGenericBlock("governanceDecl");
         case "api":      return this.parseGenericBlock("apiDecl");
@@ -209,13 +215,14 @@ class Parser {
 
   /**
    * Parses a plain `flow name(params) -> ret [effects [...]] { body }`.
-   * `qualifier` is "flow" | "secure" | "pure" (caller has consumed the qualifier).
+   * `qualifier` is "flow" | "secure" | "pure" | "guarded" (caller has consumed the qualifier).
    */
-  private parseFlowDecl(qualifier: "flow" | "secure" | "pure"): AstNode {
+  private parseFlowDecl(qualifier: "flow" | "secure" | "pure" | "guarded"): AstNode {
     const loc = this.loc();
     const kind: AstNodeKind =
       qualifier === "secure" ? "secureFlowDecl"
       : qualifier === "pure" ? "pureFlowDecl"
+      : qualifier === "guarded" ? "guardedFlowDecl"
       : "flowDecl";
 
     // Consume "flow" keyword
@@ -239,7 +246,12 @@ class Parser {
     this.skipNewlines();
     let effectsNode: AstNode | undefined;
     let effectNames: string[] = [];
-    if (this.currentIs("keyword", "effects")) {
+    if (this.currentIs("keyword", "with") && this.peek(1).kind === "keyword" && this.peek(1).value === "effects") {
+      this.advance(); // consume "with"
+      const result = this.parseEffectsDecl();
+      effectsNode = result.node;
+      effectNames = result.names;
+    } else if (this.currentIs("keyword", "effects")) {
       const result = this.parseEffectsDecl();
       effectsNode = result.node;
       effectNames = result.names;
@@ -305,6 +317,23 @@ class Parser {
     return this.parseFlowDecl("pure");
   }
 
+  private parseGuardedFlow(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "guarded"
+
+    if (!this.currentIs("keyword", "flow")) {
+      this.emit(
+        "LLN-PARSE-002",
+        "EXPECTED_FLOW_KEYWORD",
+        `Expected "flow" after "guarded".`,
+        loc,
+        `Write: guarded flow name(params) -> ReturnType with effects [...] { ... }`,
+      );
+    }
+
+    return this.parseFlowDecl("guarded");
+  }
+
   // ── Parameters ────────────────────────────────────────────────────────────
 
   private parseParamList(): AstNode[] {
@@ -366,6 +395,10 @@ class Parser {
     if (base.kind === "identifier" || base.kind === "keyword") {
       value += base.value;
       this.advance();
+      if ((base.value === "protected" || base.value === "redacted") && (this.current().kind === "identifier" || this.current().kind === "keyword")) {
+        value += " " + this.current().value;
+        this.advance();
+      }
     } else {
       this.emitUnexpected(`Expected type name, got "${base.value}".`);
       return { kind: "typeRef", value: "<unknown>", location: loc };
@@ -527,7 +560,13 @@ class Parser {
       }
     }
 
-    if (tok.kind === "identifier" || tok.kind === "number" || tok.kind === "string" || tok.kind === "boolean") {
+    if (
+      tok.kind === "identifier" ||
+      tok.kind === "number" ||
+      tok.kind === "string" ||
+      tok.kind === "char" ||
+      tok.kind === "boolean"
+    ) {
       return this.parseExprStatement();
     }
 
@@ -973,8 +1012,11 @@ class Parser {
     this.advance(); // consume "compute"
     this.skipNewlines();
 
-    // Expect "target" as an identifier (not a keyword)
-    if (this.current().kind === "identifier" && this.current().value === "target") {
+    // Expect "target" as a reserved keyword in v1.
+    if (
+      (this.current().kind === "identifier" || this.current().kind === "keyword") &&
+      this.current().value === "target"
+    ) {
       this.advance();
     } else {
       this.emitUnexpected(`Expected "target" after "compute", got "${this.current().value}".`);
@@ -1033,13 +1075,48 @@ class Parser {
     return { kind: "typeDecl", value: name, location: loc };
   }
 
+  private parseRecordDecl(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "record"
+    const name = this.current().kind === "identifier" ? this.current().value : "<unknown>";
+    if (this.current().kind === "identifier") this.advance();
+    if (this.currentIs("symbol", "{")) this.skipBalancedBraces();
+    return { kind: "recordDecl", value: name, location: loc };
+  }
+
   private parseEnumDecl(): AstNode {
     const loc = this.loc();
     this.advance(); // consume "enum"
     const name = this.current().kind === "identifier" ? this.current().value : "<unknown>";
     if (this.current().kind === "identifier") this.advance();
-    if (this.currentIs("symbol", "{")) this.skipBalancedBraces();
-    return { kind: "enumDecl", value: name, location: loc };
+    const variants: AstNode[] = [];
+    if (this.currentIs("symbol", "{")) {
+      this.advance();
+      this.skipNewlines();
+      while (!this.currentIs("symbol", "}") && !this.isEof()) {
+        const variant = this.current();
+        if (variant.kind === "identifier" || variant.kind === "keyword") {
+          variants.push({
+            kind: "enumVariant",
+            value: variant.value,
+            location: this.loc(),
+          });
+          this.advance();
+          this.skipNewlines();
+          if (this.currentIs("symbol", ",")) {
+            this.advance();
+          }
+        } else if (variant.kind === "symbol" && variant.value === ",") {
+          this.advance();
+        } else {
+          this.emitUnexpected(`Expected enum variant, got "${variant.value}".`);
+          this.advance();
+        }
+        this.skipNewlines();
+      }
+      this.expect("symbol", "}");
+    }
+    return { kind: "enumDecl", value: name, location: loc, children: variants };
   }
 
   // ── Diagnostic helpers ────────────────────────────────────────────────────

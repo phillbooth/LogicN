@@ -55,6 +55,12 @@ export {
   type TypeCheckResult,
 } from "./type-checker.js";
 
+export {
+  resolveSymbols,
+  type SymbolDiagnostic,
+  type SymbolResolveResult,
+} from "./symbol-resolver.js";
+
 export interface CompilerInput {
   readonly projectRoot: string;
   readonly entryFiles: readonly string[];

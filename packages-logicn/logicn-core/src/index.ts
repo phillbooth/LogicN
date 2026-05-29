@@ -61,6 +61,7 @@ export type TokenKind =
   | "identifier"
   | "keyword"
   | "string"
+  | "char"
   | "number"
   | "boolean"
   | "operator"

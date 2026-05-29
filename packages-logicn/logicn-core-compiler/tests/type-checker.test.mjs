@@ -326,3 +326,174 @@ flow test(
     );
   });
 });
+
+describe("Type checker — LLN-TYPE-008 null/undefined", () => {
+  it("emits LLN-TYPE-008 for null literal in expression", () => {
+    const result = parseAndCheck(`
+flow test() -> Option<String> {
+  return null
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-008"), "Expected LLN-TYPE-008 for null");
+  });
+
+  it("emits LLN-TYPE-008 for undefined literal in expression", () => {
+    const result = parseAndCheck(`
+flow test() -> Option<String> {
+  return undefined
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-008"), "Expected LLN-TYPE-008 for undefined");
+  });
+
+  it("does not emit LLN-TYPE-008 for None", () => {
+    const result = parseAndCheck(`
+flow test() -> Option<String> {
+  return None
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-008"), "None is a valid LogicN absence value");
+  });
+});
+
+describe("Type checker — LLN-TYPE-020 shadowed binding", () => {
+  it("emits LLN-TYPE-020 warning when inner binding shadows outer", () => {
+    const result = parseAndCheck(`
+flow test() -> Int {
+  let total: Int = 1
+  if true {
+    let total: Int = 2
+  }
+  return total
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-020"), "Expected LLN-TYPE-020 for inner shadow");
+  });
+
+  it("does not emit LLN-TYPE-020 for same-scope redeclaration", () => {
+    const result = parseAndCheck(`
+flow test() -> Int {
+  let total: Int = 1
+  let total: Int = 2
+  return total
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-020"), "Same-scope duplicates belong to LLN-NAME-002");
+  });
+
+  it("LLN-TYPE-020 has severity warning", () => {
+    const result = parseAndCheck(`
+flow test() -> Int {
+  let total: Int = 1
+  if true {
+    let total: Int = 2
+  }
+  return total
+}
+`);
+    const diag = diagsWithCode(result, "LLN-TYPE-020")[0];
+    assert.equal(diag?.severity, "warning");
+  });
+});
+
+describe("Type checker — LLN-TYPE-021 non-exhaustive match", () => {
+  it("emits LLN-TYPE-021 when Option match is missing None arm", () => {
+    const result = parseAndCheck(`
+flow test(value: Option<String>) -> String {
+  match value {
+    Some => "ok"
+  }
+  return "done"
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-021"), "Expected LLN-TYPE-021 for missing None");
+  });
+
+  it("emits LLN-TYPE-021 when Result match is missing Err arm", () => {
+    const result = parseAndCheck(`
+flow test(value: Result<String, Error>) -> String {
+  match value {
+    Ok => "ok"
+  }
+  return "done"
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-021"), "Expected LLN-TYPE-021 for missing Err");
+  });
+
+  it("emits LLN-TYPE-021 when enum match is missing a variant", () => {
+    const result = parseAndCheck(`
+enum Status {
+  Active
+  Inactive
+}
+
+flow test(status: Status) -> String {
+  match status {
+    Active => "active"
+  }
+  return "done"
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-021"), "Expected LLN-TYPE-021 for missing enum variant");
+  });
+
+  it("does not emit LLN-TYPE-021 when all arms present", () => {
+    const result = parseAndCheck(`
+flow test(value: Option<String>) -> String {
+  match value {
+    Some => "ok"
+    None => "none"
+  }
+  return "done"
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-021"), "Complete Option match should pass");
+  });
+
+  it("does not emit LLN-TYPE-021 when wildcard _ arm is present", () => {
+    const result = parseAndCheck(`
+enum Status {
+  Active
+  Inactive
+}
+
+flow test(status: Status) -> String {
+  match status {
+    Active => "active"
+    _ => "other"
+  }
+  return "done"
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-021"), "Wildcard should cover missing variants");
+  });
+});
+
+describe("Type checker — prefix qualifier not LLN-TYPE-001", () => {
+  it("let email: protected Email does not emit LLN-TYPE-001 for protected", () => {
+    const result = parseAndCheck(`
+type Email = Brand<String, "Email">
+
+flow test(raw: String) -> String {
+  let email: protected Email = validate.email(raw)?
+  return "ok"
+}
+`);
+    const messages = diagsWithCode(result, "LLN-TYPE-001").map((d) => d.message).join("\n");
+    assert.ok(!messages.includes("'protected'"), `Unexpected protected UnknownType: ${messages}`);
+  });
+
+  it("let audit: redacted Email does not emit LLN-TYPE-001 for redacted", () => {
+    const result = parseAndCheck(`
+type Email = Brand<String, "Email">
+
+flow test(email: Email) -> String {
+  let audit: redacted Email = redact(email)
+  return "ok"
+}
+`);
+    const messages = diagsWithCode(result, "LLN-TYPE-001").map((d) => d.message).join("\n");
+    assert.ok(!messages.includes("'redacted'"), `Unexpected redacted UnknownType: ${messages}`);
+  });
+});

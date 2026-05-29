@@ -174,8 +174,17 @@ interface ParsedTypeRef {
   readonly args: readonly string[];
 }
 
+const GOVERNANCE_QUALIFIER_PREFIXES = ["protected ", "redacted "] as const;
+
 function parseTypeString(raw: string): ParsedTypeRef {
-  const input = raw.trim();
+  let input = raw.trim();
+
+  for (const prefix of GOVERNANCE_QUALIFIER_PREFIXES) {
+    if (input.startsWith(prefix)) {
+      input = input.slice(prefix.length).trim();
+      break;
+    }
+  }
 
   const ltIdx = input.indexOf("<");
   const baseSection = ltIdx === -1 ? input : input.slice(0, ltIdx);
@@ -228,12 +237,16 @@ function parseTypeString(raw: string): ParsedTypeRef {
 class TypeChecker {
   private readonly diagnostics: TypeDiagnostic[] = [];
   private readonly userDefinedTypes = new Set<string>();
+  private readonly enumVariants = new Map<string, Set<string>>();
+  private readonly bindingScopes: Array<Set<string>> = [];
 
   check(ast: AstNode): void {
     // Pass 1: Collect all user-defined type and enum names
     this.collectDeclarations(ast);
     // Pass 2: Validate all type references
+    this.pushBindingScope();
     this.walkNode(ast);
+    this.popBindingScope();
   }
 
   getResult(): TypeCheckResult {
@@ -243,17 +256,103 @@ class TypeChecker {
   // ── Declaration collection ────────────────────────────────────────────────
 
   private collectDeclarations(node: AstNode): void {
-    if ((node.kind === "typeDecl" || node.kind === "enumDecl") && node.value) {
+    if ((node.kind === "typeDecl" || node.kind === "recordDecl" || node.kind === "enumDecl") && node.value) {
       this.userDefinedTypes.add(node.value.trim());
+    }
+    if (node.kind === "enumDecl" && node.value) {
+      const variants = new Set<string>();
+      for (const child of node.children ?? []) {
+        if ((child.kind === "identifier" || child.kind === "enumVariant") && child.value) {
+          variants.add(child.value.trim());
+        }
+      }
+      if (variants.size > 0) {
+        this.enumVariants.set(node.value.trim(), variants);
+      }
     }
     for (const child of node.children ?? []) {
       this.collectDeclarations(child);
     }
   }
 
+  private pushBindingScope(): void {
+    this.bindingScopes.push(new Set());
+  }
+
+  private popBindingScope(): void {
+    this.bindingScopes.pop();
+  }
+
+  private lookupBinding(name: string): boolean {
+    for (let i = this.bindingScopes.length - 2; i >= 0; i--) {
+      if (this.bindingScopes[i]!.has(name)) return true;
+    }
+    return false;
+  }
+
+  private lookupBindingInCurrentScope(name: string): boolean {
+    return this.bindingScopes[this.bindingScopes.length - 1]?.has(name) ?? false;
+  }
+
+  private registerBinding(name: string): void {
+    const scope = this.bindingScopes[this.bindingScopes.length - 1];
+    if (scope !== undefined && name !== "") scope.add(name);
+  }
+
   // ── AST walker ────────────────────────────────────────────────────────────
 
   private walkNode(node: AstNode): void {
+    switch (node.kind) {
+      case "flowDecl":
+      case "secureFlowDecl":
+      case "pureFlowDecl":
+      case "guardedFlowDecl":
+        this.pushBindingScope();
+        for (const child of node.children ?? []) {
+          if (child.kind === "paramDecl") {
+            this.registerBinding(parseParamName(child.value ?? ""));
+          }
+        }
+        for (const child of node.children ?? []) {
+          this.walkNode(child);
+        }
+        this.popBindingScope();
+        return;
+
+      case "block":
+        this.pushBindingScope();
+        for (const child of node.children ?? []) {
+          this.walkNode(child);
+        }
+        this.popBindingScope();
+        return;
+
+      case "identifier": {
+        const val = node.value ?? "";
+        if (val === "null" || val === "undefined") {
+          this.diagnostics.push(makeTCDiag(
+            "LLN-TYPE-008",
+            "SilentNullDenied",
+            `'${val}' is not a valid LogicN value. Use Option<T> to represent absence.`,
+            node.location,
+            `Use None for absent values, or Option<T> as the type annotation.`,
+            val === "null" ? "None" : undefined,
+          ));
+        }
+        return;
+      }
+
+      case "matchExpr":
+        this.checkMatchExhaustiveness(node);
+        for (const child of node.children ?? []) {
+          this.walkNode(child);
+        }
+        return;
+
+      default:
+        break;
+    }
+
     if (node.kind === "typeRef") {
       this.checkTypeRef(node.value ?? "", node.location);
       // The type value is fully in .value; no children to walk
@@ -262,12 +361,31 @@ class TypeChecker {
 
     // Extract the type annotation embedded in letDecl / mutDecl value strings
     if (node.kind === "letDecl" || node.kind === "mutDecl") {
+      this.checkShadowedBinding(node);
       this.checkBindingTypeAnnotation(node);
     }
 
     for (const child of node.children ?? []) {
       this.walkNode(child);
     }
+  }
+
+  private checkShadowedBinding(node: AstNode): void {
+    const bindingName = parseBindingName(node.value ?? "");
+    if (bindingName === "") return;
+
+    if (this.lookupBinding(bindingName) && !this.lookupBindingInCurrentScope(bindingName)) {
+      this.diagnostics.push({
+        code: "LLN-TYPE-020",
+        name: "ShadowedBinding",
+        severity: "warning",
+        message: `Binding '${bindingName}' shadows an outer-scope binding with the same name.`,
+        ...(node.location !== undefined ? { location: node.location } : {}),
+        suggestedFix: `Rename this binding to avoid shadowing the outer '${bindingName}'.`,
+      });
+    }
+
+    this.registerBinding(bindingName);
   }
 
   // ── Binding type annotation extraction ───────────────────────────────────
@@ -350,6 +468,66 @@ class TypeChecker {
 
   // ── Fuzzy suggestion ──────────────────────────────────────────────────────
 
+  private checkMatchExhaustiveness(node: AstNode): void {
+    const arms = (node.children ?? []).slice(1);
+    const armPatterns = new Set(
+      arms.map((a) => a.value ?? "").filter((v) => v !== ""),
+    );
+
+    if (armPatterns.has("_")) return;
+
+    if (armPatterns.has("Some") || armPatterns.has("None")) {
+      const missing: string[] = [];
+      if (!armPatterns.has("Some")) missing.push("Some");
+      if (!armPatterns.has("None")) missing.push("None");
+      if (missing.length > 0) {
+        this.diagnostics.push(makeTCDiag(
+          "LLN-TYPE-021",
+          "NonExhaustiveMatch",
+          `match is missing arm(s): ${missing.map((m) => `'${m}'`).join(", ")}.`,
+          node.location,
+          `Add the missing arm(s): ${missing.join(", ")}`,
+          missing.length === 1 ? `${missing[0]} => ...` : undefined,
+        ));
+      }
+      return;
+    }
+
+    if (armPatterns.has("Ok") || armPatterns.has("Err")) {
+      const missing: string[] = [];
+      if (!armPatterns.has("Ok")) missing.push("Ok");
+      if (!armPatterns.has("Err")) missing.push("Err");
+      if (missing.length > 0) {
+        this.diagnostics.push(makeTCDiag(
+          "LLN-TYPE-021",
+          "NonExhaustiveMatch",
+          `match is missing arm(s): ${missing.map((m) => `'${m}'`).join(", ")}.`,
+          node.location,
+          `Add the missing arm(s): ${missing.join(", ")}`,
+          missing.length === 1 ? `${missing[0]}(value) => ...` : undefined,
+        ));
+      }
+      return;
+    }
+
+    for (const [enumName, variants] of this.enumVariants) {
+      const someMatch = [...armPatterns].some((p) => variants.has(p));
+      if (someMatch) {
+        const missing = [...variants].filter((v) => !armPatterns.has(v));
+        if (missing.length > 0) {
+          this.diagnostics.push(makeTCDiag(
+            "LLN-TYPE-021",
+            "NonExhaustiveMatch",
+            `match on '${enumName}' is missing variant(s): ${missing.map((m) => `'${m}'`).join(", ")}.`,
+            node.location,
+            `Add the missing variant arm(s): ${missing.join(", ")}`,
+          ));
+        }
+        return;
+      }
+    }
+  }
+
   private fuzzyTypeSuggestion(typeName: string): string | undefined {
     const lower = typeName.toLowerCase();
     const candidates: string[] = [];
@@ -399,6 +577,20 @@ class TypeChecker {
 // ---------------------------------------------------------------------------
 // Levenshtein distance (for fuzzy type suggestions)
 // ---------------------------------------------------------------------------
+
+function parseParamName(value: string): string {
+  const colonIdx = value.indexOf(":");
+  return (colonIdx === -1 ? value : value.slice(0, colonIdx)).trim();
+}
+
+function parseBindingName(value: string): string {
+  let rest = value.trim();
+  if (rest.startsWith("unsafe ")) rest = rest.slice("unsafe ".length).trim();
+  else if (rest.startsWith("safe ")) rest = rest.slice("safe ".length).trim();
+
+  const colonIdx = rest.indexOf(":");
+  return (colonIdx === -1 ? rest : rest.slice(0, colonIdx)).trim();
+}
 
 function levenshtein(a: string, b: string): number {
   if (a.length === 0) return b.length;
