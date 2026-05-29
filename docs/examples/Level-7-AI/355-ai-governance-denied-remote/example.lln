@@ -1,0 +1,14 @@
+﻿/// example: 355-ai-governance-denied-remote
+/// level: 7
+/// concept: AI inference with remote execution denied for patient data governance
+/// expected_diagnostics: none
+/// ai_rule: Pair ai.inference with deny [remote.execution] for any flow that handles patient data.
+
+secure flow scoreRisk(readonly patient: Patient) -> Result<RiskScore, AiError>
+  with effects [ai.inference]
+  intent "Score patient risk without remote execution"
+{
+  compute target best { prefer [npu, gpu, cpu] deny [remote.execution] }
+  let score = RiskModel.run(patient)?
+  return Ok(score)
+}

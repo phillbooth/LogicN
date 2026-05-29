@@ -1,0 +1,10 @@
+﻿/// example: 311-money-vat-calculation
+/// level: 6
+/// concept: multiplying Money by a Decimal rate
+/// expected_diagnostics: none
+/// ai_rule: Multiply Money<C> by Decimal to scale an amount; the result preserves the currency type.
+
+pure flow calculateVat(price: Money<GBP>) -> Money<GBP>
+{
+  return price * Decimal("0.20")
+}

@@ -1,0 +1,32 @@
+﻿/// example: 451-healthcare-patient-create
+/// level: 9
+/// concept: healthcare PII governance pattern — create patient record with NHS number, protected types, and audit
+/// expected_diagnostics: none
+/// ai_rule: All healthcare flows must validate raw PII into protected types, declare pii.write and audit.write effects, and redact in audit.
+
+secure flow createPatient(readonly req: Request) -> Result<Response, PatientError>
+  with effects [pii.write, database.write, audit.write]
+  intent "Create a new patient record with validated NHS number"
+{
+  unsafe let rawNhs: String = req.body.nhsNumber
+  unsafe let rawName: String = req.body.fullName
+  unsafe let rawDob: String = req.body.dateOfBirth
+
+  let nhsNumber: protected NhsNumber = validate.nhsNumber(rawNhs)?
+  let fullName: protected PatientName = validate.name(rawName)?
+  let dateOfBirth: protected DateOfBirth = validate.date(rawDob)?
+
+  let patientId: protected PatientId = PatientDB.insert({
+    nhsNumber: nhsNumber,
+    fullName: fullName,
+    dateOfBirth: dateOfBirth
+  })?
+
+  AuditLog.write({
+    event: "PatientCreated",
+    patientId: redact(patientId),
+    nhsNumber: redact(nhsNumber)
+  })
+
+  return Ok(Response.created({ patientId: redact(patientId) }))
+}

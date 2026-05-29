@@ -1,0 +1,12 @@
+﻿/// example: 361-ai-any-tensor
+/// level: 7
+/// concept: AnyTensor for dynamically loaded models with unknown shape
+/// expected_diagnostics: none
+/// ai_rule: Use AnyTensor only when the tensor shape cannot be known at compile time; prefer typed Tensor<T, Shape> everywhere else.
+
+guarded flow loadDynamic() -> Result<AnyTensor, AiError>
+  with effects [ai.inference]
+{
+  let handle: AnyTensor = DynamicModelRegistry.load("latest")?
+  return Ok(handle)
+}

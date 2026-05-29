@@ -1,0 +1,1 @@
+﻿LLN-GOV-003: protected value PatientData shared with external service SpecialistService without an authority block

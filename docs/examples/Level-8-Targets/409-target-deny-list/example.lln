@@ -1,0 +1,16 @@
+﻿/// example: 409-target-deny-list
+/// level: 8
+/// concept: multiple denied target categories in a single deny clause
+/// expected_diagnostics: none
+/// ai_rule: List all denied categories in a single deny [...] clause to make the exclusions explicit and auditable.
+
+guarded flow runStrictLocal(input: Tensor<Float32, [1, 256]>) -> Result<Tensor<Float32, [1, 64]>, AiError>
+  with effects [ai.inference]
+{
+  compute target best {
+    prefer [npu, gpu, cpu]
+    deny [remote.execution, cloud.inference]
+    fallback cpu
+  }
+  return StrictLocalModel.forward(input)?
+}

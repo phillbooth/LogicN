@@ -1,0 +1,28 @@
+﻿/// example: 453-financial-payment-charge
+/// level: 9
+/// concept: payment governance flow with approved merchant, Money type, and audit
+/// expected_diagnostics: none
+/// ai_rule: All payment flows must declare payment.charge and audit.write effects and include an intent clause.
+
+guarded flow chargePayment(req: PaymentRequest) -> Result<Receipt, PaymentError>
+  with effects [payment.charge, audit.write]
+  intent "Process card payment for approved merchant"
+{
+  let amount: Money<GBP> = validate.money(req.amount)?
+  let merchantId: protected MerchantId = validate.merchantId(req.merchantId)?
+
+  let receipt: Receipt = PaymentGateway.charge({
+    amount: amount,
+    merchantId: merchantId,
+    reference: req.reference
+  })?
+
+  AuditLog.write({
+    event: "PaymentCharged",
+    merchantId: redact(merchantId),
+    amount: amount,
+    receiptId: receipt.id
+  })
+
+  return Ok(receipt)
+}

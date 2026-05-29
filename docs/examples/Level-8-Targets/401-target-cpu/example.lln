@@ -1,0 +1,12 @@
+﻿/// example: 401-target-cpu
+/// level: 8
+/// concept: explicit CPU compute target
+/// expected_diagnostics: none
+/// ai_rule: Use compute target cpu for workloads that are latency-sensitive on small inputs or that require deterministic single-threaded execution.
+
+guarded flow runOnCpu(input: Tensor<Float32, [1, 128]>) -> Result<Tensor<Float32, [1, 64]>, AiError>
+  with effects [ai.inference]
+{
+  compute target cpu { fallback cpu }
+  return SmallModel.forward(input)?
+}

@@ -1,0 +1,11 @@
+﻿/// example: 301-compute-target-best
+/// level: 6
+/// concept: compute target selection with ordered preference and fallback
+/// expected_diagnostics: none
+/// ai_rule: Use prefer [...] to express hardware preference; always declare fallback cpu as the final safety net.
+
+pure flow embedText(text: String) -> Tensor<Float32, [1, 768]>
+  with compute target best { prefer [npu, gpu, cpu] fallback cpu }
+{
+  return EmbeddingModel.embed(text)
+}

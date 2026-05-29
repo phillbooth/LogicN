@@ -1,0 +1,16 @@
+﻿/// example: 353-protected-ai-input
+/// level: 7
+/// concept: protected PII validated and passed through an AI risk model with redacted audit
+/// expected_diagnostics: none
+/// ai_rule: Always validate raw input into a protected type before passing it to an AI model.
+
+secure flow analyseRecord(readonly req: Request) -> Result<Response, AiError>
+  with effects [ai.inference, audit.write]
+{
+  unsafe let rawId: String = req.body.patientId
+  let patientId: protected PatientId = validate.patientId(rawId)?
+  let features = PatientFeatures.from(patientId)?
+  let risk = RiskModel.run(features)?
+  AuditLog.write({ event: "RiskScored", patientId: redact(patientId) })
+  return Ok(Response.ok(risk))
+}

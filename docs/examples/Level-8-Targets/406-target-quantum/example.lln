@@ -1,0 +1,12 @@
+﻿/// example: 406-target-quantum
+/// level: 8
+/// concept: quantum compute target with classical CPU fallback
+/// expected_diagnostics: none
+/// ai_rule: Use compute target quantum for quantum-native algorithms; fallback cpu runs a classical simulation.
+
+guarded flow runQuantumOptimiser(params: Tensor<Float32, [64]>) -> Result<Tensor<Float32, [64]>, AiError>
+  with effects [ai.inference]
+{
+  compute target quantum { fallback cpu }
+  return QuantumOptimiser.run(params)?
+}

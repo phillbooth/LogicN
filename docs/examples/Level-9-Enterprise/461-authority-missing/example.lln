@@ -1,0 +1,20 @@
+﻿/// example: 461-authority-missing
+/// level: 9
+/// concept: sharing protected data across a trust boundary without an authority block
+/// expected_diagnostics: LLN-GOV-003
+/// ai_rule: Sharing a protected value with an external service without an authority block is a governance violation.
+
+secure flow sendReferralNoAuthority(readonly req: Request) -> Result<Response, ReferralError>
+  with effects [pii.read, network.outbound, audit.write]
+  intent "Send patient referral to specialist"
+{
+  unsafe let rawId: String = req.body.patientId
+  let patientId: protected PatientId = validate.patientId(rawId)?
+  let patientData: protected PatientData = PatientDB.get(patientId)?
+
+  // LLN-GOV-003: protected PatientData shared with SpecialistService without authority block
+  SpecialistService.sendReferral({ patient: patientData })?
+
+  AuditLog.write({ event: "ReferralSent", patientId: redact(patientId) })
+  return Ok(Response.ok({}))
+}

@@ -1,21 +1,27 @@
 // =============================================================================
-// LogicN Phase 6 — Type Checker
+// LogicN Type Checker (Phase 6 → Phase 7A)
 //
-// Validates type references in the parsed AST against the built-in type set
-// and user-defined declarations.
+// Validates type references and structural rules in the parsed AST.
 //
 // Spec: docs/Knowledge-Bases/formal-type-system-spec.md
 //
-// Implemented diagnostics (Phase 6):
+// Implemented diagnostics:
 //   LLN-TYPE-001  UnknownType              — type name not in scope
+//   LLN-TYPE-008  SilentNullDenied         — null / undefined used as value
 //   LLN-TYPE-009  InvalidGenericInstantiation — wrong generic arity
+//   LLN-TYPE-020  ShadowedBinding          — binding shadows outer-scope name (warning)
+//   LLN-TYPE-021  NonExhaustiveMatch       — match missing arm(s)
+//   LLN-TYPE-022  UnreachablePattern       — arm after wildcard or exhausted set
+//   LLN-NAME-002  DuplicateName            — same name declared twice in same scope
 //
-// Phase 6 defers:
+// Deferred (require expression type inference or call graph):
 //   LLN-TYPE-002  TypeMismatch             — assignment compatibility
 //   LLN-TYPE-003  InvalidNominalConversion — String → Email requires gate
-//   LLN-TYPE-004..008  Operator / call / return type checking
-//   LLN-TYPE-010..022  Constraint, collection, match, symbol checks
+//   LLN-TYPE-004..007  Operator / call / return type checking
+//   LLN-TYPE-010..019  Constraint, collection, tensor, symbol checks
 //   Module-level import resolution
+//
+// Symbol resolver (LLN-NAME-001, LLN-NAME-003) lives in symbol-resolver.ts
 // =============================================================================
 
 import { type AstNode, type SourceLocation } from "./parser.js";
@@ -308,9 +314,35 @@ class TypeChecker {
       case "pureFlowDecl":
       case "guardedFlowDecl":
         this.pushBindingScope();
+        // Register params first so they're in scope throughout the body
         for (const child of node.children ?? []) {
           if (child.kind === "paramDecl") {
             this.registerBinding(parseParamName(child.value ?? ""));
+            // Check the param's type annotation (child typeRef)
+            for (const typeChild of child.children ?? []) {
+              if (typeChild.kind === "typeRef") {
+                this.checkTypeRef(typeChild.value ?? "", typeChild.location);
+              }
+            }
+          }
+        }
+        for (const child of node.children ?? []) {
+          this.walkNode(child);
+        }
+        this.popBindingScope();
+        return;
+
+      case "fnDecl":
+        // fn is a local helper — it gets its own scope for its parameters
+        this.pushBindingScope();
+        for (const child of node.children ?? []) {
+          if (child.kind === "paramDecl") {
+            this.registerBinding(parseParamName(child.value ?? ""));
+            for (const typeChild of child.children ?? []) {
+              if (typeChild.kind === "typeRef") {
+                this.checkTypeRef(typeChild.value ?? "", typeChild.location);
+              }
+            }
           }
         }
         for (const child of node.children ?? []) {
@@ -359,8 +391,8 @@ class TypeChecker {
       return;
     }
 
-    // Extract the type annotation embedded in letDecl / mutDecl value strings
-    if (node.kind === "letDecl" || node.kind === "mutDecl") {
+    // Extract the type annotation embedded in letDecl / mutDecl / readonlyDecl value strings
+    if (node.kind === "letDecl" || node.kind === "mutDecl" || node.kind === "readonlyDecl") {
       this.checkShadowedBinding(node);
       this.checkBindingTypeAnnotation(node);
     }
@@ -374,7 +406,18 @@ class TypeChecker {
     const bindingName = parseBindingName(node.value ?? "");
     if (bindingName === "") return;
 
-    if (this.lookupBinding(bindingName) && !this.lookupBindingInCurrentScope(bindingName)) {
+    if (this.lookupBindingInCurrentScope(bindingName)) {
+      // ── LLN-NAME-002: Duplicate name in the SAME scope ─────────────────────
+      this.diagnostics.push({
+        code: "LLN-NAME-002",
+        name: "DuplicateName",
+        severity: "error",
+        message: `'${bindingName}' is already declared in this scope.`,
+        ...(node.location !== undefined ? { location: node.location } : {}),
+        suggestedFix: `Rename this binding — '${bindingName}' was already declared earlier in the same block.`,
+      });
+    } else if (this.lookupBinding(bindingName)) {
+      // ── LLN-TYPE-020: Shadowing an OUTER scope binding ─────────────────────
       this.diagnostics.push({
         code: "LLN-TYPE-020",
         name: "ShadowedBinding",
@@ -473,6 +516,26 @@ class TypeChecker {
     const armPatterns = new Set(
       arms.map((a) => a.value ?? "").filter((v) => v !== ""),
     );
+
+    // ── LLN-TYPE-022: Unreachable pattern ──────────────────────────────────
+    // Any arm that follows a wildcard _ is unreachable
+    for (let i = 0; i < arms.length; i++) {
+      const arm = arms[i]!;
+      if (arm.value === "_" && i < arms.length - 1) {
+        // Every arm after the wildcard is unreachable
+        for (let j = i + 1; j < arms.length; j++) {
+          const unreachable = arms[j]!;
+          this.diagnostics.push(makeTCDiag(
+            "LLN-TYPE-022",
+            "UnreachablePattern",
+            `Pattern '${unreachable.value ?? "?"}' is unreachable — the wildcard arm '_' already covers all remaining cases.`,
+            unreachable.location,
+            `Remove this unreachable arm, or move it before the wildcard '_'.`,
+          ));
+        }
+        break;
+      }
+    }
 
     if (armPatterns.has("_")) return;
 

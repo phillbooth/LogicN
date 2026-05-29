@@ -147,7 +147,15 @@ class SymbolResolver {
 
   private checkIdentifierUse(node: AstNode): void {
     const name = node.value ?? "";
-    if (name === "" || name === "<error>") return;
+    if (name === "" || name === "<error>" || name === "_") return;
+
+    // Capital-letter identifiers are type constructors or stdlib module names.
+    // Unknown types are handled by LLN-TYPE-001 in the type checker.
+    // Suppress here to avoid noise on stdlib names like UsersDB, FraudModel, etc.
+    if (name[0] !== undefined && name[0] >= "A" && name[0] <= "Z") return;
+
+    // Numeric placeholders
+    if (/^\d/.test(name)) return;
 
     if (this.lookup(name) !== undefined) return;
 
@@ -246,12 +254,14 @@ class SymbolResolver {
   private checkCallTarget(node: AstNode): void {
     const name = node.value ?? "";
     if (name === "" || BUILT_IN_VALUE_NAMES.has(name)) return;
+
+    // Capital-letter call targets are stdlib or user-defined constructors
+    if (name[0] !== undefined && name[0] >= "A" && name[0] <= "Z") return;
+
     if (STANDARD_PRELUDE.has(name) || this.lookup(name) !== undefined) return;
 
-    const receiver = node.children?.[0];
-    if (receiver !== undefined && isReceiverCall(node)) {
-      return;
-    }
+    // Method call on a receiver — receiver check suppresses the call target
+    if (isReceiverCall(node)) return;
 
     this.diagnostics.push({
       code: "LLN-NAME-001",

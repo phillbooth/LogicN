@@ -1,0 +1,13 @@
+﻿/// example: 414-target-no-fallback-invalid
+/// level: 8
+/// concept: omitting the fallback clause from a non-cpu compute target is an error
+/// expected_diagnostics: LLN-TARGET-001
+/// ai_rule: Every compute target other than cpu requires an explicit fallback clause.
+
+guarded flow runNoFallback(input: Tensor<Float32, [1, 512]>) -> Result<Tensor<Float32, [1, 128]>, AiError>
+  with effects [ai.inference]
+{
+  // LLN-TARGET-001: compute target npu requires a fallback clause
+  compute target npu { }
+  return Model.forward(input)?
+}

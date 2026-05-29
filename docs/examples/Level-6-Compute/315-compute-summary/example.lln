@@ -1,0 +1,21 @@
+﻿/// example: 315-compute-summary
+/// level: 6
+/// concept: complete governed AI inference flow with audit, hardware targeting, and deny clause
+/// expected_diagnostics: none
+/// ai_rule: The summary pattern combines secure flow, protected types, compute target, deny, audit, and Result propagation.
+
+secure flow runFraudScore(readonly tx: Transaction) -> Result<FraudScore, AiError>
+  with effects [ai.inference, audit.write]
+  intent "Score fraud risk on approved local hardware"
+{
+  compute target best { prefer [npu, gpu, cpu] fallback cpu deny [remote.execution] }
+
+  let features: Tensor<Float32, [1, 128]> = FraudFeatures.from(tx)?
+  let score: FraudScore = FraudModel.run(features)?
+  AuditLog.write({
+    event: "FraudScored",
+    transactionId: redact(tx.id),
+    band: score.band
+  })
+  return Ok(score)
+}

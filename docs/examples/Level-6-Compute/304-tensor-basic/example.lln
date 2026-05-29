@@ -1,0 +1,13 @@
+﻿/// example: 304-tensor-basic
+/// level: 6
+/// concept: tensor shape encoded in the type signature
+/// expected_diagnostics: none
+/// ai_rule: Encode tensor rank and dimensions as static type parameters so shape mismatches are caught at compile time.
+
+pure flow matmul(
+  a: Tensor<Float32, [4, 8]>,
+  b: Tensor<Float32, [8, 16]>
+) -> Tensor<Float32, [4, 16]>
+{
+  return Tensor.matmul(a, b)
+}

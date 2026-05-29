@@ -1,0 +1,12 @@
+﻿/// example: 405-target-photonic
+/// level: 8
+/// concept: photonic (optical) compute target with GPU fallback
+/// expected_diagnostics: none
+/// ai_rule: Use compute target photonic for extremely high-throughput linear algebra; always include a classical fallback.
+
+guarded flow runPhotonic(input: Tensor<Float32, [Batch, 512]>) -> Result<Tensor<Float32, [Batch, 256]>, AiError>
+  with effects [ai.inference]
+{
+  compute target photonic { fallback gpu }
+  return OpticalModel.forward(input)?
+}

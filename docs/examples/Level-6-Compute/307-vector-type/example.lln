@@ -1,0 +1,11 @@
+﻿/// example: 307-vector-type
+/// level: 6
+/// concept: fixed-length vector type for embeddings
+/// expected_diagnostics: none
+/// ai_rule: Use Vector<T, N> for fixed-length one-dimensional arrays, such as embedding outputs.
+
+pure flow describeEmbedding() -> Vector<Float32, 768>
+{
+  let embedding: Vector<Float32, 768> = EmbeddingModel.getZeroVector()
+  return embedding
+}

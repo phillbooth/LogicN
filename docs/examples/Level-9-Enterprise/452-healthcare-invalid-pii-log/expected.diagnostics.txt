@@ -1,0 +1,1 @@
+﻿LLN-SECRET-001: protected value patientId must be wrapped in redact() before passing to AuditLog.write

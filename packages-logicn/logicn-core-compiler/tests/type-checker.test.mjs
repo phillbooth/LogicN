@@ -327,6 +327,194 @@ flow test(
   });
 });
 
+// ── LLN-TYPE-008: null / undefined rejection ──────────────────────────────────
+
+describe("Type checker — LLN-TYPE-008 null/undefined", () => {
+  it("emits LLN-TYPE-008 for null literal in expression", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let x: String = null
+  return "ok"
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-008"), "Expected LLN-TYPE-008 for null");
+  });
+
+  it("emits LLN-TYPE-008 for undefined literal in expression", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let x: String = undefined
+  return "ok"
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-008"), "Expected LLN-TYPE-008 for undefined");
+  });
+
+  it("does not emit LLN-TYPE-008 for None (valid LogicN absence value)", () => {
+    const result = parseAndCheck(`
+flow test() -> Option<String> {
+  return None
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-008"), "Unexpected LLN-TYPE-008 for None");
+  });
+});
+
+// ── LLN-TYPE-020: shadowed binding ───────────────────────────────────────────
+
+describe("Type checker — LLN-TYPE-020 shadowed binding", () => {
+  it("emits LLN-TYPE-020 warning when inner binding shadows outer", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let name: String = "outer"
+  if true {
+    let name: String = "inner"
+    return name
+  }
+  return name
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-020"), "Expected LLN-TYPE-020 for shadowed binding");
+    const diags = diagsWithCode(result, "LLN-TYPE-020");
+    assert.ok(diags.every((d) => d.severity === "warning"), "LLN-TYPE-020 must be a warning");
+  });
+
+  it("does not emit LLN-TYPE-020 for first declaration (no shadow)", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let name: String = "only"
+  return name
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-020"), "Unexpected LLN-TYPE-020 for non-shadowing binding");
+  });
+});
+
+// ── LLN-NAME-002: duplicate name in same scope ────────────────────────────────
+
+describe("Type checker — LLN-NAME-002 duplicate name", () => {
+  it("emits LLN-NAME-002 when same name declared twice in same scope", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let x: String = "first"
+  let x: String = "second"
+  return x
+}
+`);
+    assert.ok(hasDiag(result, "LLN-NAME-002"), "Expected LLN-NAME-002 for duplicate binding");
+  });
+
+  it("does not emit LLN-NAME-002 for same name in different scopes", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let x: String = "outer"
+  if true {
+    let x: String = "inner"
+    return x
+  }
+  return x
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-NAME-002"), "Unexpected LLN-NAME-002 — different scopes should not be duplicate");
+  });
+});
+
+// ── LLN-TYPE-021: non-exhaustive match ───────────────────────────────────────
+
+describe("Type checker — LLN-TYPE-021 non-exhaustive match", () => {
+  it("emits LLN-TYPE-021 when Option match is missing None arm", () => {
+    const result = parseAndCheck(`
+flow test(x: Option<String>) -> String {
+  match x {
+    Some(v) => v
+  }
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-021"), "Expected LLN-TYPE-021 for missing None arm");
+  });
+
+  it("emits LLN-TYPE-021 when Result match is missing Err arm", () => {
+    const result = parseAndCheck(`
+flow test(x: Result<String, Error>) -> String {
+  match x {
+    Ok(v) => v
+  }
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-021"), "Expected LLN-TYPE-021 for missing Err arm");
+  });
+
+  it("emits LLN-TYPE-021 when enum match is missing a variant", () => {
+    const result = parseAndCheck(`
+enum Status {
+  Active
+  Suspended
+  Deleted
+}
+
+flow test(s: Status) -> String {
+  match s {
+    Active => "active"
+    Suspended => "suspended"
+  }
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-021"), "Expected LLN-TYPE-021 for missing Deleted variant");
+  });
+
+  it("does not emit LLN-TYPE-021 when all Option arms present", () => {
+    const result = parseAndCheck(`
+flow test(x: Option<String>) -> String {
+  match x {
+    Some(v) => v
+    None => "default"
+  }
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-021"), "Unexpected LLN-TYPE-021 for complete Option match");
+  });
+
+  it("does not emit LLN-TYPE-021 when wildcard _ arm is present", () => {
+    const result = parseAndCheck(`
+flow test(x: Option<String>) -> String {
+  match x {
+    Some(v) => v
+    _ => "default"
+  }
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-021"), "Unexpected LLN-TYPE-021 when wildcard present");
+  });
+});
+
+// ── LLN-TYPE-022: unreachable pattern ────────────────────────────────────────
+
+describe("Type checker — LLN-TYPE-022 unreachable pattern", () => {
+  it("emits LLN-TYPE-022 when arm follows wildcard _", () => {
+    const result = parseAndCheck(`
+flow test(x: Option<String>) -> String {
+  match x {
+    _ => "default"
+    None => "none"
+  }
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-022"), "Expected LLN-TYPE-022 for arm after wildcard");
+  });
+
+  it("does not emit LLN-TYPE-022 when wildcard is last arm", () => {
+    const result = parseAndCheck(`
+flow test(x: Option<String>) -> String {
+  match x {
+    Some(v) => v
+    _ => "default"
+  }
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-022"), "Unexpected LLN-TYPE-022 when wildcard is last");
+  });
+});
+
 describe("Type checker — LLN-TYPE-008 null/undefined", () => {
   it("emits LLN-TYPE-008 for null literal in expression", () => {
     const result = parseAndCheck(`

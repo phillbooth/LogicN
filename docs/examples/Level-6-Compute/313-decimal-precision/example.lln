@@ -1,0 +1,10 @@
+﻿/// example: 313-decimal-precision
+/// level: 6
+/// concept: dividing Money by a Decimal value for precise splitting
+/// expected_diagnostics: none
+/// ai_rule: Use Decimal arithmetic for all monetary division to avoid floating-point rounding errors.
+
+pure flow splitEqually(total: Money<GBP>, n: Int) -> Money<GBP>
+{
+  return total / Decimal(n.toString())
+}

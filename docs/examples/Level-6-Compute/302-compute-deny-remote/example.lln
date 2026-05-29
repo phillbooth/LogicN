@@ -1,0 +1,19 @@
+﻿/// example: 302-compute-deny-remote
+/// level: 6
+/// concept: denying remote execution in a secure credit-scoring flow
+/// expected_diagnostics: none
+/// ai_rule: Use deny [remote.execution] for data that must not leave the device.
+
+secure flow scoreCredit(readonly req: Request) -> Result<Response, ApiError>
+  with effects [ai.inference, audit.write]
+  intent "Score credit risk without remote execution"
+{
+  compute target best { prefer [npu, gpu, cpu] deny [remote.execution] fallback cpu }
+
+  unsafe let rawScore: String = req.body.rawScore
+  let score: protected CreditScore = validate.creditScore(rawScore)?
+  let features: Tensor<Float32, [1, 64]> = CreditFeatures.from(score)?
+  let result = CreditModel.run(features)?
+  AuditLog.write({ event: "CreditScored", scoreId: redact(score) })
+  return Ok(Response.ok(result))
+}

@@ -1,0 +1,16 @@
+﻿/// example: 360-ai-audit-redacted
+/// level: 7
+/// concept: protected patient data redacted in AI audit log entry
+/// expected_diagnostics: none
+/// ai_rule: Always wrap protected values in redact() before passing them to AuditLog.write.
+
+secure flow scorePatientRisk(readonly req: Request) -> Result<Response, AiError>
+  with effects [ai.inference, audit.write]
+{
+  unsafe let rawId: String = req.body.patientId
+  let patientId: protected PatientId = validate.patientId(rawId)?
+  let features = PatientFeatures.from(patientId)?
+  let risk = RiskModel.run(features)?
+  AuditLog.write({ event: "Scored", patientId: redact(patientId) })
+  return Ok(Response.ok(risk))
+}

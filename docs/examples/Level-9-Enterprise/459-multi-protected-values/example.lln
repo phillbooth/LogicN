@@ -1,0 +1,29 @@
+﻿/// example: 459-multi-protected-values
+/// level: 9
+/// concept: multiple PII types in one flow — all validated as protected and all redacted in audit
+/// expected_diagnostics: none
+/// ai_rule: When a flow handles multiple PII types, validate each into its own protected type and redact each separately in the audit entry.
+
+secure flow updateContactDetails(readonly req: Request) -> Result<Response, PatientError>
+  with effects [pii.read, pii.write, database.write, audit.write]
+  intent "Update patient contact details"
+{
+  unsafe let rawEmail: String = req.body.email
+  unsafe let rawNhs: String = req.body.nhsNumber
+  unsafe let rawId: String = req.body.patientId
+
+  let email: protected Email = validate.email(rawEmail)?
+  let nhsNumber: protected NhsNumber = validate.nhsNumber(rawNhs)?
+  let patientId: protected PatientId = validate.patientId(rawId)?
+
+  PatientDB.updateContact({ patientId: patientId, email: email })?
+
+  AuditLog.write({
+    event: "ContactUpdated",
+    patientId: redact(patientId),
+    nhsNumber: redact(nhsNumber),
+    email: redact(email)
+  })
+
+  return Ok(Response.ok({}))
+}

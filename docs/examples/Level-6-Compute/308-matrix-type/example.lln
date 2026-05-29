@@ -1,0 +1,13 @@
+﻿/// example: 308-matrix-type
+/// level: 6
+/// concept: matrix type for weight tensors
+/// expected_diagnostics: none
+/// ai_rule: Use Matrix<T, Rows, Cols> for two-dimensional numeric tables such as weight matrices.
+
+pure flow applyWeights(
+  input: Vector<Float32, 4>,
+  weights: Matrix<Float32, 4, 4>
+) -> Vector<Float32, 4>
+{
+  return Matrix.vecMul(weights, input)
+}

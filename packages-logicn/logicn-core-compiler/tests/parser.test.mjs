@@ -268,3 +268,262 @@ describe("Parser — error recovery", () => {
     assert.ok(diag !== undefined, "Expected LLN-PARSE-002 for malformed flow qualifier");
   });
 });
+
+// ── New feature tests ─────────────────────────────────────────────────────────
+
+describe("Parser — guarded flow", () => {
+  it("parses guarded flow to guardedFlowDecl", () => {
+    const result = parseOk(`
+guarded flow fetchRate(currency: String) -> Result<Decimal, NetworkError>
+with effects [network.outbound] {
+  return Ok(Decimal("1.0"))
+}
+`);
+    const node = findNode(result.ast, "guardedFlowDecl");
+    assert.ok(node !== undefined, "Expected guardedFlowDecl node");
+    assert.equal(node.value, "fetchRate");
+  });
+
+  it("registers guarded flow in FlowMeta with qualifier guarded", () => {
+    const result = parseOk(`
+guarded flow saveOrder(order: String) -> Result<String, Error>
+effects [database.write] {
+  return Ok(order)
+}
+`);
+    const meta = result.flows.find((f) => f.name === "saveOrder");
+    assert.ok(meta !== undefined);
+    assert.equal(meta.qualifier, "guarded");
+    assert.deepEqual(meta.declaredEffects, ["database.write"]);
+  });
+});
+
+describe("Parser — fn helper", () => {
+  it("parses fn inside a flow body to fnDecl", () => {
+    const result = parseOk(`
+pure flow calculate(price: Decimal) -> Decimal {
+  fn applyVat(value: Decimal) -> Decimal {
+    return value
+  }
+  return applyVat(price)
+}
+`);
+    const fn = findNode(result.ast, "fnDecl");
+    assert.ok(fn !== undefined, "Expected fnDecl node");
+    assert.equal(fn.value, "applyVat");
+  });
+
+  it("emits LLN-SYNTAX-005 for top-level fn", () => {
+    const result = parseProgram(`
+fn calculate(x: Int) -> Int {
+  return x
+}
+`, "test.lln");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-SYNTAX-005");
+    assert.ok(diag !== undefined, "Expected LLN-SYNTAX-005 for top-level fn");
+  });
+
+  it("emits LLN-SEC-014 when fn declares effects", () => {
+    const result = parseProgram(`
+guarded flow myFlow() -> Void effects [database.write] {
+  fn bad() -> Void
+  effects [database.write] {
+    return
+  }
+  return
+}
+`, "test.lln");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-SEC-014");
+    assert.ok(diag !== undefined, "Expected LLN-SEC-014 for fn with effects");
+  });
+});
+
+describe("Parser — route declaration", () => {
+  it("parses a route declaration to routeDecl with method and path in value", () => {
+    const result = parseOk(`
+route POST "/orders" {
+  flow createOrder
+}
+`);
+    const node = findNode(result.ast, "routeDecl");
+    assert.ok(node !== undefined, "Expected routeDecl node");
+    assert.ok(node.value.includes("POST"), `Expected POST in route value, got "${node.value}"`);
+    assert.ok(node.value.includes("/orders"), `Expected path in route value, got "${node.value}"`);
+  });
+
+  it("parses GET route to routeDecl", () => {
+    const result = parseOk(`
+route GET "/health" {
+  flow healthCheck
+}
+`);
+    const node = findNode(result.ast, "routeDecl");
+    assert.ok(node !== undefined, "Expected routeDecl node");
+    assert.ok(node.value.includes("GET"), `Expected GET in route value, got "${node.value}"`);
+  });
+});
+
+describe("Parser — record declaration with fields", () => {
+  it("parses record declaration and captures field children", () => {
+    const result = parseOk(`
+record User {
+  id: String
+  email: String
+}
+`);
+    const node = findNode(result.ast, "recordDecl");
+    assert.ok(node !== undefined, "Expected recordDecl node");
+    assert.equal(node.value, "User");
+    assert.ok((node.children?.length ?? 0) >= 2, "Expected at least 2 field children");
+    const fieldValues = node.children?.map((c) => c.value) ?? [];
+    assert.ok(fieldValues.some((v) => v?.includes("id")));
+    assert.ok(fieldValues.some((v) => v?.includes("email")));
+  });
+});
+
+describe("Parser — readonly parameter and binding", () => {
+  it("parses readonly parameter prefix", () => {
+    const result = parseOk(`
+secure flow process(readonly req: Request) -> Result<String, Error>
+effects [database.write] {
+  return Ok("ok")
+}
+`);
+    const param = findNode(result.ast, "paramDecl");
+    assert.ok(param !== undefined, "Expected paramDecl node");
+    assert.ok(param.value?.startsWith("readonly "), `Expected 'readonly' prefix, got "${param.value}"`);
+  });
+
+  it("parses readonly local binding", () => {
+    const result = parseOk(`
+pure flow config() -> String {
+  readonly name: String = "LogicN"
+  return name
+}
+`);
+    const node = findNode(result.ast, "readonlyDecl");
+    assert.ok(node !== undefined, "Expected readonlyDecl node");
+    assert.ok(node.value?.includes("name"));
+  });
+});
+
+describe("Parser — char literal", () => {
+  it("parses char literals to charLiteral nodes", () => {
+    const result = parseOk(`
+pure flow getChar() -> String {
+  let initial: Char = 'L'
+  return "ok"
+}
+`);
+    const charNode = findNode(result.ast, "charLiteral");
+    assert.ok(charNode !== undefined, "Expected charLiteral node");
+    assert.equal(charNode.value, "L");
+  });
+});
+
+describe("Parser — list literal", () => {
+  it("parses empty list literal", () => {
+    const result = parseOk(`
+pure flow empty() -> String {
+  let xs = []
+  return "ok"
+}
+`);
+    const listNode = findNode(result.ast, "listLiteral");
+    assert.ok(listNode !== undefined, "Expected listLiteral node");
+    assert.equal(listNode.children?.length ?? -1, 0);
+  });
+
+  it("parses list literal with elements", () => {
+    const result = parseOk(`
+pure flow nums() -> String {
+  let xs = [1, 2, 3]
+  return "ok"
+}
+`);
+    const listNode = findNode(result.ast, "listLiteral");
+    assert.ok(listNode !== undefined, "Expected listLiteral node");
+    assert.equal(listNode.children?.length ?? 0, 3);
+  });
+});
+
+describe("Parser — match arm binding variables", () => {
+  it("captures binding variable in Some(x) arm as identifier child", () => {
+    const result = parseOk(`
+pure flow unwrap(x: Option<String>) -> String {
+  match x {
+    Some(value) => value
+    None => "default"
+  }
+}
+`);
+    // Find a matchArm with value "Some"
+    let someArm;
+    function findSomeArm(node) {
+      if (node?.kind === "matchArm" && node.value === "Some") { someArm = node; return; }
+      for (const c of node?.children ?? []) findSomeArm(c);
+    }
+    findSomeArm(result.ast);
+    assert.ok(someArm !== undefined, "Expected matchArm with value 'Some'");
+    // First child should be the binding identifier
+    const binding = someArm.children?.find((c) => c.kind === "identifier" && c.value === "value");
+    assert.ok(binding !== undefined, "Expected identifier child 'value' in Some arm");
+  });
+
+  it("wildcard _ arm has no binding child", () => {
+    const result = parseOk(`
+pure flow check(x: Option<String>) -> String {
+  match x {
+    Some(v) => v
+    _ => "none"
+  }
+}
+`);
+    let wildcardArm;
+    function findWildcard(node) {
+      if (node?.kind === "matchArm" && node.value === "_") { wildcardArm = node; return; }
+      for (const c of node?.children ?? []) findWildcard(c);
+    }
+    findWildcard(result.ast);
+    assert.ok(wildcardArm !== undefined, "Expected wildcard matchArm");
+    // No identifier binding child on wildcard
+    const binding = wildcardArm.children?.find((c) => c.kind === "identifier");
+    assert.equal(binding, undefined, "Wildcard arm should not have binding child");
+  });
+});
+
+describe("Parser — protected/redacted type qualifiers", () => {
+  it("parses protected Email as typeRef with full qualifier", () => {
+    const result = parseOk(`
+type Email = Brand<String, EmailAddress>
+pure flow test(x: protected Email) -> String {
+  return "ok"
+}
+`);
+    // Find a paramDecl whose value contains 'protected Email'
+    let found = false;
+    function scan(node) {
+      if (node?.kind === "paramDecl" && node.value?.includes("protected Email")) found = true;
+      for (const c of node?.children ?? []) scan(c);
+    }
+    scan(result.ast);
+    assert.ok(found, "Expected paramDecl with 'protected Email'");
+  });
+});
+
+describe("Parser — enum variants captured", () => {
+  it("captures all enum variants as enumVariant children", () => {
+    const result = parseOk(`
+enum Status {
+  Active
+  Suspended
+  Deleted
+}
+`);
+    const enumNode = findNode(result.ast, "enumDecl");
+    assert.ok(enumNode !== undefined, "Expected enumDecl node");
+    assert.equal(enumNode.value, "Status");
+    const variantValues = enumNode.children?.map((c) => c.value) ?? [];
+    assert.deepEqual(variantValues, ["Active", "Suspended", "Deleted"]);
+  });
+});

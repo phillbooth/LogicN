@@ -60,7 +60,12 @@ export type AstNodeKind =
   | "numberLiteral"
   | "boolLiteral"
   | "errorPropagation"
-  | "computeTargetBlock";
+  | "computeTargetBlock"
+  // Route declarations
+  | "routeDecl"
+  // Literal expression nodes
+  | "charLiteral"
+  | "listLiteral";
 
 export interface SourceLocation {
   readonly file: string;
@@ -192,6 +197,21 @@ class Parser {
         case "governance": return this.parseGenericBlock("governanceDecl");
         case "api":      return this.parseGenericBlock("apiDecl");
         case "compute":  return this.parseComputeTarget();
+        case "route":    return this.parseRouteDecl();
+        case "fn": {
+          // fn at top level is a compiler error — fn is only valid inside a flow body
+          this.emit(
+            "LLN-SYNTAX-005",
+            "FN_AT_TOP_LEVEL",
+            `Top-level fn declarations are not permitted. Use pure flow, guarded flow, or secure flow instead.`,
+            this.loc(),
+            `Replace with: pure flow ${this.peek(1)?.value ?? "name"}(...) -> ReturnType { ... }`,
+          );
+          // Skip fn body to recover
+          while (!this.isEof() && !this.currentIs("symbol", "{")) this.advance();
+          if (this.currentIs("symbol", "{")) this.skipBalancedBraces();
+          return undefined;
+        }
         // Skip unknown keywords at top level
         default:
           this.emitUnexpected(`Unexpected keyword "${tok.value}" at top level.`);
@@ -363,8 +383,16 @@ class Parser {
 
   private parseParam(): AstNode | undefined {
     const loc = this.loc();
-    const nameTok = this.current();
 
+    // Optional readonly prefix on parameters: readonly req: Request
+    let isReadonly = false;
+    if (this.currentIs("keyword", "readonly")) {
+      isReadonly = true;
+      this.advance();
+      this.skipNewlines();
+    }
+
+    const nameTok = this.current();
     if (nameTok.kind !== "identifier") {
       this.emitUnexpected(`Expected parameter name, got "${nameTok.value}".`);
       return undefined;
@@ -374,7 +402,8 @@ class Parser {
     this.expect("symbol", ":");
     const typeRef = this.parseTypeRef();
 
-    const paramText = `${nameTok.value}: ${typeRef.value ?? ""}`;
+    const prefix = isReadonly ? "readonly " : "";
+    const paramText = `${prefix}${nameTok.value}: ${typeRef.value ?? ""}`;
     return { kind: "paramDecl", value: paramText, location: loc, children: [typeRef] };
   }
 
@@ -529,12 +558,14 @@ class Parser {
 
     if (tok.kind === "keyword") {
       switch (tok.value) {
-        case "let":    return this.parseLetDecl();
-        case "mut":    return this.parseMutDecl();
-        case "return": return this.parseReturnStmt();
-        case "if":     return this.parseIfStmt();
-        case "match":  return this.parseMatchExpr();
+        case "let":      return this.parseLetDecl();
+        case "mut":      return this.parseMutDecl();
+        case "readonly": return this.parseReadonlyDecl();
+        case "return":   return this.parseReturnStmt();
+        case "if":       return this.parseIfStmt();
+        case "match":    return this.parseMatchExpr();
         case "compute":  return this.parseComputeTarget();
+        case "fn":       return this.parseFnDecl();
         // Safety-prefix binding forms:
         //   unsafe let name: Type = expr
         //   unsafe mut name: Type = expr
@@ -725,6 +756,9 @@ class Parser {
     const loc = this.loc();
     const pattern = this.current();
 
+    // Wildcard arm: _ => body
+    const isWildcard = pattern.kind === "identifier" && pattern.value === "_";
+
     if (pattern.kind !== "identifier" && pattern.kind !== "keyword") {
       this.emitUnexpected(`Expected match arm pattern, got "${pattern.value}".`);
       this.advance();
@@ -733,6 +767,24 @@ class Parser {
 
     const patternValue = pattern.value;
     this.advance();
+
+    // Capture optional binding variable: Some(user), Ok(value), Err(e)
+    // The binding name is stored as an identifier child so downstream passes
+    // can register it in scope.
+    const bindingChildren: AstNode[] = [];
+    if (!isWildcard && this.currentIs("symbol", "(")) {
+      this.advance(); // consume (
+      this.skipNewlines();
+      if (this.current().kind === "identifier") {
+        const bindingLoc = this.loc();
+        const bindingName = this.current().value;
+        this.advance();
+        bindingChildren.push({ kind: "identifier", value: bindingName, location: bindingLoc });
+      }
+      this.skipNewlines();
+      this.expect("symbol", ")");
+    }
+
     this.expect("operator", "=>");
 
     let body: AstNode;
@@ -747,7 +799,7 @@ class Parser {
       kind: "matchArm",
       value: patternValue,
       location: loc,
-      children: [body],
+      children: [...bindingChildren, body],
     };
   }
 
@@ -871,10 +923,35 @@ class Parser {
       return { kind: "stringLiteral", value: tok.value, location: loc };
     }
 
-    // Number literal
+    // Char literal 'A'
+    if (tok.kind === "char") {
+      this.advance();
+      return { kind: "charLiteral", value: tok.value, location: loc };
+    }
+
+    // Number literal (decimal, hex 0xFF, binary 0b1010, octal 0o755)
     if (tok.kind === "number") {
       this.advance();
       return { kind: "numberLiteral", value: tok.value, location: loc };
+    }
+
+    // List / array literal: [a, b, c] or []
+    if (tok.kind === "symbol" && tok.value === "[") {
+      this.advance(); // consume [
+      const elements: AstNode[] = [];
+      this.skipNewlines();
+      while (!this.currentIs("symbol", "]") && !this.isEof()) {
+        elements.push(this.parseExpression());
+        this.skipNewlines();
+        if (this.currentIs("symbol", ",")) {
+          this.advance();
+          this.skipNewlines();
+        } else {
+          break;
+        }
+      }
+      this.expect("symbol", "]");
+      return { kind: "listLiteral", value: "", location: loc, children: elements };
     }
 
     // Boolean literal
@@ -1044,6 +1121,137 @@ class Parser {
     };
   }
 
+  // ── fn helper declaration (inside flow body only) ─────────────────────────
+
+  /**
+   * Parses `fn name(params) -> ReturnType { body }` inside a flow body.
+   *
+   * Rules:
+   *   - fn cannot declare effects — emits LLN-SEC-014 if found
+   *   - fn cannot request authority
+   *   - fn is always synchronous
+   *   - Binding variables from fn params are registered in the fn's own scope
+   */
+  private parseFnDecl(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "fn"
+    this.skipNewlines();
+
+    const nameTok = this.expect("identifier");
+    const name = nameTok?.value ?? "<unknown>";
+
+    this.expect("symbol", "(");
+    const params = this.parseParamList();
+    this.expect("symbol", ")");
+
+    // Optional return type
+    let retTypeNode: AstNode | undefined;
+    this.skipNewlines();
+    if (this.currentIs("operator", "->")) {
+      this.advance();
+      retTypeNode = this.parseTypeRef();
+    }
+
+    // fn CANNOT declare effects — emit LLN-SEC-014 and skip the clause
+    this.skipNewlines();
+    const hasEffects =
+      this.currentIs("keyword", "effects") ||
+      (this.currentIs("keyword", "with") &&
+        this.peek(1).kind === "keyword" &&
+        this.peek(1).value === "effects");
+
+    if (hasEffects) {
+      this.emit(
+        "LLN-SEC-014",
+        "FN_CANNOT_DECLARE_EFFECTS",
+        `Local fn '${name}' cannot declare effects. Effects belong to the containing flow.`,
+        this.loc(),
+        `Remove the effects clause from fn '${name}' and declare the effect on the enclosing flow.`,
+      );
+      // Skip the effects clause to recover
+      while (!this.isEof() && !this.currentIs("symbol", "{")) this.advance();
+    }
+
+    this.skipNewlines();
+    const body = this.parseBlock();
+
+    const children: AstNode[] = [
+      ...params,
+      ...(retTypeNode !== undefined ? [retTypeNode] : []),
+      body,
+    ];
+
+    return { kind: "fnDecl", value: name, location: loc, children };
+  }
+
+  // ── Route declaration ─────────────────────────────────────────────────────
+
+  /**
+   * Parses `route METHOD "path" { request T response T flow name }`.
+   *
+   * Routes contain no business logic — they declare the contract and delegate
+   * entirely to a named flow.
+   */
+  private parseRouteDecl(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "route"
+    this.skipNewlines();
+
+    // HTTP method: GET POST PUT PATCH DELETE (identifier or keyword)
+    let method = "";
+    if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+      method = this.current().value.toUpperCase();
+      this.advance();
+    }
+    this.skipNewlines();
+
+    // Path string: "/orders" or "/users/{id}"
+    let path = "";
+    if (this.current().kind === "string") {
+      path = this.current().value;
+      this.advance();
+    }
+
+    const value = `${method} ${path}`.trim();
+
+    // Route body: { request T  response T  flow name  [permission ...] }
+    // The body contains declaration-level clauses (flow, request, response),
+    // not statements. Use the generic balanced-brace skipper for now;
+    // a full clause-level parser is Phase 8+.
+    this.skipNewlines();
+    if (this.currentIs("symbol", "{")) {
+      this.skipBalancedBraces();
+    }
+
+    return { kind: "routeDecl", value, location: loc };
+  }
+
+  // ── readonly binding declaration ──────────────────────────────────────────
+
+  /**
+   * Parses `readonly name: Type = expr` — a binding that cannot be reassigned.
+   */
+  private parseReadonlyDecl(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "readonly"
+
+    const nameTok = this.expect("identifier");
+    const name = nameTok?.value ?? "<unknown>";
+
+    let typeValue = "";
+    if (this.currentIs("symbol", ":")) {
+      this.advance();
+      const typeNode = this.parseTypeRefWithValueState();
+      typeValue = typeNode.value ?? "";
+    }
+
+    this.expect("operator", "=");
+    const init = this.parseExpression();
+
+    const nameWithType = typeValue !== "" ? `${name}: ${typeValue}` : name;
+    return { kind: "readonlyDecl", value: nameWithType, location: loc, children: [init] };
+  }
+
   // ── Import / type / enum stubs ────────────────────────────────────────────
 
   private parseImportDecl(): AstNode {
@@ -1078,10 +1286,42 @@ class Parser {
   private parseRecordDecl(): AstNode {
     const loc = this.loc();
     this.advance(); // consume "record"
+    this.skipNewlines();
     const name = this.current().kind === "identifier" ? this.current().value : "<unknown>";
     if (this.current().kind === "identifier") this.advance();
-    if (this.currentIs("symbol", "{")) this.skipBalancedBraces();
-    return { kind: "recordDecl", value: name, location: loc };
+    this.skipNewlines();
+
+    const fields: AstNode[] = [];
+    if (this.currentIs("symbol", "{")) {
+      this.advance(); // consume {
+      this.skipNewlines();
+      while (!this.currentIs("symbol", "}") && !this.isEof()) {
+        if (this.current().kind === "identifier") {
+          const fLoc = this.loc();
+          const fName = this.current().value;
+          this.advance();
+          let typeAnnotation = "";
+          if (this.currentIs("symbol", ":")) {
+            this.advance();
+            const typeNode = this.parseTypeRef();
+            typeAnnotation = typeNode.value ?? "";
+          }
+          fields.push({
+            kind: "paramDecl",
+            value: typeAnnotation !== "" ? `${fName}: ${typeAnnotation}` : fName,
+            location: fLoc,
+          });
+        } else if (this.currentIs("symbol", ",")) {
+          this.advance();
+        } else {
+          this.advance(); // skip unexpected tokens gracefully
+        }
+        this.skipNewlines();
+      }
+      this.expect("symbol", "}");
+    }
+
+    return { kind: "recordDecl", value: name, location: loc, children: fields };
   }
 
   private parseEnumDecl(): AstNode {

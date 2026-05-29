@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-05-29T16:54:55.027Z",
+  "generatedAt": "2026-05-29T18:27:38.509Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -1857,37 +1857,541 @@
       ]
     },
     {
-      "id": "doc:docs/examples/Level-6-Compute/PLANNED.md",
+      "id": "doc:docs/examples/Level-6-Compute/301-compute-target-best/notes.md",
       "kind": "Document",
-      "label": "PLANNED.md",
-      "sourcePath": "docs/examples/Level-6-Compute/PLANNED.md",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/301-compute-target-best/notes.md",
       "tags": [
         "document"
       ]
     },
     {
-      "id": "doc:docs/examples/Level-7-AI/PLANNED.md",
+      "id": "doc:docs/examples/Level-6-Compute/302-compute-deny-remote/notes.md",
       "kind": "Document",
-      "label": "PLANNED.md",
-      "sourcePath": "docs/examples/Level-7-AI/PLANNED.md",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/302-compute-deny-remote/notes.md",
       "tags": [
         "document"
       ]
     },
     {
-      "id": "doc:docs/examples/Level-8-Targets/PLANNED.md",
+      "id": "doc:docs/examples/Level-6-Compute/303-compute-gpu-explicit/notes.md",
       "kind": "Document",
-      "label": "PLANNED.md",
-      "sourcePath": "docs/examples/Level-8-Targets/PLANNED.md",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/303-compute-gpu-explicit/notes.md",
       "tags": [
         "document"
       ]
     },
     {
-      "id": "doc:docs/examples/Level-9-Enterprise/PLANNED.md",
+      "id": "doc:docs/examples/Level-6-Compute/304-tensor-basic/notes.md",
       "kind": "Document",
-      "label": "PLANNED.md",
-      "sourcePath": "docs/examples/Level-9-Enterprise/PLANNED.md",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/304-tensor-basic/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-6-Compute/305-tensor-dynamic-shape/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/305-tensor-dynamic-shape/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-6-Compute/306-tensor-arity-invalid/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/306-tensor-arity-invalid/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-6-Compute/307-vector-type/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/307-vector-type/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-6-Compute/308-matrix-type/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/308-matrix-type/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-6-Compute/309-compute-photonic/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/309-compute-photonic/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-6-Compute/310-compute-fallback-required/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/310-compute-fallback-required/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-6-Compute/311-money-vat-calculation/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/311-money-vat-calculation/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-6-Compute/312-money-invalid-cross-currency/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/312-money-invalid-cross-currency/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-6-Compute/313-decimal-precision/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/313-decimal-precision/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-6-Compute/314-compute-npu-ai-inference/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/314-compute-npu-ai-inference/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-6-Compute/315-compute-summary/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/315-compute-summary/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/351-embedding-flow/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/351-embedding-flow/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/352-ai-inference-effect/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/352-ai-inference-effect/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/353-protected-ai-input/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/353-protected-ai-input/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/354-ai-batch-inference/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/354-ai-batch-inference/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/355-ai-governance-denied-remote/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/355-ai-governance-denied-remote/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/356-ai-missing-audit/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/356-ai-missing-audit/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/357-tensor-model-input-output/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/357-tensor-model-input-output/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/358-ai-secure-string-in-ai/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/358-ai-secure-string-in-ai/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/359-embedding-with-fallback/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/359-embedding-with-fallback/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/360-ai-audit-redacted/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/360-ai-audit-redacted/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/361-ai-any-tensor/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/361-ai-any-tensor/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/362-ai-invalid-tensor-arity/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/362-ai-invalid-tensor-arity/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/363-local-model-only/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/363-local-model-only/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/364-ai-effect-propagation/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/364-ai-effect-propagation/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/365-ai-summary-flow/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/365-ai-summary-flow/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-8-Targets/401-target-cpu/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-8-Targets/401-target-cpu/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-8-Targets/402-target-gpu/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-8-Targets/402-target-gpu/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-8-Targets/403-target-npu/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-8-Targets/403-target-npu/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-8-Targets/404-target-wasm/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-8-Targets/404-target-wasm/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-8-Targets/405-target-photonic/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-8-Targets/405-target-photonic/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-8-Targets/406-target-quantum/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-8-Targets/406-target-quantum/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-8-Targets/407-target-best-prefer/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-8-Targets/407-target-best-prefer/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-8-Targets/408-target-deny-remote/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-8-Targets/408-target-deny-remote/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-8-Targets/409-target-deny-list/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-8-Targets/409-target-deny-list/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-8-Targets/410-adaptive-runtime/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-8-Targets/410-adaptive-runtime/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-8-Targets/411-deterministic-runtime/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-8-Targets/411-deterministic-runtime/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-8-Targets/412-target-photonic-with-fallback/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-8-Targets/412-target-photonic-with-fallback/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-8-Targets/413-target-quantum-simulation/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-8-Targets/413-target-quantum-simulation/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-8-Targets/414-target-no-fallback-invalid/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-8-Targets/414-target-no-fallback-invalid/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-8-Targets/415-target-summary/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-8-Targets/415-target-summary/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/451-healthcare-patient-create/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/451-healthcare-patient-create/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/452-healthcare-invalid-pii-log/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/452-healthcare-invalid-pii-log/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/453-financial-payment-charge/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/453-financial-payment-charge/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/454-financial-cross-currency-invalid/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/454-financial-cross-currency-invalid/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/455-financial-money-calculation/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/455-financial-money-calculation/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/456-compliance-pii-effect/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/456-compliance-pii-effect/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/457-compliance-phi-effect/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/457-compliance-phi-effect/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/458-compliance-audit-required/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/458-compliance-audit-required/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/459-multi-protected-values/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/459-multi-protected-values/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/460-authority-data-sharing/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/460-authority-data-sharing/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/461-authority-missing/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/461-authority-missing/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/462-policy-purpose/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/462-policy-purpose/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/463-policy-mismatch/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/463-policy-mismatch/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/464-enterprise-supply-chain/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/464-enterprise-supply-chain/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/465-enterprise-summary/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/465-enterprise-summary/notes.md",
       "tags": [
         "document"
       ]
@@ -2878,6 +3382,15 @@
       "kind": "Document",
       "label": "logicn-api-boundary-architecture.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-api-boundary-architecture.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-architecture-layers.md",
+      "kind": "Document",
+      "label": "logicn-architecture-layers.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-architecture-layers.md",
       "tags": [
         "document"
       ]

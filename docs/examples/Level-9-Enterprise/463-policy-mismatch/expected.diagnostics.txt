@@ -1,0 +1,1 @@
+﻿LLN-GOV-005: template marketing_offer is inconsistent with declared policy purpose appointment_reminder

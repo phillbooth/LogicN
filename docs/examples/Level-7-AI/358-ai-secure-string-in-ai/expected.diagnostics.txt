@@ -1,0 +1,1 @@
+﻿LLN-SECRET-001: SecureString value apiKey must not be passed to an AI model inference call

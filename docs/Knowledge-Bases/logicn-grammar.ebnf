@@ -308,6 +308,57 @@ Operator precedence, tightest last:
 `?` is postfix error propagation. It binds tighter than all infix operators:
 `validate.email(raw)? || fallback` parses as `(validate.email(raw)?) || fallback`.
 
+## Governance, Authority, and Policy Blocks
+
+These blocks appear inside `secure flow` bodies and at top-level (governance,
+api declarations). They are Phase 7B / 8 semantics; the parser currently
+handles them as generic blocks (see `parseGenericBlock` in parser.ts).
+
+```ebnf
+governance_decl     = "governance" , identifier , "{" , { governance_clause } , "}" ;
+
+authority_block     = "authority" , authority_action , [ authority_target ] ,
+                      "{" , { authority_clause } , "}" ;
+
+authority_action    = "share" | "delegate" | "grant" | identifier ;
+authority_target    = qualified_name ;
+
+authority_clause    = "reason" , string_literal
+                    | "require" , effect_name
+                    | "expires" , string_literal
+                    | "audit" , ( "required" | "optional" ) ;
+
+policy_block        = "policy" , "{" , { policy_clause } , "}" ;
+
+policy_clause       = "purpose" , string_literal
+                    | "allow" , type_ref , "to" , string_literal
+                    | "deny" , type_ref
+                    | "require" , effect_name ;
+
+runtime_block       = "runtime" , ( "adaptive" | "deterministic" ) ,
+                      [ "{" , { runtime_clause } , "}" ] ;
+
+runtime_clause      = "observe" , identifier
+                    | "learn" , "from" , identifier
+                    | "optimise" , "[" , identifier_list , "]"
+                    | "preserve" , "[" , identifier_list , "]" ;
+
+identifier_list     = identifier , { "," , identifier } ;
+```
+
+The `authority` block grants temporary authority for data sharing outside
+the normal governed boundary. It must include a `reason` and typically
+requires `audit.write` to be declared on the enclosing flow.
+
+The `policy` block constrains what the flow may do with specific data
+categories. `purpose` is a machine-readable intent tag the governance
+verifier checks against observed behaviour.
+
+The `runtime` block configures the Adaptive Runtime profile for this
+flow's execution. `runtime deterministic` disables all adaptive optimisation.
+
+---
+
 ## Explicitly Excluded From v1
 
 ```text

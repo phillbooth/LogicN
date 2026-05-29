@@ -1,0 +1,35 @@
+﻿/// example: 415-target-summary
+/// level: 8
+/// concept: complete compute target governance — prefer, deny, fallback, adaptive runtime, and audit
+/// expected_diagnostics: none
+/// ai_rule: The full target pattern combines prefer, deny, fallback, runtime mode, and governance effects.
+
+secure flow runGovernedInference(readonly req: Request) -> Result<Response, AiError>
+  with effects [ai.inference, audit.write]
+  intent "Run inference on approved local hardware with adaptive optimisation"
+{
+  compute target best {
+    prefer [photonic, npu, gpu, cpu]
+    deny [remote.execution, cloud.inference]
+    fallback cpu
+  }
+
+  runtime adaptive {
+    learn from intent
+    optimise [batching, model_warmup]
+    preserve [security, effects, governance]
+  }
+
+  unsafe let rawInput: String = req.body.input
+  let safeInput: String = validate.text(rawInput)?
+  let features: Tensor<Float32, [1, 256]> = FeatureExtractor.from(safeInput)?
+  let result = GovernedModel.run(features)?
+
+  AuditLog.write({
+    event: "GovernedInference",
+    inputHash: hash(safeInput),
+    resultBand: result.band
+  })
+
+  return Ok(Response.ok(result))
+}

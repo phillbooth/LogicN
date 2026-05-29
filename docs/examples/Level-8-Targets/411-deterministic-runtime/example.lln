@@ -1,0 +1,16 @@
+﻿/// example: 411-deterministic-runtime
+/// level: 8
+/// concept: deterministic runtime for regulated environments requiring identical execution planning
+/// expected_diagnostics: none
+/// ai_rule: Use runtime deterministic for compliance environments requiring identical execution planning.
+
+secure flow runRegulated(input: Tensor<Float32, [1, 128]>) -> Result<Tensor<Float32, [1, 64]>, AiError>
+  with effects [ai.inference, audit.write]
+{
+  runtime deterministic
+
+  compute target cpu { fallback cpu }
+  let output = RegulatedModel.forward(input)?
+  AuditLog.write({ event: "RegulatedInference", inputHash: hash(input) })
+  return Ok(output)
+}

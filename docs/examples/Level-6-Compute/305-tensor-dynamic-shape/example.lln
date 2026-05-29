@@ -1,0 +1,11 @@
+﻿/// example: 305-tensor-dynamic-shape
+/// level: 6
+/// concept: dynamic shape tensor for variable-length inference
+/// expected_diagnostics: none
+/// ai_rule: Use DynamicShape when batch size or sequence length varies at runtime.
+
+guarded flow runModel(input: Tensor<Float32, DynamicShape>) -> Tensor<Float32, DynamicShape>
+  with effects [ai.inference]
+{
+  return InferenceModel.forward(input)?
+}

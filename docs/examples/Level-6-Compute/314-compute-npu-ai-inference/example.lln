@@ -1,0 +1,16 @@
+﻿/// example: 314-compute-npu-ai-inference
+/// level: 6
+/// concept: full AI text classification flow with NPU targeting and governance
+/// expected_diagnostics: none
+/// ai_rule: Combine compute target best with deny [remote.execution] to enforce on-device AI inference.
+
+guarded flow classifyText(text: String) -> Result<Label, AiError>
+  with effects [ai.inference]
+  intent "Classify text locally on approved hardware"
+{
+  compute target best { prefer [npu, gpu, cpu] deny [remote.execution] }
+
+  let embedding: Tensor<Float32, [1, 768]> = EmbeddingModel.embed(text)?
+  let label: Label = ClassifierModel.classify(embedding)?
+  return Ok(label)
+}
