@@ -15,7 +15,7 @@ enforced by tooling** â€” not inferred, guessed, or left to convention.
 
 ## Build Progress
 
-**Post-Quantum & Hardware Security** — CHERI capability hardware, ML-DSA attestation, ARM MTE, TEE
+**Post-Photonic & Hardware Security** — CHERI capability hardware, ML-DSA attestation, ARM MTE, TEE
 
 ```
 ▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   5%
