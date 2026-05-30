@@ -3,6 +3,7 @@
 /// concept: complete governed AI inference flow with audit, hardware targeting, and deny clause
 /// expected_diagnostics: none
 /// ai_rule: The summary pattern combines secure flow, protected types, compute target, deny, audit, and Result propagation.
+/// test_status: stable
 
 secure flow runFraudScore(readonly tx: Transaction) -> RunFraudScoreResult
 

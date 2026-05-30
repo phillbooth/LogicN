@@ -3,6 +3,7 @@
 /// concept: comprehensive governance example showing all patterns
 /// expected_diagnostics: none
 /// ai_rule: Governance = intent + effects + compute target + authority + policy + audit evidence.
+/// test_status: stable
 
 secure flow createPatient(request: Request) -> CreatePatientResult
 

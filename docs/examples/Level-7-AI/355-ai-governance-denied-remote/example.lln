@@ -3,6 +3,7 @@
 /// concept: AI inference with remote execution denied for patient data governance
 /// expected_diagnostics: none
 /// ai_rule: Pair ai.inference with deny [remote.execution] for any flow that handles patient data.
+/// test_status: stable
 
 secure flow scoreRisk(readonly patient: Patient) -> ScoreRiskResult
 

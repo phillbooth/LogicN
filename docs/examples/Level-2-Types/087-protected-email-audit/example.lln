@@ -1,8 +1,15 @@
-﻿/// example: 087-protected-email-audit
+/// example: 087-protected-email-audit
 /// level: 2
 /// concept: full protected -> redacted -> audit pattern
 /// expected_diagnostics: none
 /// ai_rule: Redact protected values before writing to audit sinks.
+/// test_status: stable
 
-let auditEmail: redacted Email = redact(email)
-AuditLog.write({ email: auditEmail })
+type Email = Brand<String, EmailTag>
+
+guarded flow example(email: protected Email) -> Void
+  with effects [audit.write]
+{
+  let auditEmail: redacted Email = redact(email)
+  AuditLog.write({ email: auditEmail })
+}

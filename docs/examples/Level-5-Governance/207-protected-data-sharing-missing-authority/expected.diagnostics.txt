@@ -1,4 +1,4 @@
-﻿LLN-GOV-003 (PROTECTED_DATA_SENT_EXTERNALLY_WITHOUT_AUTHORITY — Phase 8B)
+LLN-GOV-003 (PROTECTED_DATA_SENT_EXTERNALLY_WITHOUT_AUTHORITY — Phase 8B)
 
 Protected data sent externally without authority block.
 Add a policy block authorizing the data sharing:

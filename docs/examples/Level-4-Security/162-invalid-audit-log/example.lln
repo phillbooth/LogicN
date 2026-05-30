@@ -1,7 +1,13 @@
 /// example: 162-invalid-audit-log
 /// level: 4
-/// concept: passing protected value to audit sink without redaction
+/// concept: unsafe value reaches audit sink without validation
 /// expected_diagnostics: LLN-VALUESTATE-003
-/// ai_rule: Redact protected values before passing to audit sinks.
+/// ai_rule: Unsafe boundary data must be validated before reaching any governed sink including AuditLog.
+/// test_status: stable
 
-AuditLog.write({ email: email })
+secure flow example(readonly request: Request) -> Void
+  with effects [audit.write]
+{
+  unsafe let rawEmail: String = request.body.email
+  AuditLog.write({ email: rawEmail })
+}

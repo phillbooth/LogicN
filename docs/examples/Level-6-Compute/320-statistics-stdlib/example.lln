@@ -3,7 +3,7 @@
 /// concept: pure statistical computation using Array.reduce and map
 /// expected_diagnostics: none
 /// test_status: stable
-/// ai_rule: Use Array.reduce to fold a collection into a single value. Use Array.map to transform each element. Both are available without imports.
+/// ai_rule: Use Array.reduce to fold a collection into a single value. Use local fn helpers with Array.map and Array.reduce for typed, composable transformations.
 
 // Compute the sum of an array of Decimals using Array.reduce.
 pure flow sum(values: Array<Decimal>) -> Decimal {
@@ -25,13 +25,17 @@ pure flow mean(values: Array<Decimal>) -> Decimal {
 
 // Scale each value in the array by a multiplier.
 pure flow scale(values: Array<Decimal>, factor: Decimal) -> Array<Decimal> {
-  return values.map(v => v * factor)
+  fn multiply(v: Decimal) -> Decimal {
+    return v * factor
+  }
+  return values.map(multiply)
 }
 
 // Compute squared deviations from a given mean — building block for variance.
 pure flow squaredDeviations(values: Array<Decimal>, mu: Decimal) -> Array<Decimal> {
-  return values.map(v => {
+  fn devSquared(v: Decimal) -> Decimal {
     let diff: Decimal = v - mu
     return diff * diff
-  })
+  }
+  return values.map(devSquared)
 }

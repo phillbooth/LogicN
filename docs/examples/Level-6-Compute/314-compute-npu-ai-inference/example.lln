@@ -3,6 +3,7 @@
 /// concept: full AI text classification flow with NPU targeting and governance
 /// expected_diagnostics: none
 /// ai_rule: Combine compute target best with deny [remote.execution] to enforce on-device AI inference.
+/// test_status: stable
 
 guarded flow classifyText(text: String) -> ClassifyTextResult
 

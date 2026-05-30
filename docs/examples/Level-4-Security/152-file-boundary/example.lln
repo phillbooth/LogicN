@@ -2,8 +2,8 @@
 /// level: 4
 /// concept: file content enters as unsafe
 /// expected_diagnostics: none
-/// test_status: stable
 /// ai_rule: External files are unsafe. Use unsafe let for data read from the filesystem.
+/// test_status: stable
 
 guarded flow importUsers(filePath: String) -> Result<List<UserId>, ImportError>
   with effects [filesystem.read, database.write]

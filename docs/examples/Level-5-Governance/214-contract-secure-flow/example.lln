@@ -1,8 +1,9 @@
-﻿/// example: 214-contract-secure-flow
+/// example: 214-contract-secure-flow
 /// level: 5
 /// concept: flow contract on secure flow with governance intent
 /// expected_diagnostics: none
 /// ai_rule: secure flows should use contract.intent to declare their governance purpose explicitly.
+/// test_status: stable
 
 event PatientCreated
 event PatientCreationRejected

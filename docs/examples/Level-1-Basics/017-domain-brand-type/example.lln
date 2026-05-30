@@ -2,8 +2,8 @@
 /// level: 1
 /// concept: branded domain type
 /// expected_diagnostics: none
-/// test_status: stable
 /// ai_rule: Use Brand<String, Name> to make domain types distinct at compile time.
+/// test_status: stable
 
 type Email =
   Brand<String, EmailAddress>

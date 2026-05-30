@@ -3,6 +3,7 @@
 /// concept: multiple denied target categories in a single deny clause
 /// expected_diagnostics: none
 /// ai_rule: List all denied categories in a single deny [...] clause to make the exclusions explicit and auditable.
+/// test_status: stable
 
 guarded flow runStrictLocal(input: Tensor<Float32, [1, 256]>) -> RunStrictLocalResult
 

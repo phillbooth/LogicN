@@ -5,6 +5,7 @@
 /// ai_rule: The contract declares WHAT the flow is allowed, expected, and required to do. The body declares HOW.
 ///          Canonical section order: types → intent → request → response → context → model → effects →
 ///          timeouts → retries → limits → privacy → errors → rules → observability → events → audit
+/// test_status: stable
 
 event PatientProfileRead
 

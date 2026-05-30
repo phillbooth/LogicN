@@ -2,8 +2,8 @@
 /// level: 2
 /// concept: trust and sensitivity are independent axes
 /// expected_diagnostics: none
-/// test_status: stable
 /// ai_rule: unsafe let = trust state (not yet validated). protected = sensitivity state (access restricted). These are orthogonal.
+/// test_status: stable
 
 secure flow handlePatients(readonly request: Request) -> Result<Response, ApiError>
 with effects [database.write, audit.write] {

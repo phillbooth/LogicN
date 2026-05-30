@@ -1,4 +1,4 @@
-﻿LLN-INTENT-001
+LLN-INTENT-001
 
 Flow behaviour conflicts with declared intent.
 Intent states "Generate local patient report" but flow sends data to an external endpoint.

@@ -3,6 +3,7 @@
 /// concept: complete compute target governance — prefer, deny, fallback, adaptive runtime, and audit
 /// expected_diagnostics: none
 /// ai_rule: The full target pattern combines prefer, deny, fallback, runtime mode, and governance effects.
+/// test_status: stable
 
 secure flow runGovernedInference(readonly request: Request) -> RunGovernedInferenceResult
 

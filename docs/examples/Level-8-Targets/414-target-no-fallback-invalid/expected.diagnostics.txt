@@ -1,1 +1,1 @@
-﻿LLN-TARGET-001: compute target npu requires an explicit fallback clause
+LLN-TARGET-001

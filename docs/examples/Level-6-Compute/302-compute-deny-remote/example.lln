@@ -3,6 +3,7 @@
 /// concept: denying remote execution in a secure credit-scoring flow
 /// expected_diagnostics: none
 /// ai_rule: Use deny [remote.execution] for data that must not leave the device.
+/// test_status: stable
 
 secure flow scoreCredit(readonly request: Request) -> ScoreCreditResult
 

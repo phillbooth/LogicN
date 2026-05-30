@@ -1,8 +1,9 @@
-﻿/// example: 021-flow-contract-basic
+/// example: 021-flow-contract-basic
 /// level: 1
 /// concept: flow contract block with types, intent, and events
 /// expected_diagnostics: none
 /// ai_rule: Use contract { } to group flow-local metadata — types, intent, and events — in one governed location.
+/// test_status: stable
 
 event EmailValidationStarted
 event EmailValidationCompleted

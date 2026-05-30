@@ -1,8 +1,9 @@
-﻿/// example: 303-compute-gpu-explicit
+/// example: 303-compute-gpu-explicit
 /// level: 6
 /// concept: explicit GPU targeting with CPU fallback
 /// expected_diagnostics: none
 /// ai_rule: Explicitly target gpu when the workload is known to saturate the GPU; always add fallback cpu for portability.
+/// test_status: stable
 
 pure flow processImage(pixels: Tensor<Float32, [3, 224, 224]>) -> Tensor<Float32, [1000]>
   with compute target gpu { fallback cpu }

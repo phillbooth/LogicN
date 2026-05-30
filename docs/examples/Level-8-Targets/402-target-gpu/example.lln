@@ -3,6 +3,7 @@
 /// concept: explicit GPU compute target with CPU fallback
 /// expected_diagnostics: none
 /// ai_rule: Use compute target gpu for large dense tensor workloads; always add fallback cpu.
+/// test_status: stable
 
 guarded flow runOnGpu(input: Tensor<Float32, [Batch, 224, 224, 3]>) -> RunOnGpuResult
 

@@ -1,8 +1,9 @@
-﻿/// example: 019-redacted-type-label
+/// example: 019-redacted-type-label
 /// level: 1
 /// concept: redacted type qualifier
 /// expected_diagnostics: none
 /// ai_rule: redacted marks a value that has been masked for safe output.
+/// test_status: stable
 
 let auditEmail: redacted Email =
   redact(email)

@@ -2,33 +2,33 @@
 /// level: 9
 /// concept: medical domain — record types Patient and Medication, interaction validation pattern
 /// expected_diagnostics: none
-/// test_status: stable
 /// ai_rule: Medical flows must use protected types for all PII (PatientId, MedicationCode), declare pii.read and audit.write effects, and redact protected values in audit entries.
+/// test_status: stable
 
 event MedicationCheckPerformed
 
 record Patient {
-  id: String
-  name: String
+  patientId: String
+  patientName: String
   nhsNumber: String
 }
 
 record Medication {
-  code: String
-  name: String
+  medicationCode: String
+  medicationName: String
   doseUnit: String
 }
 
 record InteractionCheckRequest {
-  patientId: String
-  medicationA: String
-  medicationB: String
+  requestPatientId: String
+  requestMedA: String
+  requestMedB: String
 }
 
 record InteractionCheckResponse {
   hasInteraction: Bool
-  severity: String
-  advice: String
+  interactionSeverity: String
+  clinicalAdvice: String
 }
 
 secure flow checkMedicationInteraction(
@@ -47,9 +47,9 @@ contract {
   request {
     accepts InteractionCheckRequest
     params {
-      patientId: unsafe String
-      medicationA: unsafe String
-      medicationB: unsafe String
+      requestPatientId: unsafe String
+      requestMedA: unsafe String
+      requestMedB: unsafe String
     }
     requires {
       actor
@@ -61,8 +61,8 @@ contract {
     returns InteractionCheckResponse
     exposes {
       hasInteraction
-      severity
-      advice
+      interactionSeverity
+      clinicalAdvice
     }
     denies {
       nhsNumber
@@ -142,9 +142,9 @@ with effects [pii.read, database.read, audit.write] {
   let actor = context.actor
   let traceId = context.trace_id
 
-  unsafe let rawPatientId: String = request.params.patientId
-  unsafe let rawMedA: String = request.params.medicationA
-  unsafe let rawMedB: String = request.params.medicationB
+  unsafe let rawPatientId: String = request.params.requestPatientId
+  unsafe let rawMedA: String = request.params.requestMedA
+  unsafe let rawMedB: String = request.params.requestMedB
 
   let patientId: protected PatientId = validate.patientId(rawPatientId)?
   let medCodeA: protected MedicationCode = validate.medicationCode(rawMedA)?
@@ -174,7 +174,7 @@ with effects [pii.read, database.read, audit.write] {
 
   return Ok(Response.okJson({
     hasInteraction: result.hasInteraction,
-    severity: result.severity,
-    advice: result.advice
+    interactionSeverity: result.interactionSeverity,
+    clinicalAdvice: result.clinicalAdvice
   }))
 }

@@ -3,6 +3,7 @@
 /// concept: policy block declares the permitted purpose for data use in a communication flow
 /// expected_diagnostics: none
 /// ai_rule: Use a policy block with a purpose declaration to document and enforce the lawful basis for processing patient contact data.
+/// test_status: stable
 
 secure flow emailPatient(readonly request: Request) -> EmailPatientResult
 
@@ -11,7 +12,7 @@ contract {
     type EmailPatientResult = Result<Response, NotificationError>
   }
 }
-  with effects [pii.read, network.outbound, audit.write]
+  with effects [pii.read, database.read, network.outbound, audit.write]
   intent "Send appointment reminder to patient"
   policy {
     purpose "appointment_reminder"

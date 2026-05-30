@@ -3,6 +3,7 @@
 /// concept: quantum compute target with classical CPU fallback
 /// expected_diagnostics: none
 /// ai_rule: Use compute target quantum for quantum-native algorithms; fallback cpu runs a classical simulation.
+/// test_status: stable
 
 guarded flow runQuantumOptimiser(params: Tensor<Float32, [64]>) -> RunQuantumOptimiserResult
 

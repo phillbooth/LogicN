@@ -3,5 +3,8 @@
 /// concept: secret value sent to console sink is forbidden
 /// expected_diagnostics: LLN-SECRET-001
 /// ai_rule: Never log secret values (API keys, passwords, tokens).
+/// test_status: stable
 
-print(apiKey)
+pure flow example(apiKey: SecureString) -> Void {
+  print(apiKey)
+}

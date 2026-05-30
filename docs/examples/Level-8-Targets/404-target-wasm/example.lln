@@ -1,8 +1,9 @@
-﻿/// example: 404-target-wasm
+/// example: 404-target-wasm
 /// level: 8
 /// concept: WebAssembly compute target for browser or sandboxed execution
 /// expected_diagnostics: none
 /// ai_rule: Use compute target wasm when the flow must run inside a browser or a WASM sandbox.
+/// test_status: stable
 
 pure flow runInBrowser(input: Tensor<Float32, [1, 128]>) -> Tensor<Float32, [1, 64]>
   with compute target wasm { fallback cpu }

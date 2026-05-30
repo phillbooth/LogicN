@@ -409,9 +409,8 @@ async function listMethod(
       return item === undefined ? LLN_NONE : mkSome(item);
     }
     case "push":
-      return { __tag: "list", items: [...items, args[0] ?? LLN_VOID] };
     case "append":
-      return { __tag: "list", items: [...items, ...asList(args[0] ?? LLN_VOID)] };
+      return { __tag: "list", items: [...items, args[0] ?? LLN_VOID] };
     case "filter": {
       const fn = args[0];
       if (fn === undefined) return receiver;

@@ -15,41 +15,50 @@ enforced by tooling** â€” not inferred, guessed, or left to convention.
 
 ## Build Progress
 
-**TypeScript Runtime** â€” compiler pipeline + execution engine running on Node.js
+**Post-Quantum & Hardware Security** — CHERI capability hardware, ML-DSA attestation, ARM MTE, TEE
 
 ```
-â–“â–“â–“â–“â–“â–“â–“â–“â–“â–“â–“â–“â–“â–“â–“â–“â–“â–“â–“â–“â–“â–“â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘  72%  (697 tests Â· 0 failures)
+▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   5%
+```
+
+**Passive Execution Plans + Target Bridges** — Phase 13: GIR → Plan → CPU/GPU/NPU/WASM/Photonic
+
+```
+▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   8%
+```
+
+**Runtime written in LogicN** — Stage B: LogicN compiler compiles itself ← Major achievement milestone
+
+```
+▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  12%  (lexer.lln written and executable)
+```
+
+**TypeScript Runtime** — Stage A: compiler pipeline + execution engine running on Node.js
+
+```
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░  92%  (1543 tests · 0 failures · 189/222 CEC stable)
 ```
 
 | Layer | Status | % |
 |---|---|---|
-| Specification / KB | Grammar, CEC (205 examples), attestation, governed memory, full contract model | 99% |
-| Lexer | All v1 keywords incl. `and`/`or`/`unless`/`is`, char/hex literals | 99% |
-| Parser | Flows, fn, routes, enums, match, types, all 16 contract sections (incl. errors/timeouts/retries/limits/privacy/observability), Brand alias, Readable Logic Forms | 90% |
-| Type checker | 11 codes â€” unknown types, arity, null, match, branded types (LLN-TYPE-003), cross-currency Money | 60% |
-| Value-state checker | Gates, sinks, secrets, taint propagation | 55% |
-| Effect checker | 4 codes, guarded/pure/secure flows, propagation | 65% |
-| Symbol resolver | LLN-NAME-001/002, scope tracking, standard prelude | 80% |
-| IR / Code generation | GIR schema + emitter, tensor metadata, target affinity | 60% |
-| Runtime execution | Async interpreter, flow dispatch, all control flow + match | 70% |
-| Route / HTTP dispatch | HTTP server, path params, JSON body, 404/405 | 70% |
-| Standard library | Money (BigInt), Duration, Set, Timestamp.format, String.format(named), Bytes.sha256 | 65% |
-| Event checker | LLN-EVENT-001/002, declare-before-emit, never-emitted warning | 90% |
-| Governance / audit / proof | GOV-001/002/004/010/011/012/HINT-001, contract sets, proof chain | 82% |
-| Signed Attestation | Ed25519 sign/verify, buildAttestation, generateKey, YAML output, runtime integration | 90% |
-| Governance enforcement | LLN-GOV-003 (response.denies), LLN-CONTEXT-001 (context not accessed), 011/012 | 70% |
-| Naming conventions | `readonly request: Request` style, `rawX` for unsafe, `FlowNameResult` aliases | 100% |
-| CEC integration tests | 215 examples wired (28 stable asserted + 187 draft compile-only) | 90% |
-| Internal graph module | `logicn-devtools-graph-algorithms` â€” Graph<N,E>, BFS/DFS/topoSort, EffectGraph, CallGraph | 90% |
-| Record literal parser | `{ field: value }` now parses as a proper record expression in all contexts | âœ… |
+| Specification / KB | 285 docs, 222 examples, full type hierarchy, 16-section contracts | 99% |
+| Lexer | All 56 keywords, all literal forms, loops/assignment | 99% |
+| Parser | Flows, fn, routes, all contracts, loops, record literals, Brand alias | 93% |
+| Type checker | 22 codes (LLN-TYPE-001..022), full inferType(), governance qualifiers | 98% |
+| Value-state checker | Taint, 2-hop taint, user gates, secrets, protected boundary | 75% |
+| Effect checker | 4 codes, topoSort via devtools-graph-algorithms | 68% |
+| Event checker | LLN-EVENT-001/002, declare-before-emit | 90% |
+| Governance verifier | 9 codes, contract sets, response.denies, 11C enforcement | 78% |
+| GIR emitter | Schema, tensor metadata, #record literals | 65% |
+| Runtime / interpreter | Loops, assignment, capabilityHost, governed memory | 85% |
+| Standard library | Money BigInt, Duration, Timestamp.format, String.format, Bytes.sha256 | 72% |
+| Route / HTTP | request/req dual-key, path params, JSON body | 75% |
+| Audit / proof chain | JSONL, SHA-256 5-hash proof, verify | 80% |
+| Signed attestation | Ed25519 sign/verify, YAML, runtime integration | 88% |
+| CEC coverage | 189/222 stable, 10 domain suites, all real-world patterns | 85% |
+| Internal graph | logicn-devtools-graph-algorithms (45t), logicn-devtools-graph-project (90t) | 90% |
 
 ---
-
-**Runtime written in LogicN** â€” the language compiles and runs its own compiler
-
-```
-â–“â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘  10%
-```
 
 *Stage A (TypeScript Runtime) must be complete before Stage B begins.
 At Stage B the compiler and runtime are rewritten in LogicN, removing the
@@ -85,9 +94,9 @@ LogicN is three things building toward one platform:
 declared effects, no hidden nulls, no silent failures. Source files use `.lln`.
 
 **2. A compiler and checker** â€” a pipeline that enforces the language rules
-before code runs. Phases 3â€“7A are complete (195 tests, 0 failures). The
-current build target is completing Phase 7B (type inference, operator checking)
-before moving to IR generation and the runtime execution engine.
+before code runs. Phases 3â€“11B are complete (1543 tests, 0 failures). The
+runtime and IR generation pipeline is the current focus
+as the project moves toward Phase 12 and the self-hosting compiler.
 
 **3. A governed runtime architecture** â€” a model for coordinating compute
 across targets (CPU, WASM, GPU, accelerators) with capability-based authority,
@@ -116,7 +125,7 @@ execution**:
 
 LogicN is a **language-design and active compiler project**. It is not a production runtime.
 
-**What works today (195 tests, 0 failures):**
+**What works today (1543 tests, 0 failures):**
 
 - Full lexer â€” all v1 keywords, char/hex/binary literals, doc comments
 - Full parser â€” all flow qualifiers, match with exhaustiveness, enums with variants, record types with fields, fn helpers, route declarations, `protected`/`redacted` type qualifiers
@@ -409,7 +418,7 @@ npm run build
 npm test
 ```
 
-195 tests, 0 failures. The compiler accepts `.lln` source via `parseProgram()` and runs all checker passes.
+1543 tests, 0 failures. The compiler accepts `.lln` source via `parseProgram()` and runs all checker passes.
 
 ```typescript
 import { parseProgram, checkTypes, checkValueStates, checkEffects, resolveSymbols } from "@logicn/core-compiler";

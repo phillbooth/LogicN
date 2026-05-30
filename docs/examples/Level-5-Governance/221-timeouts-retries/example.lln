@@ -5,6 +5,7 @@
 /// ai_rule: The timeouts block sets a hard deadline and per-effect timeouts.
 ///          The retries block declares retry attempts and strategy per effect.
 ///          Both are governance declarations; no LLN diagnostics are expected here.
+/// test_status: stable
 
 secure flow fetchExternalData(readonly request: Request) -> FetchExternalDataResult
 intent "Fetch data from an external service with governed timeout and retry policy."

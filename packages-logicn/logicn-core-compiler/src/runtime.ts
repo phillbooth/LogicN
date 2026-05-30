@@ -19,6 +19,9 @@ import { buildProofChain, type ExecutionProofChain } from "./proof-chain.js";
 import { startServer, type RunningServer, type ServerConfig } from "./route-dispatcher.js";
 import { buildRouteRegistry } from "./route-registry.js";
 import { buildAttestation, signAttestation, type LogicNAttestation, type AttestationKeyPair } from "./attestation.js";
+import { createContractEnforcer, type ContractEnforcer } from "./runtime/contractEnforcer.js";
+import { createCapabilityHost, type CapabilityHost } from "./runtime/capabilityHost.js";
+import type { ContractEnforcementRecord } from "./runtime/runtimeReport.js";
 
 export type RuntimeMode = "check-only" | "dev" | "production" | "deterministic";
 
@@ -33,6 +36,8 @@ export interface RuntimeOptions {
     readonly keyPair?: AttestationKeyPair;
     readonly includeSource?: boolean;
   };
+  /** Optional deadline for execution in milliseconds from now. */
+  readonly deadlineMs?: number;
 }
 
 export interface RuntimeResult {
@@ -44,6 +49,7 @@ export interface RuntimeResult {
   readonly proofChain?: ExecutionProofChain;
   readonly attestation?: LogicNAttestation;
   readonly mode: RuntimeMode;
+  readonly enforcementRecord?: ContractEnforcementRecord;
 }
 
 export async function run(
@@ -121,8 +127,57 @@ export async function run(
   // Pass 8: GIR emission (on clean AST)
   const girResult = emitGIR(parseResult.ast, parseResult.flows, effectResults);
 
-  // Pass 10: Execute
-  const execution = await executeFlow(flowName, args, parseResult.ast, parseResult.flows);
+  // Pass 10: Set up contract enforcement, then execute
+  //
+  // Find the contractDecl node attached to the target flow (if any).
+  // The flow node lives inside the AST; contractDecl is a direct child of the
+  // flowDecl / secureFlowDecl / pureFlowDecl / guardedFlowDecl node.
+  const FLOW_KINDS_RT = new Set(["flowDecl", "secureFlowDecl", "pureFlowDecl", "guardedFlowDecl"]);
+  let targetFlowNode: import("./parser.js").AstNode | undefined;
+  function findFlowNode(node: import("./parser.js").AstNode): void {
+    if (FLOW_KINDS_RT.has(node.kind) && node.value === flowName) {
+      targetFlowNode = node;
+      return;
+    }
+    for (const child of node.children ?? []) {
+      if (targetFlowNode === undefined) findFlowNode(child);
+    }
+  }
+  findFlowNode(parseResult.ast);
+
+  const contractNode = (targetFlowNode?.children ?? []).find((c) => c.kind === "contractDecl");
+
+  // Build the enforcer — merge any options.deadlineMs (absolute) into it.
+  // createContractEnforcer will pick up the contract node's own timeout as well;
+  // opts.deadlineMs takes priority when both are present.
+  const finalEnforcer: ContractEnforcer = createContractEnforcer(
+    contractNode,
+    flowName,
+    {
+      ...(options.traceId !== undefined ? { traceId: options.traceId } : {}),
+      ...(options.deadlineMs !== undefined
+        ? { deadlineMs: Date.now() + options.deadlineMs }
+        : {}),
+    },
+  );
+
+  // Collect declared effects for the target flow from the FlowMeta list.
+  const flowMeta = parseResult.flows.find((f) => f.name === flowName);
+  const declaredEffects = new Set<string>(flowMeta?.declaredEffects ?? []);
+
+  const capabilityHost: CapabilityHost = createCapabilityHost({
+    declaredEffects,
+    enforcer: finalEnforcer,
+  });
+
+  const execution = await executeFlow(
+    flowName,
+    args,
+    parseResult.ast,
+    parseResult.flows,
+    finalEnforcer,
+    capabilityHost,
+  );
   for (const diagnostic of execution.diagnostics) {
     allDiagnostics.push({
       code: diagnostic.code,
@@ -185,6 +240,7 @@ export async function run(
     ...(proofChain !== undefined ? { proofChain } : {}),
     ...(attestationResult !== undefined ? { attestation: attestationResult } : {}),
     mode,
+    enforcementRecord: finalEnforcer.enforcementRecord,
   };
 }
 

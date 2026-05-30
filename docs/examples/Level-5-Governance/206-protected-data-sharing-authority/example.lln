@@ -3,6 +3,7 @@
 /// concept: authority block for sharing protected data externally
 /// expected_diagnostics: none
 /// ai_rule: Use an authority block to declare permission to share protected data externally.
+/// test_status: stable
 
 secure flow sendReferral(patient: PatientRecord) -> SendReferralResult
 

@@ -3,6 +3,7 @@
 /// concept: secure flow
 /// expected_diagnostics: none
 /// ai_rule: Use secure flow at trust boundaries such as HTTP/API requests.
+/// test_status: stable
 
 type Email = Brand<String, EmailAddress>
 

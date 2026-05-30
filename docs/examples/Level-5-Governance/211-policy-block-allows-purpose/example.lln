@@ -3,6 +3,7 @@
 /// concept: policy block declaring allowed purpose for data sharing
 /// expected_diagnostics: none
 /// ai_rule: Use a policy block to declare allowed data-sharing purposes for patient communications.
+/// test_status: stable
 
 secure flow emailPatient(patient: PatientRecord) -> EmailPatientResult
 

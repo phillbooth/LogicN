@@ -1,8 +1,10 @@
 /// example: 084-unknown-type
-/// test_status: draft
+/// test_status: stable
 /// level: 2
 /// concept: unknown type name produces LLN-TYPE-001
 /// expected_diagnostics: LLN-TYPE-001
 /// ai_rule: All types must be declared or imported. Unknown type names are compile errors.
 
-let value: MadeUpType
+pure flow example() -> Void {
+  let value: MadeUpType = 42
+}

@@ -3,6 +3,7 @@
 /// concept: quantum preference with GPU simulation and CPU fallback
 /// expected_diagnostics: none
 /// ai_rule: List gpu before cpu in the quantum fallback chain to enable GPU-accelerated quantum simulation.
+/// test_status: stable
 
 guarded flow runQuantumSim(params: Tensor<Float32, [128]>) -> RunQuantumSimResult
 

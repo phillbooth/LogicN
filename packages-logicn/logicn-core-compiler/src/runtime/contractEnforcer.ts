@@ -6,7 +6,7 @@
 // =============================================================================
 
 import { type AstNode } from "../parser.js";
-import { type RuntimeContext, createContext, isExpired } from "./runtimeContext.js";
+import { type RuntimeContext, createContext } from "./runtimeContext.js";
 import { type TimeoutConfig, parseTimeoutConfig, checkDeadline } from "./timeoutPolicy.js";
 import { type EffectRetryPolicy, parseRetryPolicy, withRetry } from "./retryPolicy.js";
 import { type LimitConfig, parseLimitConfig, checkRequestSize, checkBatchSize } from "./limitPolicy.js";
@@ -59,19 +59,35 @@ export interface ContractEnforcer {
 export function createContractEnforcer(
   contractNode: AstNode | undefined,
   flowName: string,
-  opts?: { traceId?: string; actor?: string },
+  opts?: { traceId?: string; actor?: string; deadlineMs?: number },
 ): ContractEnforcer {
   const timeoutConfig: TimeoutConfig = parseTimeoutConfig(contractNode);
   const retryPolicy: EffectRetryPolicy = parseRetryPolicy(contractNode);
   const limitConfig: LimitConfig = parseLimitConfig(contractNode);
 
+  // Deadline resolution priority:
+  //   1. opts.deadlineMs (absolute ms, from caller like runtime.ts options)
+  //   2. contract timeout deadlineMs (relative, converted to absolute)
+  //   3. no deadline
+  const externalDeadline = opts?.deadlineMs !== undefined;
+  const resolvedDeadlineMs: number | undefined =
+    opts?.deadlineMs !== undefined
+      ? opts.deadlineMs
+      : timeoutConfig.deadlineMs !== undefined
+        ? Date.now() + timeoutConfig.deadlineMs
+        : undefined;
+
+  // When an external deadline is supplied (via opts) and there is no contract
+  // node, we still want cancelOnDeadline to be true so checkDeadline() throws.
+  const effectiveTimeoutConfig: TimeoutConfig = externalDeadline && !timeoutConfig.cancelOnDeadline
+    ? { ...timeoutConfig, cancelOnDeadline: true }
+    : timeoutConfig;
+
   // Build context — use deadline from contract if present
   const context = createContext(flowName, {
     ...(opts?.traceId !== undefined ? { traceId: opts.traceId } : {}),
     ...(opts?.actor !== undefined ? { actor: opts.actor } : {}),
-    ...(timeoutConfig.deadlineMs !== undefined
-      ? { deadlineMs: Date.now() + timeoutConfig.deadlineMs }
-      : {}),
+    ...(resolvedDeadlineMs !== undefined ? { deadlineMs: resolvedDeadlineMs } : {}),
   });
 
   // Enforcement record is held in a mutable cell so recordRetry can update it
@@ -110,8 +126,8 @@ export function createContractEnforcer(
     },
 
     checkDeadline(): void {
-      const result = checkDeadline(context, timeoutConfig);
-      if (result === "exceeded" && timeoutConfig.cancelOnDeadline) {
+      const result = checkDeadline(context, effectiveTimeoutConfig);
+      if (result === "exceeded" && effectiveTimeoutConfig.cancelOnDeadline) {
         throw new Error(
           `[LLN-TIMEOUT] flow "${flowName}" exceeded deadline`,
         );

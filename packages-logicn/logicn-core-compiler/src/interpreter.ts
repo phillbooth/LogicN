@@ -6,6 +6,8 @@ import { type AstNode, type FlowMeta } from "./parser.js";
 import { callStdlib, logicNValuesEqual, moneyBinary } from "./stdlib.js";
 import { type CapabilityHost } from "./runtime/capabilityHost.js";
 import { type RuntimeContext } from "./runtime/runtimeContext.js";
+import { type ContractEnforcer } from "./runtime/contractEnforcer.js";
+import { type ContractEnforcementRecord } from "./runtime/runtimeReport.js";
 
 export type LogicNValue =
   | { readonly __tag: "int";       readonly value: number }
@@ -69,6 +71,7 @@ export interface FlowExecutionResult {
   readonly auditEntries: readonly RuntimeAuditEntry[];
   readonly diagnostics: readonly { code: string; message: string }[];
   readonly audit: ExecutionAuditRecord;
+  readonly enforcementRecord?: ContractEnforcementRecord;
 }
 
 export type ExecutionResult = FlowExecutionResult;
@@ -136,12 +139,17 @@ class Interpreter {
   private readonly flowIndex: ReadonlyMap<string, AstNode>;
   private readonly fnIndex = new Map<string, AstNode>();
   capabilityHost: CapabilityHost | undefined;
+  private readonly enforcer: ContractEnforcer | undefined;
 
   constructor(
     private readonly ast: AstNode,
     private readonly knownFlows: readonly FlowMeta[],
+    enforcer?: ContractEnforcer,
+    capabilityHost?: CapabilityHost,
   ) {
     this.flowIndex = buildFlowIndex(ast);
+    this.enforcer = enforcer;
+    this.capabilityHost = capabilityHost;
   }
 
   private getContext(): RuntimeContext {
@@ -180,6 +188,18 @@ class Interpreter {
     const startedAt = new Date().toISOString();
     const flowNode = this.flowIndex.get(flowName);
     const qualifier = flowNode === undefined ? "flow" : qualifierFromFlowKind(flowNode.kind);
+
+    // Step 2A: Check deadline before doing any work
+    if (this.enforcer !== undefined) {
+      try {
+        this.enforcer.checkDeadline();
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        const value: LogicNValue = { __tag: "err", error: { __tag: "string", value: message } };
+        this.diagnostics.push({ code: "LLN-RUNTIME-DEADLINE", message });
+        return this.buildResult(flowName, qualifier, startedAt, value, message);
+      }
+    }
 
     if (flowNode === undefined) {
       const value: LogicNValue = { __tag: "runtimeError", message: `Flow '${flowName}' not found` };
@@ -249,6 +269,7 @@ class Interpreter {
       auditEntries: [...this.auditEntries],
       diagnostics: [...this.diagnostics],
       audit,
+      ...(this.enforcer !== undefined ? { enforcementRecord: this.enforcer.enforcementRecord } : {}),
     };
   }
 
@@ -346,7 +367,14 @@ class Interpreter {
         if (condition === undefined || thenBlock === undefined) return undefined;
         const condVal = await this.evalExpr(condition);
         if (condVal.__tag === "bool" && condVal.value) return await this.executeBlock(thenBlock);
-        if (elseBlock !== undefined) return await this.executeBlock(elseBlock);
+        if (elseBlock !== undefined) {
+          // else if: the else branch may be another ifStmt node (not a block)
+          if (elseBlock.kind === "ifStmt" || elseBlock.kind === "block") {
+            if (elseBlock.kind === "block") return await this.executeBlock(elseBlock);
+            return await this.executeStatement(elseBlock);
+          }
+          return await this.executeBlock(elseBlock);
+        }
         return undefined;
       }
 
@@ -449,7 +477,7 @@ class Interpreter {
         return { __tag: "bool", value: node.value === "true" };
 
       case "charLiteral":
-        return { __tag: "char", value: node.value ?? "" };
+        return { __tag: "char", value: resolveCharEscape(node.value ?? "") };
 
       case "listLiteral": {
         const items: LogicNValue[] = [];
@@ -801,6 +829,13 @@ class Interpreter {
       return this.evalMethodCall(receiver.value, method, args);
     }
 
+    // Enum variant access: EnumType.VariantName → unresolved("VariantName")
+    // This allows record fields like `{ kind: TokenKind.Keyword }` to store the
+    // variant name as an opaque unresolved value for later pattern matching.
+    if (receiver.__tag === "unresolved") {
+      return { __tag: "unresolved", name: method };
+    }
+
     return { __tag: "runtimeError", message: `Method '${method}' not found on ${receiver.__tag}` };
   }
 
@@ -1114,6 +1149,21 @@ function stripStringQuotes(value: string): string {
   return value;
 }
 
+/** Resolve backslash escape sequences in a char literal value (e.g. "\\n" → "\n"). */
+function resolveCharEscape(value: string): string {
+  if (value.length === 2 && value[0] === "\\") {
+    switch (value[1]) {
+      case "n": return "\n";
+      case "t": return "\t";
+      case "r": return "\r";
+      case "0": return "\0";
+      case "'": return "'";
+      case "\\": return "\\";
+    }
+  }
+  return value;
+}
+
 function titleCase(value: string): string {
   if (value === "") return "Value";
   return `${value[0]?.toUpperCase() ?? ""}${value.slice(1)}`;
@@ -1184,7 +1234,9 @@ export async function executeFlow(
   args: ReadonlyMap<string, LogicNValue>,
   ast: AstNode,
   knownFlows?: readonly FlowMeta[],
+  enforcer?: ContractEnforcer,
+  capabilityHost?: CapabilityHost,
 ): Promise<FlowExecutionResult> {
-  const interpreter = new Interpreter(ast, knownFlows ?? []);
+  const interpreter = new Interpreter(ast, knownFlows ?? [], enforcer, capabilityHost);
   return interpreter.runFlow(flowName, args);
 }

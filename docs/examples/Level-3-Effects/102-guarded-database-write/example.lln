@@ -2,8 +2,8 @@
 /// level: 3
 /// concept: guarded flow declaring database.write effect
 /// expected_diagnostics: none
-/// test_status: stable
 /// ai_rule: Declare database.write when writing to a database.
+/// test_status: stable
 
 guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
   with effects [database.write]

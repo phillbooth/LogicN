@@ -3,6 +3,7 @@
 /// concept: embedding flow with NPU/GPU preference and CPU fallback
 /// expected_diagnostics: none
 /// ai_rule: Declare compute fallback cpu on all embedding flows to allow CPU-only deployment.
+/// test_status: stable
 
 guarded flow embed(text: String) -> EmbedResult
 

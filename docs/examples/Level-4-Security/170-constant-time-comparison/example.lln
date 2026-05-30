@@ -1,9 +1,10 @@
-﻿/// example: 170-constant-time-comparison
+/// example: 170-constant-time-comparison
 /// level: 4
 /// concept: constantTimeEquals for safe secret comparison
 /// expected_diagnostics: none
 /// ai_rule: Use constantTimeEquals(a, b) for all secret value comparisons.
+/// test_status: stable
 
-if constantTimeEquals(apiKey, suppliedKey) {
-  return Ok(unit)
+pure flow example(apiKey: SecureString, suppliedKey: SecureString) -> Bool {
+  return constantTimeEquals(apiKey, suppliedKey)
 }

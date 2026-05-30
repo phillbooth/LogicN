@@ -2,8 +2,8 @@
 /// level: 6
 /// concept: tensor shape encoded in the type signature
 /// expected_diagnostics: none
-/// test_status: stable
 /// ai_rule: Encode tensor rank and dimensions as static type parameters so shape mismatches are caught at compile time.
+/// test_status: stable
 
 pure flow matmul(
   a: Tensor<Float32, [4, 8]>,

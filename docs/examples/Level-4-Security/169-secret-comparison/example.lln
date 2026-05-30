@@ -3,7 +3,8 @@
 /// concept: direct equality comparison on secrets is forbidden
 /// expected_diagnostics: LLN-SECRET-002
 /// ai_rule: Never compare secrets with ==. Use constantTimeEquals(...) to prevent timing attacks.
+/// test_status: stable
 
-if apiKey == suppliedKey {
-  return Ok(unit)
+pure flow example(apiKey: SecureString, suppliedKey: SecureString) -> Bool {
+  return apiKey == suppliedKey
 }

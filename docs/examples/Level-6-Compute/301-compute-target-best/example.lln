@@ -1,8 +1,9 @@
-﻿/// example: 301-compute-target-best
+/// example: 301-compute-target-best
 /// level: 6
 /// concept: compute target selection with ordered preference and fallback
 /// expected_diagnostics: none
 /// ai_rule: Use prefer [...] to express hardware preference; always declare fallback cpu as the final safety net.
+/// test_status: stable
 
 pure flow embedText(text: String) -> Tensor<Float32, [1, 768]>
   with compute target best { prefer [npu, gpu, cpu] fallback cpu }

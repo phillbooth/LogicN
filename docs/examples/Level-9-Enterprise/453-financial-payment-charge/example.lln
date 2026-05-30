@@ -2,8 +2,8 @@
 /// level: 9
 /// concept: payment governance flow with approved merchant, Money type, and audit
 /// expected_diagnostics: none
-/// test_status: stable
 /// ai_rule: All payment flows must declare payment.charge and audit.write effects and include an intent clause.
+/// test_status: stable
 
 guarded flow chargePayment(request: PaymentRequest) -> ChargePaymentResult
 

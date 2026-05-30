@@ -2,8 +2,8 @@
 /// level: 5
 /// concept: intent declaration on a guarded flow
 /// expected_diagnostics: none
-/// test_status: stable
 /// ai_rule: Use intent to describe what the flow is allowed to do. The compiler checks declared intent against observed behaviour.
+/// test_status: stable
 
 guarded flow saveOrder(order: Order) -> SaveOrderResult
 

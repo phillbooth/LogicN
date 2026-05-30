@@ -2,8 +2,8 @@
 /// level: 3
 /// concept: flow declaring multiple effects
 /// expected_diagnostics: none
-/// test_status: stable
 /// ai_rule: List all required effects in the with effects [...] declaration.
+/// test_status: stable
 
 guarded flow syncOrder(order: Order) -> Result<Unit, SyncError>
   with effects [database.write, network.outbound, audit.write]

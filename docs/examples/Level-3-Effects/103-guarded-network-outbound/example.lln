@@ -2,8 +2,8 @@
 /// level: 3
 /// concept: guarded flow declaring network.outbound effect
 /// expected_diagnostics: none
-/// test_status: stable
 /// ai_rule: Declare network.outbound when making outbound HTTP or network calls.
+/// test_status: stable
 
 guarded flow fetchRate(baseCurrency: String) -> Result<Decimal, RateError>
   with effects [network.outbound]

@@ -3,6 +3,7 @@
 /// concept: complete enterprise-grade healthcare flow — patient create with PII, NHS number, AI risk scoring, audit, and governance proof
 /// expected_diagnostics: none
 /// ai_rule: The enterprise summary combines every governance layer: secure flow, protected PII, AI inference, compute target, authority, policy, audit, and redact.
+/// test_status: stable
 
 secure flow createAndScorePatient(readonly request: Request) -> CreateAndScorePatientResult
 

@@ -3,6 +3,7 @@
 /// concept: deterministic runtime for regulated environments requiring identical execution planning
 /// expected_diagnostics: none
 /// ai_rule: Use runtime deterministic for compliance environments requiring identical execution planning.
+/// test_status: stable
 
 secure flow runRegulated(input: Tensor<Float32, [1, 128]>) -> RunRegulatedResult
 

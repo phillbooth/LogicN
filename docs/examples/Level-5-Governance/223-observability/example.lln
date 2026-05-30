@@ -4,6 +4,7 @@
 /// expected_diagnostics: none
 /// ai_rule: The observability block declares what to trace, measure, count, and deny in logs.
 ///          This is a complete, correct observability declaration; no diagnostics expected.
+/// test_status: stable
 
 secure flow processPayment(readonly request: Request) -> ProcessPaymentResult
 

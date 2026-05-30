@@ -3,5 +3,11 @@
 /// concept: unsafe value cannot be written to a database sink
 /// expected_diagnostics: LLN-VALUESTATE-003
 /// ai_rule: Unsafe values cannot be passed to database sinks. Validate first.
+/// test_status: stable
 
-PatientsDB.insert({ email: rawEmail })
+secure flow example(readonly request: Request) -> Void
+  with effects [database.write]
+{
+  unsafe let rawEmail: String = request.body.email
+  PatientsDB.insert({ email: rawEmail })
+}

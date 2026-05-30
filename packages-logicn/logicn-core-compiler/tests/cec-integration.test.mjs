@@ -41,10 +41,11 @@ const EXAMPLES_DIR = join(__dir, "../../../docs/Examples");
 // They represent known gaps from domain imports, legacy syntax, or intro-level
 // examples that deliberately use top-level bindings for pedagogical clarity.
 const SUPPRESS = new Set([
-  "LLN-TYPE-001",   // unknown type — domain types from imports
-  "LLN-TYPE-009",   // generic arity — legacy Tensor<T>
-  "LLN-NAME-001",   // undeclared name — stdlib from imports
+  "LLN-TYPE-001",   // unknown type — domain types from imports (Phase 11E: added 40+ types; remaining unknowns are user domain types)
+  "LLN-TYPE-009",   // generic arity — legacy Tensor<T> and multi-dim Tensor<F, [n, m]>
+  "LLN-NAME-001",   // undeclared name — stdlib calls from imports not yet resolved
   "LLN-GOV-002",    // missing audit — examples focused on other concepts
+  "LLN-SYNTAX-003", // future-reserved keyword — e.g. "remote" in deny [remote.execution] compute blocks
   "LLN-SYNTAX-006", // top-level let — intro examples use top-level bindings
   "LLN-SYNTAX-007", // top-level mut — intro examples use top-level bindings
   "LLN-SYNTAX-008", // top-level binding variant

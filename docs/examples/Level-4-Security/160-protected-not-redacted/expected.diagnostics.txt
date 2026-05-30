@@ -1,4 +1,4 @@
-﻿LLN-TYPE-002 (TypeMismatch)
+LLN-TYPE-002 (TypeMismatch)
 
 Protected Email cannot be assigned to redacted Email without explicit redaction.
 Use: let auditEmail: redacted Email = redact(email)

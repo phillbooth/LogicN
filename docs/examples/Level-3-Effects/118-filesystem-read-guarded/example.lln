@@ -2,8 +2,8 @@
 /// level: 3
 /// concept: guarded flow with filesystem.read effect
 /// expected_diagnostics: none
-/// test_status: stable
 /// ai_rule: Declare filesystem.read when reading from the filesystem.
+/// test_status: stable
 
 guarded flow loadConfig(path: String) -> Result<Config, ConfigError>
   with effects [filesystem.read]

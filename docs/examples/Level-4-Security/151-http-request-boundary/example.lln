@@ -1,12 +1,16 @@
-﻿/// example: 151-http-request-boundary
+/// example: 151-http-request-boundary
 /// level: 4
 /// concept: HTTP request data enters as unsafe
 /// expected_diagnostics: none
 /// ai_rule: Request data starts as unsafe. Always use unsafe let for values from request.body.
+/// test_status: stable
+
+type Email = Brand<String, EmailTag>
 
 secure flow createUser(request: Request) -> Result<UserId, UserError>
   with effects [database.write, audit.write]
 {
   unsafe let rawEmail: String = request.body.email
-  return Ok(UsersDB.insert({ rawEmail: rawEmail })?)
+  let email: protected Email = validate.email(rawEmail)?
+  return Ok(UsersDB.insert({ email: email })?)
 }

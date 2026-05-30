@@ -2,8 +2,8 @@
 /// level: 3
 /// concept: local fn may use effects declared by the containing flow
 /// expected_diagnostics: none
-/// test_status: stable
 /// ai_rule: Local fn may use effects only when the containing flow declares them.
+/// test_status: stable
 
 guarded flow syncOrders(orders: List<Order>) -> Result<Unit, SyncError>
   with effects [network.outbound, database.write]

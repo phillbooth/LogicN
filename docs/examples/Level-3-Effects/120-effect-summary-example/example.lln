@@ -2,8 +2,8 @@
 /// level: 3
 /// concept: comprehensive effects example showing all patterns
 /// expected_diagnostics: none
-/// test_status: stable
 /// ai_rule: Declare every effect used. pure = no effects. guarded/secure = explicit effect list.
+/// test_status: stable
 
 secure flow processOrder(request: Request) -> Result<OrderId, ProcessError>
   with effects [database.write, network.outbound, audit.write]

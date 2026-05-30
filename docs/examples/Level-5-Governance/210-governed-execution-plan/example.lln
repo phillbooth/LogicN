@@ -3,6 +3,7 @@
 /// concept: full governed execution plan for a ML inference flow
 /// expected_diagnostics: none
 /// ai_rule: Combine intent, compute target, and audit for fully governed ML inference flows.
+/// test_status: stable
 
 secure flow runFraudModel(input: FraudInput) -> RunFraudModelResult
 

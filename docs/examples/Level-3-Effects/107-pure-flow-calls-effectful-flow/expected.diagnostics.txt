@@ -1,4 +1,4 @@
-﻿LLN-EFFECT-003
+LLN-EFFECT-003
 
 pure flow cannot call effectful flow fetchRate.
 Move the call to a guarded or secure flow, or change qualifier to guarded.

@@ -1,8 +1,9 @@
-﻿/// example: 018-protected-type-label
+/// example: 018-protected-type-label
 /// level: 1
 /// concept: protected type qualifier
 /// expected_diagnostics: none
 /// ai_rule: protected marks a validated but sensitive value.
+/// test_status: stable
 
 let email: protected Email =
   validate.email(rawEmail)?

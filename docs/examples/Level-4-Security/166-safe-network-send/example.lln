@@ -2,8 +2,8 @@
 /// level: 4
 /// concept: protected value may be sent over network (policy dependent)
 /// expected_diagnostics: none
-/// test_status: stable
 /// ai_rule: Protected values are not automatically forbidden from network sends. Governance policy decides.
+/// test_status: stable
 
 guarded flow notifyService(email: protected Email) -> Result<Unit, NotifyError>
   with effects [network.outbound]

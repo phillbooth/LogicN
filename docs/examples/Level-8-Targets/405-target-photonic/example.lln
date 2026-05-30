@@ -3,6 +3,7 @@
 /// concept: photonic (optical) compute target with GPU fallback
 /// expected_diagnostics: none
 /// ai_rule: Use compute target photonic for extremely high-throughput linear algebra; always include a classical fallback.
+/// test_status: stable
 
 guarded flow runPhotonic(input: Tensor<Float32, [Batch, 512]>) -> RunPhotonicResult
 

@@ -2,8 +2,8 @@
 /// level: 1
 /// concept: Option return type
 /// expected_diagnostics: none
-/// test_status: stable
 /// ai_rule: Use Option<T> instead of null.
+/// test_status: stable
 
 pure flow findUser(id: UserId) -> Option<User> {
   return None

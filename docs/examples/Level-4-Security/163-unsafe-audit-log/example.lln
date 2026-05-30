@@ -3,5 +3,11 @@
 /// concept: passing unsafe value to audit sink
 /// expected_diagnostics: LLN-VALUESTATE-003
 /// ai_rule: Unsafe values must be validated before reaching any sink.
+/// test_status: stable
 
-AuditLog.write({ email: rawEmail })
+secure flow example(readonly request: Request) -> Void
+  with effects [audit.write]
+{
+  unsafe let rawEmail: String = request.body.email
+  AuditLog.write({ email: rawEmail })
+}

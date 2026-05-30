@@ -1,4 +1,4 @@
-﻿LLN-SECRET-003 (SecretSerializationDenied)
+LLN-SECRET-003 (SecretSerializationDenied)
 
 SecureString binding 'apiKey' must not be serialized via 'json.encode'.
 Secrets must not appear in serialized output.

@@ -1,4 +1,4 @@
-﻿LLN-VALUESTATE-003 (UnsafeValueReachedGovernedSink)
+LLN-VALUESTATE-003 (UnsafeValueReachedGovernedSink)
 
 Unsafe value crossing trust boundary via http.post.
 Validate rawEmail before sending:

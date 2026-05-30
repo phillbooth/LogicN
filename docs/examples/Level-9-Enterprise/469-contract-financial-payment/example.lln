@@ -1,8 +1,9 @@
-﻿/// example: 469-contract-financial-payment
+/// example: 469-contract-financial-payment
 /// level: 9
 /// concept: full 16-section contract on a financial payment flow — all sections in canonical order
 /// expected_diagnostics: none
 /// ai_rule: Financial flows must declare errors.redact for internal errors, privacy.contains PII, timeouts to prevent runaway execution, and require redaction before audit.write.
+/// test_status: stable
 
 event PaymentInitiated
 event PaymentCompleted

@@ -3,6 +3,7 @@
 /// concept: compute target best with ordered preference list and fallback
 /// expected_diagnostics: none
 /// ai_rule: best selects the best available target at runtime from the preference list in order.
+/// test_status: stable
 
 guarded flow runWithBest(input: Tensor<Float32, [1, 256]>) -> RunWithBestResult
 

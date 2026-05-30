@@ -1,8 +1,9 @@
-﻿/// example: 215-contract-set
+/// example: 215-contract-set
 /// level: 5
 /// concept: reusable contract set applied to a flow
 /// expected_diagnostics: none
 /// ai_rule: Use contract set to define reusable governance templates. Flows apply them with 'use Name' inside their contract block.
+/// test_status: stable
 
 event PatientCreated
 event PatientCreationFailed

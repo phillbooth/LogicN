@@ -1,8 +1,10 @@
 /// example: 076-money-times-money-invalid
-/// test_status: draft
+/// test_status: stable
 /// level: 2
 /// concept: Money multiplied by Money is forbidden
 /// expected_diagnostics: LLN-TYPE-004
 /// ai_rule: Money cannot be multiplied by Money. Use Decimal for scaling factors.
 
-let result = price * vat
+pure flow example(price: Money<GBP>, vat: Money<GBP>) -> Void {
+  let result = price * vat
+}

@@ -127,15 +127,21 @@ const BUILT_IN_TYPES: ReadonlySet<string> = new Set([
   "Array", "Set", "Map", "Channel",
   // Algebraic
   "Option", "Result",
+  // Unit type — the singleton value type (like () in Haskell/Rust); returned by Ok(unit)
+  "Unit",
+  // List — canonical ordered collection alias for Array
+  "List",
   // Numeric science / compute
   "Vector", "Matrix", "Tensor", "AnyTensor",
+  // Compute / AI dimension labels
+  "DynamicShape",
   // Domain / financial
   "Money", "GBP", "USD", "EUR", "JPY", "CHF", "CAD", "AUD",
   // HTTP / API
   "Request", "Response", "Context",
   // Error types
   "Error", "ApiError", "EmailError", "PaymentError", "ValidationError", "WebhookError",
-  "DecodeError",
+  "DecodeError", "ParseError",
   // Branded types
   "Brand",
   // ── Security types ───────────────────────────────────────────────────────
@@ -159,6 +165,7 @@ const BUILT_IN_TYPES: ReadonlySet<string> = new Set([
   "AuthError", "PermissionError", "NetworkError",
   // ── Phase 11E: AI / ML types ────────────────────────────────────────────
   "Label", "ClassificationResult", "EmbeddingResult", "RiskScore",
+  "Score",   // AI/ML generic confidence/relevance score
   // ── Phase 11E: Record / request / response types ─────────────────────────
   "PatientReadRequest", "PatientProfileResponse", "PatientProfileRequest",
   "CreatePatientRequest", "CreateOrderRequest", "CreateOrderResponse",
@@ -177,6 +184,7 @@ const GENERIC_ARITY: ReadonlyMap<string, number> = new Map([
   ["Option",       1],
   ["Result",       2],
   ["Array",        1],
+  ["List",         1],  // List<T> — ordered collection alias for Array<T>
   ["Set",          1],
   ["Map",          2],
   ["Channel",      1],
@@ -196,6 +204,7 @@ const GENERIC_EXAMPLES: ReadonlyMap<string, string> = new Map([
   ["Option",       "Option<T>"],
   ["Result",       "Result<T, E>"],
   ["Array",        "Array<T>"],
+  ["List",         "List<T>"],
   ["Set",          "Set<T>"],
   ["Map",          "Map<K, V>"],
   ["Channel",      "Channel<T>"],
@@ -755,10 +764,18 @@ class TypeChecker {
             this.registerBinding(paramName);
             // Phase 11A.2: flow parameters are immutable (readonly) by default
             this.registerBindingKind(paramName, "readonly");
-            // Register param type for inference
+            // Register param type for inference.
+            // Use the full type string (including generic args) so that Money<GBP>
+            // parameters carry their currency parameter through to cross-currency checks.
             const typeRef = child.children?.find((c) => c.kind === "typeRef");
             if (typeRef?.value) {
-              this.registerBindingType(paramName, parseTypeString(typeRef.value).base);
+              const parsed = parseTypeString(typeRef.value);
+              // Preserve generic args for Money (cross-currency checks) and other
+              // parameterised types; fall back to base for simple types.
+              const fullType = parsed.args.length > 0
+                ? `${parsed.base}<${parsed.args.join(",")}>`
+                : parsed.base;
+              this.registerBindingType(paramName, fullType);
             }
             for (const typeChild of child.children ?? []) {
               if (typeChild.kind === "typeRef") {
@@ -1242,25 +1259,32 @@ class TypeChecker {
     }
 
     // String + non-String = error
+    // Exception: if the non-String operand is an unknown/user-defined type (not in
+    // BUILT_IN_TYPES), skip TYPE-004 — TYPE-001 was already emitted for the unknown
+    // type, and user types may legitimately support concatenation via toString().
     if (op === "+") {
       if (leftBase === "String" && rightBase !== "String" && rightBase !== "") {
-        this.diagnostics.push(makeTCDiag(
-          "LLN-TYPE-004",
-          "InvalidBinaryOperation",
-          `Cannot use '+' between 'String' and '${rightBase}'. String concatenation requires both operands to be String.`,
-          location,
-          `Convert the '${rightBase}' to String first using .toString()`,
-        ));
+        if (BUILT_IN_TYPES.has(rightBase)) {
+          this.diagnostics.push(makeTCDiag(
+            "LLN-TYPE-004",
+            "InvalidBinaryOperation",
+            `Cannot use '+' between 'String' and '${rightBase}'. String concatenation requires both operands to be String.`,
+            location,
+            `Convert the '${rightBase}' to String first using .toString()`,
+          ));
+        }
         return;
       }
       if (rightBase === "String" && leftBase !== "String" && leftBase !== "") {
-        this.diagnostics.push(makeTCDiag(
-          "LLN-TYPE-004",
-          "InvalidBinaryOperation",
-          `Cannot use '+' between '${leftBase}' and 'String'. String concatenation requires both operands to be String.`,
-          location,
-          `Convert the '${leftBase}' to String first using .toString()`,
-        ));
+        if (BUILT_IN_TYPES.has(leftBase)) {
+          this.diagnostics.push(makeTCDiag(
+            "LLN-TYPE-004",
+            "InvalidBinaryOperation",
+            `Cannot use '+' between '${leftBase}' and 'String'. String concatenation requires both operands to be String.`,
+            location,
+            `Convert the '${leftBase}' to String first using .toString()`,
+          ));
+        }
         return;
       }
     }

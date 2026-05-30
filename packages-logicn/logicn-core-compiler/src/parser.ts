@@ -236,7 +236,7 @@ class Parser {
             this.loc(),
             `Move into a flow: pure flow name() -> T { let ... }`,
           );
-          while (!this.isEof() && this.current().kind !== "newline") this.advance();
+          this.skipTopLevelStatement();
           return undefined;
         }
         case "mut": {
@@ -248,7 +248,7 @@ class Parser {
             this.loc(),
             `Move into a flow: guarded flow name(...) { mut ... }`,
           );
-          while (!this.isEof() && this.current().kind !== "newline") this.advance();
+          this.skipTopLevelStatement();
           return undefined;
         }
         case "readonly": {
@@ -259,7 +259,7 @@ class Parser {
             `Top-level 'readonly' bindings are not allowed. Move inside a flow.`,
             this.loc(),
           );
-          while (!this.isEof() && this.current().kind !== "newline") this.advance();
+          this.skipTopLevelStatement();
           return undefined;
         }
         case "unsafe": {
@@ -276,7 +276,7 @@ class Parser {
           } else {
             this.emitUnexpected(`Unexpected 'unsafe' at top level.`);
           }
-          while (!this.isEof() && this.current().kind !== "newline") this.advance();
+          this.skipTopLevelStatement();
           return undefined;
         }
         case "emit": {
@@ -287,7 +287,7 @@ class Parser {
             `Events may only be emitted inside flows. Declare events globally, emit them inside governed execution.`,
             this.loc(),
           );
-          while (!this.isEof() && this.current().kind !== "newline") this.advance();
+          this.skipTopLevelStatement();
           return undefined;
         }
         case "fn": {
@@ -304,6 +304,22 @@ class Parser {
           if (this.currentIs("symbol", "{")) this.skipBalancedBraces();
           return undefined;
         }
+        case "match":
+        case "if":
+        case "unless":
+        case "while":
+        case "for":
+        case "return": {
+          // Statement keywords at top level — pedagogical snippets.
+          // Emit ONE error then skip the entire statement (including block body).
+          this.emitUnexpected(`Unexpected keyword "${tok.value}" at top level.`);
+          // Skip to the opening brace (if any), then skip the balanced block.
+          while (!this.isEof() && !this.currentIs("symbol", "{") && this.current().kind !== "newline") {
+            this.advance();
+          }
+          if (this.currentIs("symbol", "{")) this.skipBalancedBraces();
+          return undefined;
+        }
         // Skip unknown keywords at top level
         default:
           this.emitUnexpected(`Unexpected keyword "${tok.value}" at top level.`);
@@ -317,9 +333,11 @@ class Parser {
       return undefined;
     }
 
-    // Unknown token at top level
+    // Unknown token at top level — could be a top-level expression statement
+    // (e.g. a bare function call like AuditLog.write({...}) in a pedagogical snippet).
+    // Emit ONE error then skip the whole statement to avoid cascading PARSE-001s.
     this.emitUnexpected(`Unexpected token "${tok.value}" at top level.`);
-    this.advance();
+    this.skipTopLevelStatement();
     return undefined;
   }
 
@@ -350,6 +368,8 @@ class Parser {
     this.expect("symbol", ")");
 
     // Return type  `->`
+    // Allow `->` on the next line: `pure flow name(params)\n-> RetType`
+    this.skipNewlines();
     this.expect("operator", "->");
     const retTypeNode = this.parseTypeRef();
     const returnType = retTypeNode.value ?? "";
@@ -399,6 +419,29 @@ class Parser {
           while (!this.currentIs("symbol", "]") && !this.isEof()) this.advance();
           if (this.currentIs("symbol", "]")) this.advance();
         }
+        continue;
+      }
+      // `with compute target <kind> { ... }` — shorthand for inline compute hint
+      if (
+        this.currentIs("keyword", "with") &&
+        this.peek(1).kind === "keyword" && this.peek(1).value === "compute"
+      ) {
+        this.advance(); // consume "with"
+        flowClauses.push(this.parseComputeTarget());
+        continue;
+      }
+      // `authority { ... }` — governance authority block (post-v1); consume gracefully
+      if (this.currentIs("keyword", "authority")) {
+        this.advance(); // consume "authority"
+        this.skipNewlines();
+        if (this.currentIs("symbol", "{")) this.skipBalancedBraces();
+        continue;
+      }
+      // `policy { ... }` — data-sharing policy block (post-v1); consume gracefully
+      if (this.currentIs("keyword", "policy")) {
+        this.advance(); // consume "policy"
+        this.skipNewlines();
+        if (this.currentIs("symbol", "{")) this.skipBalancedBraces();
         continue;
       }
       // Bare `effects [...]` after contract block
@@ -726,12 +769,102 @@ class Parser {
           this.emitUnexpected(`Expected 'let' or 'mut' after '${safetyPrefix}'.`);
           return undefined;
         }
+        // `fallback <target>` inside compute blocks — consume silently as a hint node.
+        case "fallback": {
+          this.advance(); // consume "fallback"
+          this.skipNewlines();
+          // Consume the fallback target (e.g. "cpu", "gpu")
+          const targetTok = this.current();
+          const target = (targetTok.kind === "identifier" || targetTok.kind === "keyword") ? targetTok.value : "";
+          if (target) this.advance();
+          return { kind: "identifier", value: `fallback:${target}`, location: this.loc() };
+        }
+        // `prefer [list]` inside compute blocks — consume the keyword and list.
+        case "prefer":
+        case "deny": {
+          const kw = tok.value;
+          const loc2 = this.loc();
+          this.advance(); // consume "prefer" / "deny"
+          this.skipNewlines();
+          // Consume optional [...] list
+          if (this.currentIs("symbol", "[")) {
+            this.advance(); // consume [
+            while (!this.isEof() && !this.currentIs("symbol", "]")) this.advance();
+            if (this.currentIs("symbol", "]")) this.advance();
+          }
+          return { kind: "identifier", value: `${kw}:hint`, location: loc2 };
+        }
+        // `runtime <mode>` or `runtime <mode> { ... }` inside flow bodies — consume as a hint node.
+        case "runtime": {
+          const runtimeLoc = this.loc();
+          this.advance(); // consume "runtime"
+          this.skipNewlines();
+          const modeTok = this.current();
+          const mode = (modeTok.kind === "identifier" || modeTok.kind === "keyword") ? modeTok.value : "";
+          if (mode) this.advance();
+          this.skipNewlines();
+          // Optional block body: runtime adaptive { ... }
+          if (this.currentIs("symbol", "{")) this.skipBalancedBraces();
+          return { kind: "identifier", value: `runtime:${mode}`, location: runtimeLoc };
+        }
         default: break;
       }
     }
 
+    if (tok.kind === "identifier") {
+      // Identifiers used as compute-block or runtime hint directives:
+      //   prefer [npu, gpu, cpu]           — followed by [...]
+      //   deny   [remote.execution]         — followed by [...]
+      //   runtime adaptive { ... }          — followed by ident { }
+      //   runtime deterministic              — single word
+      //   learn from intent                  — multiple words (no block)
+      //   optimise [batching, warmup]        — followed by [...]
+      //   preserve [security, effects]       — followed by [...]
+      // Consume them silently to avoid cascading PARSE-001 errors.
+      const HINT_LIST_DIRECTIVES = new Set(["prefer", "deny", "optimise", "preserve"]);
+      const HINT_RUNTIME_DIRECTIVES = new Set(["runtime"]);
+      const HINT_PHRASE_DIRECTIVES = new Set(["learn"]); // "learn from X"
+
+      if (HINT_LIST_DIRECTIVES.has(tok.value)) {
+        const hintLoc = this.loc();
+        const hintName = tok.value;
+        this.advance(); // consume directive name
+        this.skipNewlines();
+        if (this.currentIs("symbol", "[")) {
+          this.advance(); // consume [
+          // Consume everything until ] — may contain reserved keywords like "remote"
+          while (!this.isEof() && !this.currentIs("symbol", "]")) this.advance();
+          if (this.currentIs("symbol", "]")) this.advance();
+        }
+        return { kind: "identifier", value: `${hintName}:hint`, location: hintLoc };
+      }
+
+      if (HINT_RUNTIME_DIRECTIVES.has(tok.value)) {
+        const hintLoc = this.loc();
+        this.advance(); // consume "runtime"
+        this.skipNewlines();
+        // Consume optional mode word (e.g. "adaptive", "deterministic")
+        if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+          this.advance();
+        }
+        this.skipNewlines();
+        // Consume optional block body
+        if (this.currentIs("symbol", "{")) this.skipBalancedBraces();
+        return { kind: "identifier", value: "runtime:hint", location: hintLoc };
+      }
+
+      if (HINT_PHRASE_DIRECTIVES.has(tok.value)) {
+        const hintLoc = this.loc();
+        this.advance(); // consume "learn"
+        // Consume until end of line (e.g. "from intent")
+        while (!this.isEof() && this.current().kind !== "newline") this.advance();
+        return { kind: "identifier", value: "learn:hint", location: hintLoc };
+      }
+
+      return this.parseExprStatement();
+    }
+
     if (
-      tok.kind === "identifier" ||
       tok.kind === "number" ||
       tok.kind === "string" ||
       tok.kind === "char" ||
@@ -760,7 +893,17 @@ class Parser {
     const loc = this.loc();
     this.advance(); // consume "let"
 
-    const nameTok = this.expect("identifier");
+    // Accept keywords as binding names (e.g. `let record = ...`) since
+    // several common keywords are also valid variable names in context.
+    const nameTokCur = this.current();
+    let nameTok;
+    if (nameTokCur.kind === "identifier") {
+      nameTok = this.expect("identifier");
+    } else if (nameTokCur.kind === "keyword") {
+      nameTok = this.advance(); // consume the keyword used as a binding name
+    } else {
+      nameTok = this.expect("identifier"); // will emit diagnostic
+    }
     const name = nameTok?.value ?? "<unknown>";
 
     // Optional type annotation
@@ -773,6 +916,7 @@ class Parser {
     }
 
     this.expect("operator", "=");
+    this.skipNewlines(); // allow initializer on next line: let x: T =\n  expr
     const init = this.parseExpression();
 
     // Encode safety prefix in the value field as a leading qualifier
@@ -786,7 +930,15 @@ class Parser {
     const loc = this.loc();
     this.advance(); // consume "mut"
 
-    const nameTok = this.expect("identifier");
+    const mutNameCur = this.current();
+    let nameTok;
+    if (mutNameCur.kind === "identifier") {
+      nameTok = this.expect("identifier");
+    } else if (mutNameCur.kind === "keyword") {
+      nameTok = this.advance();
+    } else {
+      nameTok = this.expect("identifier");
+    }
     const name = nameTok?.value ?? "<unknown>";
 
     let typeValue = "";
@@ -797,6 +949,7 @@ class Parser {
     }
 
     this.expect("operator", "=");
+    this.skipNewlines(); // allow initializer on next line: mut x: T =\n  expr
     const init = this.parseExpression();
 
     const nameWithType = typeValue !== "" ? `${name}: ${typeValue}` : name;
@@ -863,8 +1016,14 @@ class Parser {
     if (this.currentIs("keyword", "else")) {
       this.advance();
       this.skipNewlines();
-      const elseBlock = this.parseBlock();
-      children.push(elseBlock);
+      // Support `else if` chains by recursively parsing the nested if statement
+      if (this.currentIs("keyword", "if") || this.currentIs("keyword", "unless")) {
+        const branch = this.parseStatement();
+        if (branch !== undefined) children.push(branch);
+      } else {
+        const elseBlock = this.parseBlock();
+        children.push(elseBlock);
+      }
     }
 
     return { kind: "ifStmt", location: loc, children };
@@ -978,9 +1137,17 @@ class Parser {
         const nameTok = this.current();
         this.advance(); // consume identifier
         this.advance(); // consume "="
+        this.skipNewlines(); // allow RHS on next line: x =\n  expr
         const rhs = this.parseExpression();
         return { kind: "assignStmt", value: nameTok.value, location: loc, children: [rhs] };
       }
+    }
+
+    // Detect `emit EventName` in expression-statement position (e.g. a match arm body).
+    // Without this, `emit` is consumed as an identifier keyword and the event name
+    // is left in the stream, causing cascading PARSE-001 errors.
+    if (this.currentIs("keyword", "emit")) {
+      return this.parseEmitStmt();
     }
 
     const expr = this.parseExpression();
@@ -1670,6 +1837,7 @@ class Parser {
     }
 
     this.expect("operator", "=");
+    this.skipNewlines(); // allow initializer on next line: readonly x: T =\n  expr
     const init = this.parseExpression();
 
     const nameWithType = typeValue !== "" ? `${name}: ${typeValue}` : name;
@@ -2461,6 +2629,66 @@ class Parser {
   private skipNewlines(): void {
     while (this.current().kind === "newline" || this.current().kind === "comment" || this.current().kind === "docComment") {
       this.pos++;
+    }
+  }
+
+  /**
+   * Skips a disallowed top-level statement including any multi-line continuation.
+   *
+   * After emitting the diagnostic, we skip:
+   *   1. The current line (up to the first newline).
+   *   2. Any subsequent continuation lines whose first real token is NOT a
+   *      top-level keyword (flow, pure, guarded, secure, type, record, enum,
+   *      import, intent, governance, api, compute, route, contract, event).
+   *
+   * This avoids spurious LLN-PARSE-001 cascades when a binding initializer
+   * is written on the next line:
+   *     let email: protected Email =
+   *       validate.email(rawEmail)?      ← without this fix: PARSE-001 here
+   */
+  private skipTopLevelStatement(): void {
+    // Step 1: skip to end of current line
+    while (!this.isEof() && this.current().kind !== "newline") this.advance();
+
+    // Step 2: peek ahead — if the next non-newline token is a top-level keyword,
+    // stop here. Otherwise consume the continuation line(s).
+    const TOP_LEVEL_KW = new Set([
+      "flow", "pure", "guarded", "secure", "type", "record", "enum",
+      "import", "intent", "governance", "api", "compute", "route",
+      "contract", "event", "let", "mut", "readonly", "unsafe", "safe", "fn",
+    ]);
+
+    while (!this.isEof()) {
+      // Save position so we can revert if we hit a top-level keyword
+      const savedPos = this.pos;
+
+      // Skip blank lines / comments
+      while (
+        !this.isEof() &&
+        (this.current().kind === "newline" ||
+         this.current().kind === "comment" ||
+         this.current().kind === "docComment")
+      ) {
+        this.pos++;
+      }
+
+      if (this.isEof()) break;
+
+      const tok = this.current();
+      // If the first real token is a top-level keyword or a { at column 0
+      // (which starts a block for a flow), stop consuming.
+      if (tok.kind === "keyword" && TOP_LEVEL_KW.has(tok.value)) {
+        this.pos = savedPos; // revert so the outer loop sees the keyword
+        break;
+      }
+      // If the token is at column 1 (not indented), it's a new statement — stop.
+      if (tok.column <= 1) {
+        this.pos = savedPos;
+        break;
+      }
+
+      // The line is a continuation — consume it
+      while (!this.isEof() && this.current().kind !== "newline") this.advance();
     }
   }
 

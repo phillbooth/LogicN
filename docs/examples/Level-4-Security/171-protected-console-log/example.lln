@@ -1,7 +1,10 @@
 /// example: 171-protected-console-log
 /// level: 4
-/// concept: protected value sent to console sink is forbidden
+/// concept: secret value sent to console sink is forbidden
 /// expected_diagnostics: LLN-SECRET-001
-/// ai_rule: Protected values cannot be printed to the console. Redact first or omit.
+/// ai_rule: SecureString values cannot be printed to the console. Redact first or omit.
+/// test_status: stable
 
-print(email)
+pure flow example(apiKey: SecureString) -> Void {
+  print(apiKey)
+}

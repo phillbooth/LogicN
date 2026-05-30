@@ -2,18 +2,18 @@
 /// level: 5
 /// concept: all 16 contract sections in canonical order — minimal but complete template
 /// expected_diagnostics: none
-/// test_status: stable
 /// ai_rule: Canonical contract section order is: types → intent → request → response → context → model → effects → timeouts → retries → limits → privacy → errors → rules → observability → events → audit
+/// test_status: stable
 
 event RecordAccessed
 
 record ReadRequest {
-  id: String
+  recordId: String
 }
 
 record ReadResponse {
-  id: String
-  name: String
+  responseId: String
+  responseName: String
 }
 
 secure flow getRecord(readonly request: Request) -> GetRecordResult
@@ -46,8 +46,8 @@ contract {
   response {
     returns ReadResponse
     exposes {
-      id
-      name
+      responseId
+      responseName
     }
     denies {
       internalKey
@@ -142,22 +142,22 @@ with effects [database.read, audit.write] {
   let actor = context.actor
   let traceId = context.trace_id
 
-  unsafe let rawId: String = request.params.id
-  let id: protected RecordId = validate.id(rawId)?
+  unsafe let rawId: String = request.params.recordId
+  let recordId: protected RecordId = validate.id(rawId)?
 
-  let record = RecordStore.findById(id)?
+  let entry = RecordStore.findById(recordId)?
 
   AuditLog.write({
     event: "RecordAccessed",
     actor: actor.id,
     traceId: traceId,
-    id: redact(id)
+    recordId: redact(recordId)
   })
 
   emit RecordAccessed
 
   return Ok(Response.okJson({
-    id: record.id,
-    name: record.name
+    responseId: entry.id,
+    responseName: entry.name
   }))
 }

@@ -3,6 +3,7 @@
 /// concept: explicit NPU compute target with GPU fallback
 /// expected_diagnostics: none
 /// ai_rule: Use compute target npu for on-device edge inference; fall back to gpu before cpu for performance.
+/// test_status: stable
 
 guarded flow runOnNpu(input: Tensor<Float32, [1, 768]>) -> RunOnNpuResult
 

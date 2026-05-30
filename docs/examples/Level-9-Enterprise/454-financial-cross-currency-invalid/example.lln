@@ -1,5 +1,5 @@
 /// example: 454-financial-cross-currency-invalid
-/// test_status: draft
+/// test_status: stable
 /// level: 9
 /// concept: adding Money<GBP> and Money<USD> without currency conversion is a type error
 /// expected_diagnostics: LLN-TYPE-004

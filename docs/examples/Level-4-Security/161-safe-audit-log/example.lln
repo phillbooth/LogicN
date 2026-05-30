@@ -1,7 +1,14 @@
-﻿/// example: 161-safe-audit-log
+/// example: 161-safe-audit-log
 /// level: 4
 /// concept: safe audit log write with redacted value
 /// expected_diagnostics: none
 /// ai_rule: Protected -> Redacted -> Audit is the canonical LogicN trust flow for sensitive data.
+/// test_status: stable
 
-AuditLog.write({ email: redact(email) })
+type Email = Brand<String, EmailTag>
+
+guarded flow example(email: protected Email) -> Void
+  with effects [audit.write]
+{
+  AuditLog.write({ email: redact(email) })
+}

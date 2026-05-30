@@ -3,6 +3,7 @@
 /// concept: adaptive runtime block that learns from workload to optimise batching and warmup
 /// expected_diagnostics: none
 /// ai_rule: runtime adaptive enables workload-learning optimisations within governance constraints.
+/// test_status: stable
 
 guarded flow runAdaptive(input: Tensor<Float32, [Batch, 512]>) -> RunAdaptiveResult
 

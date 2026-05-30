@@ -11,7 +11,7 @@ contract {
     type SendReferralNoAuthorityResult = Result<Response, ReferralError>
   }
 }
-  with effects [pii.read, network.outbound, audit.write]
+  with effects [pii.read, database.read, network.outbound, audit.write]
   intent "Send patient referral to specialist"
 {
   unsafe let rawId: String = request.body.patientId
@@ -19,7 +19,7 @@ contract {
   let patientData: protected PatientData = PatientDB.get(patientId)?
 
   // LLN-GOV-003: protected PatientData shared with SpecialistService without authority block
-  SpecialistService.sendReferral({ patient: patientData })?
+  SpecialistService.refer({ patient: patientData })?
 
   AuditLog.write({ event: "ReferralSent", patientId: redact(patientId) })
   return Ok(Response.ok({}))

@@ -201,30 +201,45 @@ function extractResponseDeniedFields(flowNode: AstNode): Set<string> {
 }
 
 /**
- * Collects all identifier names that appear as named argument labels in
- * callExpr nodes within the flow body. Named args are stored as identifier
- * children of callExpr with their child being the value expression.
+ * Collects named argument field names from callExpr nodes in RETURN statements
+ * of the flow body. This is used to detect denied fields leaking into the response.
  *
- * Also collects plain identifier values found in the body (for heuristic
- * matching against denied field names).
+ * Only examines return statement expressions (not intermediate calls like AuditLog.write)
+ * to avoid false positives where denied field names appear in intermediate operations
+ * such as redact(amount) or audit logging.
  */
 function collectBodyFieldNames(flowNode: AstNode): Set<string> {
   const fields = new Set<string>();
 
-  function walk(node: AstNode): void {
+  function walkReturnExpr(node: AstNode): void {
     if (node.kind === "callExpr") {
       for (const child of node.children ?? []) {
-        // Named argument labels are identifier nodes with a single value child
+        // Named argument labels are identifier nodes with a value child
         if (child.kind === "identifier" && child.value !== undefined && (child.children ?? []).length > 0) {
-          fields.add(child.value);
+          // Skip if the value is wrapped in redact(...) — it has been sanitised
+          const valueChild = child.children![0];
+          const isRedacted = valueChild !== undefined &&
+            valueChild.kind === "callExpr" &&
+            valueChild.value === "redact";
+          if (!isRedacted) {
+            fields.add(child.value);
+          }
         }
       }
+      for (const child of node.children ?? []) walkReturnExpr(child);
+    } else {
+      for (const child of node.children ?? []) walkReturnExpr(child);
     }
-    if (node.kind === "identifier" && node.value !== undefined) {
-      // Also capture bare identifier values in body expressions
-      fields.add(node.value);
+  }
+
+  function findReturnStmts(node: AstNode): void {
+    if (node.kind === "returnStmt") {
+      for (const child of node.children ?? []) {
+        walkReturnExpr(child);
+      }
+      return; // don't recurse further into return
     }
-    for (const child of node.children ?? []) walk(child);
+    for (const child of node.children ?? []) findReturnStmts(child);
   }
 
   // Walk the flow body block — it's the last child of the flow node
@@ -233,7 +248,7 @@ function collectBodyFieldNames(flowNode: AstNode): Set<string> {
   const bodyBlock = blockChildren[blockChildren.length - 1];
 
   if (bodyBlock !== undefined) {
-    walk(bodyBlock);
+    findReturnStmts(bodyBlock);
   }
 
   return fields;

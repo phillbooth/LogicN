@@ -2,11 +2,8 @@
 /// level: 6
 /// concept: Tensor arithmetic requires shape compatibility
 /// expected_diagnostics: LLN-TYPE-004
+/// test_status: stable
 
-let a: Tensor<Float32, [4, 8]> =
-  Tensor.zeros()
-
-let b: Tensor<Float32, [8, 4]> =
-  Tensor.zeros()
-
-let wrong = a + b
+pure flow example(a: Tensor<Float32, [4, 8]>, b: Tensor<Float32, [8, 4]>) -> Void {
+  let wrong = a + b
+}

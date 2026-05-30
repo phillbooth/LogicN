@@ -3,6 +3,7 @@
 /// concept: authority block authorises sharing protected PatientData with an external service
 /// expected_diagnostics: none
 /// ai_rule: Use an authority block to explicitly grant permission for protected data to cross a trust boundary.
+/// test_status: stable
 
 secure flow sendReferral(readonly request: Request) -> SendReferralResult
 
@@ -11,7 +12,7 @@ contract {
     type SendReferralResult = Result<Response, ReferralError>
   }
 }
-  with effects [pii.read, pii.write, network.outbound, audit.write]
+  with effects [pii.read, pii.write, database.read, network.outbound, audit.write]
   intent "Send patient referral to approved specialist service"
   authority {
     grant pii.share to SpecialistService
@@ -23,7 +24,7 @@ contract {
   let patientId: protected PatientId = validate.patientId(rawId)?
   let patientData: protected PatientData = PatientDB.get(patientId)?
 
-  SpecialistService.sendReferral({ patient: patientData })?
+  SpecialistService.refer({ patient: patientData })?
 
   AuditLog.write({
     event: "ReferralSent",

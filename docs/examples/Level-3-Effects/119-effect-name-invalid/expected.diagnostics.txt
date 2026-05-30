@@ -1,4 +1,4 @@
-﻿LLN-EFFECT-004
+LLN-EFFECT-004
 
 Unknown or non-canonical effect: network.
 Use the canonical form: network.outbound

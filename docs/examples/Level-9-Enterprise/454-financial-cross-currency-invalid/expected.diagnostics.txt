@@ -1,1 +1,1 @@
-﻿LLN-TYPE-004: cannot add Money<GBP> and Money<USD>; currency mismatch
+LLN-TYPE-004

@@ -3,6 +3,7 @@
 /// concept: explicit CPU compute target
 /// expected_diagnostics: none
 /// ai_rule: Use compute target cpu for workloads that are latency-sensitive on small inputs or that require deterministic single-threaded execution.
+/// test_status: stable
 
 guarded flow runOnCpu(input: Tensor<Float32, [1, 128]>) -> RunOnCpuResult
 

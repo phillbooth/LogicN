@@ -3,5 +3,11 @@
 /// concept: unsafe value crossing a trust boundary via network
 /// expected_diagnostics: LLN-VALUESTATE-003
 /// ai_rule: Unsafe values cannot cross trust boundaries. Validate before sending externally.
+/// test_status: stable
 
-http.post("/customer", rawEmail)?
+secure flow example(readonly request: Request) -> Void
+  with effects [network.outbound]
+{
+  unsafe let rawEmail: String = request.body.email
+  http.post("/customer", rawEmail)?
+}

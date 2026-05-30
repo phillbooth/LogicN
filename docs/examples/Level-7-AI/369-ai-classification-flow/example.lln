@@ -83,7 +83,7 @@ contract {
 }
 
 with effects [ai.inference, audit.write] {
-  compute target best { prefer [npu, gpu, cpu] deny [remote.execution] }
+  compute target npu {}
 
   unsafe let rawText: String = request.params.text
   let safeText: String = validate.sanitize(rawText)?

@@ -1,9 +1,9 @@
 /// example: 317-money-cross-currency-compute
-/// test_status: draft
+/// test_status: stable
 /// level: 6
 /// concept: Cross-currency arithmetic is denied
 /// expected_diagnostics: LLN-TYPE-004
 
-let price: Money<GBP> = Money.gbp("99.00")
-let fee:   Money<USD> = Money.usd("5.00")
-let total = price + fee
+pure flow example(price: Money<GBP>, fee: Money<USD>) -> Void {
+  let total = price + fee
+}

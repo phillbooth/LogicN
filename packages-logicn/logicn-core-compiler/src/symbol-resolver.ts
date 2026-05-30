@@ -50,6 +50,7 @@ const BUILT_IN_VALUE_NAMES = new Set([
   "Err",
   "true",
   "false",
+  "unit",  // LogicN unit value — the singleton of type Unit (like () in Haskell/Rust)
 ]);
 
 const STANDARD_PRELUDE = new Set([
@@ -276,8 +277,15 @@ class SymbolResolver {
 
       case "typeDecl":
       case "enumDecl":
-      case "recordDecl":
         this.walkChildren(node, "type");
+        return;
+
+      case "recordDecl":
+        // Record fields are scoped to the record — push a fresh scope so that
+        // field names from different records don't conflict with each other.
+        this.pushScope();
+        this.walkChildren(node, "type");
+        this.popScope();
         return;
 
       default:
@@ -289,6 +297,9 @@ class SymbolResolver {
   private checkCallTarget(node: AstNode): void {
     const name = node.value ?? "";
     if (name === "" || BUILT_IN_VALUE_NAMES.has(name)) return;
+
+    // Internal parser tokens (e.g. #record for anonymous record literals) are not user-defined names
+    if (name.startsWith("#")) return;
 
     // Capital-letter call targets are stdlib or user-defined constructors
     if (name[0] !== undefined && name[0] >= "A" && name[0] <= "Z") return;
@@ -321,8 +332,13 @@ function isReceiverCall(node: AstNode): boolean {
 }
 
 function parseParamName(value: string): string {
-  const colonIdx = value.indexOf(":");
-  return (colonIdx === -1 ? value : value.slice(0, colonIdx)).trim();
+  let rest = value.trim();
+  // Strip leading qualifiers: readonly, unsafe, safe
+  if (rest.startsWith("readonly ")) rest = rest.slice("readonly ".length).trim();
+  else if (rest.startsWith("unsafe ")) rest = rest.slice("unsafe ".length).trim();
+  else if (rest.startsWith("safe "))   rest = rest.slice("safe ".length).trim();
+  const colonIdx = rest.indexOf(":");
+  return (colonIdx === -1 ? rest : rest.slice(0, colonIdx)).trim();
 }
 
 function parseBindingName(value: string): string {

@@ -3,6 +3,7 @@
 /// concept: mandatory fallback declaration when targeting npu or gpu
 /// expected_diagnostics: none
 /// ai_rule: Always declare fallback cpu when targeting npu or gpu.
+/// test_status: stable
 
 secure flow runFraudModel(tx: Transaction) -> RunFraudModelResult
 
