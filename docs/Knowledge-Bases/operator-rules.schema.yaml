@@ -537,3 +537,35 @@ rules:
     diagnostic_on_failure: LLN-TYPE-004
     phase: deferred
     notes: "Tensor equality deferred. Shape compatibility rules not yet defined."
+
+  # ── String taint propagation ─────────────────────────────────────────────
+
+  - operator: "+"
+    category: string_taint
+    operands:
+      left: "String (unsafe)"
+      right: "String"
+    result: "String (unsafe)"
+    allowed: true
+    diagnostic_on_failure: LLN-VALUESTATE-004
+    phase: 8B
+    notes: >
+      String concatenation propagates unsafe taint. If either operand is an
+      unsafe binding, the result is also unsafe. Sending this result to a
+      governed sink (database query, shell exec, HTML render) emits
+      LLN-VALUESTATE-004. This is the SQL injection pattern.
+      Fix: validate the unsafe input before concatenation.
+
+  - operator: "=="
+    category: secret_comparison
+    operands:
+      left: "Bytes (secret-derived)"
+      right: "any"
+    result: none
+    allowed: false
+    diagnostic_on_failure: LLN-SECRET-002
+    phase: 8B
+    notes: >
+      Bytes values derived from secret sources (HMAC digests, API token bytes,
+      signature bytes) must not be compared with == or !=. Use
+      constantTimeEquals(a, b) instead to prevent timing attacks.

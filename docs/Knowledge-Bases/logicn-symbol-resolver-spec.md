@@ -13,6 +13,13 @@ diagnostics emitted for name resolution failures.
 
 ---
 
+## TL;DR
+- Runs before the type checker — checks names in expression position
+- Flow names are program-scope (hoisted); binding names are block-scope (sequential)
+- Capital-letter identifiers are suppressed from LLN-NAME-001 (stdlib modules)
+
+---
+
 ## Rules at a Glance
 
 - Symbol resolver runs before the type checker.

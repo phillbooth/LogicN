@@ -92,10 +92,54 @@ export {
 // Stage A - Runtime Pipeline
 export {
   run,
+  serve,
   type RuntimeResult,
   type RuntimeOptions,
   type RuntimeMode,
 } from "./runtime.js";
+
+// Stage A - Route Registry
+export {
+  buildRouteRegistry,
+  type RouteEntry,
+  type RouteRegistry,
+  type RouteMatch,
+} from "./route-registry.js";
+
+// Stage A - Route Dispatcher
+export {
+  startServer,
+  makeResponseValue,
+  makeApiErrorValue,
+  type ServerConfig,
+  type RunningServer,
+} from "./route-dispatcher.js";
+
+// Stage A - Standard Library
+export {
+  callStdlib,
+  logicNValuesEqual,
+  type StdlibContext,
+} from "./stdlib.js";
+
+// Stage A - Proof Chain
+export {
+  buildProofChain,
+  verifyProofChain,
+  type ExecutionProofChain,
+  type ProofHashes,
+  type EvidenceRecord,
+  type DenialRecord,
+  type ProofChainInputs,
+} from "./proof-chain.js";
+
+// Stage A - Governance Verifier
+export {
+  verifyGovernance,
+  type GovernanceDiagnostic,
+  type GovernanceVerifyResult,
+  type DeploymentProfile,
+} from "./governance-verifier.js";
 
 export interface CompilerInput {
   readonly projectRoot: string;

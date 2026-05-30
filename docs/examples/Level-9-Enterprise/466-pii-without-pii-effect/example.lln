@@ -1,0 +1,10 @@
+/// example: 466-pii-without-pii-effect
+/// level: 9
+/// concept: PII access requires pii.read effect
+/// expected_diagnostics: LLN-PII-001
+
+guarded flow getPatientEmail(patientId: PatientId) -> Result<Email, DbError>
+effects [database.read] {
+  let patient = PatientsDB.findById(patientId)?
+  return Ok(patient.email)
+}

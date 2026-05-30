@@ -26,6 +26,13 @@ program behaviour.
 
 ---
 
+## TL;DR
+- Runs after all checker passes — combines their evidence for governance-level assertions
+- Intent guides optimisation, not permission
+- GIR emission is blocked by governance errors
+
+---
+
 ## Purpose
 
 The governance verifier confirms that declared intent matches observable

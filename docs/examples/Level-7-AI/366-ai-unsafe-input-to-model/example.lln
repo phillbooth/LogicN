@@ -1,0 +1,11 @@
+/// example: 366-ai-unsafe-input-to-model
+/// level: 7
+/// concept: Unsafe input cannot flow directly to AI model
+/// expected_diagnostics: LLN-VALUESTATE-003
+
+secure flow classifyRaw(readonly req: Request) -> Result<Label, AiError>
+effects [ai.inference] {
+  unsafe let rawInput: String = req.body.text
+  let label = ClassifierModel.classify(rawInput)?
+  return Ok(label)
+}

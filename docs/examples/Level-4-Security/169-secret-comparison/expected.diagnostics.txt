@@ -1,4 +1,4 @@
-﻿LLN-SEC-XXX
+﻿LLN-SECRET-002 (SecretComparisonDenied)
 
-Direct equality comparison on secret value is forbidden.
-Use constantTimeEquals(apiKey, suppliedKey) to prevent timing attacks.
+SecureString must not be compared with == or !=.
+Use constantTimeEquals(apiKey, suppliedKey) instead.

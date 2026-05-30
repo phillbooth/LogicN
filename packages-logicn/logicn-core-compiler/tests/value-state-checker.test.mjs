@@ -320,3 +320,81 @@ pure flow add(a: Int, b: Int) -> Int {
     assert.equal(errors.length, 0, `Unexpected errors in pure flow`);
   });
 });
+
+// ── Phase 8B: String taint propagation (LLN-VALUESTATE-004) ──────────────────
+
+describe("Value-state checker — LLN-VALUESTATE-004 string taint propagation", () => {
+  it("emits LLN-VALUESTATE-004 when unsafe binding concatenated with string literal", () => {
+    const result = parseAndCheck(`
+secure flow buildQuery(raw: String) -> Result<String, Error>
+effects [database.read] {
+  unsafe let rawInput: String = raw
+  let query: String = "SELECT * FROM users WHERE email = '" + rawInput + "'"
+  return Ok(query)
+}
+`);
+    assert.ok(
+      hasDiag(result, "LLN-VALUESTATE-004"),
+      `Expected LLN-VALUESTATE-004 for unsafe string concatenation, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+
+  it("does not emit LLN-VALUESTATE-004 for safe-only string concatenation", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let greeting: String = "Hello " + "World"
+  return greeting
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-VALUESTATE-004"), "Unexpected LLN-VALUESTATE-004 for safe concat");
+  });
+
+  it("LLN-VALUESTATE-004 includes why and risk fields", () => {
+    const result = parseAndCheck(`
+secure flow buildQuery(raw: String) -> Result<String, Error>
+effects [database.read] {
+  unsafe let rawInput: String = raw
+  let query: String = "SELECT " + rawInput
+  return Ok(query)
+}
+`);
+    const diag = result.diagnostics.find((d) => d.code === "LLN-VALUESTATE-004");
+    assert.ok(diag !== undefined, "Expected LLN-VALUESTATE-004");
+    assert.ok(diag.why !== undefined, "Expected why field on LLN-VALUESTATE-004");
+    assert.ok(diag.risk !== undefined, "Expected risk field on LLN-VALUESTATE-004");
+  });
+});
+
+// ── Rust-style related locations ──────────────────────────────────────────────
+
+describe("Value-state checker — Rust-style related locations", () => {
+  it("LLN-VALUESTATE-003 includes relatedLocations pointing to unsafe declaration", () => {
+    const result = parseAndCheck(`
+secure flow test(raw: String) -> Result<String, Error>
+effects [database.write] {
+  unsafe let rawInput: String = raw
+  let saved = DB.insert(rawInput)?
+  return Ok(saved)
+}
+`);
+    const diag = result.diagnostics.find((d) => d.code === "LLN-VALUESTATE-003");
+    assert.ok(diag !== undefined, "Expected LLN-VALUESTATE-003");
+    assert.ok(diag.why !== undefined, "Expected why field");
+    assert.ok(diag.risk !== undefined, "Expected risk field");
+  });
+
+  it("LLN-SECRET-001 includes why and risk fields", () => {
+    const result = parseAndCheck(`
+secure flow test() -> Result<String, Error>
+effects [secret.read] {
+  let apiKey: SecureString = env.secret("API_KEY")
+  log.info(apiKey)
+  return Ok("done")
+}
+`);
+    const diag = result.diagnostics.find((d) => d.code === "LLN-SECRET-001");
+    assert.ok(diag !== undefined, "Expected LLN-SECRET-001");
+    assert.ok(diag.why !== undefined, "Expected why field on LLN-SECRET-001");
+    assert.ok(diag.risk !== undefined, "Expected risk field on LLN-SECRET-001");
+  });
+});

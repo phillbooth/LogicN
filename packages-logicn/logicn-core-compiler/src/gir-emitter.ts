@@ -36,6 +36,30 @@ export interface GIRProof {
   readonly status: "satisfied" | "missing" | "failed";
 }
 
+export interface GIRTensorInfo {
+  /** Binding name that holds the tensor value. */
+  readonly name: string;
+  /** Full type annotation string, e.g. "Tensor<Float32, [Batch, 768]>". */
+  readonly type: string;
+  /** Element type, e.g. "Float32". */
+  readonly elementType: string;
+  /** Shape descriptor, e.g. "[Batch, 768]" or "DynamicShape". */
+  readonly shape: string;
+  /**
+   * True when the element type and shape are known to be compatible with
+   * photonic target bridges. Float16/Float32 with concrete or dynamic shapes
+   * are compatible. Int8 (quantized) requires explicit dequantization.
+   */
+  readonly photonic_compatible: boolean;
+}
+
+export interface GIRTargetAffinity {
+  /** Suggested compute targets based on declared effects (planning hint). */
+  readonly suggested: readonly string[];
+  /** Human-readable reason for the suggestion. */
+  readonly reason: string;
+}
+
 export interface GIRFlow {
   readonly name: string;
   readonly qualifier: "flow" | "pure" | "guarded" | "secure";
@@ -45,6 +69,10 @@ export interface GIRFlow {
   readonly audit: GIRAudit;
   readonly execution: GIRExecution;
   readonly proofs: readonly GIRProof[];
+  /** Tensor binding metadata for compute planning. Empty when no tensors present. */
+  readonly tensors: readonly GIRTensorInfo[];
+  /** Target affinity hint derived from declared effects. Absent when no hint needed. */
+  readonly target_affinity?: GIRTargetAffinity;
 }
 
 export interface GIRProgram {
@@ -96,7 +124,10 @@ export function emitGIR(
       status: effectsStatus,
     };
 
-    return {
+    const tensors = flowNode === undefined ? [] : extractTensors(flowNode);
+    const targetAffinity = inferTargetAffinity(flow.declaredEffects, tensors);
+
+    const flowGIR: GIRFlow = {
       name: flow.name,
       qualifier: flow.qualifier,
       effects,
@@ -105,7 +136,10 @@ export function emitGIR(
       audit,
       execution: flowNode === undefined ? defaultExecution() : extractExecution(flowNode),
       proofs: buildProofs(effects, intent, audit, protectedValues),
+      tensors,
+      ...(targetAffinity !== undefined ? { target_affinity: targetAffinity } : {}),
     };
+    return flowGIR;
   });
 
   return {
@@ -269,6 +303,98 @@ function buildProofs(
   }
 
   return proofs;
+}
+
+// ---------------------------------------------------------------------------
+// Tensor shape inference (Phase 8A — type annotation based)
+// ---------------------------------------------------------------------------
+
+/** Photonic-compatible float types (full and half precision). */
+const PHOTONIC_FLOAT_TYPES = new Set(["Float16", "Float32", "Float"]);
+
+/**
+ * Extracts tensor binding metadata from a flow node.
+ * Looks for letDecl/mutDecl bindings whose type annotation starts with "Tensor".
+ */
+function extractTensors(flowNode: AstNode): GIRTensorInfo[] {
+  const declarations = [
+    ...findNodes(flowNode, "letDecl"),
+    ...findNodes(flowNode, "mutDecl"),
+    ...findNodes(flowNode, "readonlyDecl"),
+  ];
+  const tensors: GIRTensorInfo[] = [];
+
+  for (const decl of declarations) {
+    const parsed = parseBindingValue(decl.value ?? "");
+    if (parsed === undefined) continue;
+
+    const typeStr = parsed.type;
+    // Check for Tensor<ElementType, Shape> annotation
+    if (!typeStr.startsWith("Tensor<") && typeStr !== "AnyTensor") continue;
+
+    if (typeStr === "AnyTensor") {
+      tensors.push({
+        name: parsed.name,
+        type: typeStr,
+        elementType: "Unknown",
+        shape: "Erased",
+        photonic_compatible: false, // unknown element type — cannot confirm
+      });
+      continue;
+    }
+
+    // Extract element type and shape from Tensor<ElementType, Shape>
+    const inner = typeStr.slice("Tensor<".length, typeStr.lastIndexOf(">")).trim();
+    const firstComma = inner.indexOf(",");
+    const elementType = firstComma === -1 ? inner.trim() : inner.slice(0, firstComma).trim();
+    const shape = firstComma === -1 ? "Unknown" : inner.slice(firstComma + 1).trim();
+
+    // Photonic compatibility: known float types with concrete or dynamic shapes
+    const isFloatType = PHOTONIC_FLOAT_TYPES.has(elementType);
+    const isConcreteShape = shape.includes("[") || shape === "DynamicShape";
+    const photonic_compatible = isFloatType && isConcreteShape;
+
+    tensors.push({ name: parsed.name, type: typeStr, elementType, shape, photonic_compatible });
+  }
+
+  return tensors;
+}
+
+// ---------------------------------------------------------------------------
+// Effect → target affinity inference (LLN-HINT-COMPUTE-001 planning)
+// ---------------------------------------------------------------------------
+
+/**
+ * Infers suggested compute targets from declared effects.
+ * This is a planning hint, not a governance decision.
+ * Returns undefined when no affinity can be inferred.
+ */
+function inferTargetAffinity(
+  declaredEffects: readonly string[],
+  tensors: readonly GIRTensorInfo[],
+): GIRTargetAffinity | undefined {
+  const effects = new Set(declaredEffects);
+  const suggested: string[] = [];
+  let reason = "";
+
+  if (effects.has("ai.inference")) {
+    suggested.push("npu", "gpu", "cpu");
+    reason = "ai.inference effect benefits from NPU or GPU acceleration";
+  }
+
+  // Photonic hint when all tensors are photonic-compatible
+  if (tensors.length > 0 && tensors.every((t) => t.photonic_compatible)) {
+    if (!suggested.includes("photonic")) {
+      suggested.unshift("photonic");
+      reason = reason !== ""
+        ? `photonic-compatible tensors detected; ${reason}`
+        : "all tensor types are photonic-compatible";
+    }
+  }
+
+  if (suggested.length === 0) return undefined;
+
+  return { suggested, reason };
 }
 
 function unique(values: readonly string[]): string[] {

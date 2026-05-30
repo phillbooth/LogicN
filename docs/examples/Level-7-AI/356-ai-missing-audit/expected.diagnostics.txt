@@ -1,1 +1,4 @@
-﻿LLN-GOV-XXX: audit.write declared but AuditLog.write was never called in flow scorePatient
+﻿LLN-GOV-002 (MISSING_AUDIT_FOR_GOVERNED_SINK)
+
+Flow uses ai.inference and writes to database but declares no audit.write.
+Add audit.write to effects and add AuditLog.write evidence.

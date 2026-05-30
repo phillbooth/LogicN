@@ -78,6 +78,13 @@ export interface AstNode {
   readonly location?: SourceLocation;
   readonly children?: readonly AstNode[];
   readonly value?: string;
+  /**
+   * Stores the original readable form used by the developer when
+   * Readable Logic Forms are adopted (see logicn-readable-logic-forms.md).
+   * Example: binaryExpr with value ">" may have readableForm "is greater than".
+   * The formatter preserves this style; the compiler uses value (canonical).
+   */
+  readonly readableForm?: string;
 }
 
 export interface ParseDiagnostic {
@@ -89,6 +96,12 @@ export interface ParseDiagnostic {
   readonly suggestedFix?: string;
   /** Machine-applicable fix — the exact LogicN snippet to insert/replace, without prose. */
   readonly suggestedCode?: string;
+  /** Rust-style: secondary source locations giving context. */
+  readonly relatedLocations?: readonly { message: string; location: SourceLocation }[];
+  /** Elm-style: why this is a problem. */
+  readonly why?: string;
+  /** Elm-style: what goes wrong if ignored. */
+  readonly risk?: string;
 }
 
 /** Metadata extracted from a flow declaration header. */
@@ -1074,7 +1087,12 @@ class Parser {
     this.advance(); // consume "intent"
 
     let value = "";
-    if (this.current().kind === "string" || this.current().kind === "identifier") {
+    if (this.current().kind === "string") {
+      // Strip surrounding double-quotes from the string literal
+      const raw = this.current().value;
+      value = raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw;
+      this.advance();
+    } else if (this.current().kind === "identifier") {
       value = this.current().value;
       this.advance();
     }
@@ -1237,22 +1255,74 @@ class Parser {
     // Path string: "/orders" or "/users/{id}"
     let path = "";
     if (this.current().kind === "string") {
-      path = this.current().value;
+      path = this.current().value.replace(/^"|"$/g, "");
       this.advance();
     }
 
     const value = `${method} ${path}`.trim();
 
-    // Route body: { request T  response T  flow name  [permission ...] }
-    // The body contains declaration-level clauses (flow, request, response),
-    // not statements. Use the generic balanced-brace skipper for now;
-    // a full clause-level parser is Phase 8+.
+    // Route body: { request T response T flow f [permission ...] }
     this.skipNewlines();
+    let requestType = "";
+    let responseType = "";
+    let flowName = "";
     if (this.currentIs("symbol", "{")) {
-      this.skipBalancedBraces();
+      this.advance(); // consume {
+      this.skipNewlines();
+
+      while (!this.currentIs("symbol", "}") && !this.isEof()) {
+        const tok = this.current();
+        const clauseName = tok.value;
+        const isClauseToken = tok.kind === "identifier" || tok.kind === "keyword";
+
+        if (isClauseToken && clauseName === "request") {
+          this.advance();
+          this.skipNewlines();
+          if (this.current().kind === "identifier") {
+            requestType = this.current().value;
+            this.advance();
+          }
+        } else if (isClauseToken && clauseName === "response") {
+          this.advance();
+          this.skipNewlines();
+          if (this.current().kind === "identifier") {
+            responseType = this.current().value;
+            this.advance();
+          }
+        } else if (isClauseToken && clauseName === "flow") {
+          this.advance();
+          this.skipNewlines();
+          if (this.current().kind === "identifier") {
+            flowName = this.current().value;
+            this.advance();
+          }
+        } else if (isClauseToken && clauseName === "permission") {
+          // Skip permission clause for now.
+          while (!this.currentIs("newline", "\n") && !this.currentIs("symbol", "}") && !this.isEof()) {
+            this.advance();
+          }
+        } else {
+          this.advance();
+        }
+
+        this.skipNewlines();
+      }
+
+      this.expect("symbol", "}");
     }
 
-    return { kind: "routeDecl", value, location: loc };
+    const children: AstNode[] = [];
+    if (flowName !== "") {
+      children.push({ kind: "identifier", value: `flow:${flowName}`, location: loc });
+    }
+    if (requestType !== "") {
+      children.push({ kind: "typeRef", value: requestType, location: loc });
+    }
+    if (responseType !== "") {
+      children.push({ kind: "identifier", value: `response:${responseType}`, location: loc });
+    }
+
+    return { kind: "routeDecl", value, location: loc, children };
   }
 
   // ── readonly binding declaration ──────────────────────────────────────────

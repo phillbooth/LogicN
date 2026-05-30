@@ -1,4 +1,6 @@
-﻿LLN-SEC-XXX
+﻿LLN-VALUESTATE-003 (UnsafeValueReachedGovernedSink)
 
-Unsafe value passed to database sink.
-Validate rawEmail before inserting into PatientsDB.
+Unsafe value passed to governed database sink.
+Validate rawEmail before inserting:
+  let email: protected Email = validate.email(rawEmail)?
+  PatientsDB.insert({ email: email })?

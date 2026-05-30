@@ -1,4 +1,5 @@
-﻿LLN-EFFECT-XXX
+﻿LLN-EFFECT-001
 
-Effect database.write is used but not declared.
-Add database.write to the with effects [...] list.
+database.write used but not declared.
+Add database.write to the effects clause:
+  with effects [database.write]

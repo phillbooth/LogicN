@@ -1,0 +1,21 @@
+family: LLN-PARSE
+description: "Parser diagnostics"
+diagnostics:
+  - code: LLN-PARSE-001
+    name: UNEXPECTED_TOKEN
+    severity: error
+    phase: parser
+    message: "Unexpected token '{token}'."
+    implemented: true
+  - code: LLN-PARSE-002
+    name: EXPECTED_FLOW_KEYWORD
+    severity: error
+    phase: parser
+    message: "Expected 'flow' keyword after qualifier."
+    implemented: true
+  - code: LLN-PARSE-003
+    name: UNTERMINATED_STRING
+    severity: error
+    phase: parser
+    message: "Unterminated string literal."
+    implemented: true

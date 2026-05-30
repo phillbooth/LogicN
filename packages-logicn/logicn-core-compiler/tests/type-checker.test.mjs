@@ -685,3 +685,287 @@ flow test(email: Email) -> String {
     assert.ok(!messages.includes("'redacted'"), `Unexpected redacted UnknownType: ${messages}`);
   });
 });
+
+// ── LLN-TYPE-002: TypeMismatch (Phase 8A literal inference) ──────────────────
+
+describe("Type checker — LLN-TYPE-002 type mismatch", () => {
+  it("emits LLN-TYPE-002 when string literal assigned to Int binding", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let count: Int = "hello"
+  return "ok"
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-002"), "Expected LLN-TYPE-002 for String assigned to Int");
+  });
+
+  it("emits LLN-TYPE-002 when bool literal assigned to String binding", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let name: String = true
+  return name
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-002"), "Expected LLN-TYPE-002 for Bool assigned to String");
+  });
+
+  it("does not emit LLN-TYPE-002 for correct Int assignment", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let count: Int = 42
+  return "ok"
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-002"), "Unexpected LLN-TYPE-002 for correct Int = 42");
+  });
+
+  it("does not emit LLN-TYPE-002 for correct String assignment", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let name: String = "Alice"
+  return name
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-002"), "Unexpected LLN-TYPE-002 for correct String = 'Alice'");
+  });
+
+  it("does not emit LLN-TYPE-002 for Auto inference", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let x: Auto = 42
+  return "ok"
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-002"), "Unexpected LLN-TYPE-002 for Auto binding");
+  });
+
+  it("does not emit LLN-TYPE-002 when assigning Int literal to sized int type (widening)", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let n: Int32 = 5
+  return "ok"
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-002"), "Unexpected LLN-TYPE-002 for Int → Int32 widening");
+  });
+});
+
+// ── LLN-TYPE-004: InvalidBinaryOperation (Phase 8A) ─────────────────────────
+
+describe("Type checker — LLN-TYPE-004 binary operation", () => {
+  it("emits LLN-TYPE-004 when String + Int is used", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let x: String = "a" + 42
+  return x
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-004"), "Expected LLN-TYPE-004 for String + Int");
+  });
+
+  it("does not emit LLN-TYPE-004 for String + String", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let x: String = "foo" + "bar"
+  return x
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-004"), "Unexpected LLN-TYPE-004 for String + String");
+  });
+
+  it("does not emit LLN-TYPE-004 for Int + Int", () => {
+    const result = parseAndCheck(`
+flow test() -> Int {
+  return 3 + 4
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-004"), "Unexpected LLN-TYPE-004 for Int + Int");
+  });
+
+  it("emits LLN-TYPE-004 for Bool used with &&  but left operand is String literal", () => {
+    const result = parseAndCheck(`
+flow test() -> Bool {
+  return "hello" && true
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-004"), "Expected LLN-TYPE-004 for String && Bool");
+  });
+});
+
+// ── LLN-TYPE-007: InvalidArgumentCount (Phase 8A) ───────────────────────────
+
+describe("Type checker — LLN-TYPE-007 argument count", () => {
+  it("emits LLN-TYPE-007 when flow called with too many arguments", () => {
+    const result = parseAndCheck(`
+pure flow add(a: Int, b: Int) -> Int {
+  return a + b
+}
+
+flow test() -> Int {
+  return add(1, 2, 3)
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-007"), "Expected LLN-TYPE-007 for extra argument");
+  });
+
+  it("emits LLN-TYPE-007 when flow called with too few arguments", () => {
+    const result = parseAndCheck(`
+pure flow add(a: Int, b: Int) -> Int {
+  return a + b
+}
+
+flow test() -> Int {
+  return add(1)
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-007"), "Expected LLN-TYPE-007 for missing argument");
+  });
+
+  it("does not emit LLN-TYPE-007 when correct number of arguments given", () => {
+    const result = parseAndCheck(`
+pure flow add(a: Int, b: Int) -> Int {
+  return a + b
+}
+
+flow test() -> Int {
+  return add(1, 2)
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-007"), "Unexpected LLN-TYPE-007 for correct argument count");
+  });
+});
+
+// ── LLN-TYPE-006: InvalidCallArgument (Phase 8A) ─────────────────────────────
+
+describe("Type checker — LLN-TYPE-006 call argument type", () => {
+  it("emits LLN-TYPE-006 when String literal passed where Int expected", () => {
+    const result = parseAndCheck(`
+pure flow double(n: Int) -> Int {
+  return n + n
+}
+
+flow test() -> Int {
+  return double("hello")
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-006"), "Expected LLN-TYPE-006 for String passed to Int param");
+  });
+
+  it("does not emit LLN-TYPE-006 when correct type is passed", () => {
+    const result = parseAndCheck(`
+pure flow double(n: Int) -> Int {
+  return n + n
+}
+
+flow test() -> Int {
+  return double(5)
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-006"), "Unexpected LLN-TYPE-006 for correct argument type");
+  });
+});
+
+// ── LLN-TYPE-008: InvalidReturnType (Phase 8A) ───────────────────────────────
+
+describe("Type checker — LLN-TYPE-008 invalid return type", () => {
+  it("emits LLN-TYPE-008 when String returned from Int flow", () => {
+    const result = parseAndCheck(`
+pure flow getCount() -> Int {
+  return "hello"
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-008"), "Expected LLN-TYPE-008 for String returned from Int flow");
+  });
+
+  it("does not emit LLN-TYPE-008 when correct type returned", () => {
+    const result = parseAndCheck(`
+pure flow getCount() -> Int {
+  return 42
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-008"), "Unexpected LLN-TYPE-008 for correct return type");
+  });
+
+  it("does not emit LLN-TYPE-008 when Ok() returned from Result flow", () => {
+    const result = parseAndCheck(`
+flow test() -> Result<String, Error> {
+  return Ok("hello")
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-008"), "Unexpected LLN-TYPE-008 for Ok() in Result flow");
+  });
+});
+
+// ── Phase 8B: Money<C> cross-currency enforcement ────────────────────────────
+
+describe("Type checker — Money cross-currency (Phase 8B)", () => {
+  it("does not emit LLN-TYPE-004 for same-currency Money addition", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let price: Money<GBP> = Money.gbp("100.00")
+  let vat: Money<GBP> = Money.gbp("20.00")
+  let total: Money<GBP> = price + vat
+  return "ok"
+}
+`);
+    const moneyDiags = diagsWithCode(result, "LLN-TYPE-004").filter(
+      (d) => d.message.includes("Money") && d.message.includes("currency")
+    );
+    assert.equal(moneyDiags.length, 0, "Unexpected cross-currency error for same-currency addition");
+  });
+
+  it("emits LLN-TYPE-004 for cross-currency Money addition", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let gbp: Money<GBP> = Money.gbp("100.00")
+  let usd: Money<USD> = Money.usd("120.00")
+  let wrong: Money<GBP> = gbp + usd
+  return "ok"
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-004"), "Expected LLN-TYPE-004 for Money<GBP> + Money<USD>");
+    const diag = diagsWithCode(result, "LLN-TYPE-004").find((d) => d.message.includes("currency"));
+    assert.ok(diag !== undefined, "Expected currency-related error message");
+  });
+
+  it("emits LLN-TYPE-004 for Money * Money (dimensionally invalid)", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let price: Money<GBP> = Money.gbp("100.00")
+  let vat: Money<GBP> = Money.gbp("20.00")
+  let wrong = price * vat
+  return "ok"
+}
+`);
+    const moneyMulDiag = diagsWithCode(result, "LLN-TYPE-004").find(
+      (d) => d.message.includes("Money") && d.message.includes("*")
+    );
+    assert.ok(moneyMulDiag !== undefined, "Expected LLN-TYPE-004 for Money * Money");
+  });
+});
+
+// ── Phase 8B: Auto type inference propagation ─────────────────────────────────
+
+describe("Type checker — Auto inference + binding type propagation (Phase 8B)", () => {
+  it("Auto binding infers from integer literal without error", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let x: Auto = 42
+  return "ok"
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-TYPE-001"), "Auto should not emit UnknownType");
+    assert.ok(!hasDiag(result, "LLN-TYPE-002"), "Auto should not emit TypeMismatch");
+  });
+
+  it("inferred binding type used in subsequent assignment check", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let x: Int = 5
+  let y: String = x
+  return "ok"
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-002"), "Expected LLN-TYPE-002: Int binding assigned to String");
+  });
+});

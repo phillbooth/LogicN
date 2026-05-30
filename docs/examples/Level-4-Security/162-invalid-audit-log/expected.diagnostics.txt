@@ -1,4 +1,5 @@
-﻿LLN-SEC-XXX
+﻿LLN-VALUESTATE-003 (UnsafeValueReachedGovernedSink) or LLN-SECRET-001 (SecretValueLogged)
 
 Protected value passed to audit sink without redaction.
-Use redact(email) before writing to AuditLog.
+Use redact(email) before writing to AuditLog:
+  AuditLog.write({ email: redact(email) })

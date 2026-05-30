@@ -28,6 +28,15 @@ import { type AstNode, type SourceLocation } from "./parser.js";
 // Public types
 // ---------------------------------------------------------------------------
 
+/**
+ * A secondary source location that gives context for a diagnostic.
+ * Used for Rust-style "declared here... used here" error messages.
+ */
+export interface DiagnosticRelatedLocation {
+  readonly message: string;
+  readonly location: SourceLocation;
+}
+
 export interface ValueStateDiagnostic {
   readonly code: string;
   readonly name: string;
@@ -37,6 +46,12 @@ export interface ValueStateDiagnostic {
   readonly suggestedFix?: string;
   /** Machine-applicable fix — the exact LogicN snippet to insert/replace, without prose. */
   readonly suggestedCode?: string;
+  /** Rust-style: secondary locations (e.g. where unsafe value was declared). */
+  readonly relatedLocations?: readonly DiagnosticRelatedLocation[];
+  /** Elm-style: why this is a problem. */
+  readonly why?: string;
+  /** Elm-style: what goes wrong if ignored. */
+  readonly risk?: string;
 }
 
 export interface ValueStateCheckResult {
@@ -56,12 +71,21 @@ function makeVSDiag(
   location: SourceLocation | undefined,
   suggestedFix: string,
   suggestedCode?: string,
+  opts?: {
+    relatedLocations?: readonly DiagnosticRelatedLocation[];
+    why?: string;
+    risk?: string;
+  },
 ): ValueStateDiagnostic {
-  const sc = suggestedCode !== undefined ? { suggestedCode } : {};
+  const sc   = suggestedCode !== undefined ? { suggestedCode } : {};
+  const rel  = opts?.relatedLocations !== undefined ? { relatedLocations: opts.relatedLocations } : {};
+  const why  = opts?.why  !== undefined ? { why:  opts.why  } : {};
+  const risk = opts?.risk !== undefined ? { risk: opts.risk } : {};
+  const extras = { ...sc, ...rel, ...why, ...risk };
   if (location !== undefined) {
-    return { code, name, severity: "error", message, location, suggestedFix, ...sc };
+    return { code, name, severity: "error", message, location, suggestedFix, ...extras };
   }
-  return { code, name, severity: "error", message, suggestedFix, ...sc };
+  return { code, name, severity: "error", message, suggestedFix, ...extras };
 }
 
 // ---------------------------------------------------------------------------
@@ -91,7 +115,12 @@ function isGovernedSink(node: AstNode): boolean {
   // Audit log
   if (fullName === "AuditLog.write") return true;
   // Shell and filesystem
-  if (/^(shell\.exec|FileSystem\.write)$/.test(fullName)) return true;
+  if (/^(shell\.exec|FileSystem\.write|fs\.write\w*)$/.test(fullName)) return true;
+  // HTTP write methods — unsafe data must not cross network boundary unvalidated
+  if (/^https?\.(post|put|patch|delete)$/.test(fullName)) return true;
+  // Email / payment sinks
+  if (/^EmailService\.(send\w*|deliver)$/.test(fullName)) return true;
+  if (/\w+Payment\.(charge|process|submit)$/.test(fullName)) return true;
 
   return false;
 }
@@ -104,6 +133,22 @@ function isGovernedSink(node: AstNode): boolean {
 // Canonical registry (source of truth):
 //   docs/Knowledge-Bases/stdlib-gates.yaml  §sinks  (log_receiver, print_output)
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Serialization functions
+//
+// Calls whose arguments must not include SecureString bindings.
+// Serializing a secret value would expose it in the output stream.
+// ---------------------------------------------------------------------------
+
+function isSerializationCall(node: AstNode): boolean {
+  const methodName = node.value ?? "";
+  if (methodName === "serialize" || methodName === "stringify") return true;
+  const receiver = node.children?.[0];
+  const receiverName = receiver?.kind === "identifier" ? (receiver.value ?? "") : "";
+  const fullName = receiverName !== "" ? `${receiverName}.${methodName}` : methodName;
+  return /^(json\.encode|json\.stringify|JSON\.stringify|toml\.encode|xml\.encode|serialize)$/.test(fullName);
+}
 
 function isLogCall(node: AstNode): boolean {
   const methodName = node.value ?? "";
@@ -178,6 +223,8 @@ interface BindingInfo {
   readonly name: string;
   readonly safetyPrefix: "unsafe" | "safe" | undefined;
   readonly typeName: string;
+  /** Location where this binding was declared — used for Rust-style related diagnostics. */
+  readonly declaredAt?: SourceLocation;
 }
 
 function parseBindingValue(value: string): BindingInfo {
@@ -320,12 +367,15 @@ class ValueStateChecker {
     const name = paramValue.slice(0, colonIdx).trim();
     const typeSection = paramValue.slice(colonIdx + 1).trim();
     const typeName = typeSection.split(/[<\s]/)[0] ?? typeSection;
-    this.registerBinding({ name, safetyPrefix: undefined, typeName });
+    const locField = node.location !== undefined ? { declaredAt: node.location } : {};
+    this.registerBinding({ name, safetyPrefix: undefined, typeName, ...locField });
   }
 
   private handleLetDecl(node: AstNode): void {
     const info = parseBindingValue(node.value ?? "");
-    this.registerBinding(info);
+    // Attach declaration location for Rust-style "declared here" diagnostics
+    const locField = node.location !== undefined ? { declaredAt: node.location } : {};
+    this.registerBinding({ ...info, ...locField });
     // Walk the init expression
     const init = node.children?.[0];
     if (init !== undefined) this.walkNode(init);
@@ -350,7 +400,8 @@ class ValueStateChecker {
     }
 
     // Overwrite the previous unsafe registration with the new (possibly safe) one
-    this.registerBinding(info);
+    const mutLocField = node.location !== undefined ? { declaredAt: node.location } : {};
+    this.registerBinding({ ...info, ...mutLocField });
 
     if (init !== undefined) this.walkNode(init);
   }
@@ -388,6 +439,14 @@ class ValueStateChecker {
         this.checkArgForSecretLogging(child, callName, node.location);
       }
     }
+
+    // Rule 4 (serialization side): LLN-SECRET-003 — SecureString in json.encode / serialize
+    if (isSerializationCall(node)) {
+      const callName = buildFullCallName(node);
+      for (const child of node.children ?? []) {
+        this.checkArgForSecretSerialization(child, callName, node.location);
+      }
+    }
   }
 
   /**
@@ -402,13 +461,26 @@ class ValueStateChecker {
     if (node.kind === "identifier") {
       const binding = this.lookupBinding(node.value ?? "");
       if (binding?.safetyPrefix === "unsafe") {
+        // Rust-style: show where the unsafe binding was declared AND where it reaches the sink
+        const related: DiagnosticRelatedLocation[] = [];
+        if (binding.declaredAt !== undefined) {
+          related.push({
+            message: `'${binding.name}' declared as unsafe here`,
+            location: binding.declaredAt,
+          });
+        }
         this.diagnostics.push(makeVSDiag(
           "LLN-VALUESTATE-003",
           "UnsafeValueReachedGovernedSink",
-          `Unsafe binding '${binding.name}' cannot flow into governed sink '${sinkName}'. Upgrade with 'safe mut ${binding.name} = gate(${binding.name})?'.`,
+          `Unsafe binding '${binding.name}' cannot flow into governed sink '${sinkName}'.`,
           location,
           `Add before the sink call: safe mut ${binding.name} = validate.${binding.name}(${binding.name})?`,
           `safe mut ${binding.name} = validate.${binding.name}(${binding.name})?`,
+          {
+            ...(related.length > 0 ? { relatedLocations: related } : {}),
+            why: `'${binding.name}' was declared with 'unsafe let', meaning its value comes from an untrusted boundary source and has not been validated.`,
+            risk: `Sending unvalidated boundary data to '${sinkName}' can cause injection attacks, data corruption, or governance violations.`,
+          },
         ));
       }
     }
@@ -430,18 +502,57 @@ class ValueStateChecker {
     if (node.kind === "identifier") {
       const binding = this.lookupBinding(node.value ?? "");
       if (binding?.typeName === "SecureString") {
+        const related: DiagnosticRelatedLocation[] = [];
+        if (binding.declaredAt !== undefined) {
+          related.push({
+            message: `'${binding.name}' declared as SecureString here`,
+            location: binding.declaredAt,
+          });
+        }
         this.diagnostics.push(makeVSDiag(
           "LLN-SECRET-001",
           "SecretValueLogged",
-          `SecureString binding '${binding.name}' must not be passed to '${callName}'. Use redact(${binding.name}) to produce a safe log placeholder.`,
+          `SecureString binding '${binding.name}' must not be passed to '${callName}'.`,
           location,
           `Replace with: log.info("...", { key: redact(${binding.name}) })`,
           `redact(${binding.name})`,
+          {
+            ...(related.length > 0 ? { relatedLocations: related } : {}),
+            why: `'${binding.name}' is a SecureString — its raw value must never appear in logs, audit output, or error messages.`,
+            risk: `Logging a secret exposes credentials, tokens, or keys in plaintext. Use redact() to produce a safe '[REDACTED]' placeholder.`,
+          },
         ));
       }
     }
     for (const child of node.children ?? []) {
       this.checkArgForSecretLogging(child, callName, location);
+    }
+  }
+
+  /**
+   * LLN-SECRET-003: SecureString must not be passed to serialization functions.
+   * Serializing a secret value would expose it in the output stream.
+   */
+  private checkArgForSecretSerialization(
+    node: AstNode,
+    callName: string,
+    location: SourceLocation | undefined,
+  ): void {
+    if (node.kind === "identifier") {
+      const binding = this.lookupBinding(node.value ?? "");
+      if (binding?.typeName === "SecureString") {
+        this.diagnostics.push(makeVSDiag(
+          "LLN-SECRET-003",
+          "SecretSerializationDenied",
+          `SecureString binding '${binding.name}' must not be serialized via '${callName}'. Secrets must not appear in serialized output.`,
+          location,
+          `Use redact(${binding.name}) to produce a safe placeholder before serialization.`,
+          `redact(${binding.name})`,
+        ));
+      }
+    }
+    for (const child of node.children ?? []) {
+      this.checkArgForSecretSerialization(child, callName, location);
     }
   }
 
@@ -455,6 +566,72 @@ class ValueStateChecker {
       if (left !== undefined) this.checkSecureStringEquality(left, node.location);
       if (right !== undefined) this.checkSecureStringEquality(right, node.location);
     }
+
+    // Phase 8B: String taint propagation — LLN-VALUESTATE-004
+    // "SELECT " + rawInput produces a tainted string that must not reach sinks
+    // Partial implementation: detect when string + contains an unsafe binding
+    if (node.value === "+") {
+      const left  = node.children?.[0];
+      const right = node.children?.[1];
+      if (left !== undefined && right !== undefined) {
+        this.checkStringConcatTaint(left, right, node.location);
+      }
+    }
+  }
+
+  /**
+   * Phase 8B: LLN-VALUESTATE-004 — String taint propagation.
+   * If a string concatenation includes an unsafe binding, the result is tainted.
+   * This is the SQL injection pattern: "SELECT " + rawInput.
+   */
+  private checkStringConcatTaint(
+    left: AstNode,
+    right: AstNode,
+    location: SourceLocation | undefined,
+  ): void {
+    // Find any unsafe identifier in either operand
+    const unsafeLeft  = this.findUnsafeIdentifier(left);
+    const unsafeRight = this.findUnsafeIdentifier(right);
+    const unsafeBinding = unsafeLeft ?? unsafeRight;
+
+    if (unsafeBinding === undefined) return;
+
+    const related: DiagnosticRelatedLocation[] = [];
+    if (unsafeBinding.declaredAt !== undefined) {
+      related.push({
+        message: `'${unsafeBinding.name}' declared as unsafe here`,
+        location: unsafeBinding.declaredAt,
+      });
+    }
+
+    this.diagnostics.push(makeVSDiag(
+      "LLN-VALUESTATE-004",
+      "TaintedValuePropagation",
+      `String concatenation includes unsafe binding '${unsafeBinding.name}'. The result is tainted and must not reach governed sinks.`,
+      location,
+      `Validate '${unsafeBinding.name}' before concatenation: let safe = validate.${unsafeBinding.name}(${unsafeBinding.name})?`,
+      `validate.${unsafeBinding.name}(${unsafeBinding.name})?`,
+      {
+        ...(related.length > 0 ? { relatedLocations: related } : {}),
+        why: `'${unsafeBinding.name}' is unsafe — it came from an untrusted boundary and has not been validated.`,
+        risk: `Concatenating unsafe input into strings sent to databases, shells, or HTML produces injection vulnerabilities.`,
+      },
+    ));
+  }
+
+  /**
+   * Recursively finds the first unsafe binding identifier in an expression tree.
+   */
+  private findUnsafeIdentifier(node: AstNode): BindingInfo | undefined {
+    if (node.kind === "identifier") {
+      const binding = this.lookupBinding(node.value ?? "");
+      if (binding?.safetyPrefix === "unsafe") return binding;
+    }
+    for (const child of node.children ?? []) {
+      const found = this.findUnsafeIdentifier(child);
+      if (found !== undefined) return found;
+    }
+    return undefined;
   }
 
   private checkSecureStringEquality(

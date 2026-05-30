@@ -10,6 +10,13 @@ Adaptive optimisation + Future AI hardware without an uncontrollable runtime
 
 ---
 
+## TL;DR
+- Adaptive runtime learns workload patterns to optimise scheduling, caching, target selection
+- It may NEVER change security, effects, validation, redaction, or program meaning
+- Intent guides optimisation, not permission — this is the core safety rule
+
+---
+
 ## Executive Summary
 
 Most runtimes are static. They execute code exactly the same way regardless
@@ -189,7 +196,9 @@ deterministic is required for regulated deployments.
 
 ## Runtime Profile Artifact
 
-The runtime emits a workload profile for audit and observability:
+The runtime emits a workload profile for audit and observability.
+
+### Full schema (including anti-entropy fields)
 
 ```yaml
 runtime_profile:
@@ -201,7 +210,33 @@ runtime_profile:
     - tensor_reuse
   governance_changes: none
   security_changes: none
+
+  # ── Intent-Guided Optimisation (IGO) learning state ─────────────────────
+  learned_preferences:
+    preferred_target: gpu
+    confidence: 0.92             # 0.0–1.0 — how certain the runtime is
+    evidence_count: 240000       # number of observations that built this
+
+  governance_bounds:
+    denied_targets:
+      - remote.execution         # governance bounds — never overridden by IGO
+    max_confidence: 1.0
+    audit_at_confidence: 0.8    # all selections audited once this threshold crossed
+
+  stale_after: "2026-07-01T00:00:00Z"  # profile expires and re-learns from scratch
 ```
+
+### The anti-entropy rule
+
+Without expiry, learned preferences drift into stale or unsafe behaviour.
+With expiry, the runtime must re-prove its optimisation choices under current
+conditions. `stale_after` is analogous to certificate expiry — old optimisation
+evidence cannot be trusted in production without re-verification.
+
+The `audit_at_confidence` threshold ensures that highly confident preferences
+(which become load-bearing assumptions) generate audit records for governance review.
+
+See: `docs/Knowledge-Bases/logicn-intent-guided-optimisation.md`
 
 ---
 
@@ -276,9 +311,25 @@ It cannot modify GIR semantics — only how they are executed.
 
 ---
 
+## IGO — Intent-Guided Optimisation
+
+This document describes the LogicN adaptive runtime. The formal concept name
+for this architecture is **Intent-Guided Optimisation (IGO)**.
+
+> **Intent is a signal for optimisation, not a grant of authority.**
+
+The internal runtime module implementing IGO may be called **GIRT** (Governed
+Intent-Guided Runtime) in implementation code. Use IGO in all external docs.
+
+Full IGO specification: `docs/Knowledge-Bases/logicn-intent-guided-optimisation.md`
+
+---
+
 ## See Also
 
+- `docs/Knowledge-Bases/logicn-intent-guided-optimisation.md` — full IGO specification
 - `docs/Knowledge-Bases/logicn-architecture-layers.md` — five-layer separation
 - `docs/Knowledge-Bases/logicn-tensor-arity-decision.md` — tensor target rules
+- `docs/Knowledge-Bases/logicn-compute-target-optimisation.md` — GIR tensor metadata and hints
 - `docs/Knowledge-Bases/effect-checker-and-boundary-checker.md` — effect model
 - `docs/Knowledge-Bases/logicn-quantum-target-bridge.md` — quantum target extension

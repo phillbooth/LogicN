@@ -680,3 +680,22 @@ terms:
       Used by the governance verifier to check that behavior matches declared purpose.
       Declared with the `intent` keyword.
     doc: "core-application-model.md"
+
+  - canonical: "IGO"
+    aliases:
+      - "Intent-Guided Optimisation"
+      - "Intent-Guided Optimization"
+      - "GIRT"
+      - "Governed Intent-Guided Runtime"
+      - "adaptive runtime"
+      - "workload learning"
+      - "intent-guided"
+    category: architecture
+    definition: >
+      The LogicN runtime architecture where intent declarations guide execution
+      optimisation without granting additional authority.
+      Intent is a signal for optimisation, not a grant of authority.
+      Learned preferences expire (stale_after), are bounded (denied_targets),
+      and are auditable (audit_at_confidence).
+    doc: "logicn-intent-guided-optimisation.md"
+    not_to_be_confused_with: "intent declaration (the source-level `intent` keyword)"

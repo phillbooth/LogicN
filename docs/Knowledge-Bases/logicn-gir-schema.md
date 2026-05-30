@@ -9,6 +9,11 @@ governance checks succeed.
 GIR is not executable source. It is the compiler's machine-readable governance
 contract for planning, lowering, auditing, and proof generation.
 
+## TL;DR
+- GIR is emitted only when all checkers produce zero errors
+- Records: flow name/qualifier, effects declared/observed, protected values, audit, compute targets
+- Never contains raw secrets or unredacted protected payloads
+
 ## Minimal Flow Shape
 
 ```yaml

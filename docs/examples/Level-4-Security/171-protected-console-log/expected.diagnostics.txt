@@ -1,4 +1,5 @@
-﻿LLN-SEC-XXX
+﻿LLN-SECRET-001 (SecretValueLogged)
 
-Protected value sent to console sink.
-Do not log protected values. Use redact(email) or omit from output.
+Protected or secret value sent to console sink.
+Use redact(email) to produce a safe placeholder:
+  print(redact(email))

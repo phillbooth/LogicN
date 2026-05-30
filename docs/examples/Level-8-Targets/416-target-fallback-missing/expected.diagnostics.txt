@@ -1,0 +1,5 @@
+﻿LLN-HINT-COMPUTE-001 (COMPUTE_TARGET_MISSING_FOR_AI_INFERENCE) — info
+
+compute target npu has no fallback declared.
+Add fallback cpu to ensure execution when npu is unavailable:
+  compute target best { prefer [npu, gpu, cpu] fallback cpu }

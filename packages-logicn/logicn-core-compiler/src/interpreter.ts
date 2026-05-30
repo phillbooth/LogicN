@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { type AstNode, type FlowMeta } from "./parser.js";
+import { callStdlib, logicNValuesEqual, moneyBinary } from "./stdlib.js";
 
 export type LogicNValue =
   | { readonly __tag: "int";       readonly value: number }
@@ -92,6 +93,16 @@ const STD_RECEIVERS = new Set([
   "sanitize",
   "toml",
   "validate",
+]);
+const STD_METHOD_NAMES = new Set([
+  "unwrapOr", "isSome", "isNone", "map", "flatMap", "value", "get",
+  "isOk", "isErr", "mapErr",
+  "length", "charCount", "toLower", "toUpper", "trim", "trimStart", "trimEnd",
+  "startsWith", "endsWith", "contains", "includes", "split", "replace", "replaceAll",
+  "slice", "encode", "encodedLength", "codePoints", "isEmpty",
+  "first", "last", "push", "append", "filter", "reduce", "sum", "reverse", "join", "find", "toList", "toArray",
+  "set", "has", "size", "keys", "values", "delete", "remove",
+  "amount", "currency", "add", "subtract", "multiply", "divideBy",
 ]);
 
 class Interpreter {
@@ -420,8 +431,12 @@ class Interpreter {
       return { __tag: "string", value: left.value + right.value };
     }
 
-    if (op === "==") return { __tag: "bool", value: logicNEqual(left, right) };
-    if (op === "!=") return { __tag: "bool", value: !logicNEqual(left, right) };
+    // Money arithmetic
+    const moneyResult = moneyBinary(left, op, right);
+    if (moneyResult !== undefined) return moneyResult;
+
+    if (op === "==") return { __tag: "bool", value: logicNValuesEqual(left, right) };
+    if (op === "!=") return { __tag: "bool", value: !logicNValuesEqual(left, right) };
 
     if (left.__tag === "int" || left.__tag === "float") {
       const l = left.value;
@@ -440,18 +455,61 @@ class Interpreter {
   private evalCall(node: AstNode): LogicNValue {
     const methodName = node.value ?? "";
     const children = node.children ?? [];
-    const receiver = getReceiver(node);
+    const forceStandalone =
+      methodName === "Ok" ||
+      methodName === "Err" ||
+      methodName === "Some" ||
+      methodName === "format" ||
+      methodName === "redact" ||
+      methodName === "constantTimeEquals" ||
+      this.fnIndex.has(methodName) ||
+      this.flowIndex.has(methodName);
+    const receiverFromSyntax = forceStandalone ? undefined : getReceiver(node);
+    const receiver =
+      receiverFromSyntax ??
+      (!forceStandalone && STD_METHOD_NAMES.has(methodName) && children.length > 0 ? children[0] : undefined);
     const args = receiver === undefined ? children : children.slice(1);
     const receiverName = receiver === undefined ? "" : this.getReceiverName(receiver);
     const fullName = receiverName !== "" ? `${receiverName}.${methodName}` : methodName;
 
-    if (methodName === "Ok" && receiver === undefined) return { __tag: "ok", value: this.evalExpr(args[0] ?? voidIdentifier()) };
-    if (methodName === "Err" && receiver === undefined) return { __tag: "err", error: this.evalExpr(args[0] ?? voidIdentifier()) };
-    if (methodName === "Some" && receiver === undefined) return { __tag: "some", value: this.evalExpr(args[0] ?? voidIdentifier()) };
+    if (methodName === "Ok") return { __tag: "ok", value: this.evalExpr(args[0] ?? voidIdentifier()) };
+    if (methodName === "Err") return { __tag: "err", error: this.evalExpr(args[0] ?? voidIdentifier()) };
+    if (methodName === "Some") return { __tag: "some", value: this.evalExpr(args[0] ?? voidIdentifier()) };
 
     if (this.fnIndex.has(methodName) && receiver === undefined) {
       return this.runLocalFn(methodName, args);
     }
+
+    const evaluatedReceiver = receiver !== undefined ? this.evalExpr(receiver) : undefined;
+    const evaluatedArgs = args.map((arg) => this.evalExpr(arg));
+    const stdlibResult = callStdlib(
+      fullName,
+      evaluatedReceiver,
+      evaluatedArgs,
+      {
+        recordEffect: (effect) => this.effectsObserved.add(effect),
+        resolveIdentifier: (name) => this.lookup(name)?.value,
+        callFlow: (name, fnArgs) => {
+          const sub = new Interpreter(this.ast, this.knownFlows);
+          const result = sub.runFlow(name, fnArgs);
+          for (const effect of result.effectsObserved) this.effectsObserved.add(effect);
+          this.auditEntries.push(...result.auditEntries);
+          return result.value;
+        },
+        applyFn: (fn, arg) => {
+          if (fn.__tag === "unresolved" && this.flowIndex.has(fn.name)) {
+            const callArgs = new Map<string, LogicNValue>([["arg", arg]]);
+            const sub = new Interpreter(this.ast, this.knownFlows);
+            const result = sub.runFlow(fn.name, callArgs);
+            for (const effect of result.effectsObserved) this.effectsObserved.add(effect);
+            this.auditEntries.push(...result.auditEntries);
+            return result.value;
+          }
+          return arg;
+        },
+      },
+    );
+    if (stdlibResult !== undefined) return stdlibResult;
 
     if (fullName.startsWith("validate.") || fullName.startsWith("sanitize.") || fullName.startsWith("parse.")) {
       const raw = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
@@ -503,12 +561,50 @@ class Interpreter {
       return { __tag: "string", value: result };
     }
 
+    // Response helpers
+    if (fullName === "Response.ok" || (receiverName === "Response" && methodName === "ok")) {
+      const data = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
+      return makeResponseValue(200, data);
+    }
+    if (fullName === "Response.created" || (receiverName === "Response" && methodName === "created")) {
+      const id = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
+      return makeResponseValue(201, id);
+    }
+    if (fullName === "Response.accepted" || (receiverName === "Response" && methodName === "accepted")) {
+      return makeResponseValue(202, LLN_VOID);
+    }
+    if (fullName === "Response.noContent" || (receiverName === "Response" && methodName === "noContent")) {
+      return makeResponseValue(204, LLN_VOID);
+    }
+    if (fullName === "Response.redirect" || (receiverName === "Response" && methodName === "redirect")) {
+      const url = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
+      return makeResponseValue(302, url);
+    }
+
+    // ApiError helpers
+    if (fullName === "ApiError.notFound" || (receiverName === "ApiError" && methodName === "notFound")) {
+      const msg = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
+      return makeApiErrorValue(404, safeDisplay(msg));
+    }
+    if (fullName === "ApiError.badRequest" || (receiverName === "ApiError" && methodName === "badRequest")) {
+      const msg = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
+      return makeApiErrorValue(400, safeDisplay(msg));
+    }
+    if (fullName === "ApiError.internal" || (receiverName === "ApiError" && methodName === "internal")) {
+      const msg = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
+      return makeApiErrorValue(500, safeDisplay(msg));
+    }
+    if (fullName === "ApiError.unauthorized" || (receiverName === "ApiError" && methodName === "unauthorized")) {
+      const msg = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
+      return makeApiErrorValue(401, safeDisplay(msg));
+    }
+
     if (this.flowIndex.has(methodName)) {
       return this.runNestedFlow(methodName, args);
     }
 
     if (receiver !== undefined) {
-      return this.evalMethodCall(this.evalExpr(receiver), methodName, args.map((arg) => this.evalExpr(arg)));
+      return this.evalMethodCall(evaluatedReceiver ?? this.evalExpr(receiver), methodName, evaluatedArgs);
     }
 
     this.diagnostics.push({ code: "LLN-RUNTIME-002", message: `Unresolved call: '${fullName}'` });
@@ -689,17 +785,6 @@ function buildFlowIndex(ast: AstNode): ReadonlyMap<string, AstNode> {
   return index;
 }
 
-function logicNEqual(a: LogicNValue, b: LogicNValue): boolean {
-  if (a.__tag !== b.__tag) return false;
-  if (a.__tag === "string" && b.__tag === "string") return a.value === b.value;
-  if (a.__tag === "int" && b.__tag === "int") return a.value === b.value;
-  if (a.__tag === "float" && b.__tag === "float") return a.value === b.value;
-  if (a.__tag === "bool" && b.__tag === "bool") return a.value === b.value;
-  if (a.__tag === "none" && b.__tag === "none") return true;
-  if (a.__tag === "void" && b.__tag === "void") return true;
-  return false;
-}
-
 function matchPattern(
   subject: LogicNValue,
   pattern: string,
@@ -877,6 +962,24 @@ function findStringLiterals(node: AstNode): AstNode[] {
 
   walk(node);
   return found;
+}
+
+function makeResponseValue(status: number, body: LogicNValue): LogicNValue {
+  const fields = new Map<string, LogicNValue>([
+    ["__httpStatus", { __tag: "int", value: status }],
+    ["__body", body],
+    ["__isResponse", { __tag: "bool", value: true }],
+  ]);
+  return { __tag: "record", fields };
+}
+
+function makeApiErrorValue(status: number, message: string): LogicNValue {
+  const fields = new Map<string, LogicNValue>([
+    ["__httpStatus", { __tag: "int", value: status }],
+    ["__message", { __tag: "string", value: message }],
+    ["__isApiError", { __tag: "bool", value: true }],
+  ]);
+  return { __tag: "record", fields };
 }
 
 export function executeFlow(

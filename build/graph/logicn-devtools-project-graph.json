@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-05-29T18:27:38.509Z",
+  "generatedAt": "2026-05-30T07:15:50.471Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -7834,6 +7834,46 @@
       ]
     },
     {
+      "id": "type:logicn-core-compiler:AuditEvent",
+      "kind": "Type",
+      "label": "AuditEvent",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/audit-writer.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:AuditWriter",
+      "kind": "Type",
+      "label": "AuditWriter",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/audit-writer.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:createAuditWriter",
+      "kind": "Flow",
+      "label": "createAuditWriter",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/audit-writer.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:buildFlowAuditEvent",
+      "kind": "Flow",
+      "label": "buildFlowAuditEvent",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/audit-writer.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "type:logicn-core-compiler:EffectDiagnostic",
       "kind": "Type",
       "label": "EffectDiagnostic",
@@ -7878,6 +7918,116 @@
       "kind": "Flow",
       "label": "effectResultsToDiagnostics",
       "sourcePath": "packages-logicn/logicn-core-compiler/src/effect-checker.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:GIREffect",
+      "kind": "Type",
+      "label": "GIREffect",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:GIRIntent",
+      "kind": "Type",
+      "label": "GIRIntent",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:GIRProtectedValue",
+      "kind": "Type",
+      "label": "GIRProtectedValue",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:GIRAudit",
+      "kind": "Type",
+      "label": "GIRAudit",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:GIRExecution",
+      "kind": "Type",
+      "label": "GIRExecution",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:GIRProof",
+      "kind": "Type",
+      "label": "GIRProof",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:GIRFlow",
+      "kind": "Type",
+      "label": "GIRFlow",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:GIRProgram",
+      "kind": "Type",
+      "label": "GIRProgram",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:GIREmitResult",
+      "kind": "Type",
+      "label": "GIREmitResult",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:emitGIR",
+      "kind": "Flow",
+      "label": "emitGIR",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:findNodes",
+      "kind": "Flow",
+      "label": "findNodes",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts",
       "tags": [
         "function",
         "logicn-core-compiler"
@@ -8654,6 +8804,86 @@
       ]
     },
     {
+      "id": "type:logicn-core-compiler:LogicNValue",
+      "kind": "Type",
+      "label": "LogicNValue",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/interpreter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_VOID",
+      "kind": "Type",
+      "label": "LLN_VOID",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/interpreter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_NONE",
+      "kind": "Type",
+      "label": "LLN_NONE",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/interpreter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:RuntimeAuditEntry",
+      "kind": "Type",
+      "label": "RuntimeAuditEntry",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/interpreter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ExecutionAuditRecord",
+      "kind": "Type",
+      "label": "ExecutionAuditRecord",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/interpreter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:FlowExecutionResult",
+      "kind": "Type",
+      "label": "FlowExecutionResult",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/interpreter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ExecutionResult",
+      "kind": "Type",
+      "label": "ExecutionResult",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/interpreter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:executeFlow",
+      "kind": "Flow",
+      "label": "executeFlow",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/interpreter.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "type:logicn-core-compiler:TokenKind",
       "kind": "Type",
       "label": "TokenKind",
@@ -8724,6 +8954,16 @@
       ]
     },
     {
+      "id": "type:logicn-core-compiler:createServer",
+      "kind": "Type",
+      "label": "createServer",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/node-http-shim.d.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "type:logicn-core-compiler:AstNodeKind",
       "kind": "Type",
       "label": "AstNodeKind",
@@ -8778,6 +9018,196 @@
       "kind": "Flow",
       "label": "parseProgram",
       "sourcePath": "packages-logicn/logicn-core-compiler/src/parser.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ServerConfig",
+      "kind": "Type",
+      "label": "ServerConfig",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/route-dispatcher.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:RunningServer",
+      "kind": "Type",
+      "label": "RunningServer",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/route-dispatcher.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:makeResponseValue",
+      "kind": "Flow",
+      "label": "makeResponseValue",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/route-dispatcher.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:makeApiErrorValue",
+      "kind": "Flow",
+      "label": "makeApiErrorValue",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/route-dispatcher.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:startServer",
+      "kind": "Flow",
+      "label": "startServer",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/route-dispatcher.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:RouteEntry",
+      "kind": "Type",
+      "label": "RouteEntry",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/route-registry.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:RouteMatch",
+      "kind": "Type",
+      "label": "RouteMatch",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/route-registry.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:RouteRegistry",
+      "kind": "Type",
+      "label": "RouteRegistry",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/route-registry.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:buildRouteRegistry",
+      "kind": "Flow",
+      "label": "buildRouteRegistry",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/route-registry.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:RuntimeMode",
+      "kind": "Type",
+      "label": "RuntimeMode",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/runtime.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:RuntimeOptions",
+      "kind": "Type",
+      "label": "RuntimeOptions",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/runtime.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:RuntimeResult",
+      "kind": "Type",
+      "label": "RuntimeResult",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/runtime.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:run",
+      "kind": "Flow",
+      "label": "run",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/runtime.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:StdlibContext",
+      "kind": "Type",
+      "label": "StdlibContext",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:makeMoney",
+      "kind": "Flow",
+      "label": "makeMoney",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:isMoney",
+      "kind": "Flow",
+      "label": "isMoney",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:moneyBinary",
+      "kind": "Flow",
+      "label": "moneyBinary",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:logicNValuesEqual",
+      "kind": "Flow",
+      "label": "logicNValuesEqual",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:callStdlib",
+      "kind": "Flow",
+      "label": "callStdlib",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts",
       "tags": [
         "function",
         "logicn-core-compiler"
@@ -17771,13 +18201,6 @@
     },
     {
       "from": "doc:README.md",
-      "to": "package:logicn-core-config",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "README.md"
-    },
-    {
-      "from": "doc:README.md",
       "to": "package:logicn-core-reports",
       "kind": "documents",
       "confidence": "INFERRED",
@@ -17800,34 +18223,6 @@
     {
       "from": "doc:README.md",
       "to": "package:logicn-core-compute",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "README.md"
-    },
-    {
-      "from": "doc:README.md",
-      "to": "package:logicn-ai",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "README.md"
-    },
-    {
-      "from": "doc:README.md",
-      "to": "package:logicn-target-cpu",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "README.md"
-    },
-    {
-      "from": "doc:README.md",
-      "to": "package:logicn-target-wasm",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "README.md"
-    },
-    {
-      "from": "doc:README.md",
-      "to": "package:logicn-target-gpu",
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "README.md"
@@ -27921,6 +28316,34 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:AuditEvent",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/audit-writer.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:AuditWriter",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/audit-writer.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:createAuditWriter",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/audit-writer.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:buildFlowAuditEvent",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/audit-writer.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:EffectDiagnostic",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -27953,6 +28376,83 @@
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/effect-checker.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:GIREffect",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:GIRIntent",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:GIRProtectedValue",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:GIRAudit",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:GIRExecution",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:GIRProof",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:GIRFlow",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:GIRProgram",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:GIREmitResult",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:emitGIR",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:findNodes",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts"
     },
     {
       "from": "package:logicn-core-compiler",
@@ -28495,6 +28995,62 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LogicNValue",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/interpreter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_VOID",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/interpreter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_NONE",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/interpreter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:RuntimeAuditEntry",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/interpreter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ExecutionAuditRecord",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/interpreter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:FlowExecutionResult",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/interpreter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ExecutionResult",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/interpreter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:executeFlow",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/interpreter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:TokenKind",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -28544,6 +29100,13 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:createServer",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/node-http-shim.d.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:AstNodeKind",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -28583,6 +29146,139 @@
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/parser.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ServerConfig",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/route-dispatcher.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:RunningServer",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/route-dispatcher.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:makeResponseValue",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/route-dispatcher.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:makeApiErrorValue",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/route-dispatcher.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:startServer",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/route-dispatcher.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:RouteEntry",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/route-registry.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:RouteMatch",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/route-registry.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:RouteRegistry",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/route-registry.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:buildRouteRegistry",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/route-registry.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:RuntimeMode",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/runtime.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:RuntimeOptions",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/runtime.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:RuntimeResult",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/runtime.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:run",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/runtime.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:StdlibContext",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:makeMoney",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:isMoney",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:moneyBinary",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:logicNValuesEqual",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:callStdlib",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts"
     },
     {
       "from": "package:logicn-core-compiler",

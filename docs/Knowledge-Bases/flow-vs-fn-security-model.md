@@ -22,6 +22,13 @@ must also declare or be permitted for that effect, and by extension so must the 
 
 LogicN is a **flow-first language**. The primary governed execution unit is `flow`.
 
+## TL;DR
+- route → flow → fn: expose, govern, compute
+- fn may only appear inside a flow body — top-level fn is LLN-SYNTAX-005
+- fn cannot declare effects, authority, or await — it is always synchronous
+
+---
+
 ## route
 
 A `route` is an external entry point. It exposes a `flow` to callers (HTTP, webhook,

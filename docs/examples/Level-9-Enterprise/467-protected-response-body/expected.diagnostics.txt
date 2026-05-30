@@ -1,0 +1,1 @@
+LLN-GOV-003 — Protected value 'patient.email' flows into external response body without authority block. Add a policy block authorizing this exposure.

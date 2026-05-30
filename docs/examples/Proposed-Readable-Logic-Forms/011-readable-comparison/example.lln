@@ -1,0 +1,14 @@
+﻿/// example: 011-readable-comparison (PROPOSED)
+/// concept: readable numeric comparison alias
+/// readable_form: amount is greater than limit
+/// canonical_form: amount > limit
+
+// Traditional (current, valid)
+if amount > limit {
+  return triggerApproval()
+}
+
+// Readable form (proposed alias)
+// if amount is greater than limit {
+//   return triggerApproval()
+// }

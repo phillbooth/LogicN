@@ -1,4 +1,5 @@
-﻿LLN-EFFECT-XXX
+﻿LLN-EFFECT-001
 
-Effect audit.write is used but not declared.
-Add audit.write to the with effects [...] list.
+audit.write used but not declared.
+Add audit.write to the effects clause:
+  with effects [database.write, audit.write]

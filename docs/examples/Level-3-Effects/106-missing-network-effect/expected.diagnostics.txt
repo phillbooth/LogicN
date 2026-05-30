@@ -1,4 +1,5 @@
-﻿LLN-EFFECT-XXX
+﻿LLN-EFFECT-001
 
-Effect network.outbound is used but not declared.
-Add network.outbound to the with effects [...] list.
+network.outbound used but not declared.
+Add network.outbound to the effects clause:
+  with effects [network.outbound]

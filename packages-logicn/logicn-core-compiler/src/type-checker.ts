@@ -39,6 +39,12 @@ export interface TypeDiagnostic {
   readonly suggestedFix?: string;
   /** Machine-applicable fix — the exact LogicN snippet to insert/replace, without prose. */
   readonly suggestedCode?: string;
+  /** Rust-style: secondary source locations giving context (e.g. "declared here"). */
+  readonly relatedLocations?: readonly { message: string; location: SourceLocation }[];
+  /** Elm-style: why this is a problem. */
+  readonly why?: string;
+  /** Elm-style: what goes wrong if ignored. */
+  readonly risk?: string;
 }
 
 export interface TypeCheckResult {
@@ -237,6 +243,54 @@ function parseTypeString(raw: string): ParsedTypeRef {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 8A — Type inference helpers
+// ---------------------------------------------------------------------------
+
+/** Numeric types that support arithmetic operators. */
+const NUMERIC_TYPES: ReadonlySet<string> = new Set([
+  "Int", "Int8", "Int16", "Int32", "Int64",
+  "UInt8", "UInt16", "UInt32", "UInt64",
+  "Float", "Float16", "Float32", "Float64",
+  "Decimal", "Byte",
+]);
+
+/** Types that support ordering operators (<, <=, >, >=). */
+const ORDERABLE_TYPES: ReadonlySet<string> = new Set([
+  ...NUMERIC_TYPES, "Timestamp", "Duration", "String",
+]);
+
+/**
+ * Returns true when a value of `inferred` type can be used where `declared`
+ * type is expected. Phase 8A: covers literals, numeric widening, and
+ * algebraic wrappers.
+ */
+function isAssignmentCompatible(declared: string, inferred: string): boolean {
+  if (declared === inferred) return true;
+  if (declared === "Auto" || declared === "" || inferred === "") return true;
+
+  // Strip generic args for comparison
+  const declaredBase = declared.split("<")[0]?.trim() ?? declared;
+  const inferredBase = inferred.split("<")[0]?.trim() ?? inferred;
+  if (declaredBase === inferredBase) return true;
+
+  // Numeric widening: Int literal is compatible with all numeric types
+  if (inferred === "Int"     && NUMERIC_TYPES.has(declared)) return true;
+  if (inferred === "Float"   && (declared === "Float"   || declared.startsWith("Float")))  return true;
+  if (inferred === "Decimal" && (declared === "Decimal" || declared.startsWith("Float")))  return true;
+  if (inferred === "Byte"    && (declared === "Byte"    || declared === "UInt8"))           return true;
+
+  // Algebraic type wrappers — coarse match for Phase 8A
+  if (inferred === "Result"  && declaredBase === "Result")  return true;
+  if (inferred === "Option"  && declaredBase === "Option")  return true;
+  if (inferred === "Money"   && declaredBase === "Money")   return true;
+
+  // Void for bare return in Void flows
+  if (inferred === "Void"    && declared === "Void")        return true;
+
+  return false;
+}
+
+// ---------------------------------------------------------------------------
 // Type checker implementation
 // ---------------------------------------------------------------------------
 
@@ -246,12 +300,24 @@ class TypeChecker {
   private readonly enumVariants = new Map<string, Set<string>>();
   private readonly bindingScopes: Array<Set<string>> = [];
 
+  // ── Phase 8A: type inference state ───────────────────────────────────────
+  /** Maps binding name → inferred base type string (per scope). */
+  private readonly typeScopes: Array<Map<string, string>> = [];
+  /** Flow return type registry, built during collectDeclarations. */
+  private readonly flowReturnTypes = new Map<string, string>();
+  /** Flow parameter type list, built during collectDeclarations. */
+  private readonly flowParamTypes = new Map<string, readonly string[]>();
+  /** Declared return type of the flow currently being walked. */
+  private currentReturnType = "";
+
   check(ast: AstNode): void {
-    // Pass 1: Collect all user-defined type and enum names
+    // Pass 1: Collect all user-defined type, enum, and flow signature names
     this.collectDeclarations(ast);
-    // Pass 2: Validate all type references
+    // Pass 2: Validate all type references and infer/check types
     this.pushBindingScope();
+    this.pushTypeScope();
     this.walkNode(ast);
+    this.popTypeScope();
     this.popBindingScope();
   }
 
@@ -276,6 +342,28 @@ class TypeChecker {
         this.enumVariants.set(node.value.trim(), variants);
       }
     }
+
+    // Phase 8A: Build flow signature registry for call argument checking
+    const FLOW_DECL_KINDS = new Set([
+      "flowDecl", "secureFlowDecl", "pureFlowDecl", "guardedFlowDecl",
+    ]);
+    if (FLOW_DECL_KINDS.has(node.kind) && node.value) {
+      const children = node.children ?? [];
+      // Extract return type from the first typeRef child (the return type annotation)
+      const retTypeNode = children.find((c) => c.kind === "typeRef");
+      if (retTypeNode?.value) {
+        this.flowReturnTypes.set(node.value, parseTypeString(retTypeNode.value).base);
+      }
+      // Extract parameter types
+      const paramTypes = children
+        .filter((c) => c.kind === "paramDecl")
+        .map((c) => {
+          const typeRef = c.children?.find((t) => t.kind === "typeRef");
+          return typeRef?.value ? parseTypeString(typeRef.value).base : "";
+        });
+      this.flowParamTypes.set(node.value, paramTypes);
+    }
+
     for (const child of node.children ?? []) {
       this.collectDeclarations(child);
     }
@@ -305,6 +393,105 @@ class TypeChecker {
     if (scope !== undefined && name !== "") scope.add(name);
   }
 
+  // ── Phase 8A: type scope management ──────────────────────────────────────
+
+  private pushTypeScope(): void {
+    this.typeScopes.push(new Map());
+  }
+
+  private popTypeScope(): void {
+    this.typeScopes.pop();
+  }
+
+  private registerBindingType(name: string, type: string): void {
+    const scope = this.typeScopes[this.typeScopes.length - 1];
+    if (scope !== undefined && name !== "" && type !== "") scope.set(name, type);
+  }
+
+  private lookupBindingType(name: string): string | undefined {
+    for (let i = this.typeScopes.length - 1; i >= 0; i--) {
+      const t = this.typeScopes[i]!.get(name);
+      if (t !== undefined) return t;
+    }
+    return undefined;
+  }
+
+  /**
+   * Infers the base type of an expression node.
+   * Phase 8A: covers literals, bound identifiers, and simple binary expressions.
+   * Returns undefined when type cannot be determined without full inference.
+   */
+  private inferType(node: AstNode): string | undefined {
+    switch (node.kind) {
+      case "numberLiteral": {
+        const v = node.value ?? "";
+        if (v.startsWith("0x") || v.startsWith("0b") || v.startsWith("0o")) return "Byte";
+        if (v.includes(".")) return "Float";
+        return "Int";
+      }
+      case "stringLiteral": return "String";
+      case "charLiteral":   return "Char";
+      case "boolLiteral":   return "Bool";
+
+      case "identifier": {
+        const name = node.value ?? "";
+        if (name === "None")           return "Option";
+        if (name === "true" || name === "false") return "Bool";
+        if (name === "null" || name === "undefined") return "Null"; // caught separately
+        // Return the full stored type (may include generic args: "Money<GBP>")
+        return this.lookupBindingType(name);
+      }
+
+      case "callExpr": {
+        const method = node.value ?? "";
+        // Algebraic constructors
+        if (method === "Ok" || method === "Err") return "Result";
+        if (method === "Some")                   return "Option";
+        if (method === "Decimal")                return "Decimal";
+        // Money constructors (receiver = Money)
+        if (method === "gbp" || method === "usd" || method === "eur" || method === "jpy") return "Money";
+        // Look up flow return type
+        return this.flowReturnTypes.get(method);
+      }
+
+      case "binaryExpr": {
+        const op = node.value ?? "";
+        const left  = node.children?.[0];
+        const right = node.children?.[1];
+        if (!left || !right) return undefined;
+        const leftType  = this.inferType(left);
+        const rightType = this.inferType(right);
+        if (!leftType || !rightType) return undefined;
+        // String concatenation
+        if (op === "+" && leftType === "String" && rightType === "String") return "String";
+        // Comparison and logical → Bool
+        if (["==","!=","<","<=",">",">=","&&","||"].includes(op)) return "Bool";
+        // Numeric arithmetic → numeric result
+        if (NUMERIC_TYPES.has(leftType) && NUMERIC_TYPES.has(rightType)) {
+          if (leftType === "Decimal" || rightType === "Decimal") return "Decimal";
+          if (leftType === "Float"   || rightType === "Float")   return "Float";
+          return leftType;
+        }
+        return undefined;
+      }
+
+      case "unaryExpr": {
+        const op = node.value ?? "";
+        if (op === "!")  return "Bool";
+        const operand = node.children?.[0];
+        return operand ? this.inferType(operand) : undefined;
+      }
+
+      case "errorPropagation": {
+        // x? strips the Result wrapper — full unwrapped type needs Phase 8B
+        return undefined;
+      }
+
+      default:
+        return undefined;
+    }
+  }
+
   // ── AST walker ────────────────────────────────────────────────────────────
 
   private walkNode(node: AstNode): void {
@@ -312,13 +499,22 @@ class TypeChecker {
       case "flowDecl":
       case "secureFlowDecl":
       case "pureFlowDecl":
-      case "guardedFlowDecl":
+      case "guardedFlowDecl": {
+        // Save + set the current flow's return type for return statement checking
+        const prevReturnType = this.currentReturnType;
+        this.currentReturnType = this.flowReturnTypes.get(node.value ?? "") ?? "";
         this.pushBindingScope();
+        this.pushTypeScope();
         // Register params first so they're in scope throughout the body
         for (const child of node.children ?? []) {
           if (child.kind === "paramDecl") {
-            this.registerBinding(parseParamName(child.value ?? ""));
-            // Check the param's type annotation (child typeRef)
+            const paramName = parseParamName(child.value ?? "");
+            this.registerBinding(paramName);
+            // Register param type for inference
+            const typeRef = child.children?.find((c) => c.kind === "typeRef");
+            if (typeRef?.value) {
+              this.registerBindingType(paramName, parseTypeString(typeRef.value).base);
+            }
             for (const typeChild of child.children ?? []) {
               if (typeChild.kind === "typeRef") {
                 this.checkTypeRef(typeChild.value ?? "", typeChild.location);
@@ -329,15 +525,26 @@ class TypeChecker {
         for (const child of node.children ?? []) {
           this.walkNode(child);
         }
+        this.popTypeScope();
         this.popBindingScope();
+        this.currentReturnType = prevReturnType;
         return;
+      }
 
-      case "fnDecl":
-        // fn is a local helper — it gets its own scope for its parameters
+      case "fnDecl": {
+        // fn gets its own scope for parameters; save return type
+        const prevReturnTypeFn = this.currentReturnType;
+        this.currentReturnType = "";
         this.pushBindingScope();
+        this.pushTypeScope();
         for (const child of node.children ?? []) {
           if (child.kind === "paramDecl") {
-            this.registerBinding(parseParamName(child.value ?? ""));
+            const paramName = parseParamName(child.value ?? "");
+            this.registerBinding(paramName);
+            const typeRef = child.children?.find((c) => c.kind === "typeRef");
+            if (typeRef?.value) {
+              this.registerBindingType(paramName, parseTypeString(typeRef.value).base);
+            }
             for (const typeChild of child.children ?? []) {
               if (typeChild.kind === "typeRef") {
                 this.checkTypeRef(typeChild.value ?? "", typeChild.location);
@@ -348,16 +555,104 @@ class TypeChecker {
         for (const child of node.children ?? []) {
           this.walkNode(child);
         }
+        this.popTypeScope();
         this.popBindingScope();
+        this.currentReturnType = prevReturnTypeFn;
         return;
+      }
 
       case "block":
         this.pushBindingScope();
+        this.pushTypeScope();
         for (const child of node.children ?? []) {
           this.walkNode(child);
         }
+        this.popTypeScope();
         this.popBindingScope();
         return;
+
+      // ── Phase 8A: return type checking ─────────────────────────────────────
+      case "returnStmt": {
+        const returnExpr = node.children?.[0];
+        if (returnExpr !== undefined && this.currentReturnType !== "" && this.currentReturnType !== "Void") {
+          const inferredType = this.inferType(returnExpr);
+          if (inferredType !== undefined) {
+            // Allow Ok/Err/Some/None for Result/Option return types
+            const isOkErrReturn = returnExpr.kind === "callExpr" &&
+              (returnExpr.value === "Ok" || returnExpr.value === "Err" || returnExpr.value === "Some");
+            const declaredBase = this.currentReturnType.split("<")[0]?.trim() ?? this.currentReturnType;
+            if (!isOkErrReturn && !isAssignmentCompatible(declaredBase, inferredType)) {
+              this.diagnostics.push(makeTCDiag(
+                "LLN-TYPE-008",
+                "InvalidReturnType",
+                `Flow declares return type '${this.currentReturnType}' but this return expression has type '${inferredType}'.`,
+                node.location,
+                `Return a value of type '${this.currentReturnType}', or correct the flow return type declaration.`,
+              ));
+            }
+          }
+        }
+        for (const child of node.children ?? []) this.walkNode(child);
+        return;
+      }
+
+      // ── Phase 8A: binary operator type checking ───────────────────────────
+      case "binaryExpr": {
+        const op = node.value ?? "";
+        const leftNode  = node.children?.[0];
+        const rightNode = node.children?.[1];
+        if (leftNode !== undefined && rightNode !== undefined) {
+          const leftType  = this.inferType(leftNode);
+          const rightType = this.inferType(rightNode);
+          if (leftType !== undefined && rightType !== undefined) {
+            this.checkBinaryOperatorTypes(op, leftType, rightType, node.location);
+          }
+        }
+        for (const child of node.children ?? []) this.walkNode(child);
+        return;
+      }
+
+      // ── Phase 8A: call argument count checking ────────────────────────────
+      case "callExpr": {
+        const flowName = node.value ?? "";
+        const paramTypes = this.flowParamTypes.get(flowName);
+        if (paramTypes !== undefined) {
+          // children[0] may be receiver — args start after receiver for method calls
+          const isMethodCall = node.children?.[0]?.kind === "identifier" ||
+            node.children?.[0]?.kind === "memberExpr";
+          const argNodes = isMethodCall ? (node.children ?? []).slice(1) : (node.children ?? []);
+
+          // LLN-TYPE-007: wrong argument count
+          if (argNodes.length !== paramTypes.length) {
+            this.diagnostics.push(makeTCDiag(
+              "LLN-TYPE-007",
+              "InvalidArgumentCount",
+              `Flow '${flowName}' expects ${paramTypes.length} argument${paramTypes.length === 1 ? "" : "s"} but received ${argNodes.length}.`,
+              node.location,
+              `Provide exactly ${paramTypes.length} argument${paramTypes.length === 1 ? "" : "s"} to '${flowName}'.`,
+            ));
+          } else {
+            // LLN-TYPE-006: argument type mismatch (for inferrable types only)
+            for (let i = 0; i < argNodes.length; i++) {
+              const argNode = argNodes[i];
+              const expectedType = paramTypes[i];
+              if (argNode === undefined || !expectedType) continue;
+              const inferredArgType = this.inferType(argNode);
+              if (inferredArgType !== undefined && !isAssignmentCompatible(expectedType, inferredArgType)) {
+                this.diagnostics.push(makeTCDiag(
+                  "LLN-TYPE-006",
+                  "InvalidCallArgument",
+                  `Argument ${i + 1} to '${flowName}' expects '${expectedType}' but received '${inferredArgType}'.`,
+                  argNode.location,
+                  `Pass a value of type '${expectedType}' as argument ${i + 1}.`,
+                ));
+              }
+            }
+          }
+        }
+        for (const child of node.children ?? []) this.walkNode(child);
+        return;
+      }
 
       case "identifier": {
         const val = node.value ?? "";
@@ -395,6 +690,8 @@ class TypeChecker {
     if (node.kind === "letDecl" || node.kind === "mutDecl" || node.kind === "readonlyDecl") {
       this.checkShadowedBinding(node);
       this.checkBindingTypeAnnotation(node);
+      // Phase 8A: register binding type and check assignment compatibility
+      this.checkAndRegisterBindingType(node);
     }
 
     for (const child of node.children ?? []) {
@@ -429,6 +726,196 @@ class TypeChecker {
     }
 
     this.registerBinding(bindingName);
+  }
+
+  // ── Phase 8A: binding type registration + assignment checking ────────────
+
+  private checkAndRegisterBindingType(node: AstNode): void {
+    let rest = (node.value ?? "").trim();
+    if (rest.startsWith("unsafe ")) rest = rest.slice("unsafe ".length).trim();
+    else if (rest.startsWith("safe "))   rest = rest.slice("safe ".length).trim();
+
+    const colonIdx = rest.indexOf(":");
+    const bindingName = (colonIdx === -1 ? rest : rest.slice(0, colonIdx)).trim();
+    if (bindingName === "") return;
+
+    // Extract the declared type annotation
+    if (colonIdx !== -1) {
+      const typeSection = rest.slice(colonIdx + 1).trim();
+      const declaredBase = parseTypeString(typeSection).base;
+
+      if (declaredBase !== "" && declaredBase !== "Auto") {
+        // Register the binding with its declared type.
+        // For generic types (Money<GBP>, Tensor<Float32,...>), preserve the full
+        // type annotation so cross-generic comparisons (e.g. Money<GBP> vs Money<USD>)
+        // can be detected. Strip governance qualifiers first.
+        let registeredType = typeSection;
+        for (const q of ["protected ", "redacted "]) {
+          if (registeredType.startsWith(q)) { registeredType = registeredType.slice(q.length).trim(); break; }
+        }
+        this.registerBindingType(bindingName, registeredType !== "" ? registeredType : declaredBase);
+
+        // Phase 8A: check assignment compatibility with init expression
+        const initNode = node.children?.[0];
+        if (initNode !== undefined) {
+          const inferredType = this.inferType(initNode);
+          if (inferredType !== undefined && !isAssignmentCompatible(declaredBase, inferredType)) {
+            this.diagnostics.push(makeTCDiag(
+              "LLN-TYPE-002",
+              "TypeMismatch",
+              `Cannot assign '${inferredType}' to '${declaredBase}'. The declared type and the value type are incompatible.`,
+              node.location,
+              `Change the value to a '${declaredBase}' expression, or update the type annotation.`,
+              inferredType === "Int" && NUMERIC_TYPES.has(declaredBase)
+                ? undefined  // numeric widening — no code suggestion needed
+                : undefined,
+            ));
+          }
+        }
+      } else if (declaredBase === "Auto") {
+        // Auto inference: register the inferred type
+        const initNode = node.children?.[0];
+        if (initNode !== undefined) {
+          const inferredType = this.inferType(initNode);
+          if (inferredType !== undefined) {
+            this.registerBindingType(bindingName, inferredType);
+          }
+        }
+      }
+    } else {
+      // No type annotation — try to infer from init expression
+      const initNode = node.children?.[0];
+      if (initNode !== undefined) {
+        const inferredType = this.inferType(initNode);
+        if (inferredType !== undefined) {
+          this.registerBindingType(bindingName, inferredType);
+        }
+      }
+    }
+  }
+
+  /**
+   * Phase 8A: check binary operator type compatibility.
+   * Emits LLN-TYPE-004 for incompatible operand types.
+   */
+  private checkBinaryOperatorTypes(
+    op: string,
+    leftType: string,
+    rightType: string,
+    location: SourceLocation | undefined,
+  ): void {
+    // ── Phase 8B: Money<C> cross-currency enforcement ────────────────────────
+    // Extract base type for Money checking (e.g. "Money" from "Money<GBP>")
+    const leftBase  = leftType.split("<")[0]?.trim()  ?? leftType;
+    const rightBase = rightType.split("<")[0]?.trim() ?? rightType;
+
+    if (leftBase === "Money" && rightBase === "Money") {
+      if (op === "+" || op === "-") {
+        if (leftType !== rightType) {
+          // Cross-currency addition/subtraction: Money<GBP> + Money<USD> → LLN-TYPE-004
+          this.diagnostics.push(makeTCDiag(
+            "LLN-TYPE-004",
+            "InvalidBinaryOperation",
+            `Cannot ${op === "+" ? "add" : "subtract"} '${leftType}' and '${rightType}'. Money arithmetic requires the same currency.`,
+            location,
+            `Use fx.convert() for explicit currency conversion before arithmetic.`,
+            `fx.convert(amount, TargetCurrency)?`,
+          ));
+        }
+        return; // same-currency is valid
+      }
+      if (op === "*") {
+        // Money<C> * Money<C> is dimensionally invalid (produces Money²)
+        this.diagnostics.push(makeTCDiag(
+          "LLN-TYPE-004",
+          "InvalidBinaryOperation",
+          `Operator '*' cannot be applied to two Money values. Use 'Money<C> * Decimal' for scaling.`,
+          location,
+          `Multiply by a Decimal rate instead: amount * Decimal("0.20")`,
+        ));
+        return;
+      }
+      if (op === "/" && leftType !== rightType) {
+        // Money<GBP> / Money<USD> is invalid (ratio requires same currency)
+        this.diagnostics.push(makeTCDiag(
+          "LLN-TYPE-004",
+          "InvalidBinaryOperation",
+          `Cannot divide '${leftType}' by '${rightType}'. Currency ratio requires same currency.`,
+          location,
+          `Use fx.convert() first, or divide same-currency values.`,
+        ));
+        return;
+      }
+      return; // Money<C> / Money<C> → Decimal ratio, valid
+    }
+
+    // Arithmetic operators
+    if (["+", "-", "*", "/", "%"].includes(op)) {
+      if (op === "+" && leftType === "String" && rightType === "String") return; // concat OK
+      if (NUMERIC_TYPES.has(leftType) && NUMERIC_TYPES.has(rightType)) {
+        // Decimal precision warning when used in Money context (per Stage 1 decision)
+        // Full Decimal precision checking in Stage 2
+        return; // numeric arithmetic is valid
+      }
+      // Invalid: string + int, bool + int, etc.
+      if (!NUMERIC_TYPES.has(leftType) || !NUMERIC_TYPES.has(rightType)) {
+        // Allow Money<C> * Decimal (Decimal is numeric, Money is not in NUMERIC_TYPES)
+        if (leftBase === "Money" && NUMERIC_TYPES.has(rightType)) return;  // Money * Decimal: valid
+        if (rightBase === "Money" && NUMERIC_TYPES.has(leftType)) return;  // Decimal * Money: valid
+        this.diagnostics.push(makeTCDiag(
+          "LLN-TYPE-004",
+          "InvalidBinaryOperation",
+          `Operator '${op}' cannot be applied to '${leftType}' and '${rightType}'. Both operands must be numeric, or both String for '+'.`,
+          location,
+          `Use compatible types: two numeric values, or two Strings for concatenation.`,
+        ));
+      }
+      return;
+    }
+
+    // Equality operators
+    if (op === "==" || op === "!=") {
+      // SecureString equality is caught by value-state checker (LLN-SECRET-002)
+      // Cross-type equality: warn but allow for now (Phase 8B will tighten)
+      if (leftType !== rightType && !NUMERIC_TYPES.has(leftType) && !NUMERIC_TYPES.has(rightType)) {
+        this.diagnostics.push(makeTCDiag(
+          "LLN-TYPE-004",
+          "InvalidBinaryOperation",
+          `Equality operator '${op}' used on different types: '${leftType}' and '${rightType}'.`,
+          location,
+          `Ensure both sides of '${op}' have the same type.`,
+        ));
+      }
+      return;
+    }
+
+    // Comparison operators
+    if (["<", "<=", ">", ">="].includes(op)) {
+      if (!ORDERABLE_TYPES.has(leftType) || !ORDERABLE_TYPES.has(rightType)) {
+        this.diagnostics.push(makeTCDiag(
+          "LLN-TYPE-004",
+          "InvalidBinaryOperation",
+          `Comparison operator '${op}' requires comparable types, got '${leftType}' and '${rightType}'.`,
+          location,
+          `Use numeric or Timestamp values with comparison operators.`,
+        ));
+      }
+      return;
+    }
+
+    // Logical operators
+    if (op === "&&" || op === "||") {
+      if (leftType !== "Bool") {
+        this.diagnostics.push(makeTCDiag(
+          "LLN-TYPE-004",
+          "InvalidBinaryOperation",
+          `Logical operator '${op}' requires Bool operands, but left operand is '${leftType}'.`,
+          location,
+          `Ensure both operands are Bool.`,
+        ));
+      }
+      return;
+    }
   }
 
   // ── Binding type annotation extraction ───────────────────────────────────

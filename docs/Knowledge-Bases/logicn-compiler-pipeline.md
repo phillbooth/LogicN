@@ -25,6 +25,13 @@ inputs, outputs, diagnostic ownership, stopping rules, and execution modes.
 
 ---
 
+## TL;DR
+- Passes 1–7 collect diagnostics and continue — they do not stop on first error
+- GIR emission (Pass 8) runs only when all checker passes produce zero errors
+- The current compiler exposes individual pass functions — a unified `compile()` is planned
+
+---
+
 ## Overview
 
 ```text

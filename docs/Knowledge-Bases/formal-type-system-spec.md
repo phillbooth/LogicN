@@ -24,6 +24,13 @@ type checker, diagnostic engine, schema generator, and later compiler phases.
 
 ---
 
+## TL;DR
+- `Auto` defers to inference — never emit LLN-TYPE-001 for it
+- `Tensor<T, Shape>` has arity 2 — bare `Tensor` emits LLN-TYPE-009
+- `protected` / `redacted` are governance qualifiers, not type names — strip before lookup
+
+---
+
 ## 1. Type Categories
 
 LogicN types are divided into:

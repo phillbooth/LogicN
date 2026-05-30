@@ -431,3 +431,40 @@ Full encoding spec: `ast-value-encoding.md`
 - `stdlib-gates.yaml` — gate and sink registry
 - `operator-type-rules.md` — operator compatibility rules
 - `compiler-diagnostics.md` — diagnostic index
+
+---
+
+## Architecture Concepts
+
+### `IGO` — Intent-Guided Optimisation
+
+**Aliases:** Intent-Guided Optimisation, GIRT (internal), adaptive runtime, workload learning
+
+The LogicN runtime architecture where intent declarations guide execution
+optimisation without granting additional authority.
+
+> **Intent is a signal for optimisation, not a grant of authority.**
+
+The runtime observes workload patterns and builds learned preferences
+(e.g. prefer GPU for AI inference). These preferences:
+- Expire after a set date (`stale_after`)
+- Are bounded by governance (`denied_targets` always enforced)
+- Are audited once confidence is high (`audit_at_confidence`)
+- Never modify GIR semantics
+
+**IGO** = public-facing name for docs and communication.
+**GIRT** (Governed Intent-Guided Runtime) = internal module name.
+
+**See also:** `logicn-intent-guided-optimisation.md`, `logicn-adaptive-runtime-profiles.md`
+
+---
+
+### `governed execution` — Governed Execution
+
+**Aliases:** governed execution plan, governance, execution governance, governed runtime
+
+LogicN's core model: code executes as part of a declared, auditable,
+permission-controlled plan. Flows are the unit of governed execution.
+The model: `intent → governed execution plan → coordinated compute`.
+
+**See also:** `core-application-model.md`

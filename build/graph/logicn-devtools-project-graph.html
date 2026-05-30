@@ -7,7 +7,7 @@
 </head>
 <body>
 <h1>LogicN Project Graph</h1>
-<p>1823 nodes, 2709 relationships.</p>
+<p>1866 nodes, 2747 relationships.</p>
 <h2>Nodes</h2>
 <ul><li><strong>logicn-core</strong> <span>Package</span></li>
 <li><strong>logicn-core-compiler</strong> <span>Package</span></li>
@@ -847,11 +847,26 @@
 <li><strong>type-system.md</strong> <span>Document</span></li>
 <li><strong>package.json</strong> <span>Document</span></li>
 <li><strong>README.md</strong> <span>Document</span></li>
+<li><strong>AuditEvent</strong> <span>Type</span></li>
+<li><strong>AuditWriter</strong> <span>Type</span></li>
+<li><strong>createAuditWriter</strong> <span>Flow</span></li>
+<li><strong>buildFlowAuditEvent</strong> <span>Flow</span></li>
 <li><strong>EffectDiagnostic</strong> <span>Type</span></li>
 <li><strong>EffectCheckResult</strong> <span>Type</span></li>
 <li><strong>checkEffects</strong> <span>Flow</span></li>
 <li><strong>checkFlowEffects</strong> <span>Flow</span></li>
 <li><strong>effectResultsToDiagnostics</strong> <span>Flow</span></li>
+<li><strong>GIREffect</strong> <span>Type</span></li>
+<li><strong>GIRIntent</strong> <span>Type</span></li>
+<li><strong>GIRProtectedValue</strong> <span>Type</span></li>
+<li><strong>GIRAudit</strong> <span>Type</span></li>
+<li><strong>GIRExecution</strong> <span>Type</span></li>
+<li><strong>GIRProof</strong> <span>Type</span></li>
+<li><strong>GIRFlow</strong> <span>Type</span></li>
+<li><strong>GIRProgram</strong> <span>Type</span></li>
+<li><strong>GIREmitResult</strong> <span>Type</span></li>
+<li><strong>emitGIR</strong> <span>Flow</span></li>
+<li><strong>findNodes</strong> <span>Flow</span></li>
 <li><strong>CompilerInput</strong> <span>Type</span></li>
 <li><strong>SourceLocation</strong> <span>Type</span></li>
 <li><strong>CompilerDiagnostic</strong> <span>Type</span></li>
@@ -929,6 +944,14 @@
 <li><strong>checkReadonlyMutation</strong> <span>Flow</span></li>
 <li><strong>checkMethodChain</strong> <span>Flow</span></li>
 <li><strong>checkMutInPureContext</strong> <span>Flow</span></li>
+<li><strong>LogicNValue</strong> <span>Type</span></li>
+<li><strong>LLN_VOID</strong> <span>Type</span></li>
+<li><strong>LLN_NONE</strong> <span>Type</span></li>
+<li><strong>RuntimeAuditEntry</strong> <span>Type</span></li>
+<li><strong>ExecutionAuditRecord</strong> <span>Type</span></li>
+<li><strong>FlowExecutionResult</strong> <span>Type</span></li>
+<li><strong>ExecutionResult</strong> <span>Type</span></li>
+<li><strong>executeFlow</strong> <span>Flow</span></li>
 <li><strong>TokenKind</strong> <span>Type</span></li>
 <li><strong>Token</strong> <span>Type</span></li>
 <li><strong>LexerDiagnostic</strong> <span>Type</span></li>
@@ -936,12 +959,32 @@
 <li><strong>V1_ACTIVE_KEYWORDS</strong> <span>Type</span></li>
 <li><strong>V1_FUTURE_RESERVED</strong> <span>Type</span></li>
 <li><strong>lex</strong> <span>Flow</span></li>
+<li><strong>createServer</strong> <span>Type</span></li>
 <li><strong>AstNodeKind</strong> <span>Type</span></li>
 <li><strong>AstNode</strong> <span>Type</span></li>
 <li><strong>ParseDiagnostic</strong> <span>Type</span></li>
 <li><strong>FlowMeta</strong> <span>Type</span></li>
 <li><strong>ParseResult</strong> <span>Type</span></li>
 <li><strong>parseProgram</strong> <span>Flow</span></li>
+<li><strong>ServerConfig</strong> <span>Type</span></li>
+<li><strong>RunningServer</strong> <span>Type</span></li>
+<li><strong>makeResponseValue</strong> <span>Flow</span></li>
+<li><strong>makeApiErrorValue</strong> <span>Flow</span></li>
+<li><strong>startServer</strong> <span>Flow</span></li>
+<li><strong>RouteEntry</strong> <span>Type</span></li>
+<li><strong>RouteMatch</strong> <span>Type</span></li>
+<li><strong>RouteRegistry</strong> <span>Type</span></li>
+<li><strong>buildRouteRegistry</strong> <span>Flow</span></li>
+<li><strong>RuntimeMode</strong> <span>Type</span></li>
+<li><strong>RuntimeOptions</strong> <span>Type</span></li>
+<li><strong>RuntimeResult</strong> <span>Type</span></li>
+<li><strong>run</strong> <span>Flow</span></li>
+<li><strong>StdlibContext</strong> <span>Type</span></li>
+<li><strong>makeMoney</strong> <span>Flow</span></li>
+<li><strong>isMoney</strong> <span>Flow</span></li>
+<li><strong>moneyBinary</strong> <span>Flow</span></li>
+<li><strong>logicNValuesEqual</strong> <span>Flow</span></li>
+<li><strong>callStdlib</strong> <span>Flow</span></li>
 <li><strong>SymbolDiagnostic</strong> <span>Type</span></li>
 <li><strong>SymbolResolveResult</strong> <span>Type</span></li>
 <li><strong>resolveSymbols</strong> <span>Flow</span></li>
@@ -1845,15 +1888,10 @@
 <li>doc:README.md <code>documents</code> package:logicn-core-compiler</li>
 <li>doc:README.md <code>documents</code> package:logicn-core-runtime</li>
 <li>doc:README.md <code>documents</code> package:logicn-core-security</li>
-<li>doc:README.md <code>documents</code> package:logicn-core-config</li>
 <li>doc:README.md <code>documents</code> package:logicn-core-reports</li>
 <li>doc:README.md <code>documents</code> package:logicn-core-logic</li>
 <li>doc:README.md <code>documents</code> package:logicn-core-vector</li>
 <li>doc:README.md <code>documents</code> package:logicn-core-compute</li>
-<li>doc:README.md <code>documents</code> package:logicn-ai</li>
-<li>doc:README.md <code>documents</code> package:logicn-target-cpu</li>
-<li>doc:README.md <code>documents</code> package:logicn-target-wasm</li>
-<li>doc:README.md <code>documents</code> package:logicn-target-gpu</li>
 <li>doc:README.md <code>documents</code> package:logicn-core-cli</li>
 <li>doc:README.md <code>documents</code> package:logicn-core-tasks</li>
 <li>doc:README.md <code>documents</code> package:logicn-devtools-project-graph</li>
@@ -2332,6 +2370,11 @@
 <li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-core-reports</li>
 <li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-core-logic</li>
 <li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-core-vector</li>
-<li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-core-compute</li></ul>
+<li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-core-compute</li>
+<li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-ai</li>
+<li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-ai-lowbit</li>
+<li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-ai-agent</li>
+<li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-ai-neural</li>
+<li>doc:docs/Knowledge-Bases/logicn-package-naming.md <code>documents</code> package:logicn-ai-neuromorphic</li></ul>
 </body>
 </html>

@@ -1,4 +1,4 @@
-﻿LLN-EFFECT-XXX
+﻿LLN-EFFECT-003
 
-Pure flow cannot call effectful flow fetchRate.
-fetchRate declares effects [network.outbound].
+pure flow cannot call effectful flow fetchRate.
+Move the call to a guarded or secure flow, or change qualifier to guarded.

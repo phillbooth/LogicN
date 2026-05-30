@@ -1,0 +1,46 @@
+# LogicN Diagnostic Schema — Master Index
+# Machine-readable registry for all LLN-* diagnostic codes
+# Load this file to resolve any diagnostic code without parsing prose.
+#
+# Diagnostic interface (all families):
+#   code:             string   — e.g. "LLN-TYPE-001"
+#   name:             string   — e.g. "UnknownType"
+#   severity:         error | warning | info
+#   message:          string   — what went wrong
+#   location?:        SourceLocation — where in source
+#   suggestedFix?:    string   — human-readable fix (Elm-style)
+#   suggestedCode?:   string   — exact snippet to insert/replace (machine-applicable)
+#   relatedLocations?: [{message, location}] — Rust-style secondary locations
+#   why?:             string   — why this is a problem (Elm-style)
+#   risk?:            string   — what goes wrong if ignored (Elm-style)
+#
+# See: docs/Knowledge-Bases/logicn-language-lessons.md
+schemaVersion: "1.0"
+families:
+  - id: LLN-TYPE
+    file: type.schema.yaml
+    description: "Type checker diagnostics"
+  - id: LLN-NAME
+    file: name.schema.yaml
+    description: "Symbol resolution diagnostics"
+  - id: LLN-MATCH
+    file: match.schema.yaml
+    description: "Match exhaustiveness diagnostics"
+  - id: LLN-VALUESTATE
+    file: valuestate.schema.yaml
+    description: "Value-state checker diagnostics"
+  - id: LLN-SECRET
+    file: secret.schema.yaml
+    description: "Secret / SecureString diagnostics"
+  - id: LLN-EFFECT
+    file: effect.schema.yaml
+    description: "Effect checker diagnostics"
+  - id: LLN-GOV
+    file: governance.schema.yaml
+    description: "Governance verifier diagnostics"
+  - id: LLN-SYNTAX
+    file: syntax.schema.yaml
+    description: "Syntax rule violations"
+  - id: LLN-PARSE
+    file: parse.schema.yaml
+    description: "Parser diagnostics"

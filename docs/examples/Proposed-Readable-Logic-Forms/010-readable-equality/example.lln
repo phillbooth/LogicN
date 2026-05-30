@@ -1,0 +1,16 @@
+﻿/// example: 010-readable-equality (PROPOSED)
+/// status: proposed - not yet in grammar
+/// concept: readable equality alias
+/// readable_form: status is Active
+/// canonical_form: status == Active
+/// expected_diagnostics: none (when adopted)
+
+// Traditional (current, valid)
+if status == Active {
+  return Ok("active")
+}
+
+// Readable form (proposed alias — same AST when adopted)
+// if status is Active {
+//   return Ok("active")
+// }

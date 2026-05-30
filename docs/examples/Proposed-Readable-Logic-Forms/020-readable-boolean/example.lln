@@ -1,0 +1,15 @@
+﻿/// example: 020-readable-boolean (PROPOSED)
+/// concept: readable boolean operators
+
+// Traditional (current, valid)
+if isActive && isVerified {
+  return Ok("proceed")
+}
+
+if isAdmin || isOwner {
+  return Ok("allowed")
+}
+
+// Readable form (proposed aliases)
+// if isActive and isVerified { return Ok("proceed") }
+// if isAdmin or isOwner { return Ok("allowed") }

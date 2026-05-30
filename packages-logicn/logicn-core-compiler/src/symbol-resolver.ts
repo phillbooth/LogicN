@@ -63,9 +63,11 @@ const STANDARD_PRELUDE = new Set([
   "http",
   "fs",
   "AuditLog",
+  "ApiError",
   "Env",
   "File",
   "Money",
+  "Response",
 ]);
 
 class SymbolResolver {
@@ -148,6 +150,7 @@ class SymbolResolver {
   private checkIdentifierUse(node: AstNode): void {
     const name = node.value ?? "";
     if (name === "" || name === "<error>" || name === "_") return;
+    if (name.includes(":")) return;
 
     // Capital-letter identifiers are type constructors or stdlib module names.
     // Unknown types are handled by LLN-TYPE-001 in the type checker.
@@ -213,10 +216,17 @@ class SymbolResolver {
 
       case "letDecl":
       case "mutDecl":
-      case "readonlyDecl":
+      case "readonlyDecl": {
+        // Walk the initializer BEFORE declaring the name to catch use-before-declaration
+        const initNode = node.children?.[0];
+        if (initNode !== undefined) this.walkNode(initNode, "normal");
         this.declareInCurrentScope(parseBindingName(node.value ?? ""), node);
-        this.walkChildren(node, "normal");
+        // Walk remaining children (type refs etc.) after declaration
+        for (const child of (node.children ?? []).slice(1)) {
+          this.walkNode(child, "normal");
+        }
         return;
+      }
 
       case "matchArm":
         for (const child of node.children ?? []) {

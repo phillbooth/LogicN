@@ -1,4 +1,5 @@
-﻿LLN-TYPE-XXX
+﻿LLN-TYPE-003 (InvalidNominalConversion — Phase 8B) or LLN-TYPE-002 (TypeMismatch)
 
-Cannot assign String directly to protected Email.
-Use validate.email(rawEmail)? to produce a validated Email value.
+Cannot assign String directly to Email.
+Email is a branded/nominal type requiring validation:
+  let email: protected Email = validate.email(rawEmail)?

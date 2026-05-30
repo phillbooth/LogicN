@@ -1,0 +1,12 @@
+/// example: 316-invalid-tensor-add
+/// level: 6
+/// concept: Tensor arithmetic requires shape compatibility
+/// expected_diagnostics: LLN-TYPE-004
+
+let a: Tensor<Float32, [4, 8]> =
+  Tensor.zeros()
+
+let b: Tensor<Float32, [8, 4]> =
+  Tensor.zeros()
+
+let wrong = a + b

@@ -557,3 +557,57 @@ test_fixtures:
         if expected == provided {
           return Ok()
         }
+
+# ---------------------------------------------------------------------------
+# Response sinks (external output — protected values require policy)
+# ---------------------------------------------------------------------------
+
+response_sinks:
+  - id: response.ok
+    kind: function
+    name: "Response.ok"
+    category: external_output
+    accepts_states:
+      - safe
+      - redacted
+    requires_policy_for:
+      - protected
+    rejects_states:
+      - unsafe
+    diagnostic_on_reject: LLN-GOV-003
+    notes: >
+      API response bodies are external output sinks. Protected values require
+      an explicit policy block authorizing the exposure. Use redact() for
+      values that should not be exposed in full.
+
+  - id: response.created
+    kind: function
+    name: "Response.created"
+    category: external_output
+    accepts_states:
+      - safe
+      - redacted
+    requires_policy_for:
+      - protected
+    rejects_states:
+      - unsafe
+    diagnostic_on_reject: LLN-GOV-003
+
+# ---------------------------------------------------------------------------
+# String taint propagation rule
+# ---------------------------------------------------------------------------
+
+taint_propagation_rules:
+  - operator: "+"
+    description: >
+      String concatenation preserves unsafe taint.
+      If either operand is unsafe, the result is unsafe.
+    rule:
+      if_any_operand_unsafe: result_is_unsafe
+    examples:
+      tainted: '"SELECT " + rawInput'
+      safe: '"SELECT " + validate.input(rawInput)?'
+    diagnostic: LLN-VALUESTATE-004
+    note: >
+      This is the SQL injection pattern. Any string derived from unsafe input
+      must be validated before reaching query, render, or shell sinks.

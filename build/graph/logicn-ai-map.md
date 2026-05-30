@@ -23,18 +23,18 @@ Provides:
 LogicN compiler pipeline contracts for parsing, checking, IR, diagnostics and reports.
 
 Provides:
+- AuditEvent
+- AuditWriter
+- createAuditWriter
+- buildFlowAuditEvent
 - EffectDiagnostic
 - EffectCheckResult
 - checkEffects
 - checkFlowEffects
 - effectResultsToDiagnostics
-- CompilerInput
-- SourceLocation
-- CompilerDiagnostic
-- CompilerResult
-- CompilerSourceText
-- CoreSyntaxSafetyOptions
-- CompilerSafetyLevel
+- GIREffect
+- GIRIntent
+- GIRProtectedValue
 
 ## logicn-core-runtime
 

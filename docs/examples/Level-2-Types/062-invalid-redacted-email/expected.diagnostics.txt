@@ -1,4 +1,4 @@
-﻿LLN-TYPE-XXX
+﻿LLN-TYPE-002 (TypeMismatch) or LLN-TYPE-003 (InvalidNominalConversion — Phase 8B)
 
-Protected value cannot be assigned to redacted binding directly.
-Use redact(email) to produce a redacted Email value.
+Cannot assign protected Email to redacted Email without calling redact().
+Use: let auditEmail: redacted Email = redact(email)

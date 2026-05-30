@@ -21,6 +21,12 @@ export interface EffectDiagnostic {
   readonly location?: SourceLocation;
   readonly suggestedFix?: string;
   readonly suggestedCode?: string;
+  /** Rust-style: secondary source locations giving context. */
+  readonly relatedLocations?: readonly { message: string; location: SourceLocation }[];
+  /** Elm-style: why this is a problem. */
+  readonly why?: string;
+  /** Elm-style: what goes wrong if ignored. */
+  readonly risk?: string;
 }
 
 export interface EffectCheckResult {

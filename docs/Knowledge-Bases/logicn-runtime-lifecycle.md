@@ -24,6 +24,13 @@ startup through request handling, flow execution, audit, and shutdown.
 
 ---
 
+## TL;DR
+- Every HTTP request passes intake guard → route match → hydration → effect gate → flow execution → audit
+- `?` operator returns Err early through an internal EarlyReturn signal
+- Production mode requires JSONL audit and proof chain
+
+---
+
 ## Startup Sequence
 
 Stage 1 startup runs in this order:

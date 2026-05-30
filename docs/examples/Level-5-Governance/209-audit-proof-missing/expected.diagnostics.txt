@@ -1,4 +1,4 @@
-﻿LLN-GOV-XXX
+﻿LLN-GOV-002 (MISSING_AUDIT_FOR_GOVERNED_SINK)
 
-Intent requires audit evidence but no audit.write sink was used.
-Add audit.write to the effect list and call AuditLog.write.
+Flow writes to a database sink but declares no audit.write.
+Add audit.write to effects and call AuditLog.write with evidence.

@@ -1,0 +1,8 @@
+/// example: 367-ai-inference-without-effect
+/// level: 7
+/// concept: ai.inference effect must be declared
+/// expected_diagnostics: LLN-EFFECT-001
+
+pure flow classify(text: String) -> Label {
+  return ClassifierModel.classify(text)?
+}

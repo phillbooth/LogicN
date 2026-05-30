@@ -98,6 +98,9 @@ export const V1_FUTURE_RESERVED: ReadonlySet<string> = new Set([
   "async", "await", "yield", "comptime", "macro",
   "trait", "impl", "where", "for", "while", "loop",
   "break", "continue",
+  // Readable Logic Forms (proposal) — reserved to protect namespace
+  // See: docs/Knowledge-Bases/logicn-readable-logic-forms.md
+  "is", "and", "or", "unless", "until",
 ]);
 
 // Two-character operator sequences (order matters — longer first)

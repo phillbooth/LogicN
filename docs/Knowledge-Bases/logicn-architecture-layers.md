@@ -20,6 +20,13 @@ Applies to all LogicN execution from compiler through audit proof
 
 ---
 
+## TL;DR
+- Layer 1 (Source AST) = what the developer writes — governance labels, effects, intent
+- Layer 2 (GIR) = what the compiler proves — verified governance contract
+- Backend owns HOW to execute; source says WHAT is allowed
+
+---
+
 ## The Five Layers
 
 ```
@@ -169,6 +176,94 @@ Backend decides HOW to execute it.
 Runtime proves WHAT happened.
 Audit chain verifies all three agree.
 ```
+
+---
+
+---
+
+## Architectural Decisions (Recorded)
+
+### Decimal Precision — Stage 1 vs Stage 2
+
+**Decision:** Decimal is string-backed in Stage 1. `parseFloat()` is used only for prototype arithmetic and is clearly marked experimental.
+
+```text
+Stage 1:
+  Decimal stored as string.
+  parseFloat allowed only for prototype arithmetic.
+  Docs say not exact. Money examples allowed at type-rule level only.
+
+Stage 2:
+  Integrate arbitrary-precision decimal.
+  Money<C> * Decimal becomes production-valid.
+  Tests cover rounding, scale, currency, VAT/tax.
+```
+
+**Rule:** Decimal must be exact before Money<C> arithmetic ships as canonical.
+
+---
+
+### Async Interpreter — Phase 8
+
+**Decision:** Make `executeFlow` async in Phase 8. Do not use blocking HTTP as the production direction.
+
+```text
+Phase 8:
+  executeFlow returns Promise<FlowExecutionResult>
+  effectful host calls return Promise<Result<T,E>>
+  network stubs become real async operations
+  pure flow remains logically non-async / no-await
+
+Flow qualifier rules for async:
+  pure flow    = no await, no effects
+  guarded flow = may await effectful operations
+  secure flow  = may await effectful operations with governance checks
+  fn           = no effects, no await
+```
+
+Sync HTTP allowed only as a dev/test mock adapter — never documented as canonical.
+
+---
+
+### fn at Top Level — Permanently Invalid
+
+**Decision:** Top-level `fn` declarations remain invalid (LLN-SYNTAX-005). Use `pure flow` for standalone utilities.
+
+```text
+Top-level utility = pure flow
+Local helper = fn (inside a flow body only)
+```
+
+Future option: top-level `fn` may be allowed as package-private pure-only utilities in a later phase, but only once the compiler can enforce: no effects, no await, no authority, no route exposure, package-private only.
+
+---
+
+### Stage B Self-Hosting — Lexer + Parser First
+
+**Decision:** Stage B proves self-hosting by rewriting the lexer and parser in LogicN first. Full compiler rewrite is a later long-term milestone.
+
+```text
+Stage B1: lexer in LogicN
+Stage B2: parser in LogicN
+Stage B3: AST + diagnostics from LogicN parser
+Stage B4: compare output against Stage A compiler
+Stage B5: type checker in LogicN (later)
+```
+
+Success criterion: same `.lln` input → Stage A and Stage B outputs match.
+
+---
+
+### Phase 8A Type Inference — Literal-Only First
+
+**Decision:** Phase 8A implements literal-only type inference. Full bottom-up expression inference is Phase 8B/8C.
+
+```text
+Phase 8A: literal inference enables LLN-TYPE-002/004/006/007/008
+Phase 8B: expression-level inference enables all remaining type codes
+```
+
+Reason: full inference touches operators, calls, returns, generics, match arms, Auto, Tensor, Money, Result/Option — too much risk for 8A.
 
 ---
 

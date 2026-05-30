@@ -1,0 +1,12 @@
+﻿/// example: 030-readable-unless (PROPOSED)
+/// concept: unless as if-not alias
+
+// Traditional (current, valid)
+if !isApproved {
+  return Err(ApiError.notAuthorized("Approval required"))
+}
+
+// Readable form (proposed alias)
+// unless isApproved {
+//   return Err(ApiError.notAuthorized("Approval required"))
+// }

@@ -23,6 +23,13 @@ declarations, runtime execution, audit output, and built artefacts.
 
 ---
 
+## TL;DR
+- Five SHA-256 hashes bind declared → executed → audited
+- Production and deterministic modes require proof generation
+- Denials are always recorded — they cannot be silently omitted
+
+---
+
 ## What the Proof Chain Is
 
 An execution proof chain is a set of SHA-256 hashes over:

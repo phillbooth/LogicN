@@ -1,0 +1,22 @@
+﻿/// example: 040-governance-readable (PROPOSED)
+/// concept: readable forms in governance conditions
+
+// Traditional governance condition
+secure flow approvePayment(amount: Money<GBP>, status: ApprovalStatus)
+-> Result<Response, ApiError>
+effects [audit.write] {
+  if amount >= Money.gbp("10000.00") && status != Approved {
+    return Err(ApiError.badRequest("High-value payment requires approval"))
+  }
+  return Ok(Response.ok({}))
+}
+
+// Readable governance condition (proposed)
+// secure flow approvePayment(amount: Money<GBP>, status: ApprovalStatus)
+// -> Result<Response, ApiError>
+// effects [audit.write] {
+//   if amount is greater than or equal to Money.gbp("10000.00") and status is not Approved {
+//     return Err(ApiError.badRequest("High-value payment requires approval"))
+//   }
+//   return Ok(Response.ok({}))
+// }

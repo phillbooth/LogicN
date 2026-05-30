@@ -1,4 +1,4 @@
-﻿LLN-SEC-XXX
+﻿LLN-SECRET-001 (SecretValueLogged)
 
-Secret value sent to console sink.
-Never log secret values such as API keys, passwords, or tokens.
+SecureString value must not be passed to print or log functions.
+Use redact(apiKey) to produce a safe [REDACTED] placeholder.

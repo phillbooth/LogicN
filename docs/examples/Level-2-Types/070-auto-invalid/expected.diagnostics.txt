@@ -1,4 +1,4 @@
-﻿LLN-TYPE-XXX
+﻿LLN-TYPE-002 (TypeMismatch — Phase 8B)
 
-Cannot infer type: Auto requires an initializer expression.
-Provide a value or use an explicit type annotation.
+Auto binding with no initializer cannot be inferred.
+Provide an initializer or an explicit type annotation.

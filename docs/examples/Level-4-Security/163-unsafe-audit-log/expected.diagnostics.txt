@@ -1,4 +1,6 @@
-﻿LLN-SEC-XXX
+﻿LLN-VALUESTATE-003 (UnsafeValueReachedGovernedSink)
 
-Unsafe value passed to audit sink.
-Validate rawEmail before writing to AuditLog.
+Unsafe value passed to governed audit sink.
+Validate rawEmail before writing to AuditLog:
+  let email: protected Email = validate.email(rawEmail)?
+  AuditLog.write({ email: redact(email) })

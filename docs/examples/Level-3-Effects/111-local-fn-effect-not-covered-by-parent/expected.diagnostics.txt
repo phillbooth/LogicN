@@ -1,4 +1,5 @@
-﻿LLN-EFFECT-XXX
+﻿LLN-EFFECT-001
 
-Effect network.outbound is used inside local fn fetchRate but not declared by containing flow saveOrderOnly.
-Add network.outbound to the containing flow's with effects [...] list.
+network.outbound used inside local fn but not declared by containing flow.
+Add network.outbound to the containing flow effects:
+  with effects [database.write, network.outbound]

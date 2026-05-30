@@ -1,4 +1,4 @@
-﻿LLN-GOV-XXX
+﻿LLN-GOV-004 (DENIED_TARGET_SELECTED)
 
 Remote execution violates governance policy.
-Intent declares on-premises processing only, but compute target is remote.
+Flow intent or compute target denies remote.execution, but a remote target was selected.
