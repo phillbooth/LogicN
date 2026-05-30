@@ -1,0 +1,30 @@
+// Core types and interfaces
+export type { Graph, GraphEdge, GraphJSON, GraphNode, NodeId } from "./core/types.js";
+
+// Core implementations
+export { ImmutableGraph } from "./core/graph.js";
+export { GraphBuilder } from "./core/builder.js";
+
+// Algorithms
+export { bfsPath, bfsReachable } from "./algorithms/bfs.js";
+export { detectCycle, dfsVisit } from "./algorithms/dfs.js";
+export type { DfsVisitor } from "./algorithms/dfs.js";
+export { topoSort } from "./algorithms/topo.js";
+export { allReachable, canReach } from "./algorithms/reach.js";
+
+// LogicN-specific graphs
+export { buildEffectGraph } from "./graphs/effect-graph.js";
+export type {
+  EffectEdgeData,
+  EffectFlowDescriptor,
+  EffectGraph,
+  EffectNodeData,
+} from "./graphs/effect-graph.js";
+
+export { buildCallGraph } from "./graphs/call-graph.js";
+export type {
+  CallEdgeData,
+  CallFlowDescriptor,
+  CallGraph,
+  CallNodeData,
+} from "./graphs/call-graph.js";

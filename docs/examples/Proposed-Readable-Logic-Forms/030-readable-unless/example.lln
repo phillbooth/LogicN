@@ -1,5 +1,6 @@
 ﻿/// example: 030-readable-unless (PROPOSED)
 /// concept: unless as if-not alias
+/// test_status: stable
 
 // Traditional (current, valid)
 if !isApproved {

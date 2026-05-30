@@ -1,4 +1,4 @@
-﻿/// example: 309-compute-photonic
+/// example: 309-compute-photonic
 /// level: 6
 /// concept: photonic compute target with classical fallback chain
 /// expected_diagnostics: none
@@ -6,7 +6,13 @@
 
 secure flow runOpticalModel(
   input: Tensor<Float32, [Batch, 512]>
-) -> Result<Tensor<Float32, [Batch, 256]>, AiError>
+) -> RunOpticalModelResult
+
+contract {
+  types {
+    type RunOpticalModelResult = Result<Tensor<Float32, [Batch, 256]>, AiError>
+  }
+}
   with effects [ai.inference]
 {
   compute target best { prefer [photonic, npu, gpu, cpu] fallback cpu }

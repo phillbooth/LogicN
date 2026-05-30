@@ -1,0 +1,34 @@
+/// example: 023-readable-logic-forms
+/// level: 1
+/// concept: readable operator aliases — and, or, unless, is
+/// expected_diagnostics: none
+/// test_status: stable
+/// ai_rule: Readable forms are aliases. 'and' = &&, 'or' = ||, 'unless' = if !cond, 'is' = ==. Same AST.
+
+event OrderApproved
+event OrderRejected
+
+pure flow approveOrder(amount: Int, limit: Int, isActive: Bool, isVerified: Bool) -> Bool {
+
+  // 'and' is an alias for &&
+  let bothVerified: Bool = isActive and isVerified
+
+  // 'or' is an alias for ||
+  let hasAccess: Bool = isActive or isVerified
+
+  // 'is greater than' is an alias for >
+  let overLimit: Bool = amount is greater than limit
+
+  // 'is less than or equal to' is an alias for <=
+  let withinLimit: Bool = amount is less than or equal to limit
+
+  // 'is not' is an alias for !=
+  let notZero: Bool = amount is not 0
+
+  // 'unless' is an alias for if !cond
+  unless overLimit {
+    return true
+  }
+
+  return false
+}

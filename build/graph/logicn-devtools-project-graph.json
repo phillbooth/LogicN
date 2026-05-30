@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-05-30T07:15:50.471Z",
+  "generatedAt": "2026-05-30T13:38:24.864Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -1002,6 +1002,33 @@
       ]
     },
     {
+      "id": "doc:docs/examples/Level-1-Basics/021-flow-contract-basic/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/021-flow-contract-basic/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/022-no-toplevel-let/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/022-no-toplevel-let/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-1-Basics/023-readable-logic-forms/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-1-Basics/023-readable-logic-forms/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/examples/Level-2-Types/051-int-basic/notes.md",
       "kind": "Document",
       "label": "notes.md",
@@ -1330,6 +1357,42 @@
       "kind": "Document",
       "label": "notes.md",
       "sourcePath": "docs/examples/Level-2-Types/087-protected-email-audit/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/088-array-range/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/088-array-range/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/089-duration-type/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/089-duration-type/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/090-result-sequence/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/090-result-sequence/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-2-Types/091-trust-sensitivity-independent/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-2-Types/091-trust-sensitivity-independent/notes.md",
       "tags": [
         "document"
       ]
@@ -1740,6 +1803,24 @@
       ]
     },
     {
+      "id": "doc:docs/examples/Level-4-Security/176-sql-injection-concat/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/176-sql-injection-concat/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-4-Security/177-secret-serialization/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-4-Security/177-secret-serialization/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/examples/Level-5-Governance/201-intent-basic/notes.md",
       "kind": "Document",
       "label": "notes.md",
@@ -1852,6 +1933,114 @@
       "kind": "Document",
       "label": "notes.md",
       "sourcePath": "docs/examples/Level-5-Governance/213-governance-summary-example/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/214-contract-secure-flow/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/214-contract-secure-flow/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/215-contract-set/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/215-contract-set/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/216-event-declaration/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/216-event-declaration/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/217-contract-set-validation/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/217-contract-set-validation/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/218-errors-contract/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/218-errors-contract/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/219-response-denies/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/219-response-denies/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/220-context-required/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/220-context-required/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/221-timeouts-retries/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/221-timeouts-retries/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/222-limits-privacy/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/222-limits-privacy/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/223-observability/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/223-observability/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/224-contract-best-practices/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/224-contract-best-practices/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-5-Governance/225-context-missing/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-5-Governance/225-context-missing/notes.md",
       "tags": [
         "document"
       ]
@@ -1992,6 +2181,42 @@
       ]
     },
     {
+      "id": "doc:docs/examples/Level-6-Compute/316-invalid-tensor-add/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/316-invalid-tensor-add/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-6-Compute/317-money-cross-currency-compute/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/317-money-cross-currency-compute/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-6-Compute/318-compute-hint-missing/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/318-compute-hint-missing/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-6-Compute/319-money-times-decimal/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-6-Compute/319-money-times-decimal/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/examples/Level-7-AI/351-embedding-flow/notes.md",
       "kind": "Document",
       "label": "notes.md",
@@ -2122,6 +2347,42 @@
       "kind": "Document",
       "label": "notes.md",
       "sourcePath": "docs/examples/Level-7-AI/365-ai-summary-flow/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/366-ai-unsafe-input-to-model/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/366-ai-unsafe-input-to-model/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/367-ai-inference-without-effect/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/367-ai-inference-without-effect/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/368-contract-ai-flow/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/368-contract-ai-flow/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-7-AI/368-signed-attestation/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-7-AI/368-signed-attestation/notes.md",
       "tags": [
         "document"
       ]
@@ -2262,6 +2523,15 @@
       ]
     },
     {
+      "id": "doc:docs/examples/Level-8-Targets/416-target-fallback-missing/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-8-Targets/416-target-fallback-missing/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/examples/Level-9-Enterprise/451-healthcare-patient-create/notes.md",
       "kind": "Document",
       "label": "notes.md",
@@ -2392,6 +2662,105 @@
       "kind": "Document",
       "label": "notes.md",
       "sourcePath": "docs/examples/Level-9-Enterprise/465-enterprise-summary/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/466-pii-without-pii-effect/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/466-pii-without-pii-effect/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/467-protected-response-body/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/467-protected-response-body/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/468-full-contract-model/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/468-full-contract-model/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/469-contract-financial-payment/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/469-contract-financial-payment/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Level-9-Enterprise/470-contract-healthcare-search/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Level-9-Enterprise/470-contract-healthcare-search/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Proposed-Readable-Logic-Forms/010-readable-equality/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Proposed-Readable-Logic-Forms/010-readable-equality/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Proposed-Readable-Logic-Forms/011-readable-comparison/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Proposed-Readable-Logic-Forms/011-readable-comparison/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Proposed-Readable-Logic-Forms/020-readable-boolean/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Proposed-Readable-Logic-Forms/020-readable-boolean/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Proposed-Readable-Logic-Forms/030-readable-unless/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Proposed-Readable-Logic-Forms/030-readable-unless/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Proposed-Readable-Logic-Forms/040-governance-readable/notes.md",
+      "kind": "Document",
+      "label": "notes.md",
+      "sourcePath": "docs/examples/Proposed-Readable-Logic-Forms/040-governance-readable/notes.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/examples/Proposed-Readable-Logic-Forms/README.md",
+      "kind": "Document",
+      "label": "README.md",
+      "sourcePath": "docs/examples/Proposed-Readable-Logic-Forms/README.md",
       "tags": [
         "document"
       ]
@@ -3468,6 +3837,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-compute-target-optimisation.md",
+      "kind": "Document",
+      "label": "logicn-compute-target-optimisation.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-compute-target-optimisation.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-concept-audit-proof.md",
       "kind": "Document",
       "label": "logicn-concept-audit-proof.md",
@@ -3517,6 +3895,60 @@
       "kind": "Document",
       "label": "logicn-concurrency-synchronisation-compute.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-concurrency-synchronisation-compute.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-contract-errors.md",
+      "kind": "Document",
+      "label": "logicn-contract-errors.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-contract-errors.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-contract-full-model.md",
+      "kind": "Document",
+      "label": "logicn-contract-full-model.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-contract-full-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-contract-operational-constraints.md",
+      "kind": "Document",
+      "label": "logicn-contract-operational-constraints.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-contract-operational-constraints.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-contract-privacy-observability.md",
+      "kind": "Document",
+      "label": "logicn-contract-privacy-observability.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-contract-privacy-observability.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-contract-sets.md",
+      "kind": "Document",
+      "label": "logicn-contract-sets.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-contract-sets.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-contracts-as-meaning-layer.md",
+      "kind": "Document",
+      "label": "logicn-contracts-as-meaning-layer.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-contracts-as-meaning-layer.md",
       "tags": [
         "document"
       ]
@@ -3864,10 +4296,37 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-developer-ux-phase-8.md",
+      "kind": "Document",
+      "label": "logicn-developer-ux-phase-8.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-developer-ux-phase-8.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-diagnostic-numbering-strategy.md",
       "kind": "Document",
       "label": "logicn-diagnostic-numbering-strategy.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-diagnostic-numbering-strategy.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-doc-comment-standard.md",
+      "kind": "Document",
+      "label": "logicn-doc-comment-standard.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-doc-comment-standard.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-flow-contracts.md",
+      "kind": "Document",
+      "label": "logicn-flow-contracts.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-flow-contracts.md",
       "tags": [
         "document"
       ]
@@ -3936,10 +4395,37 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-governed-memory-blocks.md",
+      "kind": "Document",
+      "label": "logicn-governed-memory-blocks.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-governed-memory-blocks.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-intent-graph.md",
       "kind": "Document",
       "label": "logicn-intent-graph.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-intent-graph.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-intent-guided-optimisation.md",
+      "kind": "Document",
+      "label": "logicn-intent-guided-optimisation.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-intent-guided-optimisation.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-language-lessons.md",
+      "kind": "Document",
+      "label": "logicn-language-lessons.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-language-lessons.md",
       "tags": [
         "document"
       ]
@@ -3967,6 +4453,15 @@
       "kind": "Document",
       "label": "logicn-missing-syntax-keywords.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-missing-syntax-keywords.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-naming-conventions.md",
+      "kind": "Document",
+      "label": "logicn-naming-conventions.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-naming-conventions.md",
       "tags": [
         "document"
       ]
@@ -4008,6 +4503,24 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-no-variables-outside-flows.md",
+      "kind": "Document",
+      "label": "logicn-no-variables-outside-flows.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-no-variables-outside-flows.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-nvidia-n1x-target.md",
+      "kind": "Document",
+      "label": "logicn-nvidia-n1x-target.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-nvidia-n1x-target.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-package-manifest-spec.md",
       "kind": "Document",
       "label": "logicn-package-manifest-spec.md",
@@ -4021,6 +4534,33 @@
       "kind": "Document",
       "label": "logicn-package-naming.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-package-naming.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-phase-10-roadmap.md",
+      "kind": "Document",
+      "label": "logicn-phase-10-roadmap.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-phase-10-roadmap.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-phase-11-decisions.md",
+      "kind": "Document",
+      "label": "logicn-phase-11-decisions.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-phase-11-decisions.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-phase-9-roadmap.md",
+      "kind": "Document",
+      "label": "logicn-phase-9-roadmap.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-phase-9-roadmap.md",
       "tags": [
         "document"
       ]
@@ -4048,6 +4588,15 @@
       "kind": "Document",
       "label": "logicn-quantum-target-bridge.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-quantum-target-bridge.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-readable-logic-forms.md",
+      "kind": "Document",
+      "label": "logicn-readable-logic-forms.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-readable-logic-forms.md",
       "tags": [
         "document"
       ]
@@ -4098,6 +4647,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-security-improvements-phase-8.md",
+      "kind": "Document",
+      "label": "logicn-security-improvements-phase-8.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-security-improvements-phase-8.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-security-secret-safety.md",
       "kind": "Document",
       "label": "logicn-security-secret-safety.md",
@@ -4111,6 +4669,24 @@
       "kind": "Document",
       "label": "logicn-security-taint-types.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-security-taint-types.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-signed-attestation.md",
+      "kind": "Document",
+      "label": "logicn-signed-attestation.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-signed-attestation.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-speed-improvements-phase-8.md",
+      "kind": "Document",
+      "label": "logicn-speed-improvements-phase-8.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-speed-improvements-phase-8.md",
       "tags": [
         "document"
       ]
@@ -4165,6 +4741,24 @@
       "kind": "Document",
       "label": "logicn-tensor-arity-decision.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-tensor-arity-decision.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-trust-sensitivity-type-rules.md",
+      "kind": "Document",
+      "label": "logicn-trust-sensitivity-type-rules.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-trust-sensitivity-type-rules.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-type-improvements-phase-8.md",
+      "kind": "Document",
+      "label": "logicn-type-improvements-phase-8.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-type-improvements-phase-8.md",
       "tags": [
         "document"
       ]
@@ -7834,6 +8428,86 @@
       ]
     },
     {
+      "id": "type:logicn-core-compiler:LogicNAttestation",
+      "kind": "Type",
+      "label": "LogicNAttestation",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/attestation.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:AttestationInputs",
+      "kind": "Type",
+      "label": "AttestationInputs",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/attestation.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:AttestationKeyPair",
+      "kind": "Type",
+      "label": "AttestationKeyPair",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/attestation.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:signAttestation",
+      "kind": "Flow",
+      "label": "signAttestation",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/attestation.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:verifyAttestation",
+      "kind": "Flow",
+      "label": "verifyAttestation",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/attestation.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:generateAttestationKey",
+      "kind": "Flow",
+      "label": "generateAttestationKey",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/attestation.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:attestationToYaml",
+      "kind": "Flow",
+      "label": "attestationToYaml",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/attestation.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:attestationFromJson",
+      "kind": "Flow",
+      "label": "attestationFromJson",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/attestation.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "type:logicn-core-compiler:AuditEvent",
       "kind": "Type",
       "label": "AuditEvent",
@@ -7924,6 +8598,56 @@
       ]
     },
     {
+      "id": "type:logicn-core-compiler:EventDiagnostic",
+      "kind": "Type",
+      "label": "EventDiagnostic",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/event-checker.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:EventCheckResult",
+      "kind": "Type",
+      "label": "EventCheckResult",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/event-checker.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_EVENT_001",
+      "kind": "Type",
+      "label": "LLN_EVENT_001",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/event-checker.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_EVENT_002",
+      "kind": "Type",
+      "label": "LLN_EVENT_002",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/event-checker.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:checkEvents",
+      "kind": "Flow",
+      "label": "checkEvents",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/event-checker.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "type:logicn-core-compiler:GIREffect",
       "kind": "Type",
       "label": "GIREffect",
@@ -7984,6 +8708,26 @@
       ]
     },
     {
+      "id": "type:logicn-core-compiler:GIRTensorInfo",
+      "kind": "Type",
+      "label": "GIRTensorInfo",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:GIRTargetAffinity",
+      "kind": "Type",
+      "label": "GIRTargetAffinity",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "type:logicn-core-compiler:GIRFlow",
       "kind": "Type",
       "label": "GIRFlow",
@@ -8030,6 +8774,96 @@
       "sourcePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts",
       "tags": [
         "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:GovernanceDiagnostic",
+      "kind": "Type",
+      "label": "GovernanceDiagnostic",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:GovernanceVerifyResult",
+      "kind": "Type",
+      "label": "GovernanceVerifyResult",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:DeploymentProfile",
+      "kind": "Type",
+      "label": "DeploymentProfile",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_GOV_003",
+      "kind": "Type",
+      "label": "LLN_GOV_003",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_CONTEXT_001",
+      "kind": "Type",
+      "label": "LLN_CONTEXT_001",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_GOV_011",
+      "kind": "Type",
+      "label": "LLN_GOV_011",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_GOV_012",
+      "kind": "Type",
+      "label": "LLN_GOV_012",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:verifyGovernance",
+      "kind": "Flow",
+      "label": "verifyGovernance",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_TYPE_003",
+      "kind": "Type",
+      "label": "LLN_TYPE_003",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/index.ts",
+      "tags": [
+        "type",
         "logicn-core-compiler"
       ]
     },
@@ -8207,6 +9041,46 @@
       "id": "type:logicn-core-compiler:LLN_SYNTAX_002",
       "kind": "Type",
       "label": "LLN_SYNTAX_002",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/index.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_SYNTAX_006",
+      "kind": "Type",
+      "label": "LLN_SYNTAX_006",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/index.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_SYNTAX_007",
+      "kind": "Type",
+      "label": "LLN_SYNTAX_007",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/index.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_SYNTAX_008",
+      "kind": "Type",
+      "label": "LLN_SYNTAX_008",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/index.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_SYNTAX_009",
+      "kind": "Type",
+      "label": "LLN_SYNTAX_009",
       "sourcePath": "packages-logicn/logicn-core-compiler/src/index.ts",
       "tags": [
         "type",
@@ -8874,16 +9748,6 @@
       ]
     },
     {
-      "id": "flow:logicn-core-compiler:executeFlow",
-      "kind": "Flow",
-      "label": "executeFlow",
-      "sourcePath": "packages-logicn/logicn-core-compiler/src/interpreter.ts",
-      "tags": [
-        "function",
-        "logicn-core-compiler"
-      ]
-    },
-    {
       "id": "type:logicn-core-compiler:TokenKind",
       "kind": "Type",
       "label": "TokenKind",
@@ -8954,6 +9818,96 @@
       ]
     },
     {
+      "id": "flow:logicn-core-compiler:createHash",
+      "kind": "Flow",
+      "label": "createHash",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/node-crypto-shim.d.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:generateKeyPairSync",
+      "kind": "Flow",
+      "label": "generateKeyPairSync",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/node-crypto-shim.d.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:sign",
+      "kind": "Flow",
+      "label": "sign",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/node-crypto-shim.d.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:verify",
+      "kind": "Flow",
+      "label": "verify",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/node-crypto-shim.d.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:readFile",
+      "kind": "Flow",
+      "label": "readFile",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/node-fs-promises-shim.d.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:writeFile",
+      "kind": "Flow",
+      "label": "writeFile",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/node-fs-promises-shim.d.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:appendFileSync",
+      "kind": "Flow",
+      "label": "appendFileSync",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/node-fs-shim.d.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:readFileSync",
+      "kind": "Flow",
+      "label": "readFileSync",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/node-fs-shim.d.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:writeFileSync",
+      "kind": "Flow",
+      "label": "writeFileSync",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/node-fs-shim.d.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "type:logicn-core-compiler:createServer",
       "kind": "Type",
       "label": "createServer",
@@ -9018,6 +9972,76 @@
       "kind": "Flow",
       "label": "parseProgram",
       "sourcePath": "packages-logicn/logicn-core-compiler/src/parser.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ExecutionProofChain",
+      "kind": "Type",
+      "label": "ExecutionProofChain",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/proof-chain.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ProofHashes",
+      "kind": "Type",
+      "label": "ProofHashes",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/proof-chain.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:EvidenceRecord",
+      "kind": "Type",
+      "label": "EvidenceRecord",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/proof-chain.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:DenialRecord",
+      "kind": "Type",
+      "label": "DenialRecord",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/proof-chain.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ProofChainInputs",
+      "kind": "Type",
+      "label": "ProofChainInputs",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/proof-chain.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:buildProofChain",
+      "kind": "Flow",
+      "label": "buildProofChain",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/proof-chain.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:verifyProofChain",
+      "kind": "Flow",
+      "label": "verifyProofChain",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/proof-chain.ts",
       "tags": [
         "function",
         "logicn-core-compiler"
@@ -9144,10 +10168,50 @@
       ]
     },
     {
-      "id": "flow:logicn-core-compiler:run",
+      "id": "flow:logicn-core-compiler:bigIntDecimalAdd",
       "kind": "Flow",
-      "label": "run",
-      "sourcePath": "packages-logicn/logicn-core-compiler/src/runtime.ts",
+      "label": "bigIntDecimalAdd",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:bigIntDecimalSub",
+      "kind": "Flow",
+      "label": "bigIntDecimalSub",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:bigIntDecimalCmp",
+      "kind": "Flow",
+      "label": "bigIntDecimalCmp",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:bigIntDecimalMulNumber",
+      "kind": "Flow",
+      "label": "bigIntDecimalMulNumber",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:bigIntDecimalRound",
+      "kind": "Flow",
+      "label": "bigIntDecimalRound",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts",
       "tags": [
         "function",
         "logicn-core-compiler"
@@ -9194,6 +10258,16 @@
       ]
     },
     {
+      "id": "flow:logicn-core-compiler:jsObjectToLogicN",
+      "kind": "Flow",
+      "label": "jsObjectToLogicN",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "flow:logicn-core-compiler:logicNValuesEqual",
       "kind": "Flow",
       "label": "logicNValuesEqual",
@@ -9204,9 +10278,9 @@
       ]
     },
     {
-      "id": "flow:logicn-core-compiler:callStdlib",
+      "id": "flow:logicn-core-compiler:makeDuration",
       "kind": "Flow",
-      "label": "callStdlib",
+      "label": "makeDuration",
       "sourcePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts",
       "tags": [
         "function",
@@ -9270,6 +10344,16 @@
       "sourcePath": "packages-logicn/logicn-core-compiler/src/type-checker.ts",
       "tags": [
         "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:DiagnosticRelatedLocation",
+      "kind": "Type",
+      "label": "DiagnosticRelatedLocation",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/value-state-checker.ts",
+      "tags": [
+        "type",
         "logicn-core-compiler"
       ]
     },
@@ -20174,6 +21258,27 @@
       "evidencePath": "docs/Knowledge-Bases/logicn-compliance-governance.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/logicn-compute-target-optimisation.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-compute-target-optimisation.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-compute-target-optimisation.md",
+      "to": "package:logicn-core-photonic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-compute-target-optimisation.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-compute-target-optimisation.md",
+      "to": "package:logicn-target-photonic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-compute-target-optimisation.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/logicn-concurrency-synchronisation-compute.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -21250,6 +22355,20 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/Knowledge-Bases/logicn-intent-graph.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-language-lessons.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-language-lessons.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-language-lessons.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-language-lessons.md"
     },
     {
       "from": "doc:docs/Knowledge-Bases/logicn-memory-borrow-move-pinned.md",
@@ -28316,6 +29435,62 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LogicNAttestation",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/attestation.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:AttestationInputs",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/attestation.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:AttestationKeyPair",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/attestation.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:signAttestation",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/attestation.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:verifyAttestation",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/attestation.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:generateAttestationKey",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/attestation.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:attestationToYaml",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/attestation.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:attestationFromJson",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/attestation.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:AuditEvent",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -28379,6 +29554,41 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:EventDiagnostic",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/event-checker.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:EventCheckResult",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/event-checker.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_EVENT_001",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/event-checker.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_EVENT_002",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/event-checker.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:checkEvents",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/event-checker.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:GIREffect",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -28421,6 +29631,20 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:GIRTensorInfo",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:GIRTargetAffinity",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:GIRFlow",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -28453,6 +29677,69 @@
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/gir-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:GovernanceDiagnostic",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:GovernanceVerifyResult",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:DeploymentProfile",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_GOV_003",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_CONTEXT_001",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_GOV_011",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_GOV_012",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:verifyGovernance",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_TYPE_003",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/index.ts"
     },
     {
       "from": "package:logicn-core-compiler",
@@ -28576,6 +29863,34 @@
     {
       "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:LLN_SYNTAX_002",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/index.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_SYNTAX_006",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/index.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_SYNTAX_007",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/index.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_SYNTAX_008",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/index.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_SYNTAX_009",
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/index.ts"
@@ -29044,13 +30359,6 @@
     },
     {
       "from": "package:logicn-core-compiler",
-      "to": "flow:logicn-core-compiler:executeFlow",
-      "kind": "provides",
-      "confidence": "EXTRACTED",
-      "evidencePath": "packages-logicn/logicn-core-compiler/src/interpreter.ts"
-    },
-    {
-      "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:TokenKind",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -29100,6 +30408,69 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:createHash",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/node-crypto-shim.d.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:generateKeyPairSync",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/node-crypto-shim.d.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:sign",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/node-crypto-shim.d.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:verify",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/node-crypto-shim.d.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:readFile",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/node-fs-promises-shim.d.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:writeFile",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/node-fs-promises-shim.d.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:appendFileSync",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/node-fs-shim.d.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:readFileSync",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/node-fs-shim.d.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:writeFileSync",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/node-fs-shim.d.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:createServer",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -29146,6 +30517,55 @@
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/parser.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ExecutionProofChain",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-chain.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ProofHashes",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-chain.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:EvidenceRecord",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-chain.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:DenialRecord",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-chain.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ProofChainInputs",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-chain.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:buildProofChain",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-chain.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:verifyProofChain",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-chain.ts"
     },
     {
       "from": "package:logicn-core-compiler",
@@ -29233,10 +30653,38 @@
     },
     {
       "from": "package:logicn-core-compiler",
-      "to": "flow:logicn-core-compiler:run",
+      "to": "flow:logicn-core-compiler:bigIntDecimalAdd",
       "kind": "provides",
       "confidence": "EXTRACTED",
-      "evidencePath": "packages-logicn/logicn-core-compiler/src/runtime.ts"
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:bigIntDecimalSub",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:bigIntDecimalCmp",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:bigIntDecimalMulNumber",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:bigIntDecimalRound",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts"
     },
     {
       "from": "package:logicn-core-compiler",
@@ -29268,6 +30716,13 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:jsObjectToLogicN",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "flow:logicn-core-compiler:logicNValuesEqual",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -29275,7 +30730,7 @@
     },
     {
       "from": "package:logicn-core-compiler",
-      "to": "flow:logicn-core-compiler:callStdlib",
+      "to": "flow:logicn-core-compiler:makeDuration",
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/stdlib.ts"
@@ -29321,6 +30776,13 @@
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/type-checker.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:DiagnosticRelatedLocation",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/value-state-checker.ts"
     },
     {
       "from": "package:logicn-core-compiler",

@@ -2,6 +2,7 @@
 /// level: 1
 /// concept: fn helper
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: fn is a local helper defined inside a flow. It cannot declare effects.
 
 pure flow calculateTotal(price: Money<GBP>) -> Money<GBP> {

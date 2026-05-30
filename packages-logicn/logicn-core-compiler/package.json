@@ -15,6 +15,9 @@
   "engines": {
     "node": ">=18"
   },
+  "dependencies": {
+    "@logicn/devtools-graph-algorithms": "file:../logicn-devtools-graph-algorithms"
+  },
   "devDependencies": {
     "typescript": "^5.5.0"
   }

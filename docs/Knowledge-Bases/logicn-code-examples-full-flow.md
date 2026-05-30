@@ -110,9 +110,9 @@ api OrdersApi {
   }
 }
 
-secure flow getOrderStatus(req: GetOrderStatusRequest) -> Result<ApiResponse<OrderStatusResponse>, ApiError>
+secure flow getOrderStatus(request: GetOrderStatusRequest) -> Result<ApiResponse<OrderStatusResponse>, ApiError>
 effects [database.read, audit.write] {
-  let orderId: OrderId = req.orderId
+  let orderId: OrderId = request.orderId
 
   let order: Order = OrdersDB.findById(orderId)?
 
@@ -329,9 +329,9 @@ pure flow sanitizeContactForm(input: ContactFormRequest) -> Result<SanitizedCont
   })
 }
 
-secure flow saveContactForm(req: ContactFormRequest) -> Result<ApiResponse<FormSavedResponse>, ApiError>
+secure flow saveContactForm(request: ContactFormRequest) -> Result<ApiResponse<FormSavedResponse>, ApiError>
 effects [database.write, audit.write] {
-  let form: SanitizedContactForm = sanitizeContactForm(req)?
+  let form: SanitizedContactForm = sanitizeContactForm(request)?
 
   // Mutable local state — use mut, not let mut.
   mut status: FormStatus = FormStatus.PendingReview
@@ -902,9 +902,9 @@ auditProof:
 
   values:
     unsafeInputs:
-      - req.name    (unsafe unvalidated)
-      - req.email   (unsafe unvalidated)
-      - req.message (unsafe unvalidated)
+      - request.name    (unsafe unvalidated)
+      - request.email   (unsafe unvalidated)
+      - request.message (unsafe unvalidated)
 
     validatedValues:
       - form.name    (safe validated)

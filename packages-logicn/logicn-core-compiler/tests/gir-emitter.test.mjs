@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { parseProgram, checkEffects, emitGIR, verifyGovernance } from "../dist/index.js";
+import { parseProgram, checkEffects, emitGIR, emitExpr, verifyGovernance } from "../dist/index.js";
 
 function parseAndEmit(source) {
   const parsed = parseProgram(source, "test.lln");
@@ -189,5 +189,102 @@ effects [ai.inference] {
       !gov.diagnostics.some((d) => d.code === "LLN-HINT-COMPUTE-001"),
       "Unexpected LLN-HINT-COMPUTE-001 when compute target is declared",
     );
+  });
+});
+
+// ── GIR emitExpr — #record callExpr nodes ────────────────────────────────────
+
+describe("GIR emitter — emitExpr #record handling", () => {
+  it("emits recordLiteral with correct field names for audit call record", () => {
+    // AuditLog.write({ event: "PatientCreated", email: redact(email) })
+    // The record literal { event: "PatientCreated", email: redact(email) }
+    // is parsed as callExpr { value: "#record" } with field identifier children.
+    const recordNode = {
+      kind: "callExpr",
+      value: "#record",
+      children: [
+        {
+          kind: "identifier",
+          value: "event",
+          children: [{ kind: "stringLiteral", value: "\"PatientCreated\"" }],
+        },
+        {
+          kind: "identifier",
+          value: "email",
+          children: [{ kind: "callExpr", value: "redact", children: [{ kind: "identifier", value: "email" }] }],
+        },
+      ],
+    };
+
+    const expr = emitExpr(recordNode);
+
+    assert.equal(expr.kind, "recordLiteral", "Expected recordLiteral kind for #record callExpr");
+    assert.ok(Array.isArray(expr.fields), "Expected fields array");
+    assert.equal(expr.fields.length, 2, "Expected 2 fields");
+    assert.equal(expr.fields[0].name, "event", "First field name should be 'event'");
+    assert.equal(expr.fields[1].name, "email", "Second field name should be 'email'");
+  });
+
+  it("emits recordLiteral with correct field names for response record", () => {
+    // Response.okJson({ patientId: patient.id, name: patient.name })
+    const recordNode = {
+      kind: "callExpr",
+      value: "#record",
+      children: [
+        {
+          kind: "identifier",
+          value: "patientId",
+          children: [{ kind: "identifier", value: "patient" }],
+        },
+        {
+          kind: "identifier",
+          value: "name",
+          children: [{ kind: "identifier", value: "patient" }],
+        },
+      ],
+    };
+
+    const expr = emitExpr(recordNode);
+
+    assert.equal(expr.kind, "recordLiteral");
+    assert.equal(expr.fields.length, 2);
+    const fieldNames = expr.fields.map((f) => f.name);
+    assert.ok(fieldNames.includes("patientId"), "Expected 'patientId' field in record");
+    assert.ok(fieldNames.includes("name"), "Expected 'name' field in record");
+  });
+
+  it("emits recordLiteral for empty #record literal (no fields)", () => {
+    // An empty record { } should still produce a recordLiteral (not void)
+    const recordNode = {
+      kind: "callExpr",
+      value: "#record",
+      children: [],
+    };
+
+    const expr = emitExpr(recordNode);
+
+    assert.equal(expr.kind, "recordLiteral", "#record with no fields should still emit recordLiteral");
+    assert.equal(expr.fields.length, 0);
+  });
+
+  it("emitExpr does not silently skip #record — produces inspectable output", () => {
+    // Verify that a plain callExpr with value "#record" is NOT treated as a regular call
+    const recordNode = {
+      kind: "callExpr",
+      value: "#record",
+      children: [
+        {
+          kind: "identifier",
+          value: "field1",
+          children: [{ kind: "stringLiteral", value: "\"hello\"" }],
+        },
+      ],
+    };
+
+    const expr = emitExpr(recordNode);
+
+    // Must not be treated as a regular callExpr named "#record"
+    assert.notEqual(expr.kind, "void", "#record must not produce void");
+    assert.equal(expr.kind, "recordLiteral", "#record must produce recordLiteral, not a generic callExpr");
   });
 });

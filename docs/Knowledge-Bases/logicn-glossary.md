@@ -63,10 +63,10 @@ permissions, effects, and policies. It sits between routes (external entry point
 and fn helpers (computation).
 
 ```logicn
-flow createOrder(req: CreateOrderRequest) -> Result<OrderResponse, ApiError>
+flow createOrder(request: CreateOrderRequest) -> Result<OrderResponse, ApiError>
   effects [database.write, audit.write]
 {
-  let total = calculateTotal(req.order)   // calls a fn
+  let total = calculateTotal(request.order)   // calls a fn
   let order = db.orders.insert({ ... })?
   return Ok(OrderResponse { id: order.id, total: total })
 }
@@ -93,10 +93,10 @@ A `flow` that handles security-sensitive operations. Enforces stricter value-sta
 rules: `unsafe` bindings must be gate-upgraded before reaching governed sinks.
 
 ```logicn
-secure flow createCustomer(req: Request) -> Result<Response, ApiError>
+secure flow createCustomer(request: Request) -> Result<Response, ApiError>
   effects [database.write, audit.write]
 {
-  unsafe let rawBody: Bytes = req.rawBody
+  unsafe let rawBody: Bytes = request.rawBody
   safe mut rawBody = json.decode<CreateCustomerInput>(rawBody)?
   ...
 }

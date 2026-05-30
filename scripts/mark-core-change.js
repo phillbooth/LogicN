@@ -3,7 +3,7 @@
 // file is edited during a Claude turn. Watched paths:
 //
 //   packages-logicn/logicn-core*           — all logicn-core packages
-//   packages-logicn/logicn-devtools-project-graph — now depends on lln-graph
+//   packages-logicn/logicn-devtools-graph-project — now depends on lln-graph
 //   LLN-Graph/src                          — the standalone library itself
 //
 // The Stop hook reads this sentinel to decide whether to run tests.
@@ -25,7 +25,7 @@ process.stdin.on('end', () => {
 
     const isRelevant =
       /packages-logicn\/logicn-core/.test(filePath) ||
-      /packages-logicn\/logicn-devtools-project-graph/.test(filePath) ||
+      /packages-logicn\/logicn-devtools-graph-project/.test(filePath) ||
       /LLN-Graph[\\/]src/.test(filePath);
 
     if (isRelevant) {

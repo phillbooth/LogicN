@@ -3,7 +3,7 @@
 **Concept:** secure flow at an HTTP trust boundary
 
 A `secure flow` handles external request data with full security enforcement:
-- `readonly req` — the request cannot be reassigned
+- `readonly request` — the request cannot be reassigned
 - `unsafe let rawEmail` — boundary data starts untrusted
 - `protected Email` — validated but sensitive
 - `redact(email)` — explicit redaction before audit sink

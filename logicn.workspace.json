@@ -55,7 +55,7 @@
         "packages-logicn/logicn-core-cli",
         "packages-logicn/logicn-core-tasks",
         "packages-logicn/logicn-tools-benchmark",
-        "packages-logicn/logicn-devtools-project-graph",
+        "packages-logicn/logicn-devtools-graph-project",
         "packages-logicn/logicn-framework-example-app"
     ],
     "defaultPackage": "packages-logicn/logicn-framework-example-app",
@@ -93,7 +93,7 @@
     "cliPackage": "packages-logicn/logicn-core-cli",
     "tasksPackage": "packages-logicn/logicn-core-tasks",
     "benchmarkPackage": "packages-logicn/logicn-tools-benchmark",
-    "projectGraphPackage": "packages-logicn/logicn-devtools-project-graph",
+    "projectGraphPackage": "packages-logicn/logicn-devtools-graph-project",
     "strict": true,
     "targets": [
         "cpu",
@@ -153,7 +153,7 @@
         "runtimeKernel": "packages-logicn/logicn-framework-app-kernel",
         "cliAndTasks": "packages-logicn/logicn-core-cli-and-logicn-core-tasks-requirements.md",
         "benchmark": "packages-logicn/logicn-tools-benchmark",
-        "projectGraph": "packages-logicn/logicn-devtools-project-graph"
+        "projectGraph": "packages-logicn/logicn-devtools-graph-project"
     },
     "tools": {
         "root": "tools"

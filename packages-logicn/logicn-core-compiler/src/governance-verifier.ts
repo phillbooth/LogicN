@@ -6,16 +6,19 @@
 //
 // Spec: docs/Knowledge-Bases/logicn-governance-verifier-spec.md
 //
-// Implemented diagnostics (Stage A):
-//   LLN-GOV-002  MISSING_AUDIT_FOR_GOVERNED_SINK
-//   LLN-GOV-004  DENIED_TARGET_SELECTED
-//   LLN-GOV-008  EXPERIMENTAL_CODE_IN_PRODUCTION_PROFILE
-//   LLN-GOV-010  INTENT_MISSING_ON_SECURE_FLOW
+// Implemented diagnostics (Stage A / Phase 10C):
+//   LLN-GOV-002      MISSING_AUDIT_FOR_GOVERNED_SINK
+//   LLN-GOV-003      PROTECTED_DATA_IN_RESPONSE          (Phase 10C)
+//   LLN-GOV-004      DENIED_TARGET_SELECTED
+//   LLN-GOV-008      EXPERIMENTAL_CODE_IN_PRODUCTION_PROFILE
+//   LLN-GOV-010      INTENT_MISSING_ON_SECURE_FLOW
+//   LLN-GOV-011      UnknownContractSet
+//   LLN-GOV-012      ContractSetRequirementNotMet
+//   LLN-CONTEXT-001  REQUIRED_CONTEXT_NOT_ACCESSED       (Phase 10C)
 //   LLN-HINT-COMPUTE-001  COMPUTE_TARGET_MISSING_FOR_AI_INFERENCE (planning hint)
 //
 // Deferred (require expression type inference or runtime evidence):
 //   LLN-GOV-001  INTENT_BEHAVIOR_MISMATCH
-//   LLN-GOV-003  PROTECTED_DATA_SENT_EXTERNALLY_WITHOUT_AUTHORITY
 //   LLN-GOV-005  POLICY_PURPOSE_MISMATCH
 //   LLN-GOV-006  GOVERNANCE_PROOF_REQUIRED_BUT_MISSING
 //   LLN-GOV-007  AUTHORITY_BLOCK_MISSING_REASON
@@ -135,6 +138,162 @@ function makeGovDiag(
 }
 
 // ---------------------------------------------------------------------------
+// Diagnostic constants
+// ---------------------------------------------------------------------------
+
+/** LLN-GOV-003: A field listed in contract.response.denies appears in the response body. */
+export const LLN_GOV_003 = {
+  code: "LLN-GOV-003",
+  name: "PROTECTED_DATA_IN_RESPONSE",
+  severity: "error" as const,
+  message: "A field listed in contract.response.denies appears in the response body. Protected or sensitive data must not leak through the API surface.",
+} as const;
+
+/** LLN-CONTEXT-001: A required context field declared in contract.context is never accessed. */
+export const LLN_CONTEXT_001 = {
+  code: "LLN-CONTEXT-001",
+  name: "REQUIRED_CONTEXT_NOT_ACCESSED",
+  severity: "warning" as const,
+  message: "A required context field declared in contract.context is never accessed in the flow body.",
+} as const;
+
+/** LLN-GOV-011: `use SetName` references a contract set not declared at program scope. */
+export const LLN_GOV_011 = {
+  code: "LLN-GOV-011",
+  name: "UnknownContractSet",
+  severity: "error" as const,
+  message: "Contract set referenced with 'use' is not declared at program scope.",
+} as const;
+
+/** LLN-GOV-012: Contract set audit requirement not met by flow's declared effects. */
+export const LLN_GOV_012 = {
+  code: "LLN-GOV-012",
+  name: "ContractSetRequirementNotMet",
+  severity: "warning" as const,
+  message: "Contract set requires audit.write but the flow does not declare it.",
+} as const;
+
+// ---------------------------------------------------------------------------
+// LLN-GOV-003 helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Extracts field names listed in contract.response.denies.
+ * The parser stores response sub-block children as:
+ *   contractDecl → identifier { value: "response:block", children: [identifier { value: "denies:email" }, ...] }
+ */
+function extractResponseDeniedFields(flowNode: AstNode): Set<string> {
+  const denied = new Set<string>();
+  const contractNode = (flowNode.children ?? []).find((c) => c.kind === "contractDecl");
+  if (contractNode === undefined) return denied;
+
+  // Find response:block child inside contractDecl
+  for (const child of contractNode.children ?? []) {
+    if (child.kind === "identifier" && child.value === "response:block") {
+      for (const rc of child.children ?? []) {
+        if (rc.kind === "identifier" && rc.value?.startsWith("denies:")) {
+          denied.add(rc.value.slice("denies:".length));
+        }
+      }
+    }
+  }
+  return denied;
+}
+
+/**
+ * Collects all identifier names that appear as named argument labels in
+ * callExpr nodes within the flow body. Named args are stored as identifier
+ * children of callExpr with their child being the value expression.
+ *
+ * Also collects plain identifier values found in the body (for heuristic
+ * matching against denied field names).
+ */
+function collectBodyFieldNames(flowNode: AstNode): Set<string> {
+  const fields = new Set<string>();
+
+  function walk(node: AstNode): void {
+    if (node.kind === "callExpr") {
+      for (const child of node.children ?? []) {
+        // Named argument labels are identifier nodes with a single value child
+        if (child.kind === "identifier" && child.value !== undefined && (child.children ?? []).length > 0) {
+          fields.add(child.value);
+        }
+      }
+    }
+    if (node.kind === "identifier" && node.value !== undefined) {
+      // Also capture bare identifier values in body expressions
+      fields.add(node.value);
+    }
+    for (const child of node.children ?? []) walk(child);
+  }
+
+  // Walk the flow body block — it's the last child of the flow node
+  // (after params, typeRef, effectsDecl, contractDecl, intentDecl, etc.)
+  const blockChildren = (flowNode.children ?? []).filter((c) => c.kind === "block");
+  const bodyBlock = blockChildren[blockChildren.length - 1];
+
+  if (bodyBlock !== undefined) {
+    walk(bodyBlock);
+  }
+
+  return fields;
+}
+
+// ---------------------------------------------------------------------------
+// LLN-CONTEXT-001 helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Extracts field names from contract.context { require fieldName } declarations.
+ * Stored as: contractDecl → identifier { value: "context:block", children: [identifier { value: "require:actor" }] }
+ */
+function extractRequiredContextFields(flowNode: AstNode): Set<string> {
+  const required = new Set<string>();
+  const contractNode = (flowNode.children ?? []).find((c) => c.kind === "contractDecl");
+  if (contractNode === undefined) return required;
+
+  for (const child of contractNode.children ?? []) {
+    if (child.kind === "identifier" && child.value === "context:block") {
+      for (const rc of child.children ?? []) {
+        if (rc.kind === "identifier" && rc.value?.startsWith("require:")) {
+          required.add(rc.value.slice("require:".length));
+        }
+      }
+    }
+  }
+  return required;
+}
+
+/**
+ * Checks whether a given context field name is referenced in the flow body.
+ * Looks for any identifier node with value matching the field name, or
+ * member access patterns like `context.actor` (memberExpr/callExpr with the field name).
+ */
+function isContextFieldAccessed(flowNode: AstNode, fieldName: string): boolean {
+  const bodyBlocks = (flowNode.children ?? []).filter((c) => c.kind === "block");
+  const bodyBlock = bodyBlocks[bodyBlocks.length - 1];
+
+  if (bodyBlock === undefined) return false;
+
+  function walk(node: AstNode): boolean {
+    // Check identifier nodes that match the field name directly
+    if (node.kind === "identifier" && node.value === fieldName) return true;
+    // Check memberExpr: context.actor → memberExpr { value: "actor", children: [identifier { value: "context" }] }
+    if (node.kind === "memberExpr" && node.value === fieldName) return true;
+    // Check letDecl/mutDecl/readonlyDecl that reference the field in their value string
+    if (
+      (node.kind === "letDecl" || node.kind === "mutDecl" || node.kind === "readonlyDecl") &&
+      node.value?.includes(fieldName)
+    ) {
+      return true;
+    }
+    return (node.children ?? []).some(walk);
+  }
+
+  return walk(bodyBlock);
+}
+
+// ---------------------------------------------------------------------------
 // Verifier implementation
 // ---------------------------------------------------------------------------
 
@@ -142,6 +301,7 @@ class GovernanceVerifier {
   private readonly diagnostics: GovernanceDiagnostic[] = [];
   private readonly intentStatus = new Map<string, "satisfied" | "missing" | "mismatch">();
   private readonly proofObligations: string[] = [];
+  private knownContractSets: Map<string, AstNode> = new Map();
 
   verify(
     ast: AstNode,
@@ -149,6 +309,14 @@ class GovernanceVerifier {
     effectResults: readonly EffectCheckResult[],
     profile: DeploymentProfile,
   ): void {
+    // Collect all contractSetDecl nodes from top-level program children
+    this.knownContractSets = new Map();
+    for (const child of ast.children ?? []) {
+      if (child.kind === "contractSetDecl" && child.value !== undefined) {
+        this.knownContractSets.set(child.value, child);
+      }
+    }
+
     for (const flow of flows) {
       const flowNode = findFlowNode(ast, flow.name);
       const effectResult = effectResults.find((r) => r.flowName === flow.name);
@@ -289,6 +457,97 @@ class GovernanceVerifier {
             `Review whether network.outbound is genuinely needed, or update the intent declaration.`,
           ));
           this.intentStatus.set(flow.name, "mismatch");
+        }
+      }
+    }
+
+    // ── LLN-GOV-003: response contract violation ──────────────────────────
+    // If contract.response.denies lists a field and the flow body uses that
+    // field name as a named argument label in a callExpr (e.g. return record
+    // with email: ...), emit LLN-GOV-003.
+    if (flowNode !== undefined) {
+      const deniedFields = extractResponseDeniedFields(flowNode);
+      if (deniedFields.size > 0) {
+        const bodyFields = collectBodyFieldNames(flowNode);
+        for (const field of deniedFields) {
+          if (bodyFields.has(field)) {
+            this.diagnostics.push(makeGovDiag(
+              LLN_GOV_003.code,
+              LLN_GOV_003.name,
+              "error",
+              `Flow '${flow.name}' returns field '${field}' which is denied by contract.response.denies. ` +
+              `Protected data must not leak through the API surface. Use redact(${field}) or remove the field.`,
+              loc,
+              `Remove '${field}' from the response or use: ${field}: redact(${field})`,
+            ));
+          }
+        }
+      }
+    }
+
+    // ── LLN-CONTEXT-001: required context field not accessed ──────────────
+    // If contract.context declares require actor (or other field) and the
+    // flow body never references that field, emit a warning.
+    if (flowNode !== undefined) {
+      const requiredContextFields = extractRequiredContextFields(flowNode);
+      for (const field of requiredContextFields) {
+        if (!isContextFieldAccessed(flowNode, field)) {
+          this.diagnostics.push(makeGovDiag(
+            LLN_CONTEXT_001.code,
+            LLN_CONTEXT_001.name,
+            "warning",
+            `Flow '${flow.name}' declares context.require '${field}' but never accesses it in the flow body. ` +
+            `Required context fields should be read and used.`,
+            loc,
+            `Add: let ${field} = context.${field}`,
+          ));
+        }
+      }
+    }
+
+    // ── LLN-GOV-011/012: contract set references ──────────────────────────
+    if (flowNode !== undefined) {
+      // Find contractDecl child of the flow
+      const contractNode = (flowNode.children ?? []).find((c) => c.kind === "contractDecl");
+      if (contractNode !== undefined) {
+        // Find all `use:SetName` identifier children
+        for (const child of contractNode.children ?? []) {
+          if (child.kind === "identifier" && child.value?.startsWith("use:")) {
+            const setName = child.value.slice("use:".length);
+            const contractSetNode = this.knownContractSets.get(setName);
+
+            if (contractSetNode === undefined) {
+              // LLN-GOV-011: unknown contract set
+              this.diagnostics.push(makeGovDiag(
+                LLN_GOV_011.code,
+                LLN_GOV_011.name,
+                "error",
+                `Flow '${flow.name}' references unknown contract set '${setName}'. Declare it with: contract set ${setName} { ... }`,
+                child.location ?? loc,
+                `Add at program scope: contract set ${setName} { rules { } events { } audit { } }`,
+              ));
+            } else {
+              // LLN-GOV-012: check audit requirements
+              // Find audit:block child in the contractSetDecl
+              const auditBlock = (contractSetNode.children ?? []).find(
+                (c) => c.kind === "identifier" && c.value === "audit:block",
+              );
+              if (auditBlock !== undefined && (auditBlock.children ?? []).length > 0) {
+                // Audit block has content — check whether flow declares audit.write
+                const hasAuditWrite = flow.declaredEffects.includes("audit.write");
+                if (!hasAuditWrite) {
+                  this.diagnostics.push(makeGovDiag(
+                    LLN_GOV_012.code,
+                    LLN_GOV_012.name,
+                    "warning",
+                    `Flow '${flow.name}' uses contract set '${setName}' which requires audit.write, but the flow does not declare it.`,
+                    child.location ?? loc,
+                    `Add 'audit.write' to the flow's effects declaration.`,
+                  ));
+                }
+              }
+            }
+          }
         }
       }
     }

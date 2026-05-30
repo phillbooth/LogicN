@@ -111,9 +111,9 @@ effects [network.outbound, secret.read] {
 
   it("parses effects declaration with dot-path effect names", () => {
     const result = parseOk(`
-secure flow getOrderStatus(req: GetOrderStatusRequest) -> Result<OrderStatusResponse, ApiError>
+secure flow getOrderStatus(request: GetOrderStatusRequest) -> Result<OrderStatusResponse, ApiError>
 effects [database.read, audit.write] {
-  let orderId: OrderId = req.orderId
+  let orderId: OrderId = request.orderId
   return Ok(response)
 }
 `);
@@ -170,7 +170,7 @@ flow test() -> Int {
 
   it("parses a mut binding inside a flow", () => {
     const result = parseOk(`
-secure flow test(req: Request) -> Result<Response, Error>
+secure flow test(request: Request) -> Result<Response, Error>
 effects [database.write] {
   mut status: FormStatus = FormStatus.PendingReview
   return Ok(response)
@@ -229,7 +229,7 @@ pure flow add(a: Int, b: Int) -> Int {
   return a
 }
 
-secure flow save(req: Request) -> Result<Response, Error>
+secure flow save(request: Request) -> Result<Response, Error>
 effects [database.write] {
   return Ok(response)
 }
@@ -384,7 +384,7 @@ record User {
 describe("Parser — readonly parameter and binding", () => {
   it("parses readonly parameter prefix", () => {
     const result = parseOk(`
-secure flow process(readonly req: Request) -> Result<String, Error>
+secure flow process(readonly request: Request) -> Result<String, Error>
 effects [database.write] {
   return Ok("ok")
 }
@@ -525,5 +525,346 @@ enum Status {
     assert.equal(enumNode.value, "Status");
     const variantValues = enumNode.children?.map((c) => c.value) ?? [];
     assert.deepEqual(variantValues, ["Active", "Suspended", "Deleted"]);
+  });
+});
+
+// ── Phase 10B: Contract sub-block sections ────────────────────────────────────
+
+describe("Parser — contract errors sub-block", () => {
+  it("parses errors { returns { ApiError.BadRequest } } without error", () => {
+    parseOk(`
+secure flow doThing(readonly request: Request) -> CreateOrderResult
+contract {
+  errors {
+    returns {
+      ApiError.BadRequest
+    }
+  }
+}
+with effects [database.write] {
+  return Ok(Response.ok("done"))
+}
+`);
+  });
+
+  it("parses errors block with expose and redact nested blocks", () => {
+    parseOk(`
+secure flow doThing(readonly request: Request) -> DoThingResult
+contract {
+  types {
+    type DoThingResult = Result<Response, ApiError>
+  }
+  errors {
+    returns {
+      ApiError.BadRequest
+      ApiError.Unauthorized
+    }
+    expose {
+      message
+    }
+    redact {
+      stackTrace
+    }
+  }
+}
+with effects [database.write] {
+  return Ok(Response.ok("done"))
+}
+`);
+  });
+});
+
+describe("Parser — contract timeouts sub-block", () => {
+  it("parses timeouts { deadline 5 seconds } without error", () => {
+    parseOk(`
+secure flow doThing(readonly request: Request) -> DoThingResult
+contract {
+  types {
+    type DoThingResult = Result<Response, ApiError>
+  }
+  timeouts {
+    deadline 5 seconds
+  }
+}
+with effects [database.write] {
+  return Ok(Response.ok("done"))
+}
+`);
+  });
+
+  it("parses timeouts with multiple declarations", () => {
+    parseOk(`
+secure flow doThing(readonly request: Request) -> DoThingResult
+contract {
+  types {
+    type DoThingResult = Result<Response, ApiError>
+  }
+  timeouts {
+    deadline 5 seconds
+    connect 2 seconds
+    read 10 seconds
+  }
+}
+with effects [network.outbound] {
+  return Ok(Response.ok("done"))
+}
+`);
+  });
+});
+
+describe("Parser — contract retries sub-block", () => {
+  it("parses retries { network.outbound { attempts 3 } } without error", () => {
+    parseOk(`
+secure flow doThing(readonly request: Request) -> DoThingResult
+contract {
+  types {
+    type DoThingResult = Result<Response, ApiError>
+  }
+  retries {
+    network.outbound {
+      attempts 3
+    }
+  }
+}
+with effects [network.outbound] {
+  return Ok(Response.ok("done"))
+}
+`);
+  });
+
+  it("parses retries with multiple policies", () => {
+    parseOk(`
+secure flow doThing(readonly request: Request) -> DoThingResult
+contract {
+  types {
+    type DoThingResult = Result<Response, ApiError>
+  }
+  retries {
+    max 3
+    backoff exponential
+    on network.outbound
+  }
+}
+with effects [network.outbound] {
+  return Ok(Response.ok("done"))
+}
+`);
+  });
+});
+
+describe("Parser — contract limits sub-block", () => {
+  it("parses limits { max request size 5 MB } without error", () => {
+    parseOk(`
+secure flow doThing(readonly request: Request) -> DoThingResult
+contract {
+  types {
+    type DoThingResult = Result<Response, ApiError>
+  }
+  limits {
+    max request size 5 MB
+  }
+}
+with effects [database.write] {
+  return Ok(Response.ok("done"))
+}
+`);
+  });
+
+  it("parses limits with multiple constraints", () => {
+    parseOk(`
+secure flow doThing(readonly request: Request) -> DoThingResult
+contract {
+  types {
+    type DoThingResult = Result<Response, ApiError>
+  }
+  limits {
+    max request size 5 MB
+    max response size 10 MB
+    rate 100 per minute
+  }
+}
+with effects [database.write] {
+  return Ok(Response.ok("done"))
+}
+`);
+  });
+});
+
+describe("Parser — contract privacy sub-block", () => {
+  it("parses privacy { contains PII } without error", () => {
+    parseOk(`
+secure flow doThing(readonly request: Request) -> DoThingResult
+contract {
+  types {
+    type DoThingResult = Result<Response, ApiError>
+  }
+  privacy {
+    contains PII
+  }
+}
+with effects [pii.write, audit.write] {
+  return Ok(Response.ok("done"))
+}
+`);
+  });
+
+  it("parses privacy with multiple declarations", () => {
+    parseOk(`
+secure flow doThing(readonly request: Request) -> DoThingResult
+contract {
+  types {
+    type DoThingResult = Result<Response, ApiError>
+  }
+  privacy {
+    contains PII
+    deny protected values in logs
+    retain 30 days
+  }
+}
+with effects [pii.write, audit.write] {
+  return Ok(Response.ok("done"))
+}
+`);
+  });
+});
+
+describe("Parser — contract observability sub-block", () => {
+  it("parses observability { trace flow } without error", () => {
+    parseOk(`
+secure flow doThing(readonly request: Request) -> DoThingResult
+contract {
+  types {
+    type DoThingResult = Result<Response, ApiError>
+  }
+  observability {
+    trace flow
+  }
+}
+with effects [database.write] {
+  return Ok(Response.ok("done"))
+}
+`);
+  });
+
+  it("parses observability with multiple declarations", () => {
+    parseOk(`
+secure flow doThing(readonly request: Request) -> DoThingResult
+contract {
+  types {
+    type DoThingResult = Result<Response, ApiError>
+  }
+  observability {
+    trace flow
+    measure latency
+    log on error
+  }
+}
+with effects [database.write] {
+  return Ok(Response.ok("done"))
+}
+`);
+  });
+});
+
+describe("Parser — all 6 new contract sections together", () => {
+  it("parses a contract with all 6 new sections without error", () => {
+    parseOk(`
+secure flow createOrder(readonly request: Request) -> CreateOrderResult
+
+contract {
+  types {
+    type CreateOrderResult = Result<Response, ApiError>
+  }
+
+  errors {
+    returns {
+      ApiError.BadRequest
+      ApiError.Unauthorized
+    }
+    expose {
+      message
+      code
+    }
+    redact {
+      stackTrace
+    }
+  }
+
+  timeouts {
+    deadline 5 seconds
+    connect 2 seconds
+  }
+
+  retries {
+    max 3
+    backoff exponential
+  }
+
+  limits {
+    max request size 5 MB
+    rate 100 per minute
+  }
+
+  privacy {
+    contains PII
+    deny protected values in logs
+  }
+
+  observability {
+    trace flow
+    measure latency
+  }
+}
+
+with effects [database.write, audit.write] {
+  return Ok(Response.created("order-id"))
+}
+`);
+  });
+});
+
+describe("Parser — contract with named result type", () => {
+  it("parses a flow using a named result type alias without error", () => {
+    parseOk(`
+secure flow createOrder(readonly request: Request) -> CreateOrderResult
+
+contract {
+  types {
+    type CreateOrderResult = Result<Response, ApiError>
+  }
+
+  rules {
+    require actor before database.write
+  }
+}
+
+with effects [database.write, audit.write] {
+  return Ok(Response.created("order-id"))
+}
+`);
+  });
+
+  it("named result type is captured in types sub-block", () => {
+    const result = parseOk(`
+secure flow processPayment(readonly request: Request) -> ProcessPaymentResult
+
+contract {
+  types {
+    type ProcessPaymentResult = Result<PaymentReceipt, PaymentError>
+  }
+}
+
+with effects [network.outbound, audit.write] {
+  return Ok(receipt)
+}
+`);
+    // Should find a typeDecl for ProcessPaymentResult somewhere in the tree
+    let found = false;
+    function scan(node) {
+      if (node?.kind === "typeDecl" && node.value === "ProcessPaymentResult") found = true;
+      for (const c of node?.children ?? []) scan(c);
+    }
+    scan(result.ast);
+    assert.ok(found, "Expected typeDecl for ProcessPaymentResult inside contract.types");
   });
 });

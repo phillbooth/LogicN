@@ -18,6 +18,7 @@ import { buildFlowAuditEvent, createAuditWriter } from "./audit-writer.js";
 import { buildProofChain, type ExecutionProofChain } from "./proof-chain.js";
 import { startServer, type RunningServer, type ServerConfig } from "./route-dispatcher.js";
 import { buildRouteRegistry } from "./route-registry.js";
+import { buildAttestation, signAttestation, type LogicNAttestation, type AttestationKeyPair } from "./attestation.js";
 
 export type RuntimeMode = "check-only" | "dev" | "production" | "deterministic";
 
@@ -27,6 +28,11 @@ export interface RuntimeOptions {
   readonly traceId?: string;
   readonly port?: number;
   readonly host?: string;
+  readonly flowName?: string;
+  readonly attestation?: {
+    readonly keyPair?: AttestationKeyPair;
+    readonly includeSource?: boolean;
+  };
 }
 
 export interface RuntimeResult {
@@ -36,16 +42,17 @@ export interface RuntimeResult {
   readonly diagnostics: readonly { code: string; severity: string; message: string }[];
   readonly governanceDiagnostics: readonly GovernanceDiagnostic[];
   readonly proofChain?: ExecutionProofChain;
+  readonly attestation?: LogicNAttestation;
   readonly mode: RuntimeMode;
 }
 
-export function run(
+export async function run(
   source: string,
   file: string,
   flowName: string,
   args: ReadonlyMap<string, LogicNValue> = new Map(),
   options: RuntimeOptions = {},
-): RuntimeResult {
+): Promise<RuntimeResult> {
   const mode = options.mode ?? "dev";
   const allDiagnostics: Array<{ code: string; severity: string; message: string }> = [];
 
@@ -115,7 +122,7 @@ export function run(
   const girResult = emitGIR(parseResult.ast, parseResult.flows, effectResults);
 
   // Pass 10: Execute
-  const execution = executeFlow(flowName, args, parseResult.ast, parseResult.flows);
+  const execution = await executeFlow(flowName, args, parseResult.ast, parseResult.flows);
   for (const diagnostic of execution.diagnostics) {
     allDiagnostics.push({
       code: diagnostic.code,
@@ -151,6 +158,23 @@ export function run(
     });
   }
 
+  // Build attestation if requested
+  let attestationResult: LogicNAttestation | undefined;
+  if (options.attestation !== undefined) {
+    const includeSource = options.attestation.includeSource !== false;
+    const attestInputs: import("./attestation.js").AttestationInputs = {
+      flowName: options.flowName ?? flowName,
+      ...(includeSource ? { sourceText: source } : {}),
+      ...(girResult !== undefined ? { girJson: JSON.stringify(girResult) } : {}),
+      ...(proofChain !== undefined ? { auditProofJson: JSON.stringify(proofChain) } : {}),
+    };
+    let att = await buildAttestation(attestInputs);
+    if (options.attestation.keyPair !== undefined) {
+      att = signAttestation(att, options.attestation.keyPair);
+    }
+    attestationResult = att;
+  }
+
   const isError = execution.value.__tag === "runtimeError" || execution.value.__tag === "error";
   return {
     ok: !isError,
@@ -159,6 +183,7 @@ export function run(
     diagnostics: allDiagnostics,
     governanceDiagnostics: govResult.diagnostics,
     ...(proofChain !== undefined ? { proofChain } : {}),
+    ...(attestationResult !== undefined ? { attestation: attestationResult } : {}),
     mode,
   };
 }

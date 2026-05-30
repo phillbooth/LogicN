@@ -4,12 +4,12 @@
 /// expected_diagnostics: none
 /// ai_rule: Full security pattern: trust boundaries, validation gates, protected types, redaction, safe sinks.
 
-secure flow createPatient(req: Request) -> Result<PatientId, PatientError>
+secure flow createPatient(request: Request) -> Result<PatientId, PatientError>
   with effects [database.write, network.outbound, audit.write]
 {
-  unsafe let rawEmail: String = req.body.email
-  unsafe let rawNhsNumber: String = req.body.nhsNumber
-  unsafe let rawPatientId: String = req.body.patientId
+  unsafe let rawEmail: String = request.body.email
+  unsafe let rawNhsNumber: String = request.body.nhsNumber
+  unsafe let rawPatientId: String = request.body.patientId
   unsafe let apiKey: String = Env.get("NOTIFY_API_KEY")?
 
   let email: protected Email = validate.email(rawEmail)?

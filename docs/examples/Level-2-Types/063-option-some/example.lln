@@ -1,7 +1,8 @@
-﻿/// example: 063-option-some
+/// example: 063-option-some
 /// level: 2
 /// concept: Option<T> with Some value
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Option<T> represents a value that may be absent. Some(value) wraps a present value.
 
 let maybeUser: Option<User> = Some(user)

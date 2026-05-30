@@ -2,7 +2,7 @@
 // LogicN Pass 8 - Governed Intermediate Representation emitter
 // =============================================================================
 
-import { type AstNode, type AstNodeKind, type FlowMeta } from "./parser.js";
+import { type AstNode, type AstNodeKind, type FlowMeta, type SourceLocation } from "./parser.js";
 import { type EffectCheckResult } from "./effect-checker.js";
 
 export interface GIREffect {
@@ -84,6 +84,79 @@ export interface GIRProgram {
 export interface GIREmitResult {
   readonly gir: GIRProgram;
   readonly diagnostics: readonly { code: string; message: string }[];
+}
+
+// ---------------------------------------------------------------------------
+// GIR expression representation — used by emitExpr for body analysis passes
+// ---------------------------------------------------------------------------
+
+export interface GIRRecordField {
+  readonly name: string;
+  readonly value: GIRExpr;
+}
+
+export type GIRExpr =
+  | { readonly kind: "recordLiteral"; readonly fields: readonly GIRRecordField[]; readonly location?: SourceLocation }
+  | { readonly kind: "callExpr"; readonly name: string; readonly args: readonly GIRExpr[]; readonly location?: SourceLocation }
+  | { readonly kind: "identifier"; readonly name: string; readonly location?: SourceLocation }
+  | { readonly kind: "stringLiteral"; readonly value: string; readonly location?: SourceLocation }
+  | { readonly kind: "numberLiteral"; readonly value: string; readonly location?: SourceLocation }
+  | { readonly kind: "void" };
+
+/**
+ * Converts an AstNode expression into a typed GIRExpr.
+ *
+ * Handles the `#record` special form explicitly so that record literals
+ * are never silently skipped — downstream passes receive a typed
+ * `recordLiteral` node with named fields they can inspect.
+ */
+export function emitExpr(node: AstNode): GIRExpr {
+  if (node.kind === "callExpr" && node.value === "#record") {
+    // Record literal: { field: value, ... }
+    return {
+      kind: "recordLiteral",
+      fields: (node.children ?? []).map((child) => ({
+        name: child.value ?? "<field>",
+        value: child.children?.[0] !== undefined ? emitExpr(child.children[0]) : { kind: "void" },
+      })),
+      ...(node.location !== undefined ? { location: node.location } : {}),
+    };
+  }
+
+  if (node.kind === "callExpr") {
+    return {
+      kind: "callExpr",
+      name: node.value ?? "<call>",
+      args: (node.children ?? []).map((child) => emitExpr(child)),
+      ...(node.location !== undefined ? { location: node.location } : {}),
+    };
+  }
+
+  if (node.kind === "identifier") {
+    return {
+      kind: "identifier",
+      name: node.value ?? "<id>",
+      ...(node.location !== undefined ? { location: node.location } : {}),
+    };
+  }
+
+  if (node.kind === "stringLiteral") {
+    return {
+      kind: "stringLiteral",
+      value: node.value ?? "",
+      ...(node.location !== undefined ? { location: node.location } : {}),
+    };
+  }
+
+  if (node.kind === "numberLiteral") {
+    return {
+      kind: "numberLiteral",
+      value: node.value ?? "",
+      ...(node.location !== undefined ? { location: node.location } : {}),
+    };
+  }
+
+  return { kind: "void" };
 }
 
 const FLOW_KINDS: readonly AstNodeKind[] = [

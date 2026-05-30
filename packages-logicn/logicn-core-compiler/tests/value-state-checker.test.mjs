@@ -292,9 +292,9 @@ flow test(a: Int, b: Int) -> Bool {
 describe("Value-state checker — clean flows produce no diagnostics", () => {
   it("emits no value-state diagnostics for a clean secure flow", () => {
     const result = parseAndCheck(`
-secure flow createCustomer(req: Request) -> Result<Response, ApiError>
+secure flow createCustomer(request: Request) -> Result<Response, ApiError>
 effects [database.write, audit.write] {
-  unsafe let rawBody: Bytes = req.rawBody
+  unsafe let rawBody: Bytes = request.rawBody
   safe mut rawBody = json.decode(rawBody)?
   let saved = CustomersDB.insert(rawBody)?
   AuditLog.write(saved)

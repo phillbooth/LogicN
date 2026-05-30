@@ -1,0 +1,13 @@
+﻿/// example: 176-sql-injection-concat
+/// level: 4
+/// concept: string taint propagation (SQL injection pattern)
+/// expected_diagnostics: LLN-VALUESTATE-004
+/// test_status: stable
+/// ai_rule: String concatenation with unsafe input produces a tainted string — do not send to governed sinks.
+
+secure flow buildQuery(readonly request: Request) -> Result<Response, ApiError>
+effects [database.read] {
+  unsafe let rawEmail: String = request.body.email
+  let query: String = "SELECT * FROM users WHERE email = '" + rawEmail + "'"
+  return Ok(Response.ok({}))
+}

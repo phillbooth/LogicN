@@ -1,14 +1,21 @@
-﻿/// example: 202-secure-intent-boundary
+/// example: 202-secure-intent-boundary
 /// level: 5
 /// concept: secure flow with full intent declaration
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Intent on a secure flow is the primary governance signal for patient data operations.
 
-secure flow createPatient(req: Request) -> Result<PatientId, PatientError>
+secure flow createPatient(request: Request) -> CreatePatientResult
+
+contract {
+  types {
+    type CreatePatientResult = Result<PatientId, PatientError>
+  }
+}
   with effects [database.write, audit.write]
   intent "Create a patient record from a validated request"
 {
-  unsafe let rawEmail: String = req.body.email
+  unsafe let rawEmail: String = request.body.email
   let email: protected Email = validate.email(rawEmail)?
   let id = PatientsDB.insert({ email: email })?
   let auditEmail: redacted Email = redact(email)

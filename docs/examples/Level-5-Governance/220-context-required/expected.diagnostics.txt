@@ -1,0 +1,4 @@
+none
+
+This example is correct. Both context.actor and context.trace_id are accessed in
+the flow body, satisfying the contract.context requirements. No diagnostics expected.

@@ -2,6 +2,7 @@
 /// level: 3
 /// concept: local fn cannot use effects not declared by the containing flow
 /// expected_diagnostics: LLN-EFFECT-XXX
+/// test_status: stable
 /// ai_rule: A local fn is bound by the containing flow's effect declarations.
 
 guarded flow saveOrderOnly(order: Order) -> Result<Unit, SaveError>

@@ -1,7 +1,8 @@
-﻿/// example: 014-enum-basic
+/// example: 014-enum-basic
 /// level: 1
 /// concept: enum declaration
 /// expected_diagnostics: none
+/// test_status: stable
 
 enum Status {
   Pending

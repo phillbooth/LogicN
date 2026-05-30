@@ -1,10 +1,16 @@
-﻿/// example: 206-protected-data-sharing-authority
+/// example: 206-protected-data-sharing-authority
 /// level: 5
 /// concept: authority block for sharing protected data externally
 /// expected_diagnostics: none
 /// ai_rule: Use an authority block to declare permission to share protected data externally.
 
-secure flow sendReferral(patient: PatientRecord) -> Result<ReferralId, ReferralError>
+secure flow sendReferral(patient: PatientRecord) -> SendReferralResult
+
+contract {
+  types {
+    type SendReferralResult = Result<ReferralId, ReferralError>
+  }
+}
   with effects [network.outbound, audit.write]
   intent "Send a patient referral to an approved specialist service"
   authority {

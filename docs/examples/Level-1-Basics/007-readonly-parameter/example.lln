@@ -1,7 +1,8 @@
-﻿/// example: 007-readonly-parameter
+/// example: 007-readonly-parameter
 /// level: 1
 /// concept: readonly parameter
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: readonly parameters cannot be reassigned inside the flow.
 
 pure flow greet(readonly name: String) -> String {

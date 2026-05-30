@@ -1,10 +1,16 @@
-﻿/// example: 358-ai-secure-string-in-ai
+/// example: 358-ai-secure-string-in-ai
 /// level: 7
 /// concept: passing a SecureString to an AI model is a secret-exposure error
 /// expected_diagnostics: LLN-SECRET-001
 /// ai_rule: Never pass a SecureString or secret-typed value to an AI model call.
 
-guarded flow classifyWithSecret(apiKey: SecureString, text: String) -> Result<Label, AiError>
+guarded flow classifyWithSecret(apiKey: SecureString, text: String) -> ClassifyWithSecretResult
+
+contract {
+  types {
+    type ClassifyWithSecretResult = Result<Label, AiError>
+  }
+}
   with effects [ai.inference]
 {
   // LLN-SECRET-001: SecureString apiKey must not be passed to an AI model call

@@ -1,12 +1,19 @@
-﻿/// example: 357-tensor-model-input-output
+/// example: 357-tensor-model-input-output
 /// level: 7
 /// concept: shape-typed model input and output tensors using a batch dimension
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Use a named Batch dimension to express that tensor rank is fixed but batch size is variable.
 
 guarded flow project(
   input: Tensor<Float32, [Batch, 768]>
-) -> Result<Tensor<Float32, [Batch, 256]>, AiError>
+) -> ProjectResult
+
+contract {
+  types {
+    type ProjectResult = Result<Tensor<Float32, [Batch, 256]>, AiError>
+  }
+}
   with effects [ai.inference]
 {
   return ProjectionModel.forward(input)?

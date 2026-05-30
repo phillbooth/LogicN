@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { executeFlow, type LogicNValue } from "./interpreter.js";
 import { type AstNode, type FlowMeta } from "./parser.js";
 import { buildRouteRegistry, type RouteMatch, type RouteRegistry } from "./route-registry.js";
+import { jsObjectToLogicN } from "./stdlib.js";
 
 export interface ServerConfig {
   readonly port: number;
@@ -84,19 +85,23 @@ export function startServer(
       if (settled) return;
       const body = concatBytes(chunks);
       const reqValue = hydrateRequest(req, match, body, queryParams, path);
-      const args = new Map<string, LogicNValue>([["req", reqValue]]);
+      // Pass the request value under both "request" (canonical style) and "req"
+      // (legacy style) so flows using either parameter name work correctly.
+      const args = new Map<string, LogicNValue>([
+        ["request", reqValue],
+        ["req",     reqValue],
+      ]);
 
-      try {
-        const execution = executeFlow(match.route.flowName, args, ast, flows);
+      executeFlow(match.route.flowName, args, ast, flows).then((execution) => {
         serializeResponse(execution.value, res);
-      } catch (error: unknown) {
+      }).catch((error: unknown) => {
         res.statusCode = 500;
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({
           error: "Flow execution failed",
           detail: error instanceof Error ? error.message : String(error),
         }));
-      }
+      });
     });
 
     req.on("error", () => {
@@ -145,14 +150,29 @@ function hydrateRequest(
   for (const [key, value] of queryParams) queryMap.set(key, { __tag: "string", value });
 
   const bodyBytes: LogicNValue = { __tag: "bytes", value: new Uint8Array(body) };
+
+  // Auto-parse JSON body if Content-Type is application/json
+  let parsedBody: LogicNValue = bodyBytes;  // default: raw bytes
+  const contentType = (req.headers["content-type"] ?? "").toLowerCase();
+  if (contentType.includes("application/json") && body.length > 0) {
+    try {
+      const text = new TextDecoder().decode(body);
+      const parsed = JSON.parse(text);
+      parsedBody = jsObjectToLogicN(parsed);
+    } catch {
+      // Invalid JSON — keep raw bytes
+    }
+  }
+
   const fields = new Map<string, LogicNValue>([
     ["method", { __tag: "string", value: req.method?.toUpperCase() ?? "GET" }],
     ["path", { __tag: "string", value: rawPath }],
     ["params", { __tag: "record", fields: params }],
     ["query", { __tag: "record", fields: queryMap }],
     ["headers", { __tag: "record", fields: headers }],
-    ["body", bodyBytes],
-    ["rawBody", bodyBytes],
+    ["jsonBody", parsedBody],
+    ["body",     bodyBytes],
+    ["rawBody",  bodyBytes],
   ]);
   return { __tag: "record", fields };
 }

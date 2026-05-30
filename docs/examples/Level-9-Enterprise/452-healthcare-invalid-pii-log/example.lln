@@ -1,13 +1,19 @@
-﻿/// example: 452-healthcare-invalid-pii-log
+/// example: 452-healthcare-invalid-pii-log
 /// level: 9
 /// concept: passing a protected PatientId directly to a log call without redaction
 /// expected_diagnostics: LLN-SECRET-001
 /// ai_rule: Never pass a protected value to a log or audit call without first applying redact().
 
-secure flow logPatientDirectly(readonly req: Request) -> Result<Response, PatientError>
+secure flow logPatientDirectly(readonly request: Request) -> LogPatientDirectlyResult
+
+contract {
+  types {
+    type LogPatientDirectlyResult = Result<Response, PatientError>
+  }
+}
   with effects [pii.read, audit.write]
 {
-  unsafe let rawId: String = req.body.patientId
+  unsafe let rawId: String = request.body.patientId
   let patientId: protected PatientId = validate.patientId(rawId)?
 
   // LLN-SECRET-001: protected PatientId passed directly to AuditLog.write without redact()

@@ -1,7 +1,8 @@
-﻿/// example: 118-filesystem-read-guarded
+/// example: 118-filesystem-read-guarded
 /// level: 3
 /// concept: guarded flow with filesystem.read effect
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Declare filesystem.read when reading from the filesystem.
 
 guarded flow loadConfig(path: String) -> Result<Config, ConfigError>

@@ -1,10 +1,16 @@
-﻿/// example: 354-ai-batch-inference
+/// example: 354-ai-batch-inference
 /// level: 7
 /// concept: batch AI inference over an array of inputs
 /// expected_diagnostics: none
 /// ai_rule: Use Array.map with ? propagation to run batch inference and surface the first error.
 
-guarded flow batchClassify(texts: Array<String>) -> Result<Array<Label>, AiError>
+guarded flow batchClassify(texts: Array<String>) -> BatchClassifyResult
+
+contract {
+  types {
+    type BatchClassifyResult = Result<Array<Label>, AiError>
+  }
+}
   with effects [ai.inference]
 {
   let labels = texts.map(t => ClassifierModel.classify(t))?

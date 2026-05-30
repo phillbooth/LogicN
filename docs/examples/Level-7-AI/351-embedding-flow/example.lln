@@ -1,10 +1,17 @@
-﻿/// example: 351-embedding-flow
+/// example: 351-embedding-flow
 /// level: 7
 /// concept: basic AI embedding flow returning a typed tensor
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Every flow that calls an embedding model must declare the ai.inference effect.
 
-guarded flow embedText(text: String) -> Result<Tensor<Float32, [1, 768]>, AiError>
+guarded flow embedText(text: String) -> EmbedTextResult
+
+contract {
+  types {
+    type EmbedTextResult = Result<Tensor<Float32, [1, 768]>, AiError>
+  }
+}
   with effects [ai.inference]
 {
   let embedding = EmbeddingModel.embed(text)?

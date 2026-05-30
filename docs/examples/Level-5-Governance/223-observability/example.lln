@@ -1,0 +1,59 @@
+/// example: 223-observability
+/// level: 5
+/// concept: contract observability block — trace, measure, count, deny patterns
+/// expected_diagnostics: none
+/// ai_rule: The observability block declares what to trace, measure, count, and deny in logs.
+///          This is a complete, correct observability declaration; no diagnostics expected.
+
+secure flow processPayment(readonly request: Request) -> ProcessPaymentResult
+
+contract {
+  types {
+    type ProcessPaymentResult = Result<Response, ApiError>
+  }
+
+  intent {
+    "Process a payment. Full tracing and latency measurement required. PII must not appear in logs."
+  }
+
+  context {
+    require trace_id
+  }
+
+  errors {
+    returns {
+      ApiError.PaymentDeclined
+      ApiError.InsufficientFunds
+      ApiError.Internal
+    }
+    expose {
+      ApiError.PaymentDeclined
+      ApiError.InsufficientFunds
+    }
+    redact {
+      ApiError.Internal
+    }
+    audit {
+      ApiError.PaymentDeclined
+      ApiError.InsufficientFunds
+    }
+  }
+
+  observability {
+    trace flow
+    measure latency
+    count database.write
+    log event names
+    deny protected values in logs
+    deny request body logging
+    require trace_id
+  }
+}
+
+with effects [database.write, network.outbound, audit.write] {
+  let traceId = context.trace_id
+  let charge = PaymentGateway.charge(request.body.amount, request.body.method)?
+  let record = PaymentsDB.insert({ charge: charge.id, amount: charge.amount })?
+  AuditLog.write({ event: "PaymentProcessed", chargeId: charge.id, traceId: traceId })
+  return Ok(Response.ok({ paymentId: record.id, status: charge.status }))
+}

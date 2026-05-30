@@ -1,0 +1,5 @@
+LLN-GOV-003 (PROTECTED_DATA_IN_RESPONSE) — error
+
+Flow 'getPatientProfile' returns field 'email' which is denied by contract.response.denies.
+Protected data must not leak through the API surface.
+Fix: Remove 'email' from the response or use: email: redact(email)

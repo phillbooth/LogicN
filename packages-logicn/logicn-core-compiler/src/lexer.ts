@@ -90,6 +90,15 @@ export const V1_ACTIVE_KEYWORDS: ReadonlySet<string> = new Set([
   "tainted", "secret", "protected", "redacted",
   // Compute target declarations
   "compute", "target",
+  // Flow Contracts (Pilot Candidate) — docs/Knowledge-Bases/logicn-flow-contracts.md
+  "contract", "emit", "emits", "event", "types",
+  // Compile-time constants (allowed at top level; ordinary let/mut are not)
+  "const",
+  // Readable Logic Forms (Phase 9C) — promoted from future-reserved
+  // See: docs/Knowledge-Bases/logicn-readable-logic-forms.md
+  "and", "or", "unless", "is",
+  // Note: "rules", "audit", "set" are intentionally NOT keywords — they are too
+  // common as identifier names and are handled contextually in the contract parser.
 ]);
 
 /** Words reserved for post-v1 grammar — produce LLN-SYNTAX-003 if used as identifiers. */
@@ -98,10 +107,17 @@ export const V1_FUTURE_RESERVED: ReadonlySet<string> = new Set([
   "async", "await", "yield", "comptime", "macro",
   "trait", "impl", "where", "for", "while", "loop",
   "break", "continue",
-  // Readable Logic Forms (proposal) — reserved to protect namespace
+  // Readable Logic Forms (proposal) — "until" still reserved for future use
   // See: docs/Knowledge-Bases/logicn-readable-logic-forms.md
-  "is", "and", "or", "unless", "until",
+  // Note: "and", "or", "unless", "is" promoted to V1_ACTIVE_KEYWORDS in Phase 9C
+  "until",
 ]);
+
+// ---------------------------------------------------------------------------
+// Flow Contract keywords (Pilot Candidate)
+// See: docs/Knowledge-Bases/logicn-flow-contracts.md
+// ---------------------------------------------------------------------------
+// contract, emit, emits, event, types are added to V1_ACTIVE_KEYWORDS above.
 
 // Two-character operator sequences (order matters — longer first)
 const TWO_CHAR_OPERATORS: readonly string[] = [

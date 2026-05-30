@@ -1,0 +1,21 @@
+/// example: 091-trust-sensitivity-independent
+/// level: 2
+/// concept: trust and sensitivity are independent axes
+/// expected_diagnostics: none
+/// test_status: stable
+/// ai_rule: unsafe let = trust state (not yet validated). protected = sensitivity state (access restricted). These are orthogonal.
+
+secure flow handlePatients(readonly request: Request) -> Result<Response, ApiError>
+with effects [database.write, audit.write] {
+
+  // Untrusted AND sensitive — both together is valid
+  unsafe let rawEmails: protected Array<String> = request.body.emails
+
+  // After validation: trusted AND sensitive
+  let emails: Array<protected Email> = validate.emails(rawEmails)?
+
+  // Trusted, NOT sensitive
+  let count: Int = emails.length()
+
+  return Ok(Response.ok({ count: count }))
+}

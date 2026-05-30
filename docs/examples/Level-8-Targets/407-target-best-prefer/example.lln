@@ -1,10 +1,16 @@
-﻿/// example: 407-target-best-prefer
+/// example: 407-target-best-prefer
 /// level: 8
 /// concept: compute target best with ordered preference list and fallback
 /// expected_diagnostics: none
 /// ai_rule: best selects the best available target at runtime from the preference list in order.
 
-guarded flow runWithBest(input: Tensor<Float32, [1, 256]>) -> Result<Tensor<Float32, [1, 64]>, AiError>
+guarded flow runWithBest(input: Tensor<Float32, [1, 256]>) -> RunWithBestResult
+
+contract {
+  types {
+    type RunWithBestResult = Result<Tensor<Float32, [1, 64]>, AiError>
+  }
+}
   with effects [ai.inference]
 {
   compute target best { prefer [npu, gpu, cpu] fallback cpu }

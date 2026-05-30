@@ -63,6 +63,18 @@ These words are active in the v1 grammar and must match
 | `redacted` | Type governance | Masked safe-output representation |
 | `compute` | Compute planning | Compute target block opener |
 | `target` | Compute planning | Reserved word in `compute target` blocks |
+| `contract` | Flow Contract | Flow-local metadata block (types, intent, events) |
+| `emit` | Flow Contract | Emit an event inside a flow body: `emit EventName` |
+| `emits` | Flow Contract | Declare an event in contract.events: `emits EventName` |
+| `event` | Flow Contract | Declare a global event: `event EventName` |
+| `types` | Flow Contract | Sub-block for flow-local type aliases inside contract |
+| `and` | Readable Logic Forms | Alias for `&&` — `a and b` → `a && b` |
+| `or` | Readable Logic Forms | Alias for `\|\|` — `a or b` → `a \|\| b` |
+| `unless` | Readable Logic Forms | Negated if — `unless COND {}` → `if !COND {}` |
+| `is` | Readable Logic Forms | Equality/comparison alias — `a is b` → `a == b`; `a is greater than b` → `a > b` |
+
+Note: `and`, `or`, `unless`, `is` were previously in V1_FUTURE_RESERVED.
+Moved to V1_ACTIVE_KEYWORDS in Phase 9C (Readable Logic Forms implementation).
 
 ## V1 Future-Reserved Keywords
 

@@ -1,0 +1,4 @@
+none
+
+This example is correct. The timeouts and retries blocks are properly structured and
+match the declared effects. No diagnostics are expected.

@@ -179,8 +179,8 @@ State pipeline: `unsafe unvalidated -> safe validated`
 ### API Boundary Matching
 
 ```logicn
-secure flow createCustomer(req: Request) -> ApiResponse {
-  let body: Json unsafe unvalidated = boundary.api.body(req)
+secure flow createCustomer(request: Request) -> ApiResponse {
+  let body: Json unsafe unvalidated = boundary.api.body(request)
 
   match validate.customer(body) {
     Ok(customerInput) => {

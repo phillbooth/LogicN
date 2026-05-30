@@ -1,10 +1,16 @@
-﻿/// example: 402-target-gpu
+/// example: 402-target-gpu
 /// level: 8
 /// concept: explicit GPU compute target with CPU fallback
 /// expected_diagnostics: none
 /// ai_rule: Use compute target gpu for large dense tensor workloads; always add fallback cpu.
 
-guarded flow runOnGpu(input: Tensor<Float32, [Batch, 224, 224, 3]>) -> Result<Tensor<Float32, [Batch, 1000]>, AiError>
+guarded flow runOnGpu(input: Tensor<Float32, [Batch, 224, 224, 3]>) -> RunOnGpuResult
+
+contract {
+  types {
+    type RunOnGpuResult = Result<Tensor<Float32, [Batch, 1000]>, AiError>
+  }
+}
   with effects [ai.inference]
 {
   compute target gpu { fallback cpu }

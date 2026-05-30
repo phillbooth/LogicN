@@ -112,7 +112,7 @@ qualifier second. This keeps the base type as the developer's primary mental anc
 let input:  String  unsafe             = request.body("name")
 let secret: String  secure             = env.secret("APP_SECRET")
 let email:  Email   safe   validated   = validate.email(rawEmail)
-let raw:    Json    unsafe unvalidated = boundary.api.body(req)
+let raw:    Json    unsafe unvalidated = boundary.api.body(request)
 ```
 
 This avoids wrapper type proliferation:

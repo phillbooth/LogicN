@@ -1,10 +1,16 @@
-﻿/// example: 213-governance-summary-example
+/// example: 213-governance-summary-example
 /// level: 5
 /// concept: comprehensive governance example showing all patterns
 /// expected_diagnostics: none
 /// ai_rule: Governance = intent + effects + compute target + authority + policy + audit evidence.
 
-secure flow createPatient(req: Request) -> Result<PatientId, PatientError>
+secure flow createPatient(request: Request) -> CreatePatientResult
+
+contract {
+  types {
+    type CreatePatientResult = Result<PatientId, PatientError>
+  }
+}
   with effects [database.write, network.outbound, audit.write]
   intent "Create a new patient record from a validated NHS registration request"
   compute target best {
@@ -21,8 +27,8 @@ secure flow createPatient(req: Request) -> Result<PatientId, PatientError>
     allow protected NhsNumber to "nhs-spine"
   }
 {
-  unsafe let rawEmail: String = req.body.email
-  unsafe let rawNhsNumber: String = req.body.nhsNumber
+  unsafe let rawEmail: String = request.body.email
+  unsafe let rawNhsNumber: String = request.body.nhsNumber
 
   let email: protected Email = validate.email(rawEmail)?
   let nhsNumber: protected NhsNumber = validate.nhsNumber(rawNhsNumber)?

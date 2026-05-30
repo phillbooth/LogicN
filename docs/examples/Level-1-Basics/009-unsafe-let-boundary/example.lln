@@ -5,4 +5,4 @@
 /// ai_rule: Data from external boundaries starts as unsafe.
 
 unsafe let rawBody: String =
-  req.body
+  request.body

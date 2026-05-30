@@ -1,0 +1,4 @@
+none
+
+This example is correct. The errors block properly declares returns, map, expose, redact,
+and audit clauses. No diagnostics are expected.

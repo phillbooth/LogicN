@@ -3,9 +3,15 @@
 /// concept: Unsafe input cannot flow directly to AI model
 /// expected_diagnostics: LLN-VALUESTATE-003
 
-secure flow classifyRaw(readonly req: Request) -> Result<Label, AiError>
+secure flow classifyRaw(readonly request: Request) -> ClassifyRawResult
+
+contract {
+  types {
+    type ClassifyRawResult = Result<Label, AiError>
+  }
+}
 effects [ai.inference] {
-  unsafe let rawInput: String = req.body.text
+  unsafe let rawInput: String = request.body.text
   let label = ClassifierModel.classify(rawInput)?
   return Ok(label)
 }

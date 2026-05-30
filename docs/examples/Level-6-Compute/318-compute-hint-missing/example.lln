@@ -1,0 +1,18 @@
+/// example: 318-compute-hint-missing
+/// level: 6
+/// concept: ai.inference without compute target preference
+/// expected_diagnostics: LLN-HINT-COMPUTE-001
+/// test_status: stable
+/// ai_rule: Flows using ai.inference should declare a compute target preference for NPU or GPU.
+
+guarded flow classifyText(text: String) -> ClassifyTextResult
+
+contract {
+  types {
+    type ClassifyTextResult = Result<String, AiError>
+  }
+}
+with effects [ai.inference] {
+  let label = ClassifierModel.classify(text)?
+  return Ok(label)
+}

@@ -57,7 +57,7 @@ terms:
     doc: "flow-vs-fn-security-model.md"
     not_to_be_confused_with: "fn (plain computation), route (external entry point)"
     examples:
-      - "flow createOrder(req: CreateOrderRequest) -> Result<OrderResponse, ApiError> effects [database.write] { ... }"
+      - "flow createOrder(request: CreateOrderRequest) -> Result<OrderResponse, ApiError> effects [database.write] { ... }"
 
   - canonical: "secure flow"
     aliases:

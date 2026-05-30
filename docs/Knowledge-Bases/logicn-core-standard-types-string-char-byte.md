@@ -108,6 +108,28 @@ let apiKey: SecureString = Secret.env("API_KEY")
 log.info("Loaded API key", apiKey)  // output: "[REDACTED]"
 ```
 
+### String.format — Named Interpolation (Phase 9A-3)
+
+`String.format` supports both positional `{}` and named `{field}` interpolation.
+
+```logicn
+// Positional (original)
+let msg: String = "Hello {}!".format("Alice")
+// → "Hello Alice!"
+
+// Named (Phase 9A-3) — pass a record with field names matching {placeholders}
+let greeting: String = "Hello {name}, you have {count} messages.".format({
+  name: "Bob",
+  count: 3,
+})
+// → "Hello Bob, you have 3 messages."
+
+// Named format also works via String.format(template, record) call form
+let banner: String = format("Order {ref} total: {amount}", { ref: orderId, amount: total })
+```
+
+**Rule:** Named placeholders `{name}` are replaced by the matching record field. Positional `{}` are replaced in order.
+
 ### Compiler Diagnostics
 
 | Code | Name | Description |
@@ -233,7 +255,10 @@ let lowNibble: Byte = b.lowNibble()
 ```logicn
 let fileData: Bytes = File.readBytes("image.png")
 let packet: Bytes = Network.receiveBytes()
-let hash: Bytes = Crypto.sha256(fileData)
+
+// Phase 9A-3: Bytes.sha256() — hash via node:crypto
+let hashBytes: Bytes = fileData.sha256()
+let hashHex: String = fileData.sha256Hex()       // convenience: SHA-256 as lowercase hex string
 ```
 
 `Bytes` supports bounded read-only views and explicit mutation-by-clone:

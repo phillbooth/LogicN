@@ -3,7 +3,13 @@
 /// concept: PII access requires pii.read effect
 /// expected_diagnostics: LLN-PII-001
 
-guarded flow getPatientEmail(patientId: PatientId) -> Result<Email, DbError>
+guarded flow getPatientEmail(patientId: PatientId) -> GetPatientEmailResult
+
+contract {
+  types {
+    type GetPatientEmailResult = Result<Email, DbError>
+  }
+}
 effects [database.read] {
   let patient = PatientsDB.findById(patientId)?
   return Ok(patient.email)

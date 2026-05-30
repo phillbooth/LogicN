@@ -1,0 +1,42 @@
+﻿/// example: 021-flow-contract-basic
+/// level: 1
+/// concept: flow contract block with types, intent, and events
+/// expected_diagnostics: none
+/// ai_rule: Use contract { } to group flow-local metadata — types, intent, and events — in one governed location.
+
+event EmailValidationStarted
+event EmailValidationCompleted
+event EmailValidationFailed
+
+pure flow collectEmails(inputs: Array<String>) -> EmailListResult
+
+contract {
+
+  types {
+    type EmailListResult = Result<Array<String>, ValidationError>
+  }
+
+  intent {
+    "Validate raw email strings and collect only valid protected results."
+  }
+
+  events {
+    emits EmailValidationStarted
+    emits EmailValidationCompleted
+    emits EmailValidationFailed
+  }
+
+}
+{
+  emit EmailValidationStarted
+
+  let results = inputs.map(validate.email)
+  let collected = Result.sequence(results)
+
+  match collected {
+    Ok(_)  => emit EmailValidationCompleted
+    Err(_) => emit EmailValidationFailed
+  }
+
+  return collected
+}

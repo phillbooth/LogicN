@@ -3,9 +3,11 @@
 ## Status
 
 ```
-Pilot Candidate — not yet adopted
-Three design decisions recorded below
-Requires pilot with 10 examples + AI/human testing before compiler-wide implementation
+Phase 9C — Implemented
+Keywords: and, or, unless, is — active in v1
+All operator aliases produce canonical AST (same as traditional operators)
+readableForm? field set on nodes for IDE/formatter preservation
+Pilot examples: docs/Examples/Level-1-Basics/ (readable-logic folder)
 ```
 
 ## Design Decisions (Recorded)

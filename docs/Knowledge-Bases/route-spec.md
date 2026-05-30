@@ -60,10 +60,10 @@ route POST "/patients" {
 The flow it delegates to is the Level 1 `003-secure-flow` pattern:
 
 ```logicn
-secure flow createPatient(readonly req: Request) -> Result<Response, ApiError>
+secure flow createPatient(readonly request: Request) -> Result<Response, ApiError>
 effects [database.write, audit.write] {
   unsafe let rawEmail: String =
-    req.body.email
+    request.body.email
 
   let email: protected Email =
     validate.email(rawEmail)?

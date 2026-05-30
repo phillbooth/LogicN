@@ -1,7 +1,8 @@
-﻿/// example: 015-record-basic
+/// example: 015-record-basic
 /// level: 1
 /// concept: record type
 /// expected_diagnostics: none
+/// test_status: stable
 
 record User {
   id: UserId

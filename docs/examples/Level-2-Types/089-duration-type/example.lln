@@ -1,0 +1,11 @@
+/// example: 089-duration-type
+/// level: 2
+/// concept: Duration type and arithmetic
+/// expected_diagnostics: none
+/// test_status: stable
+/// ai_rule: Duration is a time span — use Duration.ofMs, ofSeconds, ofMinutes, ofHours.
+
+pure flow describeDeadline(ms: Int) -> String {
+  let d = Duration.ofMs(ms)
+  return d.toString()
+}

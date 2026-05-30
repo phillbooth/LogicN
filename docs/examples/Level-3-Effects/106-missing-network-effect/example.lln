@@ -2,6 +2,7 @@
 /// level: 3
 /// concept: undeclared network.outbound effect
 /// expected_diagnostics: LLN-EFFECT-XXX
+/// test_status: stable
 /// ai_rule: http.get and similar calls require network.outbound to be declared.
 
 guarded flow fetchRate(baseCurrency: String) -> Result<Decimal, RateError>

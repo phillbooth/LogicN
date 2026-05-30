@@ -1,7 +1,8 @@
-﻿/// example: 108-guarded-flow-calls-effectful-flow
+/// example: 108-guarded-flow-calls-effectful-flow
 /// level: 3
 /// concept: guarded flow can call effectful flow when it declares the same effects
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: A guarded flow may call effectful flows provided it declares all required effects.
 
 guarded flow buildPriceQuote(orderId: OrderId) -> Result<Money<GBP>, RateError>

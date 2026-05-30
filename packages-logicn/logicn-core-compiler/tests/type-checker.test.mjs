@@ -944,6 +944,104 @@ flow test() -> String {
   });
 });
 
+// ── Phase 9A-2: LLN-TYPE-003 Branded type enforcement ────────────────────────
+
+describe("Type checker — LLN-TYPE-003 branded type enforcement (Phase 9A-2)", () => {
+  it("emits LLN-TYPE-003 when unsafe let assigns to a branded type", () => {
+    const result = parseAndCheck(`
+type CustomerId = Brand<String, "CustomerId">
+
+secure flow createOrder(readonly request: Request) -> String
+with effects [database.write] {
+  unsafe let id: CustomerId = request.body.id
+  return "ok"
+}
+`);
+    assert.ok(
+      hasDiag(result, "LLN-TYPE-003"),
+      `Expected LLN-TYPE-003 for unsafe let id: CustomerId = ..., got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+
+  it("emits LLN-TYPE-003 when a string literal is directly assigned to a branded type", () => {
+    const result = parseAndCheck(`
+type OrderRef = Brand<String, "OrderRef">
+
+flow test() -> String {
+  let ref: OrderRef = "ORD-001"
+  return "ok"
+}
+`);
+    assert.ok(
+      hasDiag(result, "LLN-TYPE-003"),
+      `Expected LLN-TYPE-003 for let ref: OrderRef = "ORD-001"`,
+    );
+  });
+
+  it("does NOT emit LLN-TYPE-003 for a plain let binding with string type", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let name: String = "Alice"
+  return name
+}
+`);
+    assert.ok(
+      !hasDiag(result, "LLN-TYPE-003"),
+      "Should NOT emit LLN-TYPE-003 for let name: String = 'Alice'",
+    );
+  });
+
+  it("does NOT emit LLN-TYPE-003 when a type is declared but not a Brand alias", () => {
+    const result = parseAndCheck(`
+type UserId = String
+
+flow test() -> String {
+  let id: UserId = "abc"
+  return "ok"
+}
+`);
+    // UserId is NOT a Brand<...> alias, so LLN-TYPE-003 must not fire
+    assert.ok(
+      !hasDiag(result, "LLN-TYPE-003"),
+      "LLN-TYPE-003 must not fire for non-Brand type aliases",
+    );
+  });
+
+  it("emits LLN-TYPE-003 for two different branded types in the same flow", () => {
+    const result = parseAndCheck(`
+type CustomerId = Brand<String, "CustomerId">
+type Email = Brand<String, "Email">
+
+secure flow test(readonly request: Request) -> String
+with effects [database.write] {
+  unsafe let id: CustomerId = request.body.id
+  unsafe let email: Email = request.body.email
+  return "ok"
+}
+`);
+    const brandedErrors = diagsWithCode(result, "LLN-TYPE-003");
+    assert.equal(brandedErrors.length, 2, `Expected 2 LLN-TYPE-003 errors, got ${brandedErrors.length}`);
+  });
+
+  it("LLN-TYPE-003 diagnostic includes a suggestedCode with validate gate", () => {
+    const result = parseAndCheck(`
+type CustomerId = Brand<String, "CustomerId">
+
+secure flow test(readonly request: Request) -> String
+with effects [database.write] {
+  unsafe let id: CustomerId = request.body.id
+  return "ok"
+}
+`);
+    const diag = diagsWithCode(result, "LLN-TYPE-003")[0];
+    assert.ok(diag !== undefined, "Expected LLN-TYPE-003 diagnostic");
+    assert.ok(
+      diag.suggestedCode !== undefined && diag.suggestedCode.includes("validate"),
+      `Expected suggestedCode to contain 'validate', got: ${diag.suggestedCode}`,
+    );
+  });
+});
+
 // ── Phase 8B: Auto type inference propagation ─────────────────────────────────
 
 describe("Type checker — Auto inference + binding type propagation (Phase 8B)", () => {
@@ -967,5 +1065,50 @@ flow test() -> String {
 }
 `);
     assert.ok(hasDiag(result, "LLN-TYPE-002"), "Expected LLN-TYPE-002: Int binding assigned to String");
+  });
+});
+
+// ── Phase 11A.3: inferType member access ──────────────────────────────────────
+
+describe("Type checker — Phase 11A.3 member access inference", () => {
+  it("infers String for request.body field access", () => {
+    // request.body.email should be inferred as String, enabling LLN-TYPE-003 to fire
+    const result = parseAndCheck(`
+type Email = Brand<String, "Email">
+
+secure flow test(readonly request: Request) -> String
+with effects [database.write] {
+  unsafe let rawEmail: String = request.body.email
+  let email: Email = rawEmail
+  return "ok"
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-003"),
+      `Expected LLN-TYPE-003 for Email = rawEmail where rawEmail inferred as String from request.body`);
+  });
+
+  it("LLN-TYPE-003 fires when string literal directly assigned to branded type", () => {
+    const result = parseAndCheck(`
+type CustomerId = Brand<String, "CustomerId">
+flow test() -> String {
+  let id: CustomerId = "raw-id-value"
+  return "ok"
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-003"),
+      "Expected LLN-TYPE-003 for string literal assigned to branded type");
+  });
+
+  it("inferType handles chained member access", () => {
+    // This should not crash and should not emit spurious errors
+    const result = parseAndCheck(`
+flow test(readonly request: Request) -> String {
+  let x: String = request.body.email
+  return x
+}
+`);
+    // No LLN-TYPE-002 since both sides infer as String
+    assert.ok(!hasDiag(result, "LLN-TYPE-002"),
+      "Should not emit type mismatch for String = request.body.email");
   });
 });

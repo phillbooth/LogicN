@@ -1,0 +1,13 @@
+﻿/// example: 177-secret-serialization
+/// level: 4
+/// concept: SecureString serialization denied
+/// expected_diagnostics: LLN-SECRET-003
+/// test_status: stable
+/// ai_rule: SecureString must not be passed to json.encode or serialize functions.
+
+secure flow exportConfig() -> Result<Response, ApiError>
+effects [secret.read] {
+  let apiKey: SecureString = env.secret("API_KEY")
+  let payload: String = json.encode({ key: apiKey })
+  return Ok(Response.ok(payload))
+}

@@ -1,0 +1,5 @@
+none
+
+This is the gold standard pattern. All contract sections are correct, context fields
+are accessed, denied fields do not appear in the response body, and the data-handling
+pipeline follows raw -> protected -> redact -> audit. No diagnostics expected.

@@ -195,7 +195,7 @@ Boundaries are where compile-time certainty weakens. External inputs from HTTP,
 queues, files, AI responses, and plugins cannot be trusted automatically:
 
 ```logicn
-let body: Json unsafe unvalidated = boundary.api.body(req)
+let body: Json unsafe unvalidated = boundary.api.body(request)
 ```
 
 Compile time knows: this value came from outside authority.

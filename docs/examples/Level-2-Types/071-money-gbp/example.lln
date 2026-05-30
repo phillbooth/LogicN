@@ -1,7 +1,8 @@
-﻿/// example: 071-money-gbp
+/// example: 071-money-gbp
 /// level: 2
 /// concept: Money<GBP> type
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Use Money.gbp("...") to create GBP monetary values with exact precision.
 
 let price: Money<GBP> = Money.gbp("100.00")

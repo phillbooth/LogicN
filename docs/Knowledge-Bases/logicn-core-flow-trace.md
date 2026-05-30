@@ -69,7 +69,7 @@ trace flow OrderCreateTrace {
 ### Attaching a trace to a flow
 
 ```logicn
-flow createOrder(req: CreateOrderRequest)
+flow createOrder(request: CreateOrderRequest)
   uses database.write
   trace OrderCreateTrace
 {

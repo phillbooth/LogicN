@@ -2,6 +2,7 @@
 /// level: 3
 /// concept: non-canonical effect name is rejected
 /// expected_diagnostics: LLN-EFFECT-XXX
+/// test_status: stable
 /// ai_rule: Effect names must use the canonical dotted form (e.g. network.outbound, not network).
 
 guarded flow fetchRate(currency: String) -> Result<Decimal, RateError>

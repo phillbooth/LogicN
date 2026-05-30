@@ -1,10 +1,16 @@
-﻿/// example: 205-remote-execution-violation
+/// example: 205-remote-execution-violation
 /// level: 5
 /// concept: compute target remote violates governance policy
 /// expected_diagnostics: LLN-GOV-XXX
 /// ai_rule: Specifying remote as the compute target when governance denies it is a policy violation.
 
-secure flow runFraudModel(input: FraudInput) -> Result<FraudScore, FraudError>
+secure flow runFraudModel(input: FraudInput) -> RunFraudModelResult
+
+contract {
+  types {
+    type RunFraudModelResult = Result<FraudScore, FraudError>
+  }
+}
   with effects [audit.write]
   intent "Score a transaction for fraud risk on-premises only"
   compute target remote

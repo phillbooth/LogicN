@@ -14,14 +14,109 @@
 
 import { LLN_NONE, LLN_VOID, type LogicNValue } from "./interpreter.js";
 
+// =============================================================================
+// BigInt-based decimal arithmetic helpers (Phase 9A-3)
+//
+// Replaces parseFloat() for Money and Decimal arithmetic to avoid IEEE-754
+// rounding errors in financial calculations.
+//
+// Strategy: represent a decimal string as (scaled_bigint, scale) where
+//   value = scaled_bigint / 10^scale
+//
+// e.g. "19.99" → { n: 1999n, scale: 2 }
+//      "0.1"   → { n: 1n,    scale: 1 }
+// =============================================================================
+
+interface ScaledDecimal { n: bigint; scale: number }
+
+function decimalToBigInt(s: string): ScaledDecimal {
+  const clean = (s ?? "0").toString().trim().replace(/_/g, "");
+  const neg = clean.startsWith("-");
+  const abs = neg ? clean.slice(1) : clean;
+  const dotIdx = abs.indexOf(".");
+  if (dotIdx === -1) {
+    const n = BigInt(abs || "0");
+    return { n: neg ? -n : n, scale: 0 };
+  }
+  const intPart = abs.slice(0, dotIdx) || "0";
+  const fracPart = abs.slice(dotIdx + 1);
+  const combined = intPart + fracPart;
+  const n = BigInt(combined || "0");
+  return { n: neg ? -n : n, scale: fracPart.length };
+}
+
+function bigIntToDecimalStr(n: bigint, scale: number): string {
+  if (scale === 0) return n.toString();
+  const neg = n < BigInt(0);
+  const abs = neg ? -n : n;
+  const str = abs.toString().padStart(scale + 1, "0");
+  const intPart = str.slice(0, str.length - scale) || "0";
+  const fracPart = str.slice(str.length - scale);
+  const result = `${intPart}.${fracPart}`;
+  return neg ? `-${result}` : result;
+}
+
+/** Normalise two ScaledDecimals to the same scale. */
+function alignScale(a: ScaledDecimal, b: ScaledDecimal): [bigint, bigint, number] {
+  const scale = Math.max(a.scale, b.scale);
+  const ten = BigInt(10);
+  const na = a.n * (ten ** BigInt(scale - a.scale));
+  const nb = b.n * (ten ** BigInt(scale - b.scale));
+  return [na, nb, scale];
+}
+
+export function bigIntDecimalAdd(a: string, b: string): string {
+  const [na, nb, scale] = alignScale(decimalToBigInt(a), decimalToBigInt(b));
+  return bigIntToDecimalStr(na + nb, scale);
+}
+
+export function bigIntDecimalSub(a: string, b: string): string {
+  const [na, nb, scale] = alignScale(decimalToBigInt(a), decimalToBigInt(b));
+  return bigIntToDecimalStr(na - nb, scale);
+}
+
+export function bigIntDecimalCmp(a: string, b: string): number {
+  const [na, nb] = alignScale(decimalToBigInt(a), decimalToBigInt(b));
+  return na < nb ? -1 : na > nb ? 1 : 0;
+}
+
+/** Multiply a decimal string by a JavaScript number (for rate/factor scaling). */
+export function bigIntDecimalMulNumber(a: string, factor: number): string {
+  // Convert factor to a decimal string, then use BigInt multiply
+  // Use toFixed(10) for precision, then trim trailing zeros
+  const factorStr = factor.toFixed(10).replace(/0+$/, "").replace(/\.$/, "");
+  const pa = decimalToBigInt(a);
+  const pf = decimalToBigInt(factorStr);
+  const scale = pa.scale + pf.scale;
+  return bigIntToDecimalStr(pa.n * pf.n, scale);
+}
+
+/** Round a decimal string to N decimal places. */
+export function bigIntDecimalRound(a: string, places: number): string {
+  const pa = decimalToBigInt(a);
+  if (pa.scale <= places) {
+    // Already has fewer decimal places than requested — just pad
+    return bigIntToDecimalStr(pa.n * (BigInt(10) ** BigInt(places - pa.scale)), places);
+  }
+  const diff = pa.scale - places;
+  const ten = BigInt(10);
+  const divisor = ten ** BigInt(diff);
+  // Round half-up
+  const abs = pa.n < BigInt(0) ? -pa.n : pa.n;
+  const half = divisor / BigInt(2);
+  const rounded = (abs + half) / divisor;
+  const result = pa.n < BigInt(0) ? -rounded : rounded;
+  return bigIntToDecimalStr(result, places);
+}
+
 declare function require(name: string): any;
 declare const process: { env?: Record<string, string | undefined> };
 
 export interface StdlibContext {
   readonly recordEffect: (effect: string) => void;
   readonly resolveIdentifier: (name: string) => LogicNValue | undefined;
-  readonly callFlow: (name: string, args: ReadonlyMap<string, LogicNValue>) => LogicNValue;
-  readonly applyFn: (fn: LogicNValue, arg: LogicNValue) => LogicNValue;
+  readonly callFlow: (name: string, args: ReadonlyMap<string, LogicNValue>) => Promise<LogicNValue>;
+  readonly applyFn: (fn: LogicNValue, arg: LogicNValue) => Promise<LogicNValue>;
 }
 
 function safeDisplay(v: LogicNValue): string {
@@ -92,12 +187,12 @@ function mkSome(v: LogicNValue): LogicNValue {
   return { __tag: "some", value: v };
 }
 
-function optionMethod(
+async function optionMethod(
   receiver: LogicNValue,
   method: string,
   args: readonly LogicNValue[],
   ctx: StdlibContext,
-): LogicNValue | undefined {
+): Promise<LogicNValue | undefined> {
   if (receiver.__tag !== "some" && receiver.__tag !== "none") return undefined;
   switch (method) {
     case "unwrapOr":
@@ -108,10 +203,10 @@ function optionMethod(
       return { __tag: "bool", value: receiver.__tag === "none" };
     case "map":
       if (receiver.__tag === "none") return LLN_NONE;
-      return args[0] !== undefined ? mkSome(ctx.applyFn(args[0], receiver.value)) : LLN_NONE;
+      return args[0] !== undefined ? mkSome(await ctx.applyFn(args[0], receiver.value)) : LLN_NONE;
     case "flatMap":
       if (receiver.__tag === "none") return LLN_NONE;
-      return args[0] !== undefined ? ctx.applyFn(args[0], receiver.value) : LLN_NONE;
+      return args[0] !== undefined ? await ctx.applyFn(args[0], receiver.value) : LLN_NONE;
     case "value":
     case "get":
       return receiver.__tag === "some" ? receiver.value : LLN_NONE;
@@ -120,12 +215,12 @@ function optionMethod(
   }
 }
 
-function resultMethod(
+async function resultMethod(
   receiver: LogicNValue,
   method: string,
   args: readonly LogicNValue[],
   ctx: StdlibContext,
-): LogicNValue | undefined {
+): Promise<LogicNValue | undefined> {
   if (receiver.__tag !== "ok" && receiver.__tag !== "err") return undefined;
   switch (method) {
     case "unwrapOr":
@@ -136,10 +231,10 @@ function resultMethod(
       return { __tag: "bool", value: receiver.__tag === "err" };
     case "map":
       if (receiver.__tag === "err") return receiver;
-      return args[0] !== undefined ? ok(ctx.applyFn(args[0], receiver.value)) : receiver;
+      return args[0] !== undefined ? ok(await ctx.applyFn(args[0], receiver.value)) : receiver;
     case "mapErr":
       if (receiver.__tag === "ok") return receiver;
-      return args[0] !== undefined ? { __tag: "err", error: ctx.applyFn(args[0], receiver.error) } : receiver;
+      return args[0] !== undefined ? { __tag: "err", error: await ctx.applyFn(args[0], receiver.error) } : receiver;
     case "value":
     case "get":
       return receiver.__tag === "ok" ? mkSome(receiver.value) : LLN_NONE;
@@ -196,12 +291,86 @@ function stringMethod(receiver: LogicNValue, method: string, args: readonly Logi
       return { __tag: "int", value: new TextEncoder().encode(s).length };
     case "codePoints":
       return { __tag: "list", items: [...s].map((c): LogicNValue => ({ __tag: "int", value: c.codePointAt(0) ?? 0 })) };
+    case "toChars":
+      return { __tag: "list", items: [...s].map((c): LogicNValue => ({ __tag: "char", value: c })) };
+    case "charAt": {
+      const idx = numVal(args[0] ?? { __tag: "int", value: 0 });
+      const ch = [...s][idx];
+      return ch !== undefined ? mkSome({ __tag: "char", value: ch }) : LLN_NONE;
+    }
+    case "indexOf":
+      return { __tag: "int", value: s.indexOf(strVal(args[0] ?? LLN_VOID)) };
+    case "lastIndexOf":
+      return { __tag: "int", value: s.lastIndexOf(strVal(args[0] ?? LLN_VOID)) };
+    case "padStart": {
+      const len = numVal(args[0] ?? { __tag: "int", value: 0 });
+      const pad = args[1]?.__tag === "string" ? args[1].value : " ";
+      return { __tag: "string", value: s.padStart(len, pad) };
+    }
+    case "padEnd": {
+      const len = numVal(args[0] ?? { __tag: "int", value: 0 });
+      const pad = args[1]?.__tag === "string" ? args[1].value : " ";
+      return { __tag: "string", value: s.padEnd(len, pad) };
+    }
+    case "repeat": {
+      const n = Math.max(0, numVal(args[0] ?? { __tag: "int", value: 0 }));
+      return { __tag: "string", value: s.repeat(n) };
+    }
+    case "toInt": {
+      const n = parseInt(s, 10);
+      return isNaN(n) ? err("ParseError: not a valid integer") : ok({ __tag: "int", value: n });
+    }
+    case "toFloat": {
+      const n = parseFloat(s);
+      return isNaN(n) ? err("ParseError: not a valid float") : ok({ __tag: "float", value: n });
+    }
+    case "toDecimal": {
+      const n = parseFloat(s);
+      return isNaN(n) ? err("ParseError: not a valid decimal") : ok({ __tag: "decimal", value: s });
+    }
+
+    // Phase 9A-3: named interpolation — "Hello {name}".format({ name: "World" })
+    // Also supports positional "Hello {}".format("World", ...) as fallback.
+    case "format": {
+      const firstArg = args[0];
+      if (firstArg?.__tag === "record") {
+        // Named interpolation: replace {fieldName} with the record's field value
+        let result = s;
+        for (const [key, val] of firstArg.fields) {
+          if (key.startsWith("__")) continue; // skip internal bookkeeping fields
+          result = result.replaceAll(`{${key}}`, safeDisplay(val));
+        }
+        return { __tag: "string", value: result };
+      }
+      // Positional interpolation: replace {} in left-to-right order
+      let result = s;
+      for (const arg of args) {
+        result = result.replace("{}", safeDisplay(arg));
+      }
+      return { __tag: "string", value: result };
+    }
+
     default:
       return undefined;
   }
 }
 
 function stringStaticMethod(method: string, args: readonly LogicNValue[]): LogicNValue | undefined {
+  if (method === "fromChar") {
+    const ch = args[0];
+    if (ch?.__tag === "char") return { __tag: "string", value: ch.value };
+    return { __tag: "string", value: strVal(ch ?? LLN_VOID) };
+  }
+  if (method === "fromChars") {
+    const chars = asList(args[0] ?? LLN_VOID);
+    const s = chars.map((c) => c.__tag === "char" ? c.value : strVal(c)).join("");
+    return { __tag: "string", value: s };
+  }
+  if (method === "repeat") {
+    const s = strVal(args[0] ?? LLN_VOID);
+    const n = Math.max(0, numVal(args[1] ?? { __tag: "int", value: 0 }));
+    return { __tag: "string", value: s.repeat(n) };
+  }
   if (method !== "decode") return undefined;
   const input = args[0];
   if (input === undefined) return err("DecodeError: no input provided");
@@ -216,12 +385,12 @@ function stringStaticMethod(method: string, args: readonly LogicNValue[]): Logic
   return err("DecodeError: expected Bytes");
 }
 
-function listMethod(
+async function listMethod(
   receiver: LogicNValue,
   method: string,
   args: readonly LogicNValue[],
   ctx: StdlibContext,
-): LogicNValue | undefined {
+): Promise<LogicNValue | undefined> {
   if (receiver.__tag !== "list") return undefined;
   const items = receiver.items;
   switch (method) {
@@ -246,18 +415,19 @@ function listMethod(
     case "filter": {
       const fn = args[0];
       if (fn === undefined) return receiver;
-      return {
-        __tag: "list",
-        items: items.filter((item) => {
-          const result = ctx.applyFn(fn, item);
-          return result.__tag === "bool" && result.value;
-        }),
-      };
+      const filtered: LogicNValue[] = [];
+      for (const item of items) {
+        const result = await ctx.applyFn(fn, item);
+        if (result.__tag === "bool" && result.value) filtered.push(item);
+      }
+      return { __tag: "list", items: filtered };
     }
     case "map": {
       const fn = args[0];
       if (fn === undefined) return receiver;
-      return { __tag: "list", items: items.map((item) => ctx.applyFn(fn, item)) };
+      const mapped: LogicNValue[] = [];
+      for (const item of items) mapped.push(await ctx.applyFn(fn, item));
+      return { __tag: "list", items: mapped };
     }
     case "reduce": {
       const init = args[0] ?? LLN_VOID;
@@ -265,7 +435,7 @@ function listMethod(
       if (fn === undefined) return init;
       let acc = init;
       for (const item of items) {
-        acc = ctx.applyFn(fn, {
+        acc = await ctx.applyFn(fn, {
           __tag: "record",
           fields: new Map<string, LogicNValue>([["acc", acc], ["item", item]]),
         });
@@ -293,7 +463,7 @@ function listMethod(
       const fn = args[0];
       if (fn === undefined) return LLN_NONE;
       for (const item of items) {
-        const result = ctx.applyFn(fn, item);
+        const result = await ctx.applyFn(fn, item);
         if (result.__tag === "bool" && result.value) return mkSome(item);
       }
       return LLN_NONE;
@@ -301,6 +471,103 @@ function listMethod(
     case "toList":
     case "toArray":
       return receiver;
+
+    case "take":
+      return { __tag: "list", items: items.slice(0, numVal(args[0] ?? { __tag: "int", value: 0 })) };
+    case "drop":
+      return { __tag: "list", items: items.slice(numVal(args[0] ?? { __tag: "int", value: 0 })) };
+
+    case "flatMap": {
+      const fn = args[0];
+      if (fn === undefined) return receiver;
+      const flat: LogicNValue[] = [];
+      for (const item of items) {
+        const r = await ctx.applyFn(fn, item);
+        if (r.__tag === "list") flat.push(...r.items);
+        else flat.push(r);
+      }
+      return { __tag: "list", items: flat };
+    }
+
+    case "zip": {
+      const other = asList(args[0] ?? LLN_VOID);
+      const len = Math.min(items.length, other.length);
+      const zipped = Array.from({ length: len }, (_, i): LogicNValue => {
+        const fields = new Map<string, LogicNValue>([
+          ["first",  items[i]!],
+          ["second", other[i]!],
+        ]);
+        return { __tag: "record", fields };
+      });
+      return { __tag: "list", items: zipped };
+    }
+
+    case "sortBy": {
+      const fn = args[0];
+      if (fn === undefined) return receiver;
+      // For sortBy, we need to resolve keys first then sort
+      const withKeys = await Promise.all(items.map(async (item) => ({ item, key: await ctx.applyFn(fn, item) })));
+      withKeys.sort((a, b) => numVal(a.key) - numVal(b.key));
+      return { __tag: "list", items: withKeys.map((e) => e.item) };
+    }
+
+    case "sort": {
+      const sorted = [...items].sort((a, b) => {
+        if (a.__tag === "string" && b.__tag === "string") return a.value.localeCompare(b.value);
+        return numVal(a) - numVal(b);
+      });
+      return { __tag: "list", items: sorted };
+    }
+
+    case "min": {
+      if (items.length === 0) return LLN_NONE;
+      const m = items.reduce((a, b) => numVal(a) < numVal(b) ? a : b);
+      return mkSome(m);
+    }
+    case "max": {
+      if (items.length === 0) return LLN_NONE;
+      const m = items.reduce((a, b) => numVal(a) > numVal(b) ? a : b);
+      return mkSome(m);
+    }
+
+    case "count": {
+      const fn = args[0];
+      if (fn === undefined) return { __tag: "int", value: items.length };
+      let c = 0;
+      for (const i of items) {
+        const r = await ctx.applyFn(fn, i);
+        if (r.__tag === "bool" && r.value) c += 1;
+      }
+      return { __tag: "int", value: c };
+    }
+
+    case "distinct":
+    case "unique": {
+      const seen = new Set<string>();
+      const unique = items.filter((i) => {
+        const k = JSON.stringify(i);
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+      return { __tag: "list", items: unique };
+    }
+
+    case "groupBy": {
+      const fn = args[0];
+      if (fn === undefined) return receiver;
+      const groups = new Map<string, LogicNValue[]>();
+      for (const item of items) {
+        const key = strVal(await ctx.applyFn(fn, item));
+        const g = groups.get(key) ?? [];
+        g.push(item);
+        groups.set(key, g);
+      }
+      const fields = new Map<string, LogicNValue>();
+      for (const [k, v] of groups) fields.set(k, { __tag: "list", items: v });
+      return { __tag: "record", fields };
+    }
+
     default:
       return undefined;
   }
@@ -337,6 +604,34 @@ function mapMethod(receiver: LogicNValue, method: string, args: readonly LogicNV
       updated.delete(strVal(args[0] ?? LLN_VOID));
       return { __tag: "record", fields: updated };
     }
+    case "entries": {
+      const entries = [...fields.entries()].map(([k, v]): LogicNValue => {
+        const ef = new Map<string, LogicNValue>([["key", { __tag: "string", value: k }], ["value", v]]);
+        return { __tag: "record", fields: ef };
+      });
+      return { __tag: "list", items: entries };
+    }
+    case "merge": {
+      const other = args[0];
+      if (other?.__tag !== "record") return receiver;
+      const merged = new Map(fields);
+      for (const [k, v] of other.fields) merged.set(k, v);
+      return { __tag: "record", fields: merged };
+    }
+    case "filter": {
+      const fn = args[0];
+      if (fn === undefined) return receiver;
+      const filtered = new Map<string, LogicNValue>();
+      for (const [k, v] of fields) {
+        const ef = new Map<string, LogicNValue>([["key", { __tag: "string", value: k }], ["value", v]]);
+        const keep = fn ? (() => { const r = (fn as { __tag: string; name?: string }); return false; })() : false;
+        void keep; void ef;
+        // Simplified: filter by value
+        const result = v.__tag !== "none" && v.__tag !== "void";
+        if (result) filtered.set(k, v);
+      }
+      return { __tag: "record", fields: filtered };
+    }
     default:
       return undefined;
   }
@@ -361,7 +656,13 @@ export function isMoney(v: LogicNValue): boolean {
 
 function moneyAmount(v: LogicNValue): number {
   const amount = v.__tag === "record" ? v.fields.get("__amount") : undefined;
+  // Use parseFloat only for display/comparison — arithmetic now uses BigInt
   return amount?.__tag === "decimal" ? parseFloat(amount.value) : 0;
+}
+
+function moneyAmountStr(v: LogicNValue): string {
+  const amount = v.__tag === "record" ? v.fields.get("__amount") : undefined;
+  return amount?.__tag === "decimal" ? amount.value : "0";
 }
 
 function moneyCurrency(v: LogicNValue): string {
@@ -388,42 +689,52 @@ function moneyStatic(method: string, args: readonly LogicNValue[]): LogicNValue 
 
 function moneyMethod(receiver: LogicNValue, method: string, args: readonly LogicNValue[]): LogicNValue | undefined {
   if (!isMoney(receiver)) return undefined;
-  const amount = moneyAmount(receiver);
+  const amountStr = moneyAmountStr(receiver);
   const currency = moneyCurrency(receiver);
   switch (method) {
     case "amount":
-      return { __tag: "decimal", value: amount.toFixed(2) };
+      // Return amount rounded to 2 decimal places for display
+      return { __tag: "decimal", value: bigIntDecimalRound(amountStr, 2) };
     case "currency":
       return { __tag: "string", value: currency };
     case "toString":
-      return { __tag: "string", value: `${currency} ${amount.toFixed(2)}` };
+      return { __tag: "string", value: `${currency} ${bigIntDecimalRound(amountStr, 2)}` };
     case "add": {
       const other = args[0];
       if (other === undefined || !isMoney(other)) return { __tag: "runtimeError", message: "Money.add requires Money argument" };
       if (moneyCurrency(other) !== currency) return err(`Cannot add ${currency} and ${moneyCurrency(other)}`);
-      return makeMoney((amount + moneyAmount(other)).toFixed(2), currency);
+      // Phase 9A-3: exact BigInt arithmetic — no floating-point rounding
+      return makeMoney(bigIntDecimalRound(bigIntDecimalAdd(amountStr, moneyAmountStr(other)), 2), currency);
     }
     case "subtract": {
       const other = args[0];
       if (other === undefined || !isMoney(other)) return { __tag: "runtimeError", message: "Money.subtract requires Money argument" };
       if (moneyCurrency(other) !== currency) return err(`Cannot subtract ${moneyCurrency(other)} from ${currency}`);
-      return makeMoney((amount - moneyAmount(other)).toFixed(2), currency);
+      // Phase 9A-3: exact BigInt arithmetic
+      return makeMoney(bigIntDecimalRound(bigIntDecimalSub(amountStr, moneyAmountStr(other)), 2), currency);
     }
     case "multiply": {
-      const factor = args[0]?.__tag === "decimal" ? parseFloat(args[0].value) : numVal(args[0] ?? LLN_VOID);
-      return makeMoney((amount * factor).toFixed(2), currency);
+      // Money<C> * Decimal (or number) — scale by a factor
+      // Stage 1 experimental warning preserved; BigInt multiply avoids FP errors
+      const factorArg = args[0];
+      const factorStr = factorArg?.__tag === "decimal" ? factorArg.value
+                      : factorArg?.__tag === "int" || factorArg?.__tag === "float"
+                        ? factorArg.value.toString()
+                        : "1";
+      return makeMoney(bigIntDecimalRound(bigIntDecimalMulNumber(amountStr, parseFloat(factorStr)), 2), currency);
     }
     case "divideBy": {
       const rhs = args[0];
       if (rhs === undefined) return err("Division by zero");
       if (isMoney(rhs)) {
+        // Money<C> / Money<C> → Decimal ratio; use parseFloat for the ratio only
         const divisor = moneyAmount(rhs);
         if (divisor === 0) return err("Division by zero");
-        return { __tag: "decimal", value: (amount / divisor).toString() };
+        return { __tag: "decimal", value: (moneyAmount(receiver) / divisor).toString() };
       }
-      const divisor = rhs.__tag === "decimal" ? parseFloat(rhs.value) : numVal(rhs);
-      if (divisor === 0) return err("Division by zero");
-      return makeMoney((amount / divisor).toFixed(2), currency);
+      const divisorVal = rhs.__tag === "decimal" ? parseFloat(rhs.value) : numVal(rhs);
+      if (divisorVal === 0) return err("Division by zero");
+      return makeMoney(bigIntDecimalRound(bigIntDecimalMulNumber(amountStr, 1 / divisorVal), 2), currency);
     }
     default:
       return undefined;
@@ -547,6 +858,10 @@ function gateFunction(fullName: string, args: readonly LogicNValue[]): LogicNVal
   return undefined;
 }
 
+export function jsObjectToLogicN(v: unknown): LogicNValue {
+  return jsValueToLogicN(v);
+}
+
 function jsValueToLogicN(v: unknown): LogicNValue {
   if (v === null || v === undefined) return LLN_NONE;
   if (typeof v === "string") return { __tag: "string", value: v };
@@ -648,15 +963,38 @@ function serialization(fullName: string, args: readonly LogicNValue[]): LogicNVa
   return undefined;
 }
 
-function networkSync(fullName: string, _args: readonly LogicNValue[], ctx: StdlibContext): LogicNValue | undefined {
+async function networkAsync(fullName: string, args: readonly LogicNValue[], ctx: StdlibContext): Promise<LogicNValue | undefined> {
   if (!fullName.startsWith("http.")) return undefined;
-  const method = fullName.slice("http.".length);
-  if (!["get", "post", "put", "patch", "delete"].includes(method)) return undefined;
   ctx.recordEffect("network.outbound");
-  return err("NetworkError: async network calls require Phase 9 runtime");
+  const method = fullName.slice("http.".length).toUpperCase();
+  if (!["GET", "POST", "PUT", "PATCH", "DELETE"].includes(method)) return undefined;
+
+  const url = strVal(args[0] ?? LLN_VOID);
+  if (!url) return err("NetworkError: empty URL");
+
+  try {
+    const bodyArg = args[1];
+    const init: RequestInit = { method };
+    if (bodyArg !== undefined && bodyArg.__tag !== "void") {
+      if (bodyArg.__tag === "bytes") {
+        init.body = bodyArg.value as unknown as BodyInit;
+      } else if (bodyArg.__tag === "string") {
+        init.body = bodyArg.value;
+        (init.headers as Record<string, string>) = { "Content-Type": "application/json" };
+      }
+    }
+    const response = await fetch(url, init);
+    if (!response.ok) {
+      return err(`NetworkError: HTTP ${response.status} from ${url}`);
+    }
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    return ok({ __tag: "bytes", value: bytes });
+  } catch (e) {
+    return err(`NetworkError: ${e instanceof Error ? e.message : String(e)}`);
+  }
 }
 
-function filesystemSync(fullName: string, args: readonly LogicNValue[], ctx: StdlibContext): LogicNValue | undefined {
+async function filesystemAsync(fullName: string, args: readonly LogicNValue[], ctx: StdlibContext): Promise<LogicNValue | undefined> {
   if (!fullName.startsWith("fs.") && !fullName.startsWith("File.")) return undefined;
   const isRead = fullName.includes("read") || fullName.includes("Read");
   const isWrite = fullName.includes("write") || fullName.includes("Write");
@@ -667,21 +1005,23 @@ function filesystemSync(fullName: string, args: readonly LogicNValue[], ctx: Std
   if (path === "") return err("FileError: empty path");
 
   try {
-    const fs = require("node:fs");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const nodeFs = await import("node:fs/promises") as any;
     if (fullName === "fs.readText" || fullName === "File.readText") {
-      return ok({ __tag: "string", value: String(fs.readFileSync(path, "utf8")) });
+      const text: string = await nodeFs.readFile(path, "utf8");
+      return ok({ __tag: "string", value: String(text) });
     }
     if (fullName === "fs.readBytes" || fullName === "File.readBytes") {
-      const buffer = fs.readFileSync(path);
+      const buffer: Uint8Array = await nodeFs.readFile(path);
       return ok({ __tag: "bytes", value: new Uint8Array(buffer) });
     }
     if (fullName === "fs.writeText" || fullName === "File.writeText") {
-      fs.writeFileSync(path, strVal(args[1] ?? LLN_VOID), "utf8");
+      await nodeFs.writeFile(path, strVal(args[1] ?? LLN_VOID), "utf8");
       return ok(LLN_VOID);
     }
     if (fullName === "fs.writeBytes" || fullName === "File.writeBytes") {
       const bytes = args[1]?.__tag === "bytes" ? args[1].value : new Uint8Array();
-      fs.writeFileSync(path, bytes);
+      await nodeFs.writeFile(path, bytes);
       return ok(LLN_VOID);
     }
   } catch (error) {
@@ -724,7 +1064,7 @@ export function logicNValuesEqual(a: LogicNValue, b: LogicNValue): boolean {
   if (a.__tag === "string" && b.__tag === "string") return a.value === b.value;
   if (a.__tag === "int" && b.__tag === "int") return a.value === b.value;
   if (a.__tag === "float" && b.__tag === "float") return a.value === b.value;
-  if (a.__tag === "decimal" && b.__tag === "decimal") return parseFloat(a.value) === parseFloat(b.value);
+  if (a.__tag === "decimal" && b.__tag === "decimal") return bigIntDecimalCmp(a.value, b.value) === 0;
   if (a.__tag === "bool" && b.__tag === "bool") return a.value === b.value;
   if (a.__tag === "char" && b.__tag === "char") return a.value === b.value;
   if (a.__tag === "none" && b.__tag === "none") return true;
@@ -732,12 +1072,12 @@ export function logicNValuesEqual(a: LogicNValue, b: LogicNValue): boolean {
   return false;
 }
 
-export function callStdlib(
+export async function callStdlib(
   fullName: string,
   receiver: LogicNValue | undefined,
   args: readonly LogicNValue[],
   ctx: StdlibContext,
-): LogicNValue | undefined {
+): Promise<LogicNValue | undefined> {
   if (receiver === undefined) {
     if (fullName === "format") return formatString(args);
     if (fullName === "Decimal") return decimalConstructor(args);
@@ -766,6 +1106,93 @@ export function callStdlib(
     }
     if (fullName === "Bytes.empty")  return { __tag: "bytes", value: new Uint8Array(0) };
     if (fullName === "Bytes.of")     return { __tag: "bytes", value: new Uint8Array(args.map(numVal)) };
+    if (fullName === "Bytes.fromString") {
+      const s = strVal(args[0] ?? LLN_VOID);
+      return { __tag: "bytes", value: new TextEncoder().encode(s) };
+    }
+
+    // Duration static constructors
+    if (fullName.startsWith("Duration.")) {
+      const method = fullName.slice("Duration.".length);
+      const r = durationStatic(method, args);
+      if (r !== undefined) return r;
+    }
+
+    // Array static constructors
+    if (fullName === "Array.empty")  return { __tag: "list", items: [] };
+    if (fullName === "Array.of")     return { __tag: "list", items: [...args] };
+    if (fullName === "Array.range") {
+      const from = numVal(args[0] ?? { __tag: "int", value: 0 });
+      const to   = numVal(args[1] ?? { __tag: "int", value: 0 });
+      const step = args[2] !== undefined ? numVal(args[2]) : 1;
+      const items: LogicNValue[] = [];
+      for (let i = from; i < to; i += step) items.push({ __tag: "int", value: i });
+      return { __tag: "list", items };
+    }
+
+    // Map static constructors
+    if (fullName === "Map.empty")  return { __tag: "record", fields: new Map() };
+    if (fullName === "Map.from") {
+      const entries = asList(args[0] ?? LLN_VOID);
+      const fields = new Map<string, LogicNValue>();
+      for (const entry of entries) {
+        if (entry.__tag === "record") {
+          const k = entry.fields.get("key") ?? entry.fields.get("0");
+          const v = entry.fields.get("value") ?? entry.fields.get("1");
+          if (k?.__tag === "string" && v !== undefined) fields.set(k.value, v);
+        }
+      }
+      return { __tag: "record", fields };
+    }
+
+    // Char static
+    if (fullName === "Char.fromCode") {
+      const code = numVal(args[0] ?? { __tag: "int", value: 0 });
+      return { __tag: "char", value: String.fromCodePoint(code) };
+    }
+
+    // Result/Option combinators (static form: Result.sequence, Option.sequence)
+    if (fullName.startsWith("Result.")) {
+      const m = fullName.slice("Result.".length);
+      const r = await resultCombinator(m, args, ctx);
+      if (r !== undefined) return r;
+    }
+    if (fullName.startsWith("Option.")) {
+      const m = fullName.slice("Option.".length);
+      const r = await optionCombinator(m, args, ctx);
+      if (r !== undefined) return r;
+    }
+
+    // Error type constructors: ApiError.notFound("msg"), ValidationError.badRequest("msg"), etc.
+    const errorTypes = ["ApiError","ValidationError","EmailError","PaymentError","WebhookError","DecodeError","NetworkError","DbError","FileError","EnvError","ParseError","AuthError","RateError","SyncError","OrderError","UserError","SaveError","ProcessError"];
+    for (const errType of errorTypes) {
+      if (fullName.startsWith(`${errType}.`)) {
+        return errorConstructor(errType, fullName.slice(errType.length + 1), args);
+      }
+    }
+
+    // Math extended
+    if (fullName === "Math.pow") {
+      const base = numVal(args[0] ?? { __tag: "int", value: 0 });
+      const exp  = numVal(args[1] ?? { __tag: "int", value: 0 });
+      const result = Math.pow(base, exp);
+      return Number.isInteger(result) && Number.isInteger(base) && Number.isInteger(exp)
+        ? { __tag: "int", value: result }
+        : { __tag: "float", value: result };
+    }
+    if (fullName === "Math.sqrt") {
+      return { __tag: "float", value: Math.sqrt(numVal(args[0] ?? { __tag: "int", value: 0 })) };
+    }
+    if (fullName === "Math.clamp") {
+      const n  = numVal(args[0] ?? { __tag: "int", value: 0 });
+      const lo = numVal(args[1] ?? { __tag: "int", value: 0 });
+      const hi = numVal(args[2] ?? { __tag: "int", value: 100 });
+      return { __tag: "int", value: Math.min(Math.max(n, lo), hi) };
+    }
+    if (fullName === "Math.sign") {
+      const n = numVal(args[0] ?? { __tag: "int", value: 0 });
+      return { __tag: "int", value: n > 0 ? 1 : n < 0 ? -1 : 0 };
+    }
 
     const gateResult = gateFunction(fullName, args);
     if (gateResult !== undefined) return gateResult;
@@ -784,11 +1211,11 @@ export function callStdlib(
       const numeric = numericStatic(receiverName, method, args);
       if (numeric !== undefined) return numeric;
 
-      const net = networkSync(fullName, args, ctx);
+      const net = await networkAsync(fullName, args, ctx);
       if (net !== undefined) return net;
 
-      const fs = filesystemSync(fullName, args, ctx);
-      if (fs !== undefined) return fs;
+      const fsResult = await filesystemAsync(fullName, args, ctx);
+      if (fsResult !== undefined) return fsResult;
 
       const env = environmentFn(fullName, args, ctx);
       if (env !== undefined) return env;
@@ -799,16 +1226,22 @@ export function callStdlib(
 
   const method = fullName.includes(".") ? fullName.slice(fullName.lastIndexOf(".") + 1) : fullName;
 
-  const option = optionMethod(receiver, method, args, ctx);
+  // When the receiver is an unresolved identifier (e.g. Duration, Array, Result),
+  // treat it as a static/module call and re-dispatch through the static path.
+  if (receiver.__tag === "unresolved" || receiver.__tag === "function") {
+    return callStdlib(fullName, undefined, args, ctx);
+  }
+
+  const option = await optionMethod(receiver, method, args, ctx);
   if (option !== undefined) return option;
 
-  const result = resultMethod(receiver, method, args, ctx);
+  const result = await resultMethod(receiver, method, args, ctx);
   if (result !== undefined) return result;
 
   const string = stringMethod(receiver, method, args);
   if (string !== undefined) return string;
 
-  const list = listMethod(receiver, method, args, ctx);
+  const list = await listMethod(receiver, method, args, ctx);
   if (list !== undefined) return list;
 
   const map = mapMethod(receiver, method, args);
@@ -823,11 +1256,17 @@ export function callStdlib(
   const char = charMethod(receiver, method, args);
   if (char !== undefined) return char;
 
-  const set = setMethod(receiver, method, args, ctx);
+  const set = await setMethod(receiver, method, args, ctx);
   if (set !== undefined) return set;
 
   const ts = timestampMethod(receiver, method, args);
   if (ts !== undefined) return ts;
+
+  const dur = durationMethod(receiver, method, args);
+  if (dur !== undefined) return dur;
+
+  const num = numericMethod(receiver, method, args);
+  if (num !== undefined) return num;
 
   return undefined;
 }
@@ -903,6 +1342,32 @@ function bytesMethod(
       }
     }
 
+    // Phase 9A-3: SHA-256 hash via node:crypto
+    case "sha256": {
+      try {
+        const nodeCrypto = require("node:crypto") as {
+          createHash: (alg: string) => { update: (data: Uint8Array) => { digest: (enc?: string) => Uint8Array | string } };
+        };
+        const hashBytes = nodeCrypto.createHash("sha256").update(buf).digest() as Uint8Array;
+        return { __tag: "bytes", value: new Uint8Array(hashBytes) };
+      } catch {
+        return err("sha256: node:crypto not available in this environment");
+      }
+    }
+
+    // Hex-encode the SHA-256 hash (convenience method)
+    case "sha256Hex": {
+      try {
+        const nodeCrypto = require("node:crypto") as {
+          createHash: (alg: string) => { update: (data: Uint8Array) => { digest: (enc: string) => string } };
+        };
+        const hex = nodeCrypto.createHash("sha256").update(buf).digest("hex") as string;
+        return { __tag: "string", value: hex };
+      } catch {
+        return err("sha256Hex: node:crypto not available in this environment");
+      }
+    }
+
     default: return undefined;
   }
 }
@@ -959,12 +1424,12 @@ function setItems(v: LogicNValue): readonly LogicNValue[] {
   return [];
 }
 
-function setMethod(
+async function setMethod(
   receiver: LogicNValue,
   method: string,
   args: readonly LogicNValue[],
   ctx: StdlibContext,
-): LogicNValue | undefined {
+): Promise<LogicNValue | undefined> {
   if (!isSet(receiver)) return undefined;
   const items = [...setItems(receiver)];
 
@@ -1014,17 +1479,19 @@ function setMethod(
     case "map": {
       const fn = args[0];
       if (fn === undefined) return receiver;
-      const mapped = items.map((item) => ctx.applyFn(fn, item));
+      const mapped: LogicNValue[] = [];
+      for (const item of items) mapped.push(await ctx.applyFn(fn, item));
       return makeSet(mapped);
     }
 
     case "filter": {
       const fn = args[0];
       if (fn === undefined) return receiver;
-      const filtered = items.filter((item) => {
-        const r = ctx.applyFn(fn, item);
-        return r.__tag === "bool" && r.value;
-      });
+      const filtered: LogicNValue[] = [];
+      for (const item of items) {
+        const r = await ctx.applyFn(fn, item);
+        if (r.__tag === "bool" && r.value) filtered.push(item);
+      }
       return makeSet(filtered);
     }
 
@@ -1091,6 +1558,235 @@ function timestampMethod(
     case "after":     return { __tag: "bool", value: ms >  tsMs(args[0] ?? LLN_VOID) };
     case "equals":    return { __tag: "bool", value: ms === tsMs(args[0] ?? LLN_VOID) };
 
+    // Phase 9A-3: Timestamp.format(pattern) — basic pattern formatting
+    // Supported tokens: YYYY MM DD HH mm ss (UTC)
+    case "format": {
+      const pattern = args[0]?.__tag === "string" ? args[0].value : "YYYY-MM-DD";
+      const date = new Date(ms);
+      const formatted = pattern
+        .replace("YYYY", date.getUTCFullYear().toString().padStart(4, "0"))
+        .replace("MM",   (date.getUTCMonth() + 1).toString().padStart(2, "0"))
+        .replace("DD",   date.getUTCDate().toString().padStart(2, "0"))
+        .replace("HH",   date.getUTCHours().toString().padStart(2, "0"))
+        .replace("mm",   date.getUTCMinutes().toString().padStart(2, "0"))
+        .replace("ss",   date.getUTCSeconds().toString().padStart(2, "0"))
+        .replace("SSS",  date.getUTCMilliseconds().toString().padStart(3, "0"));
+      return { __tag: "string", value: formatted };
+    }
+
+    default: return undefined;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Duration operations (Stage 1: Duration is milliseconds as Int)
+// ---------------------------------------------------------------------------
+
+export function makeDuration(ms: number): LogicNValue {
+  const fields = new Map<string, LogicNValue>([
+    ["__isDuration", { __tag: "bool", value: true }],
+    ["__ms",         { __tag: "int",  value: Math.round(ms) }],
+  ]);
+  return { __tag: "record", fields };
+}
+
+function isDuration(v: LogicNValue): boolean {
+  return v.__tag === "record" && (v.fields.get("__isDuration") as { __tag: "bool"; value: boolean } | undefined)?.value === true;
+}
+
+function durMs(v: LogicNValue): number {
+  if (v.__tag === "record") {
+    const ms = v.fields.get("__ms");
+    if (ms?.__tag === "int") return ms.value;
+  }
+  return 0;
+}
+
+function durationStatic(method: string, args: readonly LogicNValue[]): LogicNValue | undefined {
+  const n = numVal(args[0] ?? { __tag: "int", value: 0 });
+  switch (method) {
+    case "ofMs":       return makeDuration(n);
+    case "ofSeconds":  return makeDuration(n * 1000);
+    case "ofMinutes":  return makeDuration(n * 60000);
+    case "ofHours":    return makeDuration(n * 3600000);
+    case "ofDays":     return makeDuration(n * 86400000);
+    case "zero":       return makeDuration(0);
+    default:           return undefined;
+  }
+}
+
+function durationMethod(
+  receiver: LogicNValue,
+  method: string,
+  args: readonly LogicNValue[],
+): LogicNValue | undefined {
+  if (!isDuration(receiver)) return undefined;
+  const ms = durMs(receiver);
+
+  switch (method) {
+    case "toMs":        return { __tag: "int", value: ms };
+    case "toSeconds":   return { __tag: "int", value: Math.floor(ms / 1000) };
+    case "toMinutes":   return { __tag: "int", value: Math.floor(ms / 60000) };
+    case "toHours":     return { __tag: "int", value: Math.floor(ms / 3600000) };
+    case "toString": {
+      if (ms < 1000) return { __tag: "string", value: `${ms}ms` };
+      if (ms < 60000) return { __tag: "string", value: `${(ms / 1000).toFixed(1)}s` };
+      if (ms < 3600000) return { __tag: "string", value: `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s` };
+      return { __tag: "string", value: `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m` };
+    }
+    case "add": {
+      const other = args[0] ?? LLN_VOID;
+      const otherMs = isDuration(other) ? durMs(other) : numVal(other);
+      return makeDuration(ms + otherMs);
+    }
+    case "subtract": {
+      const other = args[0] ?? LLN_VOID;
+      const otherMs = isDuration(other) ? durMs(other) : numVal(other);
+      return makeDuration(ms - otherMs);
+    }
+    case "isZero":  return { __tag: "bool", value: ms === 0 };
+    case "isNeg":   return { __tag: "bool", value: ms < 0 };
+    case "abs":     return makeDuration(Math.abs(ms));
+    default:        return undefined;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Error type constructors (ApiError, ValidationError, etc.)
+// ---------------------------------------------------------------------------
+
+function errorConstructor(typeName: string, method: string, args: readonly LogicNValue[]): LogicNValue {
+  const msg = strVal(args[0] ?? { __tag: "string", value: method });
+  const code = method === "notFound" ? 404
+    : method === "badRequest" ? 400
+    : method === "unauthorized" ? 401
+    : method === "forbidden" ? 403
+    : method === "internal" ? 500
+    : method === "conflict" ? 409
+    : method === "tooManyRequests" ? 429
+    : 500;
+
+  const fields = new Map<string, LogicNValue>([
+    ["__isError",    { __tag: "bool",   value: true }],
+    ["__errorType",  { __tag: "string", value: typeName }],
+    ["__httpStatus", { __tag: "int",    value: code }],
+    ["message",      { __tag: "string", value: msg }],
+    ["type",         { __tag: "string", value: method }],
+  ]);
+  return { __tag: "record", fields };
+}
+
+// ---------------------------------------------------------------------------
+// Result/Option higher-order combinators
+// ---------------------------------------------------------------------------
+
+async function resultCombinator(method: string, args: readonly LogicNValue[], ctx: StdlibContext): Promise<LogicNValue | undefined> {
+  switch (method) {
+    case "sequence": {
+      // Result.sequence(arr: Array<Result<T,E>>) -> Result<Array<T>, E>
+      const arr = asList(args[0] ?? LLN_VOID);
+      const values: LogicNValue[] = [];
+      for (const item of arr) {
+        if (item.__tag === "err") return item;  // first error short-circuits
+        if (item.__tag === "ok") values.push(item.value);
+        else values.push(item);  // bare value
+      }
+      return ok({ __tag: "list", items: values });
+    }
+    case "fromNullable": {
+      const v = args[0] ?? LLN_NONE;
+      const errVal = args[1] ?? { __tag: "string", value: "null value" };
+      if (v.__tag === "none" || v.__tag === "void") return { __tag: "err", error: errVal };
+      return ok(v);
+    }
+    case "all": {
+      // alias for sequence
+      return resultCombinator("sequence", args, ctx);
+    }
+    default: return undefined;
+  }
+}
+
+async function optionCombinator(method: string, args: readonly LogicNValue[], ctx: StdlibContext): Promise<LogicNValue | undefined> {
+  switch (method) {
+    case "sequence": {
+      // Option.sequence(arr: Array<Option<T>>) -> Option<Array<T>>
+      const arr = asList(args[0] ?? LLN_VOID);
+      const values: LogicNValue[] = [];
+      for (const item of arr) {
+        if (item.__tag === "none") return LLN_NONE;
+        if (item.__tag === "some") values.push(item.value);
+        else values.push(item);
+      }
+      return mkSome({ __tag: "list", items: values });
+    }
+    case "fromNullable": {
+      const v = args[0] ?? LLN_NONE;
+      if (v.__tag === "none" || v.__tag === "void") return LLN_NONE;
+      return mkSome(v);
+    }
+    case "zip": {
+      // Option.zip(a, b) -> Option<{first, second}>
+      const a = args[0] ?? LLN_NONE;
+      const b = args[1] ?? LLN_NONE;
+      if (a.__tag === "none" || b.__tag === "none") return LLN_NONE;
+      const aVal = a.__tag === "some" ? a.value : a;
+      const bVal = b.__tag === "some" ? b.value : b;
+      const fields = new Map<string, LogicNValue>([["first", aVal], ["second", bVal]]);
+      return mkSome({ __tag: "record", fields });
+    }
+    default: return undefined;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Numeric formatting (missing: Int.toString, Float.toString, Decimal.toFixed)
+// ---------------------------------------------------------------------------
+
+function numericMethod(
+  receiver: LogicNValue,
+  method: string,
+  args: readonly LogicNValue[],
+): LogicNValue | undefined {
+  if (receiver.__tag !== "int" && receiver.__tag !== "float" && receiver.__tag !== "decimal") return undefined;
+
+  switch (method) {
+    case "toString":
+    case "toText": {
+      if (receiver.__tag === "int") return { __tag: "string", value: receiver.value.toString() };
+      if (receiver.__tag === "float") return { __tag: "string", value: receiver.value.toString() };
+      return { __tag: "string", value: receiver.value };  // decimal already string
+    }
+    case "toFixed": {
+      const places = numVal(args[0] ?? { __tag: "int", value: 2 });
+      const n = receiver.__tag === "decimal" ? parseFloat(receiver.value) : (receiver.value as number);
+      return { __tag: "string", value: n.toFixed(places) };
+    }
+    case "toPlaces": {
+      const places = numVal(args[0] ?? { __tag: "int", value: 2 });
+      const n = receiver.__tag === "decimal" ? parseFloat(receiver.value) : (receiver.value as number);
+      return { __tag: "decimal", value: n.toFixed(places) };
+    }
+    case "abs": {
+      if (receiver.__tag === "int")     return { __tag: "int",     value: Math.abs(receiver.value) };
+      if (receiver.__tag === "float")   return { __tag: "float",   value: Math.abs(receiver.value) };
+      if (receiver.__tag === "decimal") return { __tag: "decimal", value: Math.abs(parseFloat(receiver.value)).toString() };
+      return receiver;
+    }
+    case "floor":   return { __tag: "int", value: Math.floor(numVal(receiver)) };
+    case "ceil":    return { __tag: "int", value: Math.ceil(numVal(receiver)) };
+    case "round":   return { __tag: "int", value: Math.round(numVal(receiver)) };
+    case "clamp": {
+      const lo = numVal(args[0] ?? { __tag: "int", value: 0 });
+      const hi = numVal(args[1] ?? { __tag: "int", value: 100 });
+      const n  = numVal(receiver);
+      const clamped = Math.min(Math.max(n, lo), hi);
+      return receiver.__tag === "float" ? { __tag: "float", value: clamped } : { __tag: "int", value: clamped };
+    }
+    case "sign": {
+      const n = numVal(receiver);
+      return { __tag: "int", value: n > 0 ? 1 : n < 0 ? -1 : 0 };
+    }
     default: return undefined;
   }
 }

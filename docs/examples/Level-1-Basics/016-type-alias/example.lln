@@ -1,6 +1,7 @@
-﻿/// example: 016-type-alias
+/// example: 016-type-alias
 /// level: 1
 /// concept: type alias
 /// expected_diagnostics: none
+/// test_status: stable
 
 type UserId = String

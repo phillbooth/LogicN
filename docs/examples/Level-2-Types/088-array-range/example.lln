@@ -1,0 +1,11 @@
+/// example: 088-array-range
+/// level: 2
+/// concept: Array.range static constructor
+/// expected_diagnostics: none
+/// test_status: stable
+/// ai_rule: Use Array.range(from, to) to generate a sequence of integers.
+
+pure flow generateRange() -> Int {
+  let nums = Array.range(0, 10)
+  return nums.length()
+}

@@ -4,6 +4,7 @@
 /// readable_form: status is Active
 /// canonical_form: status == Active
 /// expected_diagnostics: none (when adopted)
+/// test_status: stable
 
 // Traditional (current, valid)
 if status == Active {

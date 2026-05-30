@@ -1,7 +1,8 @@
-﻿/// example: 109-local-fn-pure-helper
+/// example: 109-local-fn-pure-helper
 /// level: 3
 /// concept: local fn as a pure helper inside a flow
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: fn is a local helper inside a flow. It cannot be declared at the top level.
 
 pure flow calculateTotal(prices: List<Money<GBP>>) -> Money<GBP> {

@@ -9,7 +9,7 @@ base type is written first, the state qualifier second.
 let input:  String unsafe             = request.body("name")
 let secret: String secure             = env.secret("APP_SECRET")
 let email:  Email  safe validated     = validate.email(rawEmail)
-let raw:    Json   unsafe unvalidated = boundary.api.body(req)
+let raw:    Json   unsafe unvalidated = boundary.api.body(request)
 ```
 
 ## Core Rule
@@ -253,10 +253,10 @@ secure, or untrusted source.
 ## Example: Full Boundary Pipeline
 
 ```logicn
-secure flow submitForm(req: Request) -> Result<Response, ApiError>
+secure flow submitForm(request: Request) -> Result<Response, ApiError>
 effects [network.inbound]
 {
-  let myFormData: Json   unsafe unvalidated = boundary.api.body(req)
+  let myFormData: Json   unsafe unvalidated = boundary.api.body(request)
   let rawEmail:   String unsafe unvalidated = myFormData.email
   let email:      Email  safe   validated   = validate.email(rawEmail)
 

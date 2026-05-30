@@ -134,7 +134,99 @@ param               = [ "readonly" ] , identifier , ":" , type_ref ;
 
 flow_clause         = effects_clause
                     | intent_clause
-                    | compute_target_block ;
+                    | compute_target_block
+                    | contract_block ;
+
+contract_block      = "contract" , "{" ,
+                      { contract_clause } ,
+                      "}" ;
+
+contract_clause     = contract_types
+                    | contract_intent
+                    | contract_request
+                    | contract_response
+                    | contract_context
+                    | contract_model
+                    | contract_effects
+                    | contract_rules
+                    | contract_events
+                    | contract_governance
+                    | contract_targets
+                    | contract_examples
+                    | contract_errors
+                    | contract_timeouts
+                    | contract_retries
+                    | contract_limits
+                    | contract_privacy
+                    | contract_observability ;
+
+(* Canonical 16-section contract order:
+   types, intent, request, response, context, model, effects,
+   rules, events, audit, errors, timeouts, retries, limits,
+   privacy, observability *)
+
+contract_types      = "types" , "{" ,
+                      { type_decl } ,
+                      "}" ;
+
+contract_intent     = "intent" , "{" , string_literal , "}" ;
+
+contract_events     = "events" , "{" ,
+                      { "emits" , identifier } ,
+                      "}" ;
+
+contract_request    = "request" , "{" ,
+                      [ "accepts" , type_ref ] ,
+                      [ "params" , "{" , { field_decl } , "}" ] ,
+                      [ "requires" , "{" , { identifier } , "}" ] ,
+                      "}" ;
+
+contract_response   = "response" , "{" ,
+                      [ "returns" , type_ref ] ,
+                      [ "exposes" , "{" , { identifier } , "}" ] ,
+                      [ "denies" , "{" , { identifier } , "}" ] ,
+                      "}" ;
+
+contract_context    = "context" , "{" , { any_token } , "}" ;
+
+contract_model      = "model" , "{" ,
+                      [ "uses" , type_ref ] ,
+                      [ "reads" , type_ref ] ,
+                      "}" ;
+
+contract_effects    = "effects" , "{" , { effect_name } , "}" ;
+
+contract_rules      = "rules" , "{" , { any_token } , "}" ;
+
+contract_audit      = "audit" , "{" , { any_token } , "}" ;
+
+contract_governance = "governance" , "{" , { any_token } , "}" ;
+
+contract_targets    = "targets" , "{" , { any_token } , "}" ;
+
+contract_examples   = "examples" , "{" , { any_token } , "}" ;
+
+contract_errors     = "errors" , "{" ,
+                      [ "returns" , "{" , { qualified_name } , "}" ] ,
+                      [ "expose"  , "{" , { identifier } , "}" ] ,
+                      [ "redact"  , "{" , { identifier } , "}" ] ,
+                      [ "audit"   , "{" , { any_token } , "}" ] ,
+                      { "map" , qualified_name , "to" , qualified_name } ,
+                      "}" ;
+
+contract_timeouts   = "timeouts" , "{" , { any_token } , "}" ;
+
+contract_retries    = "retries" , "{" , { any_token } , "}" ;
+
+contract_limits     = "limits" , "{" , { any_token } , "}" ;
+
+contract_privacy    = "privacy" , "{" , { any_token } , "}" ;
+
+contract_observability = "observability" , "{" , { any_token } , "}" ;
+
+event_decl          = "event" , identifier ;
+
+emit_stmt           = "emit" , identifier ;
 
 effects_clause      = [ "with" ] , "effects" , "[" ,
                       [ effect_name , { "," , effect_name } ] , "]" ;

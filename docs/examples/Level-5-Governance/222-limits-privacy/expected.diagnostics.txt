@@ -1,0 +1,5 @@
+none
+
+This example is correct. The limits and privacy blocks are properly declared.
+No field listed in privacy.deny appears in the response body.
+No diagnostics are expected.

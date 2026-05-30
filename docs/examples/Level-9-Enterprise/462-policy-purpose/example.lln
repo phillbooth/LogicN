@@ -1,10 +1,16 @@
-﻿/// example: 462-policy-purpose
+/// example: 462-policy-purpose
 /// level: 9
 /// concept: policy block declares the permitted purpose for data use in a communication flow
 /// expected_diagnostics: none
 /// ai_rule: Use a policy block with a purpose declaration to document and enforce the lawful basis for processing patient contact data.
 
-secure flow emailPatient(readonly req: Request) -> Result<Response, NotificationError>
+secure flow emailPatient(readonly request: Request) -> EmailPatientResult
+
+contract {
+  types {
+    type EmailPatientResult = Result<Response, NotificationError>
+  }
+}
   with effects [pii.read, network.outbound, audit.write]
   intent "Send appointment reminder to patient"
   policy {
@@ -13,14 +19,14 @@ secure flow emailPatient(readonly req: Request) -> Result<Response, Notification
     retentionDays 30
   }
 {
-  unsafe let rawId: String = req.body.patientId
+  unsafe let rawId: String = request.body.patientId
   let patientId: protected PatientId = validate.patientId(rawId)?
   let email: protected Email = PatientDB.getEmail(patientId)?
 
   NotificationService.send({
     to: email,
     template: "appointment_reminder",
-    data: { appointmentDate: req.body.appointmentDate }
+    data: { appointmentDate: request.body.appointmentDate }
   })?
 
   AuditLog.write({

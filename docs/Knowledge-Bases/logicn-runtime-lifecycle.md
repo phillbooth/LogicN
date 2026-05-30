@@ -64,8 +64,8 @@ For each request:
    - return `404` when no route exists
    - return `405` when the path exists but the method is not declared
 3. Request hydration:
-   - build `readonly req: Request` from the raw HTTP request
-   - mark `req.body` and `req.rawBody` as unsafe boundary-origin bytes
+   - build `readonly request: Request` from the raw HTTP request
+   - mark `request.body` and `request.rawBody` as unsafe boundary-origin bytes
 4. Effect gate:
    - verify the target flow's declared effects are allowed in the deployment
      profile

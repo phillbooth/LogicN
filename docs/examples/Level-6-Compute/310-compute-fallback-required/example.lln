@@ -1,10 +1,16 @@
-﻿/// example: 310-compute-fallback-required
+/// example: 310-compute-fallback-required
 /// level: 6
 /// concept: mandatory fallback declaration when targeting npu or gpu
 /// expected_diagnostics: none
 /// ai_rule: Always declare fallback cpu when targeting npu or gpu.
 
-secure flow runFraudModel(tx: Transaction) -> Result<FraudScore, AiError>
+secure flow runFraudModel(tx: Transaction) -> RunFraudModelResult
+
+contract {
+  types {
+    type RunFraudModelResult = Result<FraudScore, AiError>
+  }
+}
   with effects [ai.inference, audit.write]
 {
   compute target best { prefer [npu, gpu] fallback cpu }

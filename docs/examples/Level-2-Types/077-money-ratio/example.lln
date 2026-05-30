@@ -1,7 +1,8 @@
-﻿/// example: 077-money-ratio
+/// example: 077-money-ratio
 /// level: 2
 /// concept: Money<GBP> / Money<GBP> yields Decimal
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Dividing Money<GBP> by Money<GBP> produces a dimensionless Decimal ratio.
 
 let ratio: Decimal = revenue / cost

@@ -1,13 +1,19 @@
-﻿/// example: 456-compliance-pii-effect
+/// example: 456-compliance-pii-effect
 /// level: 9
 /// concept: accessing PII without declaring the pii.read effect
 /// expected_diagnostics: LLN-PII-001
 /// ai_rule: Declare effects [pii.read] on every flow that reads personally identifiable information.
 
 // Missing: with effects [pii.read, ...]
-secure flow readPatientRecord(readonly req: Request) -> Result<Response, PatientError>
+secure flow readPatientRecord(readonly request: Request) -> ReadPatientRecordResult
+
+contract {
+  types {
+    type ReadPatientRecordResult = Result<Response, PatientError>
+  }
+}
 {
-  unsafe let rawId: String = req.body.patientId
+  unsafe let rawId: String = request.body.patientId
   // LLN-PII-001: pii.read required but not declared
   let patientId: protected PatientId = validate.patientId(rawId)?
   let record = PatientDB.get(patientId)?

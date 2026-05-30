@@ -115,7 +115,7 @@ The qualifier (`flow` / `secure` / `pure`) is encoded in `.kind`, not `.value`.
 ### `paramDecl`
 ```
 .value   → "name: TypeString"
-           e.g. "req: Request"
+           e.g. "request: Request"
                 "email: String"
                 "amount: Money<GBP>"
 

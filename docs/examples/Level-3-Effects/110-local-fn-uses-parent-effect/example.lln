@@ -1,7 +1,8 @@
-﻿/// example: 110-local-fn-uses-parent-effect
+/// example: 110-local-fn-uses-parent-effect
 /// level: 3
 /// concept: local fn may use effects declared by the containing flow
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Local fn may use effects only when the containing flow declares them.
 
 guarded flow syncOrders(orders: List<Order>) -> Result<Unit, SyncError>

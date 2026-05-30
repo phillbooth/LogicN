@@ -1,0 +1,52 @@
+/// example: 218-errors-contract
+/// level: 5
+/// concept: contract errors block — returns, map, expose, redact, audit
+/// expected_diagnostics: none
+/// test_status: stable
+/// ai_rule: The errors {} block declares which errors a flow can return, how to map internal
+///          errors to API-safe variants, which variants to expose, which to redact, and which
+///          to audit. This is a correct pattern that emits no diagnostics.
+
+secure flow lookupPatient(readonly request: Request) -> LookupPatientResult
+intent "Look up a patient record by ID, returning only safe error variants to the caller."
+
+contract {
+  types {
+    type LookupPatientResult = Result<Response, ApiError>
+  }
+  intent {
+    "Return a patient record to an authorised actor. Protect internal error detail."
+  }
+  request {
+    accepts PatientLookupRequest
+    params {
+      require patientId
+    }
+  }
+  errors {
+    returns {
+      ApiError.NotFound
+      ApiError.Unauthorised
+      ApiError.Internal
+    }
+    map PatientNotFound to ApiError.NotFound
+    map UnauthorisedAccess to ApiError.Unauthorised
+    expose {
+      ApiError.NotFound
+      ApiError.Unauthorised
+    }
+    redact {
+      ApiError.Internal
+    }
+    audit {
+      ApiError.Internal
+    }
+  }
+}
+
+with effects [database.read, audit.write] {
+  let id = request.params.patientId
+  let patient = PatientsDB.find(id)?
+  AuditLog.write({ event: "PatientLookup", id: id })
+  return Ok(Response.ok({ patientId: patient.id, name: patient.name }))
+}

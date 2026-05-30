@@ -1,14 +1,15 @@
-﻿/// example: 113-secure-flow-with-effects
+/// example: 113-secure-flow-with-effects
 /// level: 3
 /// concept: secure flow with full effects pattern
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Secure flows require audit.write alongside operational effects.
 
-secure flow createPatient(req: Request) -> Result<PatientId, PatientError>
+secure flow createPatient(request: Request) -> Result<PatientId, PatientError>
   with effects [database.write, audit.write]
 {
-  unsafe let rawEmail: String = req.body.email
-  unsafe let rawPatientId: String = req.body.patientId
+  unsafe let rawEmail: String = request.body.email
+  unsafe let rawPatientId: String = request.body.patientId
 
   let email: protected Email = validate.email(rawEmail)?
   let patientId: protected PatientId = validate.patientId(rawPatientId)?

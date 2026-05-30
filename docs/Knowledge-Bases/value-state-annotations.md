@@ -36,9 +36,9 @@ A flow can be `secure` (security-sensitive execution) while still holding
 `unsafe` values from an external API body. These are orthogonal properties.
 
 ```logicn
-secure flow createCustomer(req: Request) -> Result<Response, ApiError>
+secure flow createCustomer(request: Request) -> Result<Response, ApiError>
 effects [database.write] {
-  unsafe let body: Bytes      = boundary.api.body(req)
+  unsafe let body: Bytes      = boundary.api.body(request)
   safe   mut body             = validate.customer(body)?
   let input: CreateCustomerInput = body
   ...
@@ -154,7 +154,7 @@ trust state of the value being bound.
 unsafe let rawEmail: String = form.email              // boundary input — unsafe
 safe   mut rawEmail         = validate.email(rawEmail)?  // gate passed — now safe
 
-unsafe let rawBody: Bytes   = req.rawBody             // HTTP body — unsafe
+unsafe let rawBody: Bytes   = request.rawBody             // HTTP body — unsafe
 safe   mut rawBody          = json.decode<Order>(rawBody)?  // decoded — safe
 
 let total: Decimal = price + tax                      // internal — safe by default
@@ -289,7 +289,7 @@ Diagnostic: `LLN-VALUESTATE-005`
 State upgrades from `unsafe → safe` require a `safe mut` with a named gate.
 
 ```logicn
-unsafe let raw: String = req.body
+unsafe let raw: String = request.body
 safe   mut raw = validate.email(raw)?   // gate call required
 ```
 
@@ -352,10 +352,10 @@ All codes follow the `LLN-SERIES-NNN` format.
 ### API boundary — correct pattern
 
 ```logicn
-secure flow createCustomer(req: Request) -> Result<Response, ApiError>
+secure flow createCustomer(request: Request) -> Result<Response, ApiError>
 effects [database.write, audit.write] {
 
-  unsafe let body: Bytes = req.rawBody
+  unsafe let body: Bytes = request.rawBody
   safe   mut body = json.decode<CreateCustomerInput>(body)?
 
   let saved: Customer = saveCustomer(body)?
@@ -366,9 +366,9 @@ effects [database.write, audit.write] {
 ### API boundary — error (unsafe value reaches database)
 
 ```logicn
-secure flow unsafeSave(req: ContactFormRequest) -> Result<ContactForm, FormError>
+secure flow unsafeSave(request: ContactFormRequest) -> Result<ContactForm, FormError>
 effects [database.write] {
-  unsafe let rawMessage: String = req.message
+  unsafe let rawMessage: String = request.message
 
   // LLN-VALUESTATE-001: unsafe binding cannot flow into database.write
   let saved: ContactForm = ContactFormsDB.insert({ message: rawMessage })?
@@ -420,7 +420,7 @@ effects [secret.read, audit.write] {
 |---|---|---|
 | `pure flow` | Whether effects are declared | `pure flow add(a: Int) -> Int` |
 | `secure flow` | Whether effects are audited and declared | `secure flow save(...) effects [...]` |
-| `unsafe let` / `safe mut` | Whether a **binding** is from a trusted source | `unsafe let raw: Bytes = req.body` |
+| `unsafe let` / `safe mut` | Whether a **binding** is from a trusted source | `unsafe let raw: Bytes = request.body` |
 
 `safe flow` and `unsafe flow` are **not valid syntax** in v1. The `safe`/`unsafe`
 qualifiers apply to bindings (`let`, `mut`), not flows.

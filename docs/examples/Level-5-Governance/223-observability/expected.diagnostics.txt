@@ -1,0 +1,4 @@
+none
+
+This example is correct. The observability block is fully declared and context.trace_id
+is accessed in the flow body. No diagnostics are expected.

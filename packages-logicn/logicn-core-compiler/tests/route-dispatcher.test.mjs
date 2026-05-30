@@ -44,7 +44,7 @@ function makeRequest(port, method, path, body) {
 describe("Route dispatcher", () => {
   it("GET /hello returns 200", async () => {
     const source = `
-flow sayHello(req: String) -> Result<String, ApiError> {
+flow sayHello(request: String) -> Result<String, ApiError> {
   return Ok("hello")
 }
 route GET "/hello" { flow sayHello }
@@ -58,7 +58,7 @@ route GET "/hello" { flow sayHello }
 
   it("unknown route returns 404", async () => {
     const source = `
-flow sayHello(req: String) -> Result<String, ApiError> { return Ok("hello") }
+flow sayHello(request: String) -> Result<String, ApiError> { return Ok("hello") }
 route GET "/hello" { flow sayHello }
 `;
     await withServer(source, async (server) => {
@@ -69,7 +69,7 @@ route GET "/hello" { flow sayHello }
 
   it("wrong method returns 405", async () => {
     const source = `
-flow sayHello(req: String) -> Result<String, ApiError> { return Ok("hello") }
+flow sayHello(request: String) -> Result<String, ApiError> { return Ok("hello") }
 route GET "/hello" { flow sayHello }
 `;
     await withServer(source, async (server) => {
@@ -80,7 +80,7 @@ route GET "/hello" { flow sayHello }
 
   it("POST route receives body", async () => {
     const source = `
-flow echoBody(req: String) -> Result<String, ApiError> {
+flow echoBody(request: String) -> Result<String, ApiError> {
   return Ok("received")
 }
 route POST "/echo" { flow echoBody }
@@ -94,8 +94,8 @@ route POST "/echo" { flow echoBody }
 
   it("path parameter is extracted", async () => {
     const source = `
-flow getUser(req: String) -> Result<String, ApiError> {
-  return Ok(req.params.id)
+flow getUser(request: String) -> Result<String, ApiError> {
+  return Ok(request.params.id)
 }
 route GET "/users/{id}" { flow getUser }
 `;
@@ -108,7 +108,7 @@ route GET "/users/{id}" { flow getUser }
 
   it("flow returning Err maps to error status", async () => {
     const source = `
-flow missing(req: String) -> Result<String, ApiError> {
+flow missing(request: String) -> Result<String, ApiError> {
   return Err(ApiError.notFound("missing"))
 }
 route GET "/missing" { flow missing }
@@ -121,8 +121,8 @@ route GET "/missing" { flow missing }
 
   it("query string is available", async () => {
     const source = `
-flow search(req: String) -> Result<String, ApiError> {
-  return Ok(req.query.q)
+flow search(request: String) -> Result<String, ApiError> {
+  return Ok(request.query.q)
 }
 route GET "/search" { flow search }
 `;
@@ -135,7 +135,7 @@ route GET "/search" { flow search }
 
   it("server refuses to start with compiler errors", async () => {
     const source = `
-flow bad(req: UnknownType) -> String {
+flow bad(request: UnknownType) -> String {
   return "x"
 }
 route GET "/bad" { flow bad }

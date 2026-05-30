@@ -1,7 +1,8 @@
-﻿/// example: 056-char-basic
+/// example: 056-char-basic
 /// level: 2
 /// concept: Char type
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Char holds a single Unicode character, written with single quotes.
 
 let initial: Char = 'L'

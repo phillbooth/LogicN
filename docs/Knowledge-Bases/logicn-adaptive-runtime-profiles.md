@@ -153,7 +153,7 @@ runtime adaptive {
 ## Intent as a Learning Signal
 
 ```logicn
-secure flow classifyMessage(readonly req: Request) -> Result<Response, ApiError>
+secure flow classifyMessage(readonly request: Request) -> Result<Response, ApiError>
 effects [ai.inference, audit.write]
 intent "Classify inbound messages locally without remote execution" {
 

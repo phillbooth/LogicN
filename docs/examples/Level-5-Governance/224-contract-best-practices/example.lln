@@ -1,0 +1,118 @@
+/// example: 224-contract-best-practices
+/// level: 5
+/// concept: gold standard contract — named result type, full contract, raw→protected→redact→audit
+/// expected_diagnostics: none
+/// test_status: stable
+/// ai_rule: This is the canonical "gold standard" pattern. It combines named result types,
+///          a complete contract with all key sections, and the raw→protected→redact→audit
+///          data-handling pipeline in the body. No diagnostics expected.
+
+event PatientProfileRead
+
+secure flow getPatientProfile(readonly request: Request) -> PatientProfileResult
+
+contract {
+  types {
+    type PatientProfileResult = Result<Response, ApiError>
+  }
+
+  intent {
+    "Return a patient profile to an authorised clinical actor. Protect email and NHS number."
+  }
+
+  request {
+    accepts PatientProfileRequest
+    params {
+      require patientId
+    }
+  }
+
+  response {
+    returns PatientProfileResponse
+    exposes { patientId name dateOfBirth }
+    denies { email nhsNumber }
+  }
+
+  context {
+    require actor
+    require trace_id
+  }
+
+  effects {
+    database.read
+    audit.write
+  }
+
+  timeouts {
+    deadline 5 seconds
+  }
+
+  privacy {
+    contains PII
+    deny protected Email to response
+    require redaction before audit.write
+  }
+
+  errors {
+    returns {
+      ApiError.NotFound
+      ApiError.Unauthorised
+      ApiError.Internal
+    }
+    map PatientNotFound to ApiError.NotFound
+    map AccessDenied to ApiError.Unauthorised
+    expose {
+      ApiError.NotFound
+      ApiError.Unauthorised
+    }
+    redact {
+      ApiError.Internal
+    }
+    audit {
+      ApiError.Internal
+    }
+  }
+
+  rules {
+    require actor before database.read
+  }
+
+  observability {
+    trace flow
+    measure latency
+    deny protected values in logs
+    require trace_id
+  }
+
+  events {
+    emits PatientProfileRead
+  }
+
+  audit {
+    require runtime report
+  }
+}
+
+with effects [database.read, audit.write] {
+  // Step 1: read required context fields
+  let actor = context.actor
+  let traceId = context.trace_id
+
+  // Step 2: receive raw (unsafe) boundary input
+  unsafe let rawId: String = request.params.patientId
+
+  // Step 3: validate into a protected type
+  let patientId: protected PatientId = validate.patientId(rawId)?
+
+  // Step 4: perform governed read
+  let patient = PatientsDB.findById(patientId)?
+
+  // Step 5: audit the access (with redacted trace context)
+  AuditLog.write({ event: "PatientProfileRead", id: patientId, actor: actor, traceId: traceId })
+
+  // Step 6: emit domain event
+  emit PatientProfileRead
+
+  // Step 7: return only allowed fields (email and nhsNumber are denied by contract)
+  return Ok(Response.ok({ patientId: patient.id, name: patient.name, dateOfBirth: patient.dob }))
+}

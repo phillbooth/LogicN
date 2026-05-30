@@ -1,7 +1,8 @@
-﻿/// example: 455-financial-money-calculation
+/// example: 455-financial-money-calculation
 /// level: 9
 /// concept: financial tax calculation using Money and Decimal
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Use Decimal for all tax rate multiplication to avoid floating-point rounding in financial flows.
 
 pure flow calculateTax(amount: Money<GBP>, rate: Decimal) -> Money<GBP>

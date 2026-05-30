@@ -1,13 +1,14 @@
-﻿/// example: 154-validate-email
+/// example: 154-validate-email
 /// level: 4
 /// concept: validating unsafe email to protected Email
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Email values come from validate.email(). The ? propagates validation failure.
 
-secure flow createUser(req: Request) -> Result<UserId, UserError>
+secure flow createUser(request: Request) -> Result<UserId, UserError>
   with effects [database.write, audit.write]
 {
-  unsafe let rawEmail: String = req.body.email
+  unsafe let rawEmail: String = request.body.email
   let email: protected Email = validate.email(rawEmail)?
   let id = UsersDB.insert({ email: email })?
   AuditLog.write({ action: "createUser", id: id })

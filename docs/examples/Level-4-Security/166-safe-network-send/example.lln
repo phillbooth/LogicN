@@ -1,7 +1,8 @@
-﻿/// example: 166-safe-network-send
+/// example: 166-safe-network-send
 /// level: 4
 /// concept: protected value may be sent over network (policy dependent)
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Protected values are not automatically forbidden from network sends. Governance policy decides.
 
 guarded flow notifyService(email: protected Email) -> Result<Unit, NotifyError>

@@ -1,0 +1,222 @@
+﻿/// example: 469-contract-financial-payment
+/// level: 9
+/// concept: full 16-section contract on a financial payment flow — all sections in canonical order
+/// expected_diagnostics: none
+/// ai_rule: Financial flows must declare errors.redact for internal errors, privacy.contains PII, timeouts to prevent runaway execution, and require redaction before audit.write.
+
+event PaymentInitiated
+event PaymentCompleted
+event PaymentRejected
+
+record PaymentRequest {
+  amount: String
+  currency: String
+  recipientId: String
+  reference: String
+}
+
+record PaymentResponse {
+  transactionId: String
+  status: String
+  timestamp: String
+}
+
+secure flow initiatePayment(
+  readonly request: Request
+) -> InitiatePaymentResult
+
+contract {
+  types {
+    type InitiatePaymentResult = Result<Response, ApiError>
+  }
+
+  intent {
+    "Initiate a governed payment transfer with full audit trail."
+  }
+
+  request {
+    accepts PaymentRequest
+
+    params {
+      amount: unsafe String
+      currency: unsafe String
+      recipientId: unsafe String
+      reference: unsafe String
+    }
+
+    requires {
+      actor
+      trace_id
+      deadline
+    }
+  }
+
+  response {
+    returns PaymentResponse
+
+    exposes {
+      transactionId
+      status
+      timestamp
+    }
+
+    denies {
+      amount
+      recipientId
+      internalError
+      stackTrace
+    }
+  }
+
+  context {
+    require actor
+    require trace_id
+    require deadline
+  }
+
+  model {
+    uses Payment
+    uses Account
+    reads AccountBalance
+  }
+
+  effects {
+    database.write
+    network.outbound
+    audit.write
+  }
+
+  timeouts {
+    deadline 30 seconds
+    network {
+      timeout 10 seconds
+    }
+    database {
+      timeout 5 seconds
+    }
+  }
+
+  retries {
+    network.outbound {
+      attempts 3
+      strategy exponential_backoff
+    }
+    database.write {
+      attempts 1
+    }
+  }
+
+  limits {
+    max request size 100 KB
+    max amount 1000000
+  }
+
+  privacy {
+    contains PII
+    deny protected AccountNumber to response
+    deny protected SortCode to response
+    require redaction before audit.write
+    retention 10 years
+  }
+
+  errors {
+    returns {
+      ApiError.BadRequest
+      ApiError.Unauthorised
+      ApiError.UnprocessableEntity
+      ApiError.ServiceUnavailable
+      ApiError.Internal
+    }
+
+    map ValidationError to ApiError.BadRequest
+    map InsufficientFunds to ApiError.UnprocessableEntity
+    map PaymentProviderError to ApiError.ServiceUnavailable
+    map AuthError to ApiError.Unauthorised
+
+    expose {
+      ApiError.BadRequest
+      ApiError.UnprocessableEntity
+      ApiError.ServiceUnavailable
+    }
+
+    redact {
+      ApiError.Internal
+    }
+
+    audit {
+      ApiError.Internal
+      ApiError.Unauthorised
+      ApiError.ServiceUnavailable
+    }
+  }
+
+  rules {
+    require actor before database.write
+    require trace_id before audit.write
+    require deadline before network or database work
+    deny protected AccountNumber to response
+    require validation before database.write
+    require redaction before audit.write
+  }
+
+  observability {
+    trace flow
+    measure latency
+    measure payment_amount
+    count database.write
+    count network.outbound
+    log event names
+    require trace_id
+    deny protected values in logs
+    deny request body logging
+    deny account numbers in traces
+  }
+
+  events {
+    emits PaymentInitiated
+    emits PaymentCompleted
+    emits PaymentRejected
+  }
+
+  audit {
+    require proof
+    require runtime report
+    require signed attestation
+    require access event
+  }
+}
+
+with effects [database.write, network.outbound, audit.write] {
+  let actor: Actor = context.actor
+  let traceId: TraceId = context.trace_id
+
+  unsafe let rawAmount: String = request.body.amount
+  unsafe let rawCurrency: String = request.body.currency
+  unsafe let rawRecipientId: String = request.body.recipientId
+
+  let amount: protected Money<GBP> = validate.money(rawAmount)?
+  let recipientId: protected AccountId = validate.accountId(rawRecipientId)?
+
+  let payment = PaymentService.initiate({
+    amount: amount,
+    recipientId: recipientId,
+    reference: request.body.reference
+  })?
+
+  AuditLog.write({
+    event: "PaymentInitiated",
+    actor: actor.id,
+    traceId: traceId,
+    transactionId: payment.id,
+    amount: redact(amount),
+    recipientId: redact(recipientId)
+  })
+
+  emit PaymentInitiated
+
+  return Ok(Response.created({
+    transactionId: payment.id,
+    status: "initiated",
+    timestamp: payment.timestamp
+  }))
+}

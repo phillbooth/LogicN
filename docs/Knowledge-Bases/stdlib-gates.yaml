@@ -514,18 +514,18 @@ ai_guidance:
     - "Do not generate direct == for SecureString or ProtectedSecret."
     - "Prefer explicit Result handling with ? after gates that can fail."
   safe_example: |
-    unsafe let rawEmail: String = req.body.email
+    unsafe let rawEmail: String = request.body.email
     let email: Email = validate.email(rawEmail)?
     UsersDB.insert({ email: email })?
   unsafe_example: |
-    unsafe let rawEmail: String = req.body.email
+    unsafe let rawEmail: String = request.body.email
     UsersDB.insert({ email: rawEmail })?  // LLN-VALUESTATE-003
 
 test_fixtures:
   accepted:
     - name: validate_before_insert
       source: |
-        unsafe let rawEmail: String = req.body.email
+        unsafe let rawEmail: String = request.body.email
         let email: Email = validate.email(rawEmail)?
         UsersDB.insert({ email: email })?
 
@@ -542,7 +542,7 @@ test_fixtures:
     - name: unsafe_direct_database_insert
       expected_diagnostic: LLN-VALUESTATE-003
       source: |
-        unsafe let rawEmail: String = req.body.email
+        unsafe let rawEmail: String = request.body.email
         UsersDB.insert({ email: rawEmail })?
 
     - name: protected_direct_log

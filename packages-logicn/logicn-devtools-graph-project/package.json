@@ -1,5 +1,5 @@
 {
-  "name": "@logicn/devtools-project-graph",
+  "name": "@logicn/devtools-graph-project",
   "version": "0.1.0-beta.0",
   "description": "LogicN project knowledge graph contracts for package, document, policy and report relationships.",
   "license": "Apache-2.0",
@@ -16,7 +16,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "lln-graph": "file:../../../LLN-Graph"
+    "@logicn/devtools-project-graph": "github:logicn/lln-graph"
   },
   "devDependencies": {
     "typescript": "^5.5.0"

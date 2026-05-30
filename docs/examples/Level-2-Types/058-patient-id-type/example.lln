@@ -1,8 +1,9 @@
-﻿/// example: 058-patient-id-type
+/// example: 058-patient-id-type
 /// level: 2
 /// concept: protected PatientId domain type
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: PatientId values come from validate.patientId().
 
-unsafe let rawPatientId: String = req.body.patientId
+unsafe let rawPatientId: String = request.body.patientId
 let patientId: protected PatientId = validate.patientId(rawPatientId)?

@@ -1,4 +1,4 @@
-import { GraphBuilder, bfsPath as llnBfsPath } from "lln-graph";
+import { GraphBuilder, bfsPath as llnBfsPath } from "@logicn/devtools-project-graph";
 
 export type ProjectGraphNodeKind =
   | "Package"
@@ -621,7 +621,7 @@ export function createWorkspaceProjectGraph(
     }
   }
 
-  const graphPackage = packages.find((item) => item.name === "logicn-devtools-project-graph");
+  const graphPackage = packages.find((item) => item.name === "logicn-devtools-graph-project");
   const reportNode: ProjectGraphNode = {
     id: "report:project-graph",
     kind: "Report",

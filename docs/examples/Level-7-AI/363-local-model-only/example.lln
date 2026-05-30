@@ -1,16 +1,22 @@
-﻿/// example: 363-local-model-only
+/// example: 363-local-model-only
 /// level: 7
 /// concept: local-only AI classification denying both remote execution and network outbound
 /// expected_diagnostics: none
 /// ai_rule: Use deny [remote.execution, network.outbound] for air-gapped or strict data-residency deployments.
 
-secure flow classify(readonly req: Request) -> Result<Response, AiError>
+secure flow classify(readonly request: Request) -> ClassifyResult
+
+contract {
+  types {
+    type ClassifyResult = Result<Response, AiError>
+  }
+}
   with effects [ai.inference]
   intent "Classify locally only — no network access permitted"
 {
   compute target best { prefer [cpu] deny [remote.execution, network.outbound] }
 
-  unsafe let rawText: String = req.body.text
+  unsafe let rawText: String = request.body.text
   let text: String = validate.text(rawText)?
   let label: Label = LocalClassifierModel.classify(text)?
   return Ok(Response.ok(label))

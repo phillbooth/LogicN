@@ -19,7 +19,7 @@ Applies to: flow declarations, type declarations, record declarations
 The most important AI signal is the **code shape**, not comments:
 
 ```logicn
-unsafe let rawEmail: String = req.body.email      // code shape: unsafe, boundary
+unsafe let rawEmail: String = request.body.email      // code shape: unsafe, boundary
 let email: protected Email = validate.email(rawEmail)?  // code shape: gate, protected
 effects [database.write, audit.write]              // code shape: declared effects
 intent "Create patient record"                     // code shape: intent
@@ -114,14 +114,14 @@ with effects [network.outbound] {
 /// @summary Create a new patient record with validated and protected PII.
 /// @kind governance
 /// @ai.intent Accept an HTTP request, validate all PII fields, write to database, and produce an audit record.
-/// @ai.inputs req: Request (contains email, nhsNumber as unsafe boundary inputs)
+/// @ai.inputs request: Request (contains email, nhsNumber as unsafe boundary inputs)
 /// @ai.output Result<Response, ApiError>
 /// @effects database.write, audit.write
 /// @security
 ///   - rawEmail validated via validate.email gate before use
 ///   - email is protected Email — cannot be logged raw
 ///   - email redacted before AuditLog.write
-secure flow createPatient(readonly req: Request) -> Result<Response, ApiError>
+secure flow createPatient(readonly request: Request) -> Result<Response, ApiError>
 with effects [database.write, audit.write]
 intent "Create patient record with protected PII handling" {
   ...
@@ -137,7 +137,7 @@ changes value state. These are the most valuable AI signals in the body:
 
 ```logicn
 // Boundary input: unsafe until validated.
-unsafe let rawEmail: String = req.body.email
+unsafe let rawEmail: String = request.body.email
 
 // Validation gate: produces protected Email.
 let email: protected Email = validate.email(rawEmail)?
@@ -166,7 +166,7 @@ AuditLog.write({ event: "PatientCreated", email: redact(email) })
 let total: Money<GBP> = subtotal + vat  // adds vat to subtotal
 
 // Good: explaining trust transitions only
-unsafe let rawTotal: String = req.body.total  // Boundary: unsafe until parsed
+unsafe let rawTotal: String = request.body.total  // Boundary: unsafe until parsed
 let total: Money<GBP> = Money.gbp(rawTotal)?  // Parsed: safe for arithmetic
 ```
 

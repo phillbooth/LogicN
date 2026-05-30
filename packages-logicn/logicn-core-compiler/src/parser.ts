@@ -46,6 +46,7 @@ export type AstNodeKind =
   | "letDecl"
   | "mutDecl"
   | "readonlyDecl"
+  | "assignStmt"
   | "returnStmt"
   | "ifStmt"
   | "matchExpr"
@@ -63,6 +64,9 @@ export type AstNodeKind =
   | "computeTargetBlock"
   // Route declarations
   | "routeDecl"
+  // Flow Contract (Pilot Candidate)
+  | "contractDecl"
+  | "contractSetDecl"
   // Literal expression nodes
   | "charLiteral"
   | "listLiteral";
@@ -211,6 +215,79 @@ class Parser {
         case "api":      return this.parseGenericBlock("apiDecl");
         case "compute":  return this.parseComputeTarget();
         case "route":    return this.parseRouteDecl();
+        case "contract": {
+          // contract set Name { } — reusable contract template (peek at next token)
+          // contract { } — flow-attached contract block
+          const nextTok = this.peek(1);
+          if ((nextTok.kind === "identifier" || nextTok.kind === "keyword") && nextTok.value === "set") {
+            return this.parseContractSetDecl();
+          }
+          return this.parseContractDecl();
+        }
+        case "event":    return this.parseEventDecl();
+        case "let": {
+          // LLN-SYNTAX-006: let at top level is not allowed
+          this.emit(
+            "LLN-SYNTAX-006",
+            "LET_AT_TOP_LEVEL",
+            `Top-level 'let' bindings are not allowed. Move this inside a flow, or declare a compile-time 'const' if the value is immutable.`,
+            this.loc(),
+            `Move into a flow: pure flow name() -> T { let ... }`,
+          );
+          while (!this.isEof() && this.current().kind !== "newline") this.advance();
+          return undefined;
+        }
+        case "mut": {
+          // LLN-SYNTAX-007: mut at top level is not allowed
+          this.emit(
+            "LLN-SYNTAX-007",
+            "MUT_AT_TOP_LEVEL",
+            `Top-level 'mut' bindings are not allowed. Mutable state must be flow-local.`,
+            this.loc(),
+            `Move into a flow: guarded flow name(...) { mut ... }`,
+          );
+          while (!this.isEof() && this.current().kind !== "newline") this.advance();
+          return undefined;
+        }
+        case "readonly": {
+          // LLN-SYNTAX-006 variant: readonly at top level is not allowed as an executable binding
+          this.emit(
+            "LLN-SYNTAX-006",
+            "LET_AT_TOP_LEVEL",
+            `Top-level 'readonly' bindings are not allowed. Move inside a flow.`,
+            this.loc(),
+          );
+          while (!this.isEof() && this.current().kind !== "newline") this.advance();
+          return undefined;
+        }
+        case "unsafe": {
+          // LLN-SYNTAX-008: unsafe let at top level — boundary data must be flow-owned
+          const peek = this.peek(1);
+          if (peek.kind === "keyword" && (peek.value === "let" || peek.value === "mut")) {
+            this.emit(
+              "LLN-SYNTAX-008",
+              "UNSAFE_LET_AT_TOP_LEVEL",
+              `'unsafe let' is only allowed inside a secure flow. Boundary data must be owned by a governed flow.`,
+              this.loc(),
+              `Move into a secure flow: secure flow name(readonly req: Request) { unsafe let ... }`,
+            );
+          } else {
+            this.emitUnexpected(`Unexpected 'unsafe' at top level.`);
+          }
+          while (!this.isEof() && this.current().kind !== "newline") this.advance();
+          return undefined;
+        }
+        case "emit": {
+          // LLN-SYNTAX-009: emit at top level is not allowed
+          this.emit(
+            "LLN-SYNTAX-009",
+            "EMIT_AT_TOP_LEVEL",
+            `Events may only be emitted inside flows. Declare events globally, emit them inside governed execution.`,
+            this.loc(),
+          );
+          while (!this.isEof() && this.current().kind !== "newline") this.advance();
+          return undefined;
+        }
         case "fn": {
           // fn at top level is a compiler error — fn is only valid inside a flow body
           this.emit(
@@ -300,6 +377,33 @@ class Parser {
       }
       if (this.currentIs("keyword", "compute")) {
         flowClauses.push(this.parseComputeTarget());
+        continue;
+      }
+      if (this.currentIs("keyword", "contract")) {
+        flowClauses.push(this.parseContractDecl());
+        continue;
+      }
+      // `with effects [...]` may also appear AFTER the contract block
+      if (this.currentIs("keyword", "with") && this.peek(1).kind === "keyword" && this.peek(1).value === "effects") {
+        if (effectsNode === undefined) {
+          this.advance(); // consume "with"
+          const result = this.parseEffectsDecl();
+          effectsNode = result.node;
+          effectNames = result.names;
+        } else {
+          // Duplicate effects clause — skip it gracefully
+          this.advance();
+          this.advance();
+          while (!this.currentIs("symbol", "]") && !this.isEof()) this.advance();
+          if (this.currentIs("symbol", "]")) this.advance();
+        }
+        continue;
+      }
+      // Bare `effects [...]` after contract block
+      if (this.currentIs("keyword", "effects") && effectsNode === undefined) {
+        const result = this.parseEffectsDecl();
+        effectsNode = result.node;
+        effectNames = result.names;
         continue;
       }
       break;
@@ -592,9 +696,11 @@ class Parser {
         case "readonly": return this.parseReadonlyDecl();
         case "return":   return this.parseReturnStmt();
         case "if":       return this.parseIfStmt();
+        case "unless":   return this.parseUnlessStmt();
         case "match":    return this.parseMatchExpr();
         case "compute":  return this.parseComputeTarget();
         case "fn":       return this.parseFnDecl();
+        case "emit":     return this.parseEmitStmt();
         // Safety-prefix binding forms:
         //   unsafe let name: Type = expr
         //   unsafe mut name: Type = expr
@@ -760,6 +866,30 @@ class Parser {
     return { kind: "ifStmt", location: loc, children };
   }
 
+  private parseUnlessStmt(): AstNode {
+    // unless CONDITION { } → semantically equivalent to if !CONDITION { }
+    const loc = this.loc();
+    this.advance(); // consume "unless"
+    const condition = this.parseExpression();
+    const thenBlock = this.parseBlock();
+    const negated: AstNode = { kind: "unaryExpr", value: "!", location: loc, children: [condition] };
+    const children: AstNode[] = [negated, thenBlock];
+
+    this.skipNewlines();
+    if (this.currentIs("keyword", "else")) {
+      this.advance();
+      this.skipNewlines();
+      if (this.currentIs("keyword", "if") || this.currentIs("keyword", "unless")) {
+        const branch = this.parseStatement();
+        if (branch !== undefined) children.push(branch);
+      } else {
+        children.push(this.parseBlock());
+      }
+    }
+
+    return { kind: "ifStmt", value: "unless", location: loc, children, readableForm: "unless" };
+  }
+
   private parseMatchExpr(): AstNode {
     const loc = this.loc();
     this.advance(); // consume "match"
@@ -834,6 +964,21 @@ class Parser {
 
   private parseExprStatement(): AstNode | undefined {
     const loc = this.loc();
+
+    // Detect bare assignment: `name = expr` (no binding keyword).
+    // This is the canonical mutation of a `mut` binding; `let` and `readonly`
+    // bindings will be rejected by the binding checker (LLN-BINDING-005).
+    if (this.current().kind === "identifier") {
+      const peek1 = this.peek(1);
+      if (peek1?.kind === "operator" && peek1.value === "=") {
+        const nameTok = this.current();
+        this.advance(); // consume identifier
+        this.advance(); // consume "="
+        const rhs = this.parseExpression();
+        return { kind: "assignStmt", value: nameTok.value, location: loc, children: [rhs] };
+      }
+    }
+
     const expr = this.parseExpression();
     return { kind: "block", value: "(expr)", location: loc, children: [expr] };
   }
@@ -857,6 +1002,31 @@ class Parser {
 
     while (true) {
       const tok = this.current();
+
+      // Handle readable keyword operators (Phase 9C): and / or / is
+      if (tok.kind === "keyword") {
+        if (tok.value === "and" && 20 >= minPrecedence) {
+          const loc = this.loc();
+          this.advance();
+          const right = this.parseExpression(21);
+          left = { kind: "binaryExpr", value: "&&", location: loc, children: [left, right], readableForm: "and" };
+          continue;
+        }
+        if (tok.value === "or" && 10 >= minPrecedence) {
+          const loc = this.loc();
+          this.advance();
+          const right = this.parseExpression(11);
+          left = { kind: "binaryExpr", value: "||", location: loc, children: [left, right], readableForm: "or" };
+          continue;
+        }
+        if (tok.value === "is" && 30 >= minPrecedence) {
+          const loc = this.loc();
+          left = this.parseIsForm(left, loc);
+          continue;
+        }
+        break;
+      }
+
       if (tok.kind !== "operator") break;
       const entry = INFIX_OPERATOR_TABLE.get(tok.value);
       if (entry === undefined || entry.precedence < minPrecedence) break;
@@ -876,6 +1046,88 @@ class Parser {
     }
 
     return left;
+  }
+
+  /**
+   * Parses the `is` readable form: `a is X`, `a is not X`, `a is greater than X`, etc.
+   * Called from parseExpression() after consuming the left-hand side.
+   * The `is` keyword has not been consumed yet when this method is called.
+   */
+  private parseIsForm(left: AstNode, _outerLoc: SourceLocation): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "is"
+    const next = this.current();
+
+    // "is not [greater/less/equal to] X"
+    if (next.kind === "identifier" && next.value === "not") {
+      this.advance(); // "not"
+      const nn = this.current();
+      if (nn.kind === "identifier") {
+        if (nn.value === "greater") {
+          this.advance();
+          if (this.current().value === "than") this.advance();
+          const right = this.parseExpression(41);
+          return { kind: "binaryExpr", value: "<=", location: loc, children: [left, right], readableForm: "is not greater than" };
+        }
+        if (nn.value === "less") {
+          this.advance();
+          if (this.current().value === "than") this.advance();
+          const right = this.parseExpression(41);
+          return { kind: "binaryExpr", value: ">=", location: loc, children: [left, right], readableForm: "is not less than" };
+        }
+        if (nn.value === "equal") {
+          this.advance();
+          if (this.current().value === "to") this.advance();
+          const right = this.parseExpression(31);
+          return { kind: "binaryExpr", value: "!=", location: loc, children: [left, right], readableForm: "is not equal to" };
+        }
+      }
+      // "is not X" → != X
+      const right = this.parseExpression(31);
+      return { kind: "binaryExpr", value: "!=", location: loc, children: [left, right], readableForm: "is not" };
+    }
+
+    // "is greater than [or equal to]"
+    if (next.kind === "identifier" && next.value === "greater") {
+      this.advance(); // "greater"
+      if (this.current().value === "than") this.advance(); // "than"
+      if (this.current().kind === "keyword" && this.current().value === "or") {
+        this.advance(); // "or"
+        if (this.current().value === "equal") this.advance();
+        if (this.current().value === "to") this.advance();
+        const right = this.parseExpression(41);
+        return { kind: "binaryExpr", value: ">=", location: loc, children: [left, right], readableForm: "is greater than or equal to" };
+      }
+      const right = this.parseExpression(41);
+      return { kind: "binaryExpr", value: ">", location: loc, children: [left, right], readableForm: "is greater than" };
+    }
+
+    // "is less than [or equal to]"
+    if (next.kind === "identifier" && next.value === "less") {
+      this.advance(); // "less"
+      if (this.current().value === "than") this.advance(); // "than"
+      if (this.current().kind === "keyword" && this.current().value === "or") {
+        this.advance(); // "or"
+        if (this.current().value === "equal") this.advance();
+        if (this.current().value === "to") this.advance();
+        const right = this.parseExpression(41);
+        return { kind: "binaryExpr", value: "<=", location: loc, children: [left, right], readableForm: "is less than or equal to" };
+      }
+      const right = this.parseExpression(41);
+      return { kind: "binaryExpr", value: "<", location: loc, children: [left, right], readableForm: "is less than" };
+    }
+
+    // "is equal to"
+    if (next.kind === "identifier" && next.value === "equal") {
+      this.advance(); // "equal"
+      if (this.current().value === "to") this.advance(); // "to"
+      const right = this.parseExpression(31);
+      return { kind: "binaryExpr", value: "==", location: loc, children: [left, right], readableForm: "is equal to" };
+    }
+
+    // "is X" → left == X (catch-all equality)
+    const right = this.parseExpression(31);
+    return { kind: "binaryExpr", value: "==", location: loc, children: [left, right], readableForm: "is" };
   }
 
   /**
@@ -989,8 +1241,26 @@ class Parser {
       return { kind: "boolLiteral", value: tok.value, location: loc };
     }
 
-    // Block literal (struct construction or object) — simplified: skip to matching }
+    // Object/record literal or block statement.
+    // Disambiguate by lookahead: if after { (skipping newlines) we see
+    // `identifier :` or `keyword :`, it is a record literal { field: value, ... }.
+    // Otherwise it is a block statement { stmt; ... }.
     if (tok.kind === "symbol" && tok.value === "{") {
+      // Look ahead past newlines to find the first real token after {
+      let peekOff = 1;
+      while (this.peek(peekOff).kind === "newline") peekOff++;
+      const firstReal = this.peek(peekOff);
+      const secondReal = this.peek(peekOff + 1);
+
+      // Empty {} → empty record literal
+      const isEmpty = firstReal.kind === "symbol" && firstReal.value === "}";
+      const isRecord = !isEmpty &&
+        (firstReal.kind === "identifier" || firstReal.kind === "keyword") &&
+        secondReal.kind === "symbol" && secondReal.value === ":";
+
+      if (isEmpty || isRecord) {
+        return this.parseRecordLiteral(loc);
+      }
       return this.parseBlock();
     }
 
@@ -1021,6 +1291,56 @@ class Parser {
     return { kind: "identifier", value: "<error>", location: loc };
   }
 
+  /**
+   * Parses a record/object literal: `{ field: expr, field2: expr2 }`.
+   *
+   * Records are stored as a callExpr with value "#record" and field children.
+   * Each field is an identifier node whose value is the field name and whose
+   * first child is the field value expression.
+   *
+   * This mirrors how named arguments are stored in call expressions, letting
+   * the interpreter evaluate both forms with the same logic.
+   *
+   * Called when parsePrimary() detects `{ identifier :` or `{ }`.
+   */
+  private parseRecordLiteral(loc: SourceLocation): AstNode {
+    this.advance(); // consume {
+    this.skipNewlines();
+
+    const fields: AstNode[] = [];
+
+    while (!this.currentIs("symbol", "}") && !this.isEof()) {
+      this.skipNewlines();
+      if (this.currentIs("symbol", "}")) break;
+
+      const fieldLoc = this.loc();
+      const fieldTok = this.current();
+      const fieldName = fieldTok.kind === "identifier" || fieldTok.kind === "keyword"
+        ? fieldTok.value : "<field>";
+      this.advance(); // consume field name
+
+      this.expect("symbol", ":");
+      this.skipNewlines();
+
+      const fieldValue = this.parseExpression();
+      fields.push({
+        kind: "identifier",
+        value: fieldName,
+        location: fieldLoc,
+        children: [fieldValue],
+      });
+
+      this.skipNewlines();
+      if (this.currentIs("symbol", ",")) {
+        this.advance();
+        this.skipNewlines();
+      }
+    }
+
+    this.expect("symbol", "}");
+    return { kind: "callExpr", value: "#record", location: loc, children: fields };
+  }
+
   private parseArgList(): AstNode[] {
     const args: AstNode[] = [];
 
@@ -1029,8 +1349,9 @@ class Parser {
       if (this.currentIs("symbol", ")")) break;
 
       // Named argument: name: value
+      // Also accept keyword tokens as labels (e.g. AuditLog.write(event: "Test"))
       if (
-        this.current().kind === "identifier" &&
+        (this.current().kind === "identifier" || this.current().kind === "keyword") &&
         this.peek(1).kind === "symbol" &&
         this.peek(1).value === ":"
       ) {
@@ -1351,6 +1672,590 @@ class Parser {
     return { kind: "readonlyDecl", value: nameWithType, location: loc, children: [init] };
   }
 
+  // ── Flow Contract (Pilot Candidate) ──────────────────────────────────────
+
+  /**
+   * Parses a `contract { types { } intent { } events { } }` block.
+   *
+   * In Stage 1 the body is stored as children of the contractDecl node.
+   * Sub-blocks (types, intent, events) are parsed into identifier/intentDecl
+   * children. Full semantic checking is Phase 9B+.
+   *
+   * The contract block may appear:
+   *   - Attached to a flow (between signature and body)
+   *   - As a top-level declaration (rare, for shared contract templates)
+   */
+  private parseContractDecl(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "contract"
+    this.skipNewlines();
+
+    const children: AstNode[] = [];
+
+    if (!this.currentIs("symbol", "{")) {
+      return { kind: "contractDecl", location: loc, children };
+    }
+
+    this.advance(); // consume {
+    this.skipNewlines();
+
+    while (!this.currentIs("symbol", "}") && !this.isEof()) {
+      const tok = this.current();
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "types") {
+        children.push(this.parseContractSubBlock("types"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if (tok.kind === "keyword" && tok.value === "intent") {
+        children.push(this.parseIntentDecl());
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "events") {
+        children.push(this.parseContractSubBlock("events"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "governance") {
+        children.push(this.parseGenericBlock("governanceDecl"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "rules") {
+        children.push(this.parseContractSubBlock("rules"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "audit") {
+        children.push(this.parseContractSubBlock("audit"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "use") {
+        // use ContractSetName — reference a contract set
+        this.advance(); // consume "use"
+        this.skipNewlines();
+        const setName = this.current().kind === "identifier" ? this.current().value : "<unknown>";
+        if (this.current().kind === "identifier") this.advance();
+        children.push({ kind: "identifier", value: `use:${setName}`, location: this.loc() });
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "targets") {
+        children.push(this.parseContractSubBlock("targets"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "examples") {
+        children.push(this.parseContractSubBlock("examples"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "request") {
+        children.push(this.parseContractSubBlock("request"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "response") {
+        children.push(this.parseContractSubBlock("response"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "model") {
+        children.push(this.parseContractSubBlock("model"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "context") {
+        children.push(this.parseContractSubBlock("context"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "effects") {
+        children.push(this.parseContractSubBlock("effects"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "errors") {
+        children.push(this.parseContractSubBlock("errors"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "timeouts") {
+        children.push(this.parseContractSubBlock("timeouts"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "retries") {
+        children.push(this.parseContractSubBlock("retries"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "limits") {
+        children.push(this.parseContractSubBlock("limits"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "privacy") {
+        children.push(this.parseContractSubBlock("privacy"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "observability") {
+        children.push(this.parseContractSubBlock("observability"));
+        this.skipNewlines();
+        continue;
+      }
+
+      // Skip unrecognised content gracefully
+      if (this.currentIs("symbol", "{")) {
+        this.skipBalancedBraces();
+      } else {
+        this.advance();
+      }
+      this.skipNewlines();
+    }
+
+    this.expect("symbol", "}");
+    return { kind: "contractDecl", location: loc, children };
+  }
+
+  /**
+   * Parses a named sub-block inside a contract:
+   *   types { ... } / events { ... } / targets { ... } / examples { ... }
+   *
+   * The content is stored as identifier children (names of types/events).
+   * Full parsing of sub-block content is Phase 9B+.
+   */
+  private parseContractSubBlock(subBlockName: string): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume the sub-block keyword
+    this.skipNewlines();
+
+    const children: AstNode[] = [];
+
+    if (!this.currentIs("symbol", "{")) {
+      return { kind: "identifier", value: `${subBlockName}:`, location: loc, children };
+    }
+
+    this.advance(); // consume {
+    this.skipNewlines();
+
+    while (!this.currentIs("symbol", "}") && !this.isEof()) {
+      const tok = this.current();
+
+      if (tok.kind === "keyword" && tok.value === "type") {
+        // Type alias inside contract.types — parse like a normal typeDecl
+        const typeNode = this.parseTypeDecl();
+        children.push(typeNode);
+        this.skipNewlines();
+        continue;
+      }
+
+      if (tok.kind === "keyword" && tok.value === "emits") {
+        // Event emission declaration: emits EventName
+        this.advance(); // consume "emits"
+        this.skipNewlines();
+        if (this.current().kind === "identifier") {
+          children.push({
+            kind: "identifier",
+            value: `emits:${this.current().value}`,
+            location: this.loc(),
+          });
+          this.advance();
+        }
+        this.skipNewlines();
+        continue;
+      }
+
+      // `require effectName` inside audit/rules/context blocks (Phase 9B+)
+      if ((tok.kind === "identifier" || tok.kind === "keyword") && tok.value === "require") {
+        const loc = this.loc();
+        this.advance(); // consume "require"
+        let req = "";
+        while (!this.isEof() && this.current().kind !== "newline" && !this.currentIs("symbol", "}")) {
+          req += (req === "" ? "" : ".") + this.current().value;
+          this.advance();
+        }
+        children.push({ kind: "identifier", value: `require:${req.trim()}`, location: loc });
+        this.skipNewlines();
+        continue;
+      }
+
+      // `accepts TypeName` inside request blocks
+      if ((tok.kind === "identifier" || tok.kind === "keyword") && tok.value === "accepts") {
+        const loc = this.loc();
+        this.advance(); // consume "accepts"
+        this.skipNewlines();
+        const typeName = (this.current().kind === "identifier" || this.current().kind === "keyword")
+          ? this.current().value : "";
+        if (typeName !== "") this.advance();
+        children.push({ kind: "identifier", value: `accepts:${typeName}`, location: loc });
+        this.skipNewlines();
+        continue;
+      }
+
+      // `params { ... }` inside request blocks
+      if ((tok.kind === "identifier" || tok.kind === "keyword") && tok.value === "params") {
+        const subLoc = this.loc();
+        this.advance(); // consume "params"
+        this.skipNewlines();
+        const paramChildren: AstNode[] = [];
+        if (this.currentIs("symbol", "{")) {
+          this.advance(); // consume {
+          this.skipNewlines();
+          while (!this.currentIs("symbol", "}") && !this.isEof()) {
+            const inner = this.current();
+            if ((inner.kind === "identifier" || inner.kind === "keyword") && inner.value === "require") {
+              const reqLoc = this.loc();
+              this.advance();
+              let req = "";
+              while (!this.isEof() && this.current().kind !== "newline" && !this.currentIs("symbol", "}")) {
+                req += (req === "" ? "" : ".") + this.current().value;
+                this.advance();
+              }
+              paramChildren.push({ kind: "identifier", value: `require:${req.trim()}`, location: reqLoc });
+            } else {
+              this.advance();
+            }
+            this.skipNewlines();
+          }
+          this.expect("symbol", "}");
+        }
+        children.push({ kind: "identifier", value: "params:block", location: subLoc, children: paramChildren });
+        this.skipNewlines();
+        continue;
+      }
+
+      // `returns TypeName` or `returns { ... }` inside response/errors blocks
+      if ((tok.kind === "identifier" || tok.kind === "keyword") && tok.value === "returns") {
+        const loc = this.loc();
+        this.advance(); // consume "returns"
+        this.skipNewlines();
+        if (this.currentIs("symbol", "{")) {
+          // Block form: returns { Variant1, Variant2, ... }
+          const returnChildren: AstNode[] = [];
+          this.advance(); // consume {
+          this.skipNewlines();
+          while (!this.currentIs("symbol", "}") && !this.isEof()) {
+            const rt = this.current();
+            if (rt.kind === "identifier" || rt.kind === "keyword") {
+              // Collect the full dot-path or qualified name on this line
+              let variantName = rt.value;
+              this.advance();
+              while (this.currentIs("symbol", ".")) {
+                this.advance();
+                const next = this.current();
+                if (next.kind === "identifier" || next.kind === "keyword") {
+                  variantName += "." + next.value;
+                  this.advance();
+                } else break;
+              }
+              returnChildren.push({ kind: "identifier", value: `returns:${variantName}`, location: this.loc() });
+            } else {
+              this.advance();
+            }
+            this.skipNewlines();
+          }
+          this.expect("symbol", "}");
+          children.push({ kind: "identifier", value: "returns:block", location: loc, children: returnChildren });
+        } else {
+          const typeName = (this.current().kind === "identifier" || this.current().kind === "keyword")
+            ? this.current().value : "";
+          if (typeName !== "") this.advance();
+          children.push({ kind: "identifier", value: `returns:${typeName}`, location: loc });
+        }
+        this.skipNewlines();
+        continue;
+      }
+
+      // `exposes { field field }` inside response blocks
+      if ((tok.kind === "identifier" || tok.kind === "keyword") && tok.value === "exposes") {
+        const subLoc = this.loc();
+        this.advance(); // consume "exposes"
+        this.skipNewlines();
+        const exposeChildren: AstNode[] = [];
+        if (this.currentIs("symbol", "{")) {
+          this.advance(); // consume {
+          this.skipNewlines();
+          while (!this.currentIs("symbol", "}") && !this.isEof()) {
+            const ft = this.current();
+            if (ft.kind === "identifier" || ft.kind === "keyword") {
+              exposeChildren.push({ kind: "identifier", value: `exposes:${ft.value}`, location: this.loc() });
+              this.advance();
+            } else {
+              this.advance();
+            }
+            this.skipNewlines();
+          }
+          this.expect("symbol", "}");
+        }
+        children.push(...exposeChildren);
+        this.skipNewlines();
+        continue;
+      }
+
+      // `denies { field field }` inside response blocks
+      if ((tok.kind === "identifier" || tok.kind === "keyword") && tok.value === "denies") {
+        const subLoc = this.loc();
+        this.advance(); // consume "denies"
+        this.skipNewlines();
+        const denyChildren: AstNode[] = [];
+        if (this.currentIs("symbol", "{")) {
+          this.advance(); // consume {
+          this.skipNewlines();
+          while (!this.currentIs("symbol", "}") && !this.isEof()) {
+            const ft = this.current();
+            if (ft.kind === "identifier" || ft.kind === "keyword") {
+              denyChildren.push({ kind: "identifier", value: `denies:${ft.value}`, location: this.loc() });
+              this.advance();
+            } else {
+              this.advance();
+            }
+            this.skipNewlines();
+          }
+          this.expect("symbol", "}");
+        }
+        children.push(...denyChildren);
+        this.skipNewlines();
+        void subLoc;
+        continue;
+      }
+
+      // `uses TypeName` inside model blocks
+      if ((tok.kind === "identifier" || tok.kind === "keyword") && tok.value === "uses") {
+        const loc = this.loc();
+        this.advance(); // consume "uses"
+        this.skipNewlines();
+        const typeName = (this.current().kind === "identifier" || this.current().kind === "keyword")
+          ? this.current().value : "";
+        if (typeName !== "") this.advance();
+        children.push({ kind: "identifier", value: `uses:${typeName}`, location: loc });
+        this.skipNewlines();
+        continue;
+      }
+
+      // `reads TypeName` inside model blocks
+      if ((tok.kind === "identifier" || tok.kind === "keyword") && tok.value === "reads") {
+        const loc = this.loc();
+        this.advance(); // consume "reads"
+        this.skipNewlines();
+        const typeName = (this.current().kind === "identifier" || this.current().kind === "keyword")
+          ? this.current().value : "";
+        if (typeName !== "") this.advance();
+        children.push({ kind: "identifier", value: `reads:${typeName}`, location: loc });
+        this.skipNewlines();
+        continue;
+      }
+
+      // `constraints { ... }` inside model blocks
+      if ((tok.kind === "identifier" || tok.kind === "keyword") && tok.value === "constraints") {
+        const subLoc = this.loc();
+        this.advance(); // consume "constraints"
+        this.skipNewlines();
+        const constraintChildren: AstNode[] = [];
+        if (this.currentIs("symbol", "{")) {
+          this.advance(); // consume {
+          this.skipNewlines();
+          while (!this.currentIs("symbol", "}") && !this.isEof()) {
+            const ct = this.current();
+            if (ct.kind === "identifier" || ct.kind === "keyword") {
+              constraintChildren.push({ kind: "identifier", value: ct.value, location: this.loc() });
+              this.advance();
+            } else {
+              this.advance();
+            }
+            this.skipNewlines();
+          }
+          this.expect("symbol", "}");
+        }
+        children.push({ kind: "identifier", value: "constraints:block", location: subLoc, children: constraintChildren });
+        this.skipNewlines();
+        continue;
+      }
+
+      // For effects sub-blocks: capture dot-path effect names
+      if (subBlockName === "effects" && (tok.kind === "identifier" || tok.kind === "keyword")) {
+        const effectLoc = this.loc();
+        let effectName = tok.value;
+        this.advance();
+        // Consume dot-path continuations (e.g. database.write)
+        while (this.currentIs("symbol", ".")) {
+          this.advance(); // consume dot
+          const next = this.current();
+          if (next.kind === "identifier" || next.kind === "keyword") {
+            effectName += "." + next.value;
+            this.advance();
+          } else {
+            break;
+          }
+        }
+        children.push({ kind: "identifier", value: `effect:${effectName}`, location: effectLoc });
+        this.skipNewlines();
+        continue;
+      }
+
+      // Generic declaration line: for errors, timeouts, retries, limits, privacy, observability, etc.
+      // Recognise nested named sub-blocks (identifier followed by {}) or collect tokens on one line.
+      if (tok.kind === "identifier" || tok.kind === "keyword") {
+        const stmtLoc = this.loc();
+        // Peek ahead — if an opening brace follows on the same or next "logical" token, parse as sub-block
+        // Look ahead past one identifier to see if there is a {
+        const afterIdent = this.peek(1);
+        if (afterIdent.kind === "symbol" && afterIdent.value === "{") {
+          // Named nested block: keyword/ident { ... }
+          const blockName = tok.value;
+          this.advance(); // consume the block name
+          const nestedChildren: AstNode[] = [];
+          this.advance(); // consume {
+          this.skipNewlines();
+          while (!this.currentIs("symbol", "}") && !this.isEof()) {
+            const inner = this.current();
+            if ((inner.kind === "identifier" || inner.kind === "keyword") && !this.currentIs("symbol", "}")) {
+              // Collect tokens on this line
+              const lineParts: string[] = [];
+              while (!this.isEof() && this.current().kind !== "newline" && !this.currentIs("symbol", "}")) {
+                if (this.currentIs("symbol", "{")) {
+                  // Nested further — skip balanced
+                  this.skipBalancedBraces();
+                  break;
+                }
+                lineParts.push(this.current().value);
+                this.advance();
+              }
+              if (lineParts.length > 0) {
+                nestedChildren.push({ kind: "identifier", value: `decl:${lineParts.join(" ")}`, location: this.loc() });
+              }
+            } else {
+              this.advance();
+            }
+            this.skipNewlines();
+          }
+          this.expect("symbol", "}");
+          children.push({ kind: "identifier", value: `${blockName}:block`, location: stmtLoc, children: nestedChildren });
+          this.skipNewlines();
+          continue;
+        }
+
+        // No brace follows — collect all tokens on this line as a single decl node
+        const parts: string[] = [];
+        while (!this.isEof() && this.current().kind !== "newline" && !this.currentIs("symbol", "}")) {
+          if (this.currentIs("symbol", "{")) {
+            // Nested block mid-line — skip it and stop
+            this.skipBalancedBraces();
+            break;
+          }
+          parts.push(this.current().value);
+          this.advance();
+        }
+        if (parts.length > 0) {
+          children.push({ kind: "identifier", value: `decl:${parts.join(" ")}`, location: stmtLoc });
+        }
+        this.skipNewlines();
+        continue;
+      }
+
+      // Skip unrecognised content
+      this.advance();
+      this.skipNewlines();
+    }
+
+    this.expect("symbol", "}");
+    return { kind: "identifier", value: `${subBlockName}:block`, location: loc, children };
+  }
+
+  /**
+   * Parses a `contract set Name { rules { } events { } audit { } }` declaration.
+   * Contract sets are reusable governance templates that flows apply with `use Name`.
+   *
+   * Key rule: a contract set may REQUIRE behaviour (e.g. audit.write) but may NOT
+   * silently grant authority or add effects. Flows must still declare effects explicitly.
+   */
+  private parseContractSetDecl(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "contract"
+    this.skipNewlines();
+    // consume "set"
+    if ((this.current().kind === "identifier" || this.current().kind === "keyword") && this.current().value === "set") {
+      this.advance();
+    }
+    this.skipNewlines();
+
+    // Contract set name
+    const name = this.current().kind === "identifier" ? this.current().value : "<unknown>";
+    if (this.current().kind === "identifier") this.advance();
+    this.skipNewlines();
+
+    // Parse body — same sub-block structure as contractDecl
+    const children: AstNode[] = [];
+    if (this.currentIs("symbol", "{")) {
+      this.advance(); // consume {
+      this.skipNewlines();
+      while (!this.currentIs("symbol", "}") && !this.isEof()) {
+        const tok = this.current();
+        const v = tok.value;
+        if ((tok.kind === "keyword" || tok.kind === "identifier") &&
+            (v === "rules" || v === "events" || v === "audit" || v === "types")) {
+          children.push(this.parseContractSubBlock(v));
+        } else if (this.currentIs("symbol", "{")) {
+          this.skipBalancedBraces();
+        } else {
+          this.advance();
+        }
+        this.skipNewlines();
+      }
+      this.expect("symbol", "}");
+    }
+
+    return { kind: "contractSetDecl", value: name, location: loc, children };
+  }
+
+  /**
+   * Parses a top-level `event EventName` declaration.
+   * Global event declarations are referenced in contract.events blocks.
+   */
+  private parseEventDecl(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "event"
+    this.skipNewlines();
+    const name = this.current().kind === "identifier" ? this.current().value : "<unknown>";
+    if (this.current().kind === "identifier") this.advance();
+    return { kind: "intentDecl", value: `event:${name}`, location: loc };
+  }
+
+  /**
+   * Parses an `emit EventName` statement inside a flow body.
+   * In Stage 1 this is a no-op at runtime but recorded in the AST.
+   */
+  private parseEmitStmt(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "emit"
+    this.skipNewlines();
+    const name = this.current().kind === "identifier" ? this.current().value : "<unknown>";
+    if (this.current().kind === "identifier") this.advance();
+    return { kind: "identifier", value: `emit:${name}`, location: loc };
+  }
+
   // ── Import / type / enum stubs ────────────────────────────────────────────
 
   private parseImportDecl(): AstNode {
@@ -1370,15 +2275,30 @@ class Parser {
     const name = this.current().kind === "identifier" ? this.current().value : "<unknown>";
     if (this.current().kind === "identifier") this.advance();
 
+    // `type Name { ... }` — record-style type body
     if (this.currentIs("symbol", "{")) {
       this.skipBalancedBraces();
-    } else {
-      // `type Name = ...` form
+      return { kind: "typeDecl", value: name, location: loc };
+    }
+
+    // `type Name = TypeRef` — alias form; capture the RHS as a child typeRef
+    // This is critical for Phase 9A-2 branded type detection:
+    //   type CustomerId = Brand<String, "CustomerId">
+    if (this.currentIs("operator", "=")) {
+      this.advance(); // consume "="
+      this.skipNewlines();
+      const aliasType = this.parseTypeRef();
+      // Skip any remaining tokens on this line (trailing comments, etc.)
       while (!this.isEof() && this.current().kind !== "newline") {
         this.advance();
       }
+      return { kind: "typeDecl", value: name, location: loc, children: [aliasType] };
     }
 
+    // Fallback: skip to end of line
+    while (!this.isEof() && this.current().kind !== "newline") {
+      this.advance();
+    }
     return { kind: "typeDecl", value: name, location: loc };
   }
 

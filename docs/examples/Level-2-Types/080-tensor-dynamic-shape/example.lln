@@ -1,7 +1,8 @@
-﻿/// example: 080-tensor-dynamic-shape
+/// example: 080-tensor-dynamic-shape
 /// level: 2
 /// concept: Tensor<Dtype, DynamicShape>
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Use DynamicShape when tensor dimensions are not known at compile time.
 
 let embedding: Tensor<Float32, DynamicShape>

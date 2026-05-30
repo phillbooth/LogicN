@@ -2,6 +2,7 @@
 /// level: 3
 /// concept: filesystem.read in a pure flow is forbidden
 /// expected_diagnostics: LLN-EFFECT-XXX
+/// test_status: stable
 /// ai_rule: Pure flows cannot perform any I/O, including filesystem reads.
 
 pure flow loadConfig(path: String) -> Result<Config, ConfigError> {

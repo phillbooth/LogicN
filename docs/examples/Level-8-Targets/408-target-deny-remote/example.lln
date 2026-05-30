@@ -1,10 +1,16 @@
-﻿/// example: 408-target-deny-remote
+/// example: 408-target-deny-remote
 /// level: 8
 /// concept: denying remote.execution placement category
 /// expected_diagnostics: none
 /// ai_rule: deny [remote.execution] blocks any remote dispatch, regardless of what appears in the prefer list.
 
-guarded flow runLocal(input: Tensor<Float32, [1, 512]>) -> Result<Tensor<Float32, [1, 128]>, AiError>
+guarded flow runLocal(input: Tensor<Float32, [1, 512]>) -> RunLocalResult
+
+contract {
+  types {
+    type RunLocalResult = Result<Tensor<Float32, [1, 128]>, AiError>
+  }
+}
   with effects [ai.inference]
 {
   compute target best { prefer [gpu, cpu] deny [remote.execution] fallback cpu }

@@ -1,7 +1,8 @@
-﻿/// example: 064-option-none
+/// example: 064-option-none
 /// level: 2
 /// concept: Option<T> with None value
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: None represents the absence of a value in Option<T>.
 
 let maybeUser: Option<User> = None

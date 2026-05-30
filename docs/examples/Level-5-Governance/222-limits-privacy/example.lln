@@ -1,0 +1,51 @@
+/// example: 222-limits-privacy
+/// level: 5
+/// concept: contract limits and privacy blocks
+/// expected_diagnostics: none
+/// test_status: stable
+/// ai_rule: The limits block caps resource consumption (request size, batch size, memory).
+///          The privacy block declares PII handling, retention, and redaction requirements.
+///          Both are correct governance declarations; no diagnostics expected.
+
+secure flow uploadPatientDocument(readonly request: Request) -> UploadDocumentResult
+intent "Accept a patient document upload, enforcing size limits and PII redaction before audit."
+
+contract {
+  types {
+    type UploadDocumentResult = Result<Response, ApiError>
+  }
+  intent {
+    "Upload a patient document. Enforce a 5 MB size limit. PII must be redacted before audit."
+  }
+  limits {
+    max request size 5 MB
+    max batch size 100
+    max memory 256 MB
+  }
+  privacy {
+    contains PII
+    retention 7 years
+    deny protected Email to response
+    require redaction before audit.write
+  }
+  errors {
+    returns {
+      ApiError.PayloadTooLarge
+      ApiError.BadRequest
+      ApiError.Internal
+    }
+    expose {
+      ApiError.PayloadTooLarge
+      ApiError.BadRequest
+    }
+    redact {
+      ApiError.Internal
+    }
+  }
+}
+
+with effects [database.write, audit.write] {
+  let doc = DocumentsDB.insert({ patientId: request.params.id, content: request.body.data })?
+  AuditLog.write({ event: "DocumentUploaded", docId: doc.id, patientId: doc.patientId })
+  return Ok(Response.created({ docId: doc.id }))
+}

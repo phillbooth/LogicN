@@ -1,10 +1,16 @@
-﻿/// example: 212-policy-purpose-mismatch
+/// example: 212-policy-purpose-mismatch
 /// level: 5
 /// concept: declared purpose does not match observed template use
 /// expected_diagnostics: LLN-GOV-XXX
 /// ai_rule: The template used in a communication flow must match the declared purpose.
 
-secure flow emailPatient(patient: PatientRecord) -> Result<Unit, EmailError>
+secure flow emailPatient(patient: PatientRecord) -> EmailPatientResult
+
+contract {
+  types {
+    type EmailPatientResult = Result<Unit, EmailError>
+  }
+}
   with effects [network.outbound, audit.write]
   intent "Send an appointment reminder to a patient"
   policy {

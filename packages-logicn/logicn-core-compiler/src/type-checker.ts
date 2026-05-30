@@ -14,9 +14,11 @@
 //   LLN-TYPE-022  UnreachablePattern       — arm after wildcard or exhausted set
 //   LLN-NAME-002  DuplicateName            — same name declared twice in same scope
 //
-// Deferred (require expression type inference or call graph):
-//   LLN-TYPE-002  TypeMismatch             — assignment compatibility
-//   LLN-TYPE-003  InvalidNominalConversion — String → Email requires gate
+// Implemented (continued):
+//   LLN-TYPE-003  InvalidNominalConversion — String → BrandedType requires gate (Phase 9A-2)
+//
+// Deferred (require full expression type inference or call graph):
+//   LLN-TYPE-002  TypeMismatch             — assignment compatibility (partial Phase 8A)
 //   LLN-TYPE-004..007  Operator / call / return type checking
 //   LLN-TYPE-010..019  Constraint, collection, tensor, symbol checks
 //   Module-level import resolution
@@ -299,6 +301,12 @@ class TypeChecker {
   private readonly userDefinedTypes = new Set<string>();
   private readonly enumVariants = new Map<string, Set<string>>();
   private readonly bindingScopes: Array<Set<string>> = [];
+  /**
+   * Phase 9A-2: user-defined types declared as `type X = Brand<T, "Name">`.
+   * Bindings with these declared types require a validation gate — direct
+   * String assignment (or unsafe let) is rejected with LLN-TYPE-003.
+   */
+  private readonly brandedTypes = new Set<string>();
 
   // ── Phase 8A: type inference state ───────────────────────────────────────
   /** Maps binding name → inferred base type string (per scope). */
@@ -330,6 +338,18 @@ class TypeChecker {
   private collectDeclarations(node: AstNode): void {
     if ((node.kind === "typeDecl" || node.kind === "recordDecl" || node.kind === "enumDecl") && node.value) {
       this.userDefinedTypes.add(node.value.trim());
+    }
+
+    // Phase 9A-2: detect Brand<T, "Name"> aliases → register as branded type
+    // These types require a validation gate before assignment (LLN-TYPE-003).
+    if (node.kind === "typeDecl" && node.value) {
+      const aliasChild = node.children?.[0];
+      if (aliasChild?.kind === "typeRef") {
+        const parsed = parseTypeString(aliasChild.value ?? "");
+        if (parsed.base === "Brand") {
+          this.brandedTypes.add(node.value.trim());
+        }
+      }
     }
     if (node.kind === "enumDecl" && node.value) {
       const variants = new Set<string>();
@@ -442,6 +462,48 @@ class TypeChecker {
         return this.lookupBindingType(name);
       }
 
+      case "memberExpr": {
+        // member.field — infer base type from the receiver, then the field type
+        const receiverNode = node.children?.[0];
+        if (receiverNode === undefined) return undefined;
+        const receiverType = this.inferType(receiverNode);
+        const field = node.value ?? "";
+
+        if (receiverType === undefined) return undefined;
+
+        // Request object fields — any field access on Request → String
+        // This is the common case: request.body.email, request.params.id, etc.
+        if (receiverType === "Request") return "String";
+
+        // Protected/redacted wrapper: protected Email → access returns String
+        if (receiverType.startsWith("protected ") || receiverType.startsWith("redacted ")) {
+          return "String";
+        }
+
+        // Record field access: if the receiver is a known record type,
+        // try to look up the field type from the record schema
+        // For now: return String as a conservative approximation for field access
+        // More accurate inference comes in Phase 11B with full type propagation
+        if (field !== "" && receiverType !== "") {
+          // Common HTTP/API fields
+          if (field === "body" || field === "params" || field === "query" || field === "headers") {
+            return "String";
+          }
+          if (field === "id" || field === "name" || field === "email" || field === "status" || field === "message") {
+            return "String";
+          }
+          // Numeric fields
+          if (field === "length" || field === "count" || field === "size") return "Int";
+          if (field === "amount" || field === "score" || field === "value") return "Decimal";
+          // Boolean fields
+          if (field === "ok" || field === "success" || field === "active" || field === "enabled") return "Bool";
+        }
+
+        // For any other field access, conservatively return undefined
+        // (let later passes handle it)
+        return undefined;
+      }
+
       case "callExpr": {
         const method = node.value ?? "";
         // Algebraic constructors
@@ -450,8 +512,35 @@ class TypeChecker {
         if (method === "Decimal")                return "Decimal";
         // Money constructors (receiver = Money)
         if (method === "gbp" || method === "usd" || method === "eur" || method === "jpy") return "Money";
-        // Look up flow return type
-        return this.flowReturnTypes.get(method);
+
+        // Existing: use flowReturnTypes
+        const knownReturn = this.flowReturnTypes.get(method);
+        if (knownReturn !== undefined) return knownReturn;
+
+        // Stdlib return type inference
+        const receiverNode = node.children?.[0];
+        const receiverType = receiverNode !== undefined ? this.inferType(receiverNode) : undefined;
+
+        // Validation gates: validate.email(raw) → protected Email
+        if (method === "email" && receiverType === undefined) return "protected Email";
+        if (method.startsWith("validate.")) return "protected String";
+
+        // String methods → String
+        if (receiverType === "String") {
+          if (["toLower", "toUpper", "trim", "trimStart", "trimEnd", "replace", "replaceAll", "slice"].includes(method)) {
+            return "String";
+          }
+          if (["length", "charCount", "indexOf", "lastIndexOf"].includes(method)) return "Int";
+          if (["startsWith", "endsWith", "contains", "isEmpty"].includes(method)) return "Bool";
+        }
+
+        // Array/list methods
+        if (receiverType?.startsWith("Array") || receiverType === "Array") {
+          if (method === "length" || method === "count") return "Int";
+          if (method === "isEmpty") return "Bool";
+        }
+
+        return undefined;
       }
 
       case "binaryExpr": {
@@ -731,7 +820,11 @@ class TypeChecker {
   // ── Phase 8A: binding type registration + assignment checking ────────────
 
   private checkAndRegisterBindingType(node: AstNode): void {
-    let rest = (node.value ?? "").trim();
+    // Preserve the raw value before stripping prefixes (needed for unsafe-let detection below)
+    const rawNodeValue = (node.value ?? "").trim();
+    const isUnsafeLet = rawNodeValue.startsWith("unsafe ");
+
+    let rest = rawNodeValue;
     if (rest.startsWith("unsafe ")) rest = rest.slice("unsafe ".length).trim();
     else if (rest.startsWith("safe "))   rest = rest.slice("safe ".length).trim();
 
@@ -769,6 +862,35 @@ class TypeChecker {
               inferredType === "Int" && NUMERIC_TYPES.has(declaredBase)
                 ? undefined  // numeric widening — no code suggestion needed
                 : undefined,
+            ));
+          }
+        }
+
+        // Phase 9A-2: LLN-TYPE-003 — branded type enforcement
+        // A branded type (e.g. CustomerId = Brand<String, "CustomerId">) cannot be
+        // assigned a raw String. The value must pass through a validation gate first.
+        if (this.brandedTypes.has(declaredBase)) {
+          // Case 1: `unsafe let x: BrandedType = ...` is always invalid.
+          // The unsafe prefix means boundary-origin data — it bypasses the gate.
+          let emitBrandedError = isUnsafeLet;
+          // Case 2: inferred init type is String/SecureString — direct string literal
+          // or an identifier known to be String is assigned without validation.
+          if (!emitBrandedError && initNode !== undefined) {
+            const inferredInitType = this.inferType(initNode);
+            if (inferredInitType === "String" || inferredInitType === "SecureString") {
+              emitBrandedError = true;
+            }
+          }
+          if (emitBrandedError) {
+            const gateName = `validate.${declaredBase.charAt(0).toLowerCase()}${declaredBase.slice(1)}`;
+            this.diagnostics.push(makeTCDiag(
+              "LLN-TYPE-003",
+              "InvalidNominalConversion",
+              `Cannot assign a raw String to branded type '${declaredBase}'. `
+                + `Branded types require a validation gate (e.g. ${gateName}(raw)?).`,
+              node.location,
+              `Replace direct assignment with a validation gate call.`,
+              `${gateName}(raw)?`,
             ));
           }
         }

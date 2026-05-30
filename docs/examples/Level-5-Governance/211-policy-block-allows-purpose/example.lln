@@ -1,10 +1,16 @@
-﻿/// example: 211-policy-block-allows-purpose
+/// example: 211-policy-block-allows-purpose
 /// level: 5
 /// concept: policy block declaring allowed purpose for data sharing
 /// expected_diagnostics: none
 /// ai_rule: Use a policy block to declare allowed data-sharing purposes for patient communications.
 
-secure flow emailPatient(patient: PatientRecord) -> Result<Unit, EmailError>
+secure flow emailPatient(patient: PatientRecord) -> EmailPatientResult
+
+contract {
+  types {
+    type EmailPatientResult = Result<Unit, EmailError>
+  }
+}
   with effects [network.outbound, audit.write]
   intent "Send an appointment reminder to a patient"
   policy {

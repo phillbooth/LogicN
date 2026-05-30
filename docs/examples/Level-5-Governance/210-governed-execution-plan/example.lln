@@ -1,10 +1,16 @@
-﻿/// example: 210-governed-execution-plan
+/// example: 210-governed-execution-plan
 /// level: 5
 /// concept: full governed execution plan for a ML inference flow
 /// expected_diagnostics: none
 /// ai_rule: Combine intent, compute target, and audit for fully governed ML inference flows.
 
-secure flow runFraudModel(input: FraudInput) -> Result<FraudScore, FraudError>
+secure flow runFraudModel(input: FraudInput) -> RunFraudModelResult
+
+contract {
+  types {
+    type RunFraudModelResult = Result<FraudScore, FraudError>
+  }
+}
   with effects [database.write, audit.write]
   intent "Score a payment transaction for fraud risk on approved hardware"
   compute target best {

@@ -6,11 +6,11 @@
 
 type Email = Brand<String, EmailAddress>
 
-secure flow createPatient(readonly req: Request) -> Result<Response, ApiError>
+secure flow createPatient(readonly request: Request) -> Result<Response, ApiError>
 effects [database.write, audit.write] {
 
   unsafe let rawEmail: String =
-    req.body.email
+    request.body.email
 
   let email: protected Email =
     validate.email(rawEmail)?

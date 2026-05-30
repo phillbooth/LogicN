@@ -1,10 +1,16 @@
-﻿/// example: 362-ai-invalid-tensor-arity
+/// example: 362-ai-invalid-tensor-arity
 /// level: 7
 /// concept: Tensor type with missing shape argument raises LLN-TYPE-009
 /// expected_diagnostics: LLN-TYPE-009
 /// ai_rule: Tensor requires exactly two type parameters; omitting the shape is always a compile error.
 
-guarded flow badTensor() -> Result<Tensor<Float32>, AiError>
+guarded flow badTensor() -> BadTensorResult
+
+contract {
+  types {
+    type BadTensorResult = Result<Tensor<Float32>, AiError>
+  }
+}
   with effects [ai.inference]
 {
   // LLN-TYPE-009: Tensor expects 2 type parameters, got 1

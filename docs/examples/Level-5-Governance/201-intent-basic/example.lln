@@ -1,10 +1,17 @@
-﻿/// example: 201-intent-basic
+/// example: 201-intent-basic
 /// level: 5
 /// concept: intent declaration on a guarded flow
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Use intent to describe what the flow is allowed to do. The compiler checks declared intent against observed behaviour.
 
-guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
+guarded flow saveOrder(order: Order) -> SaveOrderResult
+
+contract {
+  types {
+    type SaveOrderResult = Result<OrderId, OrderError>
+  }
+}
   with effects [database.write]
   intent "Save a customer order"
 {

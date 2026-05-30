@@ -67,7 +67,7 @@ effects [database.write] {
 describe("Effect Checker — secure flow rules", () => {
   it("accepts a secure flow with correctly declared effects", () => {
     const { effectResults } = parseAndCheck(`
-secure flow getOrder(req: GetOrderRequest) -> Result<Order, Error>
+secure flow getOrder(request: GetOrderRequest) -> Result<Order, Error>
 effects [database.read, audit.write] {
   return Ok(order)
 }
@@ -77,7 +77,7 @@ effects [database.read, audit.write] {
 
   it("returns metadata for each flow", () => {
     const { effectResults } = parseAndCheck(`
-secure flow saveForm(req: FormRequest) -> Result<FormResponse, Error>
+secure flow saveForm(request: FormRequest) -> Result<FormResponse, Error>
 effects [database.write, audit.write] {
   return Ok(response)
 }
@@ -90,7 +90,7 @@ effects [database.write, audit.write] {
 
   it("reports no errors for empty secure flow body", () => {
     const { effectResults } = parseAndCheck(`
-secure flow emptyFlow(req: Request) -> Result<Response, Error>
+secure flow emptyFlow(request: Request) -> Result<Response, Error>
 effects [database.read] {
   return Ok(response)
 }
@@ -392,5 +392,78 @@ guarded flow loadSecret(name: String) -> Result<String, Error>
 }
 `);
     assert.ok(hasEffectDiag(effectResults, "LLN-EFFECT-001"));
+  });
+});
+
+// ── Effect checker — devtools-graph buildCallGraph integration ─────────────────
+
+describe("Effect checker — devtools-graph buildCallGraph integration", () => {
+  it("still propagates transitive effects correctly after graph refactor", () => {
+    // Verify that the graph-based call graph produces the same transitive propagation
+    // as the previous hand-rolled map did.
+    const { effectResults } = parseAndCheck(`
+guarded flow writeAudit() -> Result<Unit, Error>
+  with effects [audit.write]
+{
+  AuditLog.write("test")
+  return Ok(unit)
+}
+
+guarded flow createRecord() -> Result<Unit, Error>
+  with effects [database.write, audit.write]
+{
+  OrdersDB.insert("record")
+  writeAudit()
+  return Ok(unit)
+}
+
+guarded flow processRequest() -> Result<Unit, Error>
+  with effects [database.write, audit.write]
+{
+  return createRecord()
+}
+`);
+    assert.equal(effectErrors(effectResults).length, 0,
+      "No errors expected: all transitive effects are declared");
+  });
+
+  it("reports LLN-EFFECT-002 when a caller misses transitive effect after graph refactor", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow innerWrite() -> Result<Unit, Error>
+  with effects [database.write]
+{
+  OrdersDB.insert("x")
+  return Ok(unit)
+}
+
+guarded flow outerCall() -> Result<Unit, Error>
+  with effects []
+{
+  return innerWrite()
+}
+`);
+    assert.ok(hasEffectDiag(effectResults, "LLN-EFFECT-002"),
+      "Expected LLN-EFFECT-002: outerCall misses database.write from innerWrite");
+  });
+
+  it("handles circular flow references gracefully without hanging", () => {
+    // Two flows mutually calling each other — the checker must not hang
+    // and must complete (guarded by the `seen` set in collectTransitiveCalledEffects).
+    const { effectResults } = parseAndCheck(`
+guarded flow flowA(x: Int) -> Result<Int, Error>
+  with effects [database.read]
+{
+  return flowB(x)
+}
+
+guarded flow flowB(x: Int) -> Result<Int, Error>
+  with effects [database.read]
+{
+  return flowA(x)
+}
+`);
+    // Just verify the checker completes without throwing
+    assert.ok(Array.isArray(effectResults), "Checker must not throw on circular flow calls");
+    assert.equal(effectResults.length, 2, "Expected results for both flows");
   });
 });

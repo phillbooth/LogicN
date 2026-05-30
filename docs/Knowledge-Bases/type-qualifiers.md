@@ -18,7 +18,7 @@ as governance qualifiers.
 ```logicn
 let email: protected Email = validate.email(rawEmail)?
 let auditEmail: redacted Email = redact(email)
-let rawBody: String unsafe = req.body
+let rawBody: String unsafe = request.body
 ```
 
 `protected` and `redacted` are prefix-only:
@@ -76,7 +76,7 @@ Level 2 examples 057-087 define the canonical domain patterns:
 
 ```logicn
 // 057-email-type
-unsafe let rawEmail: String = req.body.email
+unsafe let rawEmail: String = request.body.email
 let email: protected Email = validate.email(rawEmail)?
 ```
 

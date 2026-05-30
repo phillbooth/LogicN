@@ -3,9 +3,9 @@
 // indicates that relevant files were edited this turn.
 //
 // Execution order (matches the dependency chain):
-//   1. lln-graph            — upstream library
-//   2. logicn-core-*        — packages that may depend on lln-graph
-//   3. logicn-devtools-project-graph — downstream consumer of lln-graph
+//   1. @logicn/devtools-project-graph — upstream library (C:\laragon\www\LLN-Graph, when created)
+//   2. logicn-core-*, logicn-devtools-graph-algorithms  — packages that may depend on @logicn/devtools-project-graph
+//   3. logicn-devtools-graph-project  — downstream consumer of @logicn/devtools-project-graph
 //
 // Outputs a JSON { systemMessage } result so Claude Code shows a status chip.
 
@@ -19,7 +19,7 @@ const ROOT        = path.join(__dirname, '..');
 const PACKAGES_DIR = path.join(ROOT, 'packages-logicn');
 const LLN_GRAPH_DIR = path.join(ROOT, '..', 'LLN-Graph');
 const SENTINEL    = path.join(ROOT, '.claude', '.core-changed');
-const GRAPH_PKG   = 'logicn-devtools-project-graph';
+const GRAPH_PKG   = 'logicn-devtools-graph-project';
 
 // ── Guard: only run when relevant files changed this turn ──────────────────
 
@@ -56,17 +56,18 @@ function runTest(dir, label) {
 const results = [];
 let allPassed = true;
 
-// 1. lln-graph — run first; core packages depend on it
+// 1. @logicn/devtools-project-graph — run first; core packages depend on it
 if (fs.existsSync(LLN_GRAPH_DIR) && hasTestScript(LLN_GRAPH_DIR)) {
-  const r = runTest(LLN_GRAPH_DIR, 'lln-graph');
+  const r = runTest(LLN_GRAPH_DIR, '@logicn/devtools-project-graph');
   results.push(r);
   if (!r.passed) allPassed = false;
 }
 
-// 2. logicn-core-* packages (excludes logicn-devtools-project-graph)
+// 2. All logicn-* packages (excludes logicn-devtools-graph-project which runs last)
+//    Catches: logicn-core-*, logicn-devtools-graph-algorithms, and any future logicn-* packages.
 const corePackages = fs
   .readdirSync(PACKAGES_DIR)
-  .filter(name => /^logicn-core/.test(name) && name !== GRAPH_PKG)
+  .filter(name => /^logicn-/.test(name) && name !== GRAPH_PKG)
   .map(name => ({ name, dir: path.join(PACKAGES_DIR, name) }))
   .filter(({ dir }) => hasTestScript(dir));
 
@@ -76,7 +77,7 @@ for (const { name, dir } of corePackages) {
   if (!r.passed) allPassed = false;
 }
 
-// 3. logicn-devtools-project-graph — run last; downstream of lln-graph
+// 3. logicn-devtools-graph-project — run last; downstream of @logicn/devtools-project-graph
 if (allPassed) {
   const graphDir = path.join(PACKAGES_DIR, GRAPH_PKG);
   if (hasTestScript(graphDir)) {

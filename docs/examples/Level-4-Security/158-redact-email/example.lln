@@ -1,7 +1,8 @@
-﻿/// example: 158-redact-email
+/// example: 158-redact-email
 /// level: 4
 /// concept: redact() converts protected Email to redacted Email
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Protected values become redacted through redact(). Use for audit logging.
 
 let auditEmail: redacted Email = redact(email)

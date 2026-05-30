@@ -4,8 +4,8 @@ import { describe, it } from "node:test";
 import { run } from "../dist/index.js";
 
 describe("Runtime pipeline", () => {
-  it("check-only mode runs checkers without executing", () => {
-    const result = run(`
+  it("check-only mode runs checkers without executing", async () => {
+    const result = await run(`
 pure flow greet() -> String {
   return "hello"
 }
@@ -16,8 +16,8 @@ pure flow greet() -> String {
     assert.equal(result.mode, "check-only");
   });
 
-  it("check-only mode reports type errors", () => {
-    const result = run(`
+  it("check-only mode reports type errors", async () => {
+    const result = await run(`
 flow bad() -> Strng {
   return "hello"
 }
@@ -27,8 +27,8 @@ flow bad() -> Strng {
     assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code === "LLN-TYPE-001"));
   });
 
-  it("dev mode executes a flow", () => {
-    const result = run(`
+  it("dev mode executes a flow", async () => {
+    const result = await run(`
 pure flow answer() -> Int {
   return 42
 }
@@ -38,15 +38,15 @@ pure flow answer() -> Int {
     assert.equal(result.value?.__tag, "int");
   });
 
-  it("returns ok false for parse errors", () => {
-    const result = run(`flow {`, "test.lln", "missing");
+  it("returns ok false for parse errors", async () => {
+    const result = await run(`flow {`, "test.lln", "missing");
 
     assert.equal(result.ok, false);
     assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code.startsWith("LLN-PARSE-")));
   });
 
-  it("diagnostics array contains checker results", () => {
-    const result = run(`
+  it("diagnostics array contains checker results", async () => {
+    const result = await run(`
 flow bad() -> UnknownType {
   return "hello"
 }

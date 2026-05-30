@@ -1,0 +1,11 @@
+/// example: 090-result-sequence
+/// level: 2
+/// concept: Result.sequence converts Array<Result<T,E>> to Result<Array<T>, E>
+/// expected_diagnostics: none
+/// test_status: stable
+/// ai_rule: Use Result.sequence to collect all Ok values or short-circuit on the first Err.
+
+pure flow collectResults(inputs: Array<String>) -> Result<Array<String>, Error> {
+  let results = inputs.map(validate.email)
+  return Result.sequence(results)
+}

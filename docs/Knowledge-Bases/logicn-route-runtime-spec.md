@@ -47,7 +47,7 @@ Path parameters use braces:
 /users/{id}
 ```
 
-The `{id}` segment becomes a named parameter in `req.params`.
+The `{id}` segment becomes a named parameter in `request.params`.
 
 ## Route Matching Algorithm
 
@@ -55,7 +55,7 @@ For each incoming request:
 
 1. Normalize the HTTP method to uppercase.
 2. Match against the route table in declaration order.
-3. Bind path parameter captures into `req.params`.
+3. Bind path parameter captures into `request.params`.
 4. If no path matches, return `404` with a structured error body.
 5. If the path matches but the method does not, return `405`.
 6. If method and path match, continue to hydration and effect gating.
@@ -68,23 +68,23 @@ HTTP method declaration semantics are specified in
 The runtime builds:
 
 ```logicn
-readonly req: Request
+readonly request: Request
 ```
 
 from the raw HTTP request:
 
 | Request field | Runtime value |
 |---|---|
-| `req.method` | HTTP method string |
-| `req.path` | URL path |
-| `req.params` | path parameter map |
-| `req.query` | query string map |
-| `req.headers` | header map |
-| `req.body` | raw body bytes (`Bytes`) |
-| `req.rawBody` | same bytes, explicitly typed as unsafe `Bytes` |
+| `request.method` | HTTP method string |
+| `request.path` | URL path |
+| `request.params` | path parameter map |
+| `request.query` | query string map |
+| `request.headers` | header map |
+| `request.body` | raw body bytes (`Bytes`) |
+| `request.rawBody` | same bytes, explicitly typed as unsafe `Bytes` |
 
-The `Request` value is readonly. The flow cannot reassign it. `req.body` and
-`req.rawBody` are unsafe by default because they originate outside the runtime.
+The `Request` value is readonly. The flow cannot reassign it. `request.body` and
+`request.rawBody` are unsafe by default because they originate outside the runtime.
 
 ## Response Serialization
 
@@ -133,7 +133,7 @@ route POST "/orders" {
 
 Before the flow runs:
 
-1. The runtime deserializes `req.body`.
+1. The runtime deserializes `request.body`.
 2. The decoded shape is checked against `CreateOrderRequest`.
 3. On failure, the runtime returns `400` with an `LLN-PARSE-*` or decode-related
    structured error body.

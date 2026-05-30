@@ -55,6 +55,16 @@ export {
   type TypeCheckResult,
 } from "./type-checker.js";
 
+/** LLN-TYPE-003: raw String assigned to a branded type (Brand<T,"Name"> alias) without a validation gate. */
+export const LLN_TYPE_003 = {
+  code: "LLN-TYPE-003",
+  name: "InvalidNominalConversion",
+  severity: "error",
+  message:
+    "Branded types (type X = Brand<T, \"Name\">) cannot be assigned a raw String value. "
+    + "Use a validation gate such as validate.x(raw)? to produce a trusted branded value.",
+} as const;
+
 export {
   resolveSymbols,
   type SymbolDiagnostic,
@@ -64,9 +74,12 @@ export {
 // Pass 8 - GIR Emitter
 export {
   emitGIR,
+  emitExpr,
   type GIRFlow,
   type GIRProgram,
   type GIREmitResult,
+  type GIRExpr,
+  type GIRRecordField,
 } from "./gir-emitter.js";
 
 // Stage A - AST Interpreter
@@ -118,6 +131,7 @@ export {
 // Stage A - Standard Library
 export {
   callStdlib,
+  jsObjectToLogicN,
   logicNValuesEqual,
   type StdlibContext,
 } from "./stdlib.js";
@@ -136,10 +150,36 @@ export {
 // Stage A - Governance Verifier
 export {
   verifyGovernance,
+  LLN_GOV_003,
+  LLN_CONTEXT_001,
+  LLN_GOV_011,
+  LLN_GOV_012,
   type GovernanceDiagnostic,
   type GovernanceVerifyResult,
   type DeploymentProfile,
 } from "./governance-verifier.js";
+
+// Phase 9B — Event Checker
+export {
+  checkEvents,
+  LLN_EVENT_001,
+  LLN_EVENT_002,
+  type EventDiagnostic,
+  type EventCheckResult,
+} from "./event-checker.js";
+
+// Phase 10A — Signed Attestation
+export {
+  buildAttestation,
+  signAttestation,
+  verifyAttestation,
+  generateAttestationKey,
+  attestationToYaml,
+  attestationFromJson,
+  type LogicNAttestation,
+  type AttestationInputs,
+  type AttestationKeyPair,
+} from "./attestation.js";
 
 export interface CompilerInput {
   readonly projectRoot: string;
@@ -302,7 +342,46 @@ export const LLN_SYNTAX_002 = {
   message: "LogicN does not support const. Use let for immutable bindings or readonly for read-only values.",
 } as const;
 
-export const LLN_SYNTAX_DIAGNOSTICS = [LLN_SYNTAX_001, LLN_SYNTAX_002] as const;
+/** `let` binding at top level — must be inside a flow. */
+export const LLN_SYNTAX_006 = {
+  code: "LLN-SYNTAX-006",
+  name: "LET_AT_TOP_LEVEL",
+  severity: "error",
+  message: "Top-level let bindings are not allowed. Move this inside a flow, or use const for compile-time constants.",
+} as const;
+
+/** `mut` binding at top level — mutable state must be flow-local. */
+export const LLN_SYNTAX_007 = {
+  code: "LLN-SYNTAX-007",
+  name: "MUT_AT_TOP_LEVEL",
+  severity: "error",
+  message: "Top-level mut bindings are not allowed. Mutable state must be flow-local.",
+} as const;
+
+/** `unsafe let` at top level — boundary data must be owned by a secure flow. */
+export const LLN_SYNTAX_008 = {
+  code: "LLN-SYNTAX-008",
+  name: "UNSAFE_LET_AT_TOP_LEVEL",
+  severity: "error",
+  message: "unsafe let is only allowed inside a secure flow. Boundary data must be owned by a governed flow.",
+} as const;
+
+/** `emit` at top level — events may only be emitted inside flows. */
+export const LLN_SYNTAX_009 = {
+  code: "LLN-SYNTAX-009",
+  name: "EMIT_AT_TOP_LEVEL",
+  severity: "error",
+  message: "Events may only be emitted inside flows. Declare events globally, emit them inside governed execution.",
+} as const;
+
+export const LLN_SYNTAX_DIAGNOSTICS = [
+  LLN_SYNTAX_001,
+  LLN_SYNTAX_002,
+  LLN_SYNTAX_006,
+  LLN_SYNTAX_007,
+  LLN_SYNTAX_008,
+  LLN_SYNTAX_009,
+] as const;
 
 // ---------------------------------------------------------------------------
 // Binding diagnostics — LLN-BINDING-001..004
@@ -340,11 +419,29 @@ export const LLN_BINDING_004 = {
   message: "mut binding used where mutation is forbidden. Use let or a functional accumulator (fold, count, filter).",
 } as const;
 
+/** LLN-BINDING-005: Reassignment of immutable let binding denied. */
+export const LLN_BINDING_005 = {
+  code: "LLN-BINDING-005",
+  name: "IMMUTABLE_BINDING_REASSIGNED",
+  severity: "error",
+  message: "Cannot reassign an immutable 'let' binding. Use 'mut' if reassignment is intended.",
+} as const;
+
+/** LLN-BINDING-006: Type-changing reassignment of mut binding denied. */
+export const LLN_BINDING_006 = {
+  code: "LLN-BINDING-006",
+  name: "MUT_TYPE_CHANGE",
+  severity: "error",
+  message: "Cannot change the type of a 'mut' binding on reassignment. 'mut' bindings are type-stable.",
+} as const;
+
 export const LLN_BINDING_DIAGNOSTICS = [
   LLN_BINDING_001,
   LLN_BINDING_002,
   LLN_BINDING_003,
   LLN_BINDING_004,
+  LLN_BINDING_005,
+  LLN_BINDING_006,
 ] as const;
 
 // ---------------------------------------------------------------------------

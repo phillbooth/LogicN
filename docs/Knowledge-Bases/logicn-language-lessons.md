@@ -42,7 +42,7 @@ Error: LLN-VALUESTATE-003 UnsafeValueReachedGovernedSink
   Unsafe binding 'rawEmail' cannot flow into governed sink 'PatientsDB.insert'.
 
   'rawEmail' declared as unsafe here:
-    unsafe let rawEmail: String = req.body.email          ← line 5
+    unsafe let rawEmail: String = request.body.email          ← line 5
 
   Used in governed sink here:
     PatientsDB.insert({ email: rawEmail })?               ← line 9

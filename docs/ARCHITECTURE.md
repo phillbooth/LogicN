@@ -163,7 +163,7 @@ tooling lives in `packages-logicn/logicn-core-cli/`, and safe project automation
 `packages-logicn/logicn-tools-benchmark/`.
 
  Project knowledge graph tooling lives in
-`packages-logicn/logicn-devtools-project-graph/`.
+`packages-logicn/logicn-devtools-graph-project/`.
 
  App source and build configuration live in
 `packages-logicn/logicn-framework-example-app/`.
@@ -759,7 +759,7 @@ logicn-app/
 |   |-- logicn-core-cli/
 |   |-- logicn-core-tasks/
 |   |-- logicn-tools-benchmark/
-|   |-- logicn-devtools-project-graph/
+|   |-- logicn-devtools-graph-project/
 |   |-- logicn-framework-example-app/
 |-- packages-logicn-enterprise/
 |   |-- logicn-compliance/
@@ -807,7 +807,7 @@ git
 |   |-- logicn-core-cli/
 |   |-- logicn-core-tasks/
 |   |-- logicn-tools-benchmark/
-|   |-- logicn-devtools-project-graph/
+|   |-- logicn-devtools-graph-project/
 |   `-- logicn-framework-example-app/
 |-- app/
 `-- framework files
@@ -1098,7 +1098,7 @@ safe for ordinary development machines.
 
 
 
-`logicn-devtools-project-graph` is developer tooling for architecture inspection and AI
+`logicn-devtools-graph-project` is developer tooling for architecture inspection and AI
 assistant context.
 
  It may generate graph JSON, an HTML view, a graph report and
@@ -1458,7 +1458,7 @@ support.
 views, explicit clone/copy-on-write and conservative cache semantics.
 
 
-`logicn-core-compiler`, `logicn-core-cli` and `logicn-devtools-project-graph` may use
+`logicn-core-compiler`, `logicn-core-cli` and `logicn-devtools-graph-project` may use
 storage facts for incremental compilation, IDE indexes and project graph scans.
 
 
@@ -2144,7 +2144,7 @@ type is written first; the state qualifier follows:
 let input:  String  unsafe             = request.body("name")
 let secret: String  secure             = env.secret("APP_SECRET")
 let email:  Email   safe   validated   = validate.email(rawEmail)
-let raw:    Json    unsafe unvalidated = boundary.api.body(req)
+let raw:    Json    unsafe unvalidated = boundary.api.body(request)
 ```
 
 This avoids creating many wrapper types (`SecureString`, `UnsafeJson`, etc.).

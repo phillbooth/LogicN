@@ -686,8 +686,8 @@ Authority escalation paths:
   CustomerService → AdminService: payment.refund capability transferred?
 
 Tainted input paths:
-  req.rawBody (unsafe let) → json.decode → CreateOrderRequest (validated)
-  req.rawBody (unsafe let) → ??? → sql query (possible injection if undeclared)
+  request.rawBody (unsafe let) → json.decode → CreateOrderRequest (validated)
+  request.rawBody (unsafe let) → ??? → sql query (possible injection if undeclared)
 ```
 
 Traditional threat modelling is a manual exercise, typically performed once and

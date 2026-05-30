@@ -2,12 +2,13 @@
 /// level: 3
 /// concept: secure flow calls AuditLog.write but does not declare audit.write
 /// expected_diagnostics: LLN-EFFECT-XXX
+/// test_status: stable
 /// ai_rule: AuditLog.write requires audit.write to be declared in the effect list.
 
-secure flow createPatient(req: Request) -> Result<PatientId, PatientError>
+secure flow createPatient(request: Request) -> Result<PatientId, PatientError>
   with effects [database.write]
 {
-  unsafe let rawEmail: String = req.body.email
+  unsafe let rawEmail: String = request.body.email
   let email: protected Email = validate.email(rawEmail)?
   let id = PatientsDB.insert({ email: email })?
   AuditLog.write({ action: "createPatient", id: id })

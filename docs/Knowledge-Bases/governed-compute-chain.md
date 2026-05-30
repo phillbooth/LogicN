@@ -43,7 +43,7 @@ audit proof               (cpu)
 
 ```logicn
 compute target cpu {
-  let user: User = UsersDB.findById(req.userId)?
+  let user: User = UsersDB.findById(request.userId)?
   let data: ChartData = ReportsDB.loadChartData(user.id)?
 }
 ```
@@ -55,8 +55,8 @@ compute target gpu {
   let frame: RenderFrame = Graphics.render({
     vertices: vertices,
     labels:   labels,
-    width:    req.width,
-    height:   req.height
+    width:    request.width,
+    height:   request.height
   })
 }
 ```
@@ -148,13 +148,13 @@ the audit system to record them.
 ## 5. Full Example — Dashboard Rendering
 
 ```logicn
-secure flow renderDashboard(req: DashboardRequest)
+secure flow renderDashboard(request: DashboardRequest)
   -> Result<RenderedDashboard, RenderError>
 effects [database.read, gpu.compute, audit.write] {
 
   // Governed data load on CPU
   compute target cpu {
-    let user: User     = UsersDB.findById(req.userId)?
+    let user: User     = UsersDB.findById(request.userId)?
     let data: ChartData = ReportsDB.loadChartData(user.id)?
   }
 
@@ -170,8 +170,8 @@ effects [database.read, gpu.compute, audit.write] {
     let frame: RenderFrame = Graphics.render({
       vertices: gpuBuffer,
       labels:   labels,
-      width:    req.width,
-      height:   req.height
+      width:    request.width,
+      height:   request.height
     })
   }
 
@@ -181,7 +181,7 @@ effects [database.read, gpu.compute, audit.write] {
 
     AuditLog.write({
       event:  "DashboardRendered",
-      userId: req.userId
+      userId: request.userId
     })
 
     return Ok(RenderedDashboard { image, format: "png" })
@@ -214,7 +214,7 @@ stream output         (cpu / network)
 ### Full AI flow example
 
 ```logicn
-secure flow answerQuestion(req: ChatRequest)
+secure flow answerQuestion(request: ChatRequest)
   -> Result<ChatResponse, ChatError>
 effects [
   ai.inference,
@@ -225,8 +225,8 @@ effects [
 ] {
 
   compute target cpu {
-    let user:   User   = UsersDB.findById(req.userId)?
-    let prompt: Prompt safe validated = PromptBuilder.fromRequest(req)?
+    let user:   User   = UsersDB.findById(request.userId)?
+    let prompt: Prompt safe validated = PromptBuilder.fromRequest(request)?
   }
 
   compute target cpu {
@@ -255,7 +255,7 @@ effects [
   }
 
   compute target cpu {
-    AuditLog.write({ event: "ChatCompletionGenerated", userId: req.userId })
+    AuditLog.write({ event: "ChatCompletionGenerated", userId: request.userId })
     return Ok(ChatResponse { text: checked.text })
   }
 }

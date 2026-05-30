@@ -23,7 +23,7 @@ the result is `unsafe`. This is the SQL injection pattern.
 ### Tainted (must emit LLN-VALUESTATE-004 at sink)
 
 ```logicn
-unsafe let rawEmail: String = req.body.email
+unsafe let rawEmail: String = request.body.email
 let query: String = "SELECT * FROM users WHERE email = '" + rawEmail + "'"
 Database.query(query)?   // LLN-VALUESTATE-004
 ```
@@ -31,7 +31,7 @@ Database.query(query)?   // LLN-VALUESTATE-004
 ### Safe
 
 ```logicn
-unsafe let rawEmail: String = req.body.email
+unsafe let rawEmail: String = request.body.email
 let email: protected Email = validate.email(rawEmail)?
 Database.queryParameterized("SELECT * FROM users WHERE email = ?", [email])?
 ```
@@ -62,7 +62,7 @@ bytes are `Bytes` type. Normal equality comparison is vulnerable to timing attac
 
 ```logicn
 let expected: Bytes = Hmac.sign(secretKey, payload)
-let supplied: Bytes = req.headers.signature
+let supplied: Bytes = request.headers.signature
 if expected == supplied {   // LLN-SECRET-002
   return Ok()
 }
@@ -72,7 +72,7 @@ if expected == supplied {   // LLN-SECRET-002
 
 ```logicn
 let expected: Bytes = Hmac.sign(secretKey, payload)
-let supplied: Bytes = req.headers.signature
+let supplied: Bytes = request.headers.signature
 if constantTimeEquals(expected, supplied) {
   return Ok()
 }

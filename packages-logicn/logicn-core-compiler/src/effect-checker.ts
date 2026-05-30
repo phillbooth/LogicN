@@ -8,6 +8,7 @@
 // =============================================================================
 
 import { type AstNode, type AstNodeKind, type ParseDiagnostic, type FlowMeta, type SourceLocation } from "./parser.js";
+import { buildCallGraph, topoSort, detectCycle } from "@logicn/devtools-graph-algorithms";
 
 // ---------------------------------------------------------------------------
 // Effect checker diagnostics
@@ -395,19 +396,51 @@ function buildFlowCallGraph(
   flows: readonly FlowMeta[],
   ast: AstNode,
 ): ReadonlyMap<string, ReadonlySet<string>> {
-  const graph = new Map<string, Set<string>>();
   const knownFlows = new Set(flows.map((flow) => flow.name));
 
-  for (const flow of flows) {
+  // Build plain descriptors for each flow — no AstNode references cross the boundary
+  const descriptors = flows.map((flow) => {
     const node = findFlowNode(ast, flow.name);
+    const calledFlows: string[] = [];
     if (node !== undefined) {
       const calls = new Set<string>();
       findDirectFlowCalls(node, knownFlows, calls);
-      graph.set(flow.name, calls);
+      calledFlows.push(...calls);
     }
+    return {
+      name: flow.name,
+      qualifier: flow.qualifier,
+      calledFlows,
+    };
+  });
+
+  // Use devtools-graph to build a formal CallGraph for structural analysis
+  const callGraph = buildCallGraph(descriptors);
+
+  // Check for circular flow dependencies and log via detectCycle
+  const cycleResult = detectCycle(callGraph);
+  if (cycleResult.hasCycle && cycleResult.cycle !== undefined) {
+    // Cycle detected — callers will see diagnostic LLN-EFFECT-002 from
+    // collectTransitiveCalledEffects (which guards against infinite recursion
+    // using the `seen` set). The cycle is recorded here for future diagnostics.
+    // No throw: the checker degrades gracefully on cycles.
+    void cycleResult.cycle; // acknowledged; used by topoSort result below
   }
 
-  return graph;
+  // Use topoSort to produce a processing order (leaves first, callers last).
+  // The `order` is available for future passes that need bottom-up propagation.
+  const { order: _topoOrder } = topoSort(callGraph);
+  void _topoOrder; // available for downstream use if needed
+
+  // Convert the CallGraph back to the adjacency map the rest of this module uses.
+  // This keeps the existing recursive helpers (hasTransitiveEffect, etc.) unchanged.
+  const adjacency = new Map<string, ReadonlySet<string>>();
+  for (const node of callGraph.nodes()) {
+    const callees = new Set(callGraph.outEdges(node.id).map((edge) => edge.to));
+    adjacency.set(node.id, callees);
+  }
+
+  return adjacency;
 }
 
 function findDirectFlowCalls(

@@ -1,7 +1,8 @@
-﻿/// example: 307-vector-type
+/// example: 307-vector-type
 /// level: 6
 /// concept: fixed-length vector type for embeddings
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Use Vector<T, N> for fixed-length one-dimensional arrays, such as embedding outputs.
 
 pure flow describeEmbedding() -> Vector<Float32, 768>

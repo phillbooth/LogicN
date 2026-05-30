@@ -72,7 +72,7 @@ pure flow calculateVat(amount: Money<GBP>) -> Money<GBP> { ... }
 | `packages-logicn/logicn-core-compiler/` | Compiler pipeline: scanner, lexer, parser, effect checker |
 | `packages-logicn/logicn-core-cli/` | CLI entry point and graph commands |
 | `packages-logicn/logicn-core-tasks/` | Task dependency resolution |
-| `packages-logicn/logicn-devtools-project-graph/` | Workspace knowledge graph |
+| `packages-logicn/logicn-devtools-graph-project/` | Workspace knowledge graph |
 | `packages-logicn/logicn-framework-app-kernel/` | Secure app kernel design |
 | `packages-logicn/logicn-framework-example-app/` | Example app source |
 
@@ -111,7 +111,7 @@ See `docs/Knowledge-Bases/compiler-diagnostics.md` for the full index.
 Primary graph outputs:
 
 ```text
-build/graph/logicn-devtools-project-graph.json
+build/graph/logicn-devtools-graph-project.json
 build/graph/LogicN_GRAPH_REPORT.md
 build/graph/logicn-ai-map.md
 ```

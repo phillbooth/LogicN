@@ -1,0 +1,202 @@
+﻿/// example: 470-contract-healthcare-search
+/// level: 9
+/// concept: healthcare patient search with complete privacy, observability, errors, and context contract sections
+/// expected_diagnostics: none
+/// ai_rule: Healthcare flows must declare privacy.contains PII, privacy.retention, deny protected values from logs, and require signed attestation for GDPR/NHS compliance.
+
+event PatientSearched
+
+record PatientSearchRequest {
+  query: String
+  limit: String
+}
+
+record PatientSearchResult {
+  patientId: String
+  name: String
+  matchScore: String
+}
+
+secure flow searchPatients(
+  readonly request: Request
+) -> SearchPatientsResult
+
+contract {
+  types {
+    type SearchPatientsResult = Result<Response, ApiError>
+  }
+
+  intent {
+    "Search patient records for authorised clinical staff. Returns de-identified results. Full records require separate access."
+  }
+
+  request {
+    accepts PatientSearchRequest
+
+    params {
+      query: unsafe String
+      limit: unsafe String
+    }
+
+    requires {
+      actor
+      trace_id
+      deadline
+    }
+  }
+
+  response {
+    returns PatientSearchResult
+
+    exposes {
+      patientId
+      name
+      matchScore
+    }
+
+    denies {
+      email
+      nhsNumber
+      dateOfBirth
+      address
+      phoneNumber
+    }
+  }
+
+  context {
+    require actor
+    require trace_id
+    require deadline
+  }
+
+  effects {
+    database.read
+    audit.write
+  }
+
+  timeouts {
+    deadline 10 seconds
+    database {
+      timeout 5 seconds
+    }
+  }
+
+  retries {
+    database.read {
+      attempts 2
+      strategy linear_backoff
+    }
+  }
+
+  limits {
+    max query length 200 characters
+    max results 50
+    max request size 10 KB
+  }
+
+  privacy {
+    contains PII
+    retention 7 years
+    deny protected Email to response
+    deny protected NhsNumber to response
+    deny protected DateOfBirth to response
+    deny protected values in logs
+    require redaction before audit.write
+  }
+
+  errors {
+    returns {
+      ApiError.BadRequest
+      ApiError.Unauthorised
+      ApiError.Forbidden
+      ApiError.NotFound
+      ApiError.Internal
+    }
+
+    map ValidationError to ApiError.BadRequest
+    map AuthError to ApiError.Unauthorised
+    map PermissionDenied to ApiError.Forbidden
+    map SearchError to ApiError.Internal
+
+    expose {
+      ApiError.BadRequest
+      ApiError.Unauthorised
+      ApiError.Forbidden
+      ApiError.NotFound
+    }
+
+    redact {
+      ApiError.Internal
+    }
+
+    audit {
+      ApiError.Unauthorised
+      ApiError.Forbidden
+      ApiError.Internal
+    }
+  }
+
+  rules {
+    require actor before database.read
+    require clinical_role on actor
+    require trace_id before audit.write
+    deny protected NhsNumber to response
+    require redaction before audit.write
+  }
+
+  observability {
+    trace flow
+    measure latency
+    count database.read
+    log event names
+    require trace_id
+    deny protected values in logs
+    deny query content in logs
+    deny request body logging
+  }
+
+  events {
+    emits PatientSearched
+  }
+
+  audit {
+    require proof
+    require runtime report
+    require signed attestation
+    require access event
+  }
+}
+
+with effects [database.read, audit.write] {
+  let actor: Actor = context.actor
+  let traceId: TraceId = context.trace_id
+
+  unsafe let rawQuery: String = request.params.query
+  unsafe let rawLimit: String = request.params.limit
+
+  let query: String = validate.searchQuery(rawQuery)?
+  let limit: Int = validate.positiveInt(rawLimit).unwrapOr(10)
+
+  let results = PatientsDB.search({
+    query: query,
+    limit: limit,
+    actor: actor.id
+  })?
+
+  AuditLog.write({
+    event: "PatientSearched",
+    actor: actor.id,
+    traceId: traceId,
+    resultCount: results.length()
+  })
+
+  emit PatientSearched
+
+  return Ok(Response.okJson({
+    results: results.map(p => ({
+      patientId: p.id,
+      name: p.name,
+      matchScore: p.score
+    }))
+  }))
+}

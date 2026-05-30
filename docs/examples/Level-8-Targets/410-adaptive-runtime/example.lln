@@ -1,10 +1,16 @@
-﻿/// example: 410-adaptive-runtime
+/// example: 410-adaptive-runtime
 /// level: 8
 /// concept: adaptive runtime block that learns from workload to optimise batching and warmup
 /// expected_diagnostics: none
 /// ai_rule: runtime adaptive enables workload-learning optimisations within governance constraints.
 
-guarded flow runAdaptive(input: Tensor<Float32, [Batch, 512]>) -> Result<Tensor<Float32, [Batch, 128]>, AiError>
+guarded flow runAdaptive(input: Tensor<Float32, [Batch, 512]>) -> RunAdaptiveResult
+
+contract {
+  types {
+    type RunAdaptiveResult = Result<Tensor<Float32, [Batch, 128]>, AiError>
+  }
+}
   with effects [ai.inference]
 {
   compute target best { prefer [npu, gpu, cpu] fallback cpu }

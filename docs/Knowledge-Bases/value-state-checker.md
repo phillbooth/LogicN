@@ -93,7 +93,7 @@ safe   mut rawEmail         = validate.email(rawEmail)?
 ### Rule 1 — `unsafe` bindings cannot reach governed sinks directly
 
 ```logicn
-unsafe let rawInput: String = req.body
+unsafe let rawInput: String = request.body
 Database.insert(rawInput)   // LLN-VALUESTATE-003 — unsafe binding at governed sink
 ```
 
@@ -121,7 +121,7 @@ Diagnostic: `LLN-VALUESTATE-001` (`UnsafeToSafeTransitionDenied`)
 ### Rule 3 — Taint propagates through expressions
 
 ```logicn
-unsafe let rawInput: String = req.body
+unsafe let rawInput: String = request.body
 let sql = "SELECT " + rawInput   // sql is now tainted — LLN-VALUESTATE-004
 Database.query(sql)              // LLN-VALUESTATE-003
 ```
@@ -201,7 +201,7 @@ pure flow parseOrderId(raw: String) -> Result<OrderId, ValidationError> {
 Usage:
 
 ```logicn
-unsafe let rawId: String = req.params.id
+unsafe let rawId: String = request.params.id
 safe   mut rawId = parseOrderId(rawId)?
 ```
 
@@ -210,12 +210,12 @@ safe   mut rawId = parseOrderId(rawId)?
 ## 6. Full Flow Example
 
 ```logicn
-secure flow createCustomer(req: CreateCustomerRequest)
+secure flow createCustomer(request: CreateCustomerRequest)
   -> Result<ApiResponse<Customer>, ApiError>
 effects [database.write, audit.write] {
 
   // Boundary data — declared unsafe at entry point
-  unsafe let rawEmail: String = req.email
+  unsafe let rawEmail: String = request.email
 
   // Gate function: upgrades rawEmail to safe in-place
   // Fails with Err(ValidationError) if email format is invalid

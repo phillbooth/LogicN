@@ -1,7 +1,8 @@
-﻿/// example: 308-matrix-type
+/// example: 308-matrix-type
 /// level: 6
 /// concept: matrix type for weight tensors
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Use Matrix<T, Rows, Cols> for two-dimensional numeric tables such as weight matrices.
 
 pure flow applyWeights(

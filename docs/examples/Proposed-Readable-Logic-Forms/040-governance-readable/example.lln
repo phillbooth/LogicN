@@ -1,5 +1,6 @@
 ﻿/// example: 040-governance-readable (PROPOSED)
 /// concept: readable forms in governance conditions
+/// test_status: stable
 
 // Traditional governance condition
 secure flow approvePayment(amount: Money<GBP>, status: ApprovalStatus)

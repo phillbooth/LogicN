@@ -2,6 +2,7 @@
 /// concept: readable numeric comparison alias
 /// readable_form: amount is greater than limit
 /// canonical_form: amount > limit
+/// test_status: stable
 
 // Traditional (current, valid)
 if amount > limit {

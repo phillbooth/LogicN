@@ -2,6 +2,7 @@
 /// level: 3
 /// concept: caller missing effect required by callee
 /// expected_diagnostics: LLN-EFFECT-XXX
+/// test_status: stable
 /// ai_rule: If a callee declares an effect, the caller must declare it too.
 
 guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>

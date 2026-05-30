@@ -1,0 +1,154 @@
+/// example: 468-full-contract-model
+/// level: 9
+/// concept: full contract model — all 16 sections in canonical order
+/// expected_diagnostics: none
+/// ai_rule: The contract declares WHAT the flow is allowed, expected, and required to do. The body declares HOW.
+///          Canonical section order: types → intent → request → response → context → model → effects →
+///          timeouts → retries → limits → privacy → errors → rules → observability → events → audit
+
+event PatientProfileRead
+
+record PatientReadRequest {
+  patientId: String
+}
+
+record PatientProfileResponse {
+  patientId: String
+  name: String
+}
+
+secure flow getPatient(readonly request: Request) -> GetPatientResult
+
+contract {
+  types {
+    type GetPatientResult = Result<Response, ApiError>
+  }
+
+  intent {
+    "Return a patient profile to an authorised actor."
+  }
+
+  request {
+    accepts PatientReadRequest
+    params {
+      patientId: unsafe String
+    }
+    requires {
+      actor
+      trace_id
+      deadline
+    }
+  }
+
+  response {
+    returns PatientProfileResponse
+    exposes {
+      patientId
+      name
+    }
+    denies {
+      email
+      nhsNumber
+      dateOfBirth
+    }
+  }
+
+  context {
+    require actor
+    require trace_id
+    require deadline
+  }
+
+  model {
+    uses Patient
+    reads PatientRecord
+  }
+
+  effects {
+    database.read
+    audit.write
+  }
+
+  timeouts {
+    deadline 5 seconds
+    connect 2 seconds
+    read 10 seconds
+  }
+
+  retries {
+    network.outbound {
+      attempts 3
+      backoff exponential
+    }
+  }
+
+  limits {
+    max request size 1 MB
+    rate 1000 per minute per actor
+  }
+
+  privacy {
+    contains PII
+    deny protected values in logs
+    retain 30 days
+  }
+
+  errors {
+    returns {
+      ApiError.BadRequest
+      ApiError.Unauthorized
+      ApiError.NotFound
+    }
+    expose {
+      message
+      code
+    }
+    redact {
+      stackTrace
+      internalDetails
+    }
+  }
+
+  rules {
+    require actor before database.read
+    require trace_id before audit.write
+    deny protected Email to response unless response policy allows
+    deny protected NhsNumber to response
+  }
+
+  observability {
+    trace flow
+    measure latency
+    measure throughput
+    log on error
+  }
+
+  events {
+    emits PatientProfileRead
+  }
+
+  audit {
+    require proof
+    require runtime report
+    require signed attestation
+  }
+}
+
+with effects [database.read, audit.write] {
+  unsafe let rawId: String = request.params.patientId
+  let patientId: protected PatientId = validate.patientId(rawId)?
+
+  let patient = PatientsDB.find(patientId)?
+
+  AuditLog.write({
+    event: "PatientProfileRead",
+    patientId: redact(patient.id)
+  })
+
+  emit PatientProfileRead
+
+  return Ok(Response.okJson({
+    patientId: patient.id,
+    name: patient.name
+  }))
+}

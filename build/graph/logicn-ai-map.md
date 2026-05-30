@@ -23,18 +23,18 @@ Provides:
 LogicN compiler pipeline contracts for parsing, checking, IR, diagnostics and reports.
 
 Provides:
+- LogicNAttestation
+- AttestationInputs
+- AttestationKeyPair
+- signAttestation
+- verifyAttestation
+- generateAttestationKey
+- attestationToYaml
+- attestationFromJson
 - AuditEvent
 - AuditWriter
 - createAuditWriter
 - buildFlowAuditEvent
-- EffectDiagnostic
-- EffectCheckResult
-- checkEffects
-- checkFlowEffects
-- effectResultsToDiagnostics
-- GIREffect
-- GIRIntent
-- GIRProtectedValue
 
 ## logicn-core-runtime
 

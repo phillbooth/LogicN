@@ -1,7 +1,8 @@
-﻿/// example: 102-guarded-database-write
+/// example: 102-guarded-database-write
 /// level: 3
 /// concept: guarded flow declaring database.write effect
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Declare database.write when writing to a database.
 
 guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>

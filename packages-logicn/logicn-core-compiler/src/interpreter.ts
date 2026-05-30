@@ -95,14 +95,35 @@ const STD_RECEIVERS = new Set([
   "validate",
 ]);
 const STD_METHOD_NAMES = new Set([
+  // Option
   "unwrapOr", "isSome", "isNone", "map", "flatMap", "value", "get",
+  // Result
   "isOk", "isErr", "mapErr",
+  // String
   "length", "charCount", "toLower", "toUpper", "trim", "trimStart", "trimEnd",
   "startsWith", "endsWith", "contains", "includes", "split", "replace", "replaceAll",
-  "slice", "encode", "encodedLength", "codePoints", "isEmpty",
-  "first", "last", "push", "append", "filter", "reduce", "sum", "reverse", "join", "find", "toList", "toArray",
-  "set", "has", "size", "keys", "values", "delete", "remove",
+  "slice", "encode", "encodedLength", "codePoints", "isEmpty", "toString", "toText",
+  "charAt", "indexOf", "lastIndexOf", "padStart", "padEnd", "repeat", "toChars",
+  "toInt", "toFloat", "toDecimal",
+  // Array
+  "first", "last", "push", "append", "filter", "reduce", "sum", "reverse", "join", "find",
+  "toList", "toArray", "take", "drop", "flatMap", "zip", "sortBy", "sort",
+  "min", "max", "count", "distinct", "unique", "groupBy",
+  // Map
+  "set", "has", "size", "keys", "values", "delete", "remove", "entries", "merge",
+  // Money
   "amount", "currency", "add", "subtract", "multiply", "divideBy",
+  // Bytes
+  "toHex", "toBase64", "equals", "decode", "sha256", "sha256Hex",
+  // String extended — named format (Phase 9A-3)
+  "format",
+  // Char
+  "codePoint", "isDigit", "isLetter", "isUpper", "isLower", "isWhitespace",
+  // Timestamp + Duration
+  "toMs", "toSeconds", "toMinutes", "toHours", "before", "after", "toIso",
+  "isZero", "isNeg", "abs",
+  // Numeric
+  "toFixed", "toPlaces", "floor", "ceil", "round", "clamp", "sign",
 ]);
 
 class Interpreter {
@@ -120,7 +141,7 @@ class Interpreter {
     this.flowIndex = buildFlowIndex(ast);
   }
 
-  runFlow(flowName: string, args: ReadonlyMap<string, LogicNValue>): FlowExecutionResult {
+  async runFlow(flowName: string, args: ReadonlyMap<string, LogicNValue>): Promise<FlowExecutionResult> {
     const startedAt = new Date().toISOString();
     const flowNode = this.flowIndex.get(flowName);
     const qualifier = flowNode === undefined ? "flow" : qualifierFromFlowKind(flowNode.kind);
@@ -148,7 +169,7 @@ class Interpreter {
     try {
       for (const child of flowNode.children ?? []) {
         if (child.kind === "block") {
-          returnValue = this.executeBlock(child) ?? LLN_VOID;
+          returnValue = await this.executeBlock(child) ?? LLN_VOID;
         }
       }
     } catch (error: unknown) {
@@ -235,13 +256,13 @@ class Interpreter {
     return false;
   }
 
-  private executeBlock(node: AstNode): LogicNValue | undefined {
+  private async executeBlock(node: AstNode): Promise<LogicNValue | undefined> {
     this.pushScope();
     let result: LogicNValue | undefined;
 
     try {
       for (const child of node.children ?? []) {
-        const stmtResult = this.executeStatement(child);
+        const stmtResult = await this.executeStatement(child);
         if (stmtResult !== undefined) {
           result = stmtResult;
           break;
@@ -254,12 +275,12 @@ class Interpreter {
     return result;
   }
 
-  private executeStatement(node: AstNode): LogicNValue | undefined {
+  private async executeStatement(node: AstNode): Promise<LogicNValue | undefined> {
     switch (node.kind) {
       case "letDecl":
       case "readonlyDecl": {
         const initNode = node.children?.[0];
-        const initVal = initNode !== undefined ? this.evalExpr(initNode) : LLN_VOID;
+        const initVal = initNode !== undefined ? await this.evalExpr(initNode) : LLN_VOID;
         const { name, safetyPrefix, typeName, rawType } = parseBindingValue(node.value ?? "");
         this.declare(name, wrapGovernedValue(initVal, rawType), safetyPrefix === "unsafe", typeName);
         return undefined;
@@ -267,7 +288,7 @@ class Interpreter {
 
       case "mutDecl": {
         const initNode = node.children?.[0];
-        const initVal = initNode !== undefined ? this.evalExpr(initNode) : LLN_VOID;
+        const initVal = initNode !== undefined ? await this.evalExpr(initNode) : LLN_VOID;
         const { name, safetyPrefix, typeName, rawType } = parseBindingValue(node.value ?? "");
         const value = wrapGovernedValue(initVal, rawType);
         if (safetyPrefix === "safe") {
@@ -280,7 +301,7 @@ class Interpreter {
 
       case "returnStmt": {
         const retExpr = node.children?.[0];
-        return retExpr !== undefined ? this.evalExpr(retExpr) : LLN_VOID;
+        return retExpr !== undefined ? await this.evalExpr(retExpr) : LLN_VOID;
       }
 
       case "ifStmt": {
@@ -288,14 +309,14 @@ class Interpreter {
         const thenBlock = node.children?.[1];
         const elseBlock = node.children?.[2];
         if (condition === undefined || thenBlock === undefined) return undefined;
-        const condVal = this.evalExpr(condition);
-        if (condVal.__tag === "bool" && condVal.value) return this.executeBlock(thenBlock);
-        if (elseBlock !== undefined) return this.executeBlock(elseBlock);
+        const condVal = await this.evalExpr(condition);
+        if (condVal.__tag === "bool" && condVal.value) return await this.executeBlock(thenBlock);
+        if (elseBlock !== undefined) return await this.executeBlock(elseBlock);
         return undefined;
       }
 
       case "matchExpr": {
-        const matchResult = this.evalExpr(node);
+        const matchResult = await this.evalExpr(node);
         return matchResult.__tag === "void" ? undefined : matchResult;
       }
 
@@ -307,15 +328,15 @@ class Interpreter {
         return undefined;
 
       case "block":
-        return this.executeBlock(node);
+        return await this.executeBlock(node);
 
       default:
-        this.evalExpr(node);
+        await this.evalExpr(node);
         return undefined;
     }
   }
 
-  private evalExpr(node: AstNode): LogicNValue {
+  private async evalExpr(node: AstNode): Promise<LogicNValue> {
     switch (node.kind) {
       case "stringLiteral": {
         const raw = node.value ?? "";
@@ -338,8 +359,11 @@ class Interpreter {
       case "charLiteral":
         return { __tag: "char", value: node.value ?? "" };
 
-      case "listLiteral":
-        return { __tag: "list", items: (node.children ?? []).map((child) => this.evalExpr(child)) };
+      case "listLiteral": {
+        const items: LogicNValue[] = [];
+        for (const child of node.children ?? []) items.push(await this.evalExpr(child));
+        return { __tag: "list", items };
+      }
 
       case "identifier": {
         const name = node.value ?? "";
@@ -349,6 +373,12 @@ class Interpreter {
         if (name === "Ok" || name === "Err" || name === "Some") return { __tag: "unresolved", name };
         const entry = this.lookup(name);
         if (entry !== undefined) return entry.value;
+        // Capital-letter identifiers not in scope are module/type names (Math, Duration, Array, etc.)
+        // Return unresolved so the stdlib dispatcher can handle them as static calls.
+        // Symbol resolver already validates lowercase identifiers — capital ones are stdlib modules.
+        if (name.length > 0 && name[0]! >= "A" && name[0]! <= "Z") {
+          return { __tag: "unresolved", name };
+        }
         return { __tag: "runtimeError", message: `'${name}' is not in scope` };
       }
 
@@ -356,13 +386,13 @@ class Interpreter {
         const leftNode = node.children?.[0];
         const rightNode = node.children?.[1];
         if (leftNode === undefined || rightNode === undefined) return LLN_VOID;
-        return this.evalBinary(node.value ?? "", leftNode, rightNode);
+        return await this.evalBinary(node.value ?? "", leftNode, rightNode);
       }
 
       case "unaryExpr": {
         const operandNode = node.children?.[0];
         if (operandNode === undefined) return LLN_VOID;
-        const operand = this.evalExpr(operandNode);
+        const operand = await this.evalExpr(operandNode);
         const op = node.value ?? "";
         if (op === "!" && operand.__tag === "bool") return { __tag: "bool", value: !operand.value };
         if (op === "-" && operand.__tag === "int") return { __tag: "int", value: -operand.value };
@@ -373,48 +403,48 @@ class Interpreter {
       case "errorPropagation": {
         const inner = node.children?.[0];
         if (inner === undefined) return LLN_VOID;
-        const val = this.evalExpr(inner);
+        const val = await this.evalExpr(inner);
         if (val.__tag === "err") throw new EarlyReturn(val);
         if (val.__tag === "ok") return val.value;
         return val;
       }
 
       case "callExpr":
-        return this.evalCall(node);
+        return await this.evalCall(node);
 
       case "memberExpr":
-        return this.evalMember(node);
+        return await this.evalMember(node);
 
       case "matchExpr":
-        return this.evalMatch(node);
+        return await this.evalMatch(node);
 
       case "block":
         if (node.value === "(expr)") {
           const expr = node.children?.[0];
-          return expr === undefined ? LLN_VOID : this.evalExpr(expr);
+          return expr === undefined ? LLN_VOID : await this.evalExpr(expr);
         }
-        return this.executeBlock(node) ?? LLN_VOID;
+        return await this.executeBlock(node) ?? LLN_VOID;
 
       default:
         return LLN_VOID;
     }
   }
 
-  private evalBinary(op: string, leftNode: AstNode, rightNode: AstNode): LogicNValue {
+  private async evalBinary(op: string, leftNode: AstNode, rightNode: AstNode): Promise<LogicNValue> {
     if (op === "&&") {
-      const left = this.evalExpr(leftNode);
+      const left = await this.evalExpr(leftNode);
       if (left.__tag === "bool" && !left.value) return { __tag: "bool", value: false };
-      return this.evalExpr(rightNode);
+      return await this.evalExpr(rightNode);
     }
 
     if (op === "||") {
-      const left = this.evalExpr(leftNode);
+      const left = await this.evalExpr(leftNode);
       if (left.__tag === "bool" && left.value) return { __tag: "bool", value: true };
-      return this.evalExpr(rightNode);
+      return await this.evalExpr(rightNode);
     }
 
-    const left = this.evalExpr(leftNode);
-    const right = this.evalExpr(rightNode);
+    const left = await this.evalExpr(leftNode);
+    const right = await this.evalExpr(rightNode);
 
     if ((left.__tag === "int" || left.__tag === "float") && (right.__tag === "int" || right.__tag === "float")) {
       const resultTag = left.__tag === "float" || right.__tag === "float" ? "float" : "int";
@@ -452,9 +482,26 @@ class Interpreter {
     return { __tag: "runtimeError", message: `Operator '${op}' not supported for ${left.__tag}` };
   }
 
-  private evalCall(node: AstNode): LogicNValue {
+  private async evalCall(node: AstNode): Promise<LogicNValue> {
     const methodName = node.value ?? "";
     const children = node.children ?? [];
+
+    // Record literal: { field: expr, ... } parsed as callExpr { value: "#record" }
+    // Each child is an identifier { value: "fieldName", children: [valueExpr] }
+    if (methodName === "#record") {
+      const fields = new Map<string, LogicNValue>();
+      for (const child of children) {
+        if (child.kind === "identifier" && child.value !== undefined) {
+          const fieldName = child.value;
+          const fieldValueNode = child.children?.[0];
+          const fieldValue = fieldValueNode !== undefined
+            ? await this.evalExpr(fieldValueNode)
+            : { __tag: "void" as const };
+          fields.set(fieldName, fieldValue);
+        }
+      }
+      return { __tag: "record", fields };
+    }
     const forceStandalone =
       methodName === "Ok" ||
       methodName === "Err" ||
@@ -472,35 +519,37 @@ class Interpreter {
     const receiverName = receiver === undefined ? "" : this.getReceiverName(receiver);
     const fullName = receiverName !== "" ? `${receiverName}.${methodName}` : methodName;
 
-    if (methodName === "Ok") return { __tag: "ok", value: this.evalExpr(args[0] ?? voidIdentifier()) };
-    if (methodName === "Err") return { __tag: "err", error: this.evalExpr(args[0] ?? voidIdentifier()) };
-    if (methodName === "Some") return { __tag: "some", value: this.evalExpr(args[0] ?? voidIdentifier()) };
+    if (methodName === "Ok") return { __tag: "ok", value: await this.evalExpr(args[0] ?? voidIdentifier()) };
+    if (methodName === "Err") return { __tag: "err", error: await this.evalExpr(args[0] ?? voidIdentifier()) };
+    if (methodName === "Some") return { __tag: "some", value: await this.evalExpr(args[0] ?? voidIdentifier()) };
 
     if (this.fnIndex.has(methodName) && receiver === undefined) {
-      return this.runLocalFn(methodName, args);
+      return await this.runLocalFn(methodName, args);
     }
 
-    const evaluatedReceiver = receiver !== undefined ? this.evalExpr(receiver) : undefined;
-    const evaluatedArgs = args.map((arg) => this.evalExpr(arg));
-    const stdlibResult = callStdlib(
+    const evaluatedReceiver = receiver !== undefined ? await this.evalExpr(receiver) : undefined;
+    const evaluatedArgs: LogicNValue[] = [];
+    for (const arg of args) evaluatedArgs.push(await this.evalExpr(arg));
+
+    const stdlibResult = await callStdlib(
       fullName,
       evaluatedReceiver,
       evaluatedArgs,
       {
         recordEffect: (effect) => this.effectsObserved.add(effect),
         resolveIdentifier: (name) => this.lookup(name)?.value,
-        callFlow: (name, fnArgs) => {
+        callFlow: async (name, fnArgs) => {
           const sub = new Interpreter(this.ast, this.knownFlows);
-          const result = sub.runFlow(name, fnArgs);
+          const result = await sub.runFlow(name, fnArgs);
           for (const effect of result.effectsObserved) this.effectsObserved.add(effect);
           this.auditEntries.push(...result.auditEntries);
           return result.value;
         },
-        applyFn: (fn, arg) => {
+        applyFn: async (fn, arg) => {
           if (fn.__tag === "unresolved" && this.flowIndex.has(fn.name)) {
             const callArgs = new Map<string, LogicNValue>([["arg", arg]]);
             const sub = new Interpreter(this.ast, this.knownFlows);
-            const result = sub.runFlow(fn.name, callArgs);
+            const result = await sub.runFlow(fn.name, callArgs);
             for (const effect of result.effectsObserved) this.effectsObserved.add(effect);
             this.auditEntries.push(...result.auditEntries);
             return result.value;
@@ -512,13 +561,13 @@ class Interpreter {
     if (stdlibResult !== undefined) return stdlibResult;
 
     if (fullName.startsWith("validate.") || fullName.startsWith("sanitize.") || fullName.startsWith("parse.")) {
-      const raw = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
+      const raw = args[0] !== undefined ? await this.evalExpr(args[0]) : LLN_VOID;
       const baseName = fullName.split(".").slice(1).join(".");
       return { __tag: "ok", value: { __tag: "protected", baseType: titleCase(baseName), value: raw } };
     }
 
     if (fullName.startsWith("json.decode") || fullName.startsWith("toml.decode")) {
-      const raw = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
+      const raw = args[0] !== undefined ? await this.evalExpr(args[0]) : LLN_VOID;
       if (raw.__tag === "string") {
         try {
           return { __tag: "ok", value: jsObjectToLogicN(JSON.parse(raw.value)) };
@@ -530,44 +579,44 @@ class Interpreter {
     }
 
     if (methodName === "redact" || fullName === "redact") {
-      const raw = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
+      const raw = args[0] !== undefined ? await this.evalExpr(args[0]) : LLN_VOID;
       return { __tag: "redacted", baseType: raw.__tag === "protected" ? raw.baseType : "Unknown" };
     }
 
     if (methodName === "constantTimeEquals" || fullName === "constantTimeEquals") {
-      const a = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_NONE;
-      const b = args[1] !== undefined ? this.evalExpr(args[1]) : LLN_NONE;
+      const a = args[0] !== undefined ? await this.evalExpr(args[0]) : LLN_NONE;
+      const b = args[1] !== undefined ? await this.evalExpr(args[1]) : LLN_NONE;
       return { __tag: "bool", value: secureComparable(a) === secureComparable(b) };
     }
 
     if (fullName === "AuditLog.write") {
       this.effectsObserved.add("audit.write");
-      this.auditEntries.push(this.buildAuditEntry(args));
+      this.auditEntries.push(await this.buildAuditEntry(args));
       return LLN_VOID;
     }
 
     if (methodName === "print" || fullName.startsWith("log.") || fullName.startsWith("console.")) {
-      const arg = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
+      const arg = args[0] !== undefined ? await this.evalExpr(args[0]) : LLN_VOID;
       console.log(safeDisplay(arg));
       return LLN_VOID;
     }
 
     if (methodName === "format" || fullName === "format") {
-      let result = args[0] !== undefined ? safeStringify(this.evalExpr(args[0])) : "";
+      let result = args[0] !== undefined ? safeStringify(await this.evalExpr(args[0])) : "";
       for (let index = 1; index < args.length; index += 1) {
         const arg = args[index];
-        result = result.replace("{}", arg === undefined ? "" : safeDisplay(this.evalExpr(arg)));
+        result = result.replace("{}", arg === undefined ? "" : safeDisplay(await this.evalExpr(arg)));
       }
       return { __tag: "string", value: result };
     }
 
     // Response helpers
     if (fullName === "Response.ok" || (receiverName === "Response" && methodName === "ok")) {
-      const data = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
+      const data = args[0] !== undefined ? await this.evalExpr(args[0]) : LLN_VOID;
       return makeResponseValue(200, data);
     }
     if (fullName === "Response.created" || (receiverName === "Response" && methodName === "created")) {
-      const id = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
+      const id = args[0] !== undefined ? await this.evalExpr(args[0]) : LLN_VOID;
       return makeResponseValue(201, id);
     }
     if (fullName === "Response.accepted" || (receiverName === "Response" && methodName === "accepted")) {
@@ -577,34 +626,34 @@ class Interpreter {
       return makeResponseValue(204, LLN_VOID);
     }
     if (fullName === "Response.redirect" || (receiverName === "Response" && methodName === "redirect")) {
-      const url = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
+      const url = args[0] !== undefined ? await this.evalExpr(args[0]) : LLN_VOID;
       return makeResponseValue(302, url);
     }
 
     // ApiError helpers
     if (fullName === "ApiError.notFound" || (receiverName === "ApiError" && methodName === "notFound")) {
-      const msg = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
+      const msg = args[0] !== undefined ? await this.evalExpr(args[0]) : LLN_VOID;
       return makeApiErrorValue(404, safeDisplay(msg));
     }
     if (fullName === "ApiError.badRequest" || (receiverName === "ApiError" && methodName === "badRequest")) {
-      const msg = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
+      const msg = args[0] !== undefined ? await this.evalExpr(args[0]) : LLN_VOID;
       return makeApiErrorValue(400, safeDisplay(msg));
     }
     if (fullName === "ApiError.internal" || (receiverName === "ApiError" && methodName === "internal")) {
-      const msg = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
+      const msg = args[0] !== undefined ? await this.evalExpr(args[0]) : LLN_VOID;
       return makeApiErrorValue(500, safeDisplay(msg));
     }
     if (fullName === "ApiError.unauthorized" || (receiverName === "ApiError" && methodName === "unauthorized")) {
-      const msg = args[0] !== undefined ? this.evalExpr(args[0]) : LLN_VOID;
+      const msg = args[0] !== undefined ? await this.evalExpr(args[0]) : LLN_VOID;
       return makeApiErrorValue(401, safeDisplay(msg));
     }
 
     if (this.flowIndex.has(methodName)) {
-      return this.runNestedFlow(methodName, args);
+      return await this.runNestedFlow(methodName, args);
     }
 
     if (receiver !== undefined) {
-      return this.evalMethodCall(evaluatedReceiver ?? this.evalExpr(receiver), methodName, evaluatedArgs);
+      return this.evalMethodCall(evaluatedReceiver ?? await this.evalExpr(receiver), methodName, evaluatedArgs);
     }
 
     this.diagnostics.push({ code: "LLN-RUNTIME-002", message: `Unresolved call: '${fullName}'` });
@@ -647,10 +696,10 @@ class Interpreter {
     return { __tag: "runtimeError", message: `Method '${method}' not found on ${receiver.__tag}` };
   }
 
-  private evalMatch(node: AstNode): LogicNValue {
+  private async evalMatch(node: AstNode): Promise<LogicNValue> {
     const subject = node.children?.[0];
     if (subject === undefined) return LLN_VOID;
-    const subjectVal = this.evalExpr(subject);
+    const subjectVal = await this.evalExpr(subject);
     const arms = (node.children ?? []).slice(1);
 
     for (const arm of arms) {
@@ -667,7 +716,7 @@ class Interpreter {
           }
         }
         const body = [...children].reverse().find((child) => child.kind !== "identifier");
-        return body === undefined ? LLN_VOID : this.evalExpr(body);
+        return body === undefined ? LLN_VOID : await this.evalExpr(body);
       } finally {
         this.popScope();
       }
@@ -676,11 +725,11 @@ class Interpreter {
     return LLN_VOID;
   }
 
-  private evalMember(node: AstNode): LogicNValue {
+  private async evalMember(node: AstNode): Promise<LogicNValue> {
     const receiver = node.children?.[0];
     const memberName = node.value ?? "";
     if (receiver === undefined) return LLN_VOID;
-    return this.evalMethodCall(this.evalExpr(receiver), memberName, []);
+    return this.evalMethodCall(await this.evalExpr(receiver), memberName, []);
   }
 
   private getReceiverName(node: AstNode): string {
@@ -705,57 +754,71 @@ class Interpreter {
     }
   }
 
-  private runLocalFn(name: string, argNodes: readonly AstNode[]): LogicNValue {
+  private async runLocalFn(name: string, argNodes: readonly AstNode[]): Promise<LogicNValue> {
     const fn = this.fnIndex.get(name);
     if (fn === undefined) return { __tag: "runtimeError", message: `Unresolved fn: '${name}'` };
 
     this.pushScope();
     try {
       const params = (fn.children ?? []).filter((child) => child.kind === "paramDecl");
-      params.forEach((param, index) => {
+      for (let index = 0; index < params.length; index += 1) {
+        const param = params[index];
+        if (param === undefined) continue;
         const paramName = extractParamName(param.value ?? "");
         if (paramName !== "") {
           const argNode = argNodes[index];
-          this.declare(paramName, argNode === undefined ? LLN_VOID : this.evalExpr(argNode));
+          this.declare(paramName, argNode === undefined ? LLN_VOID : await this.evalExpr(argNode));
         }
-      });
+      }
 
       const body = [...(fn.children ?? [])].reverse().find((child) => child.kind === "block");
-      return body === undefined ? LLN_VOID : this.executeBlock(body) ?? LLN_VOID;
+      return body === undefined ? LLN_VOID : await this.executeBlock(body) ?? LLN_VOID;
     } finally {
       this.popScope();
     }
   }
 
-  private runNestedFlow(name: string, argNodes: readonly AstNode[]): LogicNValue {
+  private async runNestedFlow(name: string, argNodes: readonly AstNode[]): Promise<LogicNValue> {
     const flowNode = this.flowIndex.get(name);
     if (flowNode === undefined) return { __tag: "runtimeError", message: `Flow '${name}' not found` };
 
     const callArgs = new Map<string, LogicNValue>();
     const params = (flowNode.children ?? []).filter((child) => child.kind === "paramDecl");
-    argNodes.forEach((arg, index) => {
+    for (let index = 0; index < argNodes.length; index += 1) {
+      const arg = argNodes[index];
+      if (arg === undefined) continue;
       const paramName = extractParamName(params[index]?.value ?? `arg${index}`);
-      callArgs.set(paramName, this.evalExpr(arg));
-    });
+      callArgs.set(paramName, await this.evalExpr(arg));
+    }
 
     const nested = new Interpreter(this.ast, this.knownFlows);
-    const result = nested.runFlow(name, callArgs);
+    const result = await nested.runFlow(name, callArgs);
     for (const effect of result.effectsObserved) this.effectsObserved.add(effect);
     this.auditEntries.push(...result.auditEntries);
     this.diagnostics.push(...result.diagnostics);
     return result.value;
   }
 
-  private buildAuditEntry(argNodes: readonly AstNode[]): RuntimeAuditEntry {
+  private async buildAuditEntry(argNodes: readonly AstNode[]): Promise<RuntimeAuditEntry> {
     const fields: Record<string, string> = {};
     let event = "UnnamedEvent";
 
     for (const arg of argNodes) {
       if (arg.kind === "identifier" && arg.children?.[0] !== undefined) {
-        const value = safeStringify(this.evalExpr(arg.children[0]));
+        const value = safeStringify(await this.evalExpr(arg.children[0]));
         const key = arg.value ?? `arg${Object.keys(fields).length}`;
         fields[key] = value;
         if (key === "event") event = value;
+      } else if (arg.kind === "callExpr" && arg.value === "#record") {
+        // Record literal { field: value, ... } — from parseRecordLiteral()
+        for (const field of arg.children ?? []) {
+          if (field.kind === "identifier" && field.children?.[0] !== undefined) {
+            const value = safeStringify(await this.evalExpr(field.children[0]));
+            const key = field.value ?? `arg${Object.keys(fields).length}`;
+            fields[key] = value;
+            if (key === "event") event = value;
+          }
+        }
       } else if (arg.kind === "block") {
         const blockStrings = findStringLiterals(arg).map((literal) => stripStringQuotes(literal.value ?? ""));
         if (blockStrings[0] !== undefined) {
@@ -763,7 +826,7 @@ class Interpreter {
           event = blockStrings[0];
         }
       } else {
-        fields[`arg${Object.keys(fields).length}`] = safeStringify(this.evalExpr(arg));
+        fields[`arg${Object.keys(fields).length}`] = safeStringify(await this.evalExpr(arg));
       }
     }
 
@@ -982,12 +1045,12 @@ function makeApiErrorValue(status: number, message: string): LogicNValue {
   return { __tag: "record", fields };
 }
 
-export function executeFlow(
+export async function executeFlow(
   flowName: string,
   args: ReadonlyMap<string, LogicNValue>,
   ast: AstNode,
   knownFlows?: readonly FlowMeta[],
-): FlowExecutionResult {
+): Promise<FlowExecutionResult> {
   const interpreter = new Interpreter(ast, knownFlows ?? []);
   return interpreter.runFlow(flowName, args);
 }

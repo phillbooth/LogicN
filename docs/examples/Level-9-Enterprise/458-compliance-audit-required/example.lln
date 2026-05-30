@@ -1,14 +1,20 @@
-﻿/// example: 458-compliance-audit-required
+/// example: 458-compliance-audit-required
 /// level: 9
 /// concept: secure flow that declares audit.write but never calls AuditLog.write
 /// expected_diagnostics: LLN-AUDIT-001
 /// ai_rule: AuditLog.write must be called on every return path in a flow that declares audit.write.
 
-secure flow deleteRecord(readonly req: Request) -> Result<Response, RecordError>
+secure flow deleteRecord(readonly request: Request) -> DeleteRecordResult
+
+contract {
+  types {
+    type DeleteRecordResult = Result<Response, RecordError>
+  }
+}
   with effects [database.write, audit.write]
   intent "Delete a patient record with audit trail"
 {
-  unsafe let rawId: String = req.body.recordId
+  unsafe let rawId: String = request.body.recordId
   let recordId: protected RecordId = validate.recordId(rawId)?
   RecordDB.delete(recordId)?
   // LLN-AUDIT-001: audit.write declared but AuditLog.write never called

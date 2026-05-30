@@ -3,9 +3,15 @@
 /// concept: Protected value in response body requires policy
 /// expected_diagnostics: LLN-GOV-003
 
-secure flow getProfile(readonly req: Request) -> Result<Response, ApiError>
+secure flow getProfile(readonly request: Request) -> GetProfileResult
+
+contract {
+  types {
+    type GetProfileResult = Result<Response, ApiError>
+  }
+}
 effects [database.read] {
-  let patient = PatientsDB.findById(req.patientId)?
+  let patient = PatientsDB.findById(request.patientId)?
   return Ok(Response.ok({
     email: patient.email
   }))

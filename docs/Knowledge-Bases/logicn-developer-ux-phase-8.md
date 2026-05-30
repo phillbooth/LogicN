@@ -83,7 +83,7 @@ Allowed effects:
 Protected values:
   - email: protected Email (validated, redacted before audit)
 Unsafe inputs:
-  - rawEmail from req.body.email
+  - rawEmail from request.body.email
 Audit:
   - AuditLog.write used
   - email redacted before audit

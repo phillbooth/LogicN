@@ -1,7 +1,8 @@
-﻿/// example: 055-byte-basic
+/// example: 055-byte-basic
 /// level: 2
 /// concept: Byte type
 /// expected_diagnostics: none
+/// test_status: stable
 /// ai_rule: Byte holds a single 8-bit unsigned integer, often written as a hex literal.
 
 let value: Byte = 0xFF
