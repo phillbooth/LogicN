@@ -18,9 +18,12 @@
 //              (LLN-VALUESTATE-004: TaintedValuePropagation)
 //   Phase 11B.1 — Two-hop taint propagation
 //              (LLN-VALUESTATE-005: DerivedUnsafeValueAtSink)
+//   Phase 11B.2 — User-defined gate functions
+//              Functions whose names start with recognised gate prefixes
+//              (validate*, sanitize*, check*, verify*, parse*, decode*)
+//              automatically break the taint chain, just like stdlib gates.
 //
 // Phase 6 defers:
-//   - Custom @gate annotations
 //   - LLN-VALUESTATE-002
 //   - LLN-SECRET-003 (SecretSerializationDenied)
 // =============================================================================
@@ -188,8 +191,63 @@ const GATE_PREFIXES = [
   "redact",
 ] as const;
 
-function isGateCallName(fullName: string): boolean {
-  return GATE_PREFIXES.some((prefix) => fullName.startsWith(prefix));
+// ---------------------------------------------------------------------------
+// Phase 11B.2 — User-defined gate function prefixes
+//
+// Functions whose names start with any of these prefixes are automatically
+// treated as gate functions that break the taint chain. This covers the common
+// naming conventions for validation helpers (validateAge, sanitizeHtml, etc.)
+// without requiring explicit @gate annotations in the AST.
+// ---------------------------------------------------------------------------
+
+const USER_GATE_NAME_PREFIXES = [
+  "validate",
+  "sanitize",
+  "check",
+  "verify",
+  "parse",
+  "decode",
+] as const;
+
+/**
+ * Phase 11B.2: Walk the AST and collect user-defined gate function names.
+ *
+ * A function is a user gate if its unqualified name starts with one of the
+ * recognised gate name prefixes (validate*, sanitize*, check*, verify*,
+ * parse*, decode*). This mirrors the stdlib gate convention and requires no
+ * additional annotation syntax.
+ *
+ * In addition to name-prefix matching, the set contains ALL fnDecl names that
+ * appear at the top level of the program so that call-site checks can find
+ * them by simple Set lookup.
+ */
+function collectUserGates(ast: AstNode): Set<string> {
+  const gates = new Set<string>();
+
+  function walk(node: AstNode): void {
+    if (node.kind === "fnDecl") {
+      const fnName = node.value ?? "";
+      if (
+        fnName !== "" &&
+        USER_GATE_NAME_PREFIXES.some((prefix) => fnName.startsWith(prefix))
+      ) {
+        gates.add(fnName);
+      }
+    }
+    for (const child of node.children ?? []) walk(child);
+  }
+
+  walk(ast);
+  return gates;
+}
+
+function isGateCallName(fullName: string, userGates?: ReadonlySet<string>): boolean {
+  if (GATE_PREFIXES.some((prefix) => fullName.startsWith(prefix))) return true;
+  // Phase 11B.2: user-defined gate by name prefix (e.g. validateAge)
+  if (USER_GATE_NAME_PREFIXES.some((prefix) => fullName.startsWith(prefix))) return true;
+  // Phase 11B.2: user-defined gate by explicit registry
+  if (userGates !== undefined && userGates.has(fullName)) return true;
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -276,10 +334,14 @@ function parseBindingValue(value: string): BindingInfo {
  * Returns true if `expr` references an unsafe or tainted binding anywhere in
  * its tree, UNLESS the expression is a recognised validation/redaction gate
  * (which breaks the taint chain).
+ *
+ * Phase 11B.2: accepts an optional `userGates` set so that user-defined gate
+ * functions also break the taint chain.
  */
 function isTaintedExpression(
   expr: AstNode,
   lookupBinding: (name: string) => BindingInfo | undefined,
+  userGates?: ReadonlySet<string>,
 ): boolean {
   if (expr.kind === "identifier" && expr.value) {
     const binding = lookupBinding(expr.value);
@@ -296,8 +358,13 @@ function isTaintedExpression(
     // Reconstruct the full qualified call name (e.g. "validate.searchQuery")
     // by combining the receiver identifier/memberExpr name with the method name.
     const fullCallName = buildFullCallName(expr);
+    const methodNameOnly = expr.value ?? "";
     // Gate calls break the taint chain — validate.*, sanitize.*, redact*, etc.
-    if (isGateCallName(fullCallName)) return false;
+    // Phase 11B.2: also check user-defined gates.
+    // Also check the unqualified method name because buildFullCallName may incorrectly
+    // treat the first argument as the receiver for standalone function calls like
+    // validateAge(rawAge) → builds "rawAge.validateAge" instead of just "validateAge".
+    if (isGateCallName(fullCallName, userGates) || isGateCallName(methodNameOnly, userGates)) return false;
 
     // For non-gate calls, check whether the receiver binding is itself tainted/unsafe,
     // OR whether any of the call arguments are tainted.
@@ -318,24 +385,24 @@ function isTaintedExpression(
     const receiverMemberTainted =
       firstChild !== undefined &&
       firstChild.kind === "memberExpr" &&
-      isTaintedExpression(firstChild, lookupBinding);
+      isTaintedExpression(firstChild, lookupBinding, userGates);
 
-    const argsTainted = args.some((a) => isTaintedExpression(a, lookupBinding));
+    const argsTainted = args.some((a) => isTaintedExpression(a, lookupBinding, userGates));
     return receiverIsTainted || receiverMemberTainted || argsTainted;
   }
 
   if (expr.kind === "binaryExpr") {
     const [left, right] = expr.children ?? [];
     return (
-      (left !== undefined && isTaintedExpression(left, lookupBinding)) ||
-      (right !== undefined && isTaintedExpression(right, lookupBinding))
+      (left !== undefined && isTaintedExpression(left, lookupBinding, userGates)) ||
+      (right !== undefined && isTaintedExpression(right, lookupBinding, userGates))
     );
   }
 
   // errorPropagation (?) — the wrapped expression might be tainted
   if (expr.kind === "errorPropagation") {
     const inner = expr.children?.[0];
-    return inner !== undefined && isTaintedExpression(inner, lookupBinding);
+    return inner !== undefined && isTaintedExpression(inner, lookupBinding, userGates);
   }
 
   return false;
@@ -369,6 +436,12 @@ class ValueStateChecker {
   private readonly diagnostics: ValueStateDiagnostic[] = [];
   // Binding scope stack — innermost scope is last
   private readonly scopes: Array<Map<string, BindingInfo>> = [];
+  // Phase 11B.2: user-defined gate function names (collected from fnDecl nodes)
+  private readonly userGates: ReadonlySet<string>;
+
+  constructor(userGates: ReadonlySet<string> = new Set()) {
+    this.userGates = userGates;
+  }
 
   check(ast: AstNode): void {
     this.pushScope();
@@ -486,12 +559,13 @@ class ValueStateChecker {
 
     // Phase 11B.1: propagate taint — if the init expression references an
     // unsafe or tainted binding (via a non-gate call), the new binding is tainted.
+    // Phase 11B.2: user-defined gate functions also break the taint chain.
     const init = node.children?.[0];
     const taintField: { tainted?: boolean; taintSource?: string } = {};
     if (init !== undefined && info.safetyPrefix !== "unsafe") {
       // unsafe bindings already have safetyPrefix tracking; we only need taint
       // propagation for plain let bindings derived from unsafe/tainted ones.
-      if (isTaintedExpression(init, (name) => this.lookupBinding(name))) {
+      if (isTaintedExpression(init, (name) => this.lookupBinding(name), this.userGates)) {
         const sourceName = findTaintSourceName(init, (name) => this.lookupBinding(name));
         taintField.tainted = true;
         if (sourceName !== undefined) taintField.taintSource = sourceName;
@@ -523,10 +597,11 @@ class ValueStateChecker {
 
     // Overwrite the previous unsafe registration with the new (possibly safe) one.
     // Phase 11B.1: propagate taint unless a gate clears it.
+    // Phase 11B.2: user-defined gate functions also break the taint chain.
     const mutLocField = node.location !== undefined ? { declaredAt: node.location } : {};
     const mutTaintField: { tainted?: boolean; taintSource?: string } = {};
     if (init !== undefined && info.safetyPrefix !== "safe" && info.safetyPrefix !== "unsafe") {
-      if (isTaintedExpression(init, (name) => this.lookupBinding(name))) {
+      if (isTaintedExpression(init, (name) => this.lookupBinding(name), this.userGates)) {
         const sourceName = findTaintSourceName(init, (name) => this.lookupBinding(name));
         mutTaintField.tainted = true;
         if (sourceName !== undefined) mutTaintField.taintSource = sourceName;
@@ -548,8 +623,16 @@ class ValueStateChecker {
       return inner !== undefined && this.isGateExpression(inner);
     }
     // Accept `gate(args)` — callExpr with a recognised gate name
+    // Phase 11B.2: also check user-defined gates.
+    // Also check the unqualified method name (node.value) because buildFullCallName
+    // may treat the first argument as the receiver for standalone calls like
+    // validateEmail(rawEmail) → "rawEmail.validateEmail" instead of "validateEmail".
     if (node.kind === "callExpr") {
-      return isGateCallName(buildFullCallName(node));
+      const methodNameOnly = node.value ?? "";
+      return (
+        isGateCallName(buildFullCallName(node), this.userGates) ||
+        isGateCallName(methodNameOnly, this.userGates)
+      );
     }
     return false;
   }
@@ -823,11 +906,17 @@ class ValueStateChecker {
  *   - `safe mut` upgrades must use a recognised gate function
  *   - `SecureString` bindings must not appear in log calls or equality comparisons
  *
+ * Phase 11B.2: user-defined gate functions are collected from fnDecl nodes
+ * before checking. Functions whose names start with validate*, sanitize*,
+ * check*, verify*, parse*, or decode* automatically break the taint chain.
+ *
  * @param ast  The root `program` node from `parseProgram()`.
  * @returns    A result object containing all value-state diagnostics.
  */
 export function checkValueStates(ast: AstNode): ValueStateCheckResult {
-  const checker = new ValueStateChecker();
+  // Phase 11B.2: collect user-defined gate functions before running the checker
+  const userGates = collectUserGates(ast);
+  const checker = new ValueStateChecker(userGates);
   checker.check(ast);
   return checker.getResult();
 }

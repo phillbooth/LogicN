@@ -49,6 +49,8 @@ export type AstNodeKind =
   | "assignStmt"
   | "returnStmt"
   | "ifStmt"
+  | "whileStmt"
+  | "forEachStmt"
   | "matchExpr"
   | "matchArm"
   // Expressions
@@ -701,6 +703,8 @@ class Parser {
         case "compute":  return this.parseComputeTarget();
         case "fn":       return this.parseFnDecl();
         case "emit":     return this.parseEmitStmt();
+        case "while":    return this.parseWhileStmt();
+        case "for":      return this.parseForEachStmt();
         // Safety-prefix binding forms:
         //   unsafe let name: Type = expr
         //   unsafe mut name: Type = expr
@@ -2254,6 +2258,30 @@ class Parser {
     const name = this.current().kind === "identifier" ? this.current().value : "<unknown>";
     if (this.current().kind === "identifier") this.advance();
     return { kind: "identifier", value: `emit:${name}`, location: loc };
+  }
+
+  private parseWhileStmt(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "while"
+    const condition = this.parseExpression();
+    const body = this.parseBlock();
+    return { kind: "whileStmt", location: loc, children: [condition, body] };
+  }
+
+  private parseForEachStmt(): AstNode {
+    // for name in expr { }
+    const loc = this.loc();
+    this.advance(); // consume "for"
+    this.skipNewlines();
+    const varName = this.current().kind === "identifier" ? this.current().value : "<item>";
+    if (this.current().kind === "identifier") this.advance();
+    this.skipNewlines();
+    // consume "in" (identifier, not keyword)
+    if (this.current().kind === "identifier" && this.current().value === "in") this.advance();
+    this.skipNewlines();
+    const collection = this.parseExpression();
+    const body = this.parseBlock();
+    return { kind: "forEachStmt", value: varName, location: loc, children: [collection, body] };
   }
 
   // ── Import / type / enum stubs ────────────────────────────────────────────

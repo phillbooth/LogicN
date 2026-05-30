@@ -1,4 +1,5 @@
-﻿/// example: 083-readonly-view-invalid
+/// example: 083-readonly-view-invalid
+/// test_status: draft
 /// level: 2
 /// concept: ReadOnlyView requires exactly one type parameter
 /// expected_diagnostics: LLN-TYPE-009

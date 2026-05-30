@@ -1,4 +1,5 @@
 /// example: 317-money-cross-currency-compute
+/// test_status: draft
 /// level: 6
 /// concept: Cross-currency arithmetic is denied
 /// expected_diagnostics: LLN-TYPE-004

@@ -1,4 +1,5 @@
-﻿/// example: 073-money-cross-currency-invalid
+/// example: 073-money-cross-currency-invalid
+/// test_status: draft
 /// level: 2
 /// concept: cross-currency Money addition is forbidden
 /// expected_diagnostics: LLN-TYPE-004

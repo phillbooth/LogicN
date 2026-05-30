@@ -1,4 +1,5 @@
 /// example: 070-auto-invalid
+/// test_status: draft
 /// level: 2
 /// concept: Auto requires an initializer
 /// expected_diagnostics: LLN-TYPE-002

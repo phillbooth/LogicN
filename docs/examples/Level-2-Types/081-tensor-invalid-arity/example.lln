@@ -1,4 +1,5 @@
-﻿/// example: 081-tensor-invalid-arity
+/// example: 081-tensor-invalid-arity
+/// test_status: draft
 /// level: 2
 /// concept: Tensor requires exactly two type parameters
 /// expected_diagnostics: LLN-TYPE-009

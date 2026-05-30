@@ -1,4 +1,5 @@
 /// example: 458-compliance-audit-required
+/// test_status: draft
 /// level: 9
 /// concept: secure flow that declares audit.write but never calls AuditLog.write
 /// expected_diagnostics: LLN-AUDIT-001

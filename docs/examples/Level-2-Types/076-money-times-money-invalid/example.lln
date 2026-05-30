@@ -1,4 +1,5 @@
-﻿/// example: 076-money-times-money-invalid
+/// example: 076-money-times-money-invalid
+/// test_status: draft
 /// level: 2
 /// concept: Money multiplied by Money is forbidden
 /// expected_diagnostics: LLN-TYPE-004

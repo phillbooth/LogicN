@@ -92,6 +92,13 @@ export {
   type SymbolResolveResult,
 } from "./symbol-resolver.js";
 
+// Phase 11E — Import Resolver
+export {
+  resolveImports,
+  type ImportedSymbol,
+  type ImportResolveResult,
+} from "./import-resolver.js";
+
 // Pass 8 - GIR Emitter
 export {
   emitGIR,

@@ -355,6 +355,63 @@ class Interpreter {
         return matchResult.__tag === "void" ? undefined : matchResult;
       }
 
+      case "assignStmt": {
+        const targetName = node.value ?? "";
+        const rhsNode = node.children?.[0];
+        if (targetName === "" || rhsNode === undefined) return undefined;
+        const newValue = await this.evalExpr(rhsNode);
+        if (!this.assign(targetName, newValue)) {
+          this.diagnostics.push({
+            code: "LLN-RUNTIME-004",
+            message: `Cannot assign to undeclared binding '${targetName}'`,
+          });
+        }
+        return undefined;
+      }
+
+      case "whileStmt": {
+        const conditionNode = node.children?.[0];
+        const bodyNode = node.children?.[1];
+        if (conditionNode === undefined || bodyNode === undefined) return undefined;
+
+        let iterations = 0;
+        const MAX_ITERATIONS = 100_000;
+
+        while (true) {
+          if (iterations++ > MAX_ITERATIONS) {
+            this.diagnostics.push({
+              code: "LLN-RUNTIME-005",
+              message: "Loop exceeded maximum iteration count (100,000)",
+            });
+            break;
+          }
+          const cond = await this.evalExpr(conditionNode);
+          if (cond.__tag !== "bool" || !cond.value) break;
+          const bodyResult = await this.executeBlock(bodyNode);
+          if (bodyResult !== undefined) return bodyResult;
+        }
+        return undefined;
+      }
+
+      case "forEachStmt": {
+        const varName = node.value ?? "item";
+        const collectionNode = node.children?.[0];
+        const bodyNode = node.children?.[1];
+        if (collectionNode === undefined || bodyNode === undefined) return undefined;
+
+        const collection = await this.evalExpr(collectionNode);
+        const items = collection.__tag === "list" ? collection.items : [];
+
+        for (const item of items) {
+          this.pushScope();
+          this.declare(varName, item);
+          const bodyResult = await this.executeBlock(bodyNode);
+          this.popScope();
+          if (bodyResult !== undefined) return bodyResult;
+        }
+        return undefined;
+      }
+
       case "fnDecl":
         if (node.value !== undefined) {
           this.fnIndex.set(node.value, node);

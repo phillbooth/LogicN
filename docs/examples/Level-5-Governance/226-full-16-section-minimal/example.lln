@@ -1,0 +1,163 @@
+/// example: 226-full-16-section-minimal
+/// level: 5
+/// concept: all 16 contract sections in canonical order — minimal but complete template
+/// expected_diagnostics: none
+/// test_status: stable
+/// ai_rule: Canonical contract section order is: types → intent → request → response → context → model → effects → timeouts → retries → limits → privacy → errors → rules → observability → events → audit
+
+event RecordAccessed
+
+record ReadRequest {
+  id: String
+}
+
+record ReadResponse {
+  id: String
+  name: String
+}
+
+secure flow getRecord(readonly request: Request) -> GetRecordResult
+
+contract {
+
+  // 1. types — name the result type
+  types {
+    type GetRecordResult = Result<Response, ApiError>
+  }
+
+  // 2. intent — human-readable governance statement
+  intent {
+    "Return a record to an authorised actor."
+  }
+
+  // 3. request — accepted input type and required params
+  request {
+    accepts ReadRequest
+    params {
+      id: unsafe String
+    }
+    requires {
+      actor
+      trace_id
+    }
+  }
+
+  // 4. response — allowed and denied output fields
+  response {
+    returns ReadResponse
+    exposes {
+      id
+      name
+    }
+    denies {
+      internalKey
+    }
+  }
+
+  // 5. context — required execution context fields
+  context {
+    require actor
+    require trace_id
+  }
+
+  // 6. model — domain types this flow operates on
+  model {
+    uses Record
+    reads RecordStore
+  }
+
+  // 7. effects — declared side effects
+  effects {
+    database.read
+    audit.write
+  }
+
+  // 8. timeouts — hard deadlines
+  timeouts {
+    deadline 5 seconds
+  }
+
+  // 9. retries — retry policy per effect
+  retries {
+    database.read {
+      attempts 2
+      backoff linear
+    }
+  }
+
+  // 10. limits — input and throughput limits
+  limits {
+    max request size 10 KB
+    rate 500 per minute per actor
+  }
+
+  // 11. privacy — sensitivity class and redaction rules
+  privacy {
+    deny protected values in logs
+  }
+
+  // 12. errors — error taxonomy and visibility
+  errors {
+    returns {
+      ApiError.NotFound
+      ApiError.Unauthorised
+      ApiError.Internal
+    }
+    expose {
+      ApiError.NotFound
+      ApiError.Unauthorised
+    }
+    redact {
+      ApiError.Internal
+    }
+  }
+
+  // 13. rules — pre-condition and invariant rules
+  rules {
+    require actor before database.read
+    require trace_id before audit.write
+  }
+
+  // 14. observability — tracing and metrics
+  observability {
+    trace flow
+    measure latency
+    deny protected values in logs
+    require trace_id
+  }
+
+  // 15. events — domain events emitted
+  events {
+    emits RecordAccessed
+  }
+
+  // 16. audit — audit reporting requirements
+  audit {
+    require runtime report
+  }
+
+}
+
+with effects [database.read, audit.write] {
+  let actor = context.actor
+  let traceId = context.trace_id
+
+  unsafe let rawId: String = request.params.id
+  let id: protected RecordId = validate.id(rawId)?
+
+  let record = RecordStore.findById(id)?
+
+  AuditLog.write({
+    event: "RecordAccessed",
+    actor: actor.id,
+    traceId: traceId,
+    id: redact(id)
+  })
+
+  emit RecordAccessed
+
+  return Ok(Response.okJson({
+    id: record.id,
+    name: record.name
+  }))
+}

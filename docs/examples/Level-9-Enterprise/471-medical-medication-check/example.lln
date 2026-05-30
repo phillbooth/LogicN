@@ -1,0 +1,180 @@
+/// example: 471-medical-medication-check
+/// level: 9
+/// concept: medical domain — record types Patient and Medication, interaction validation pattern
+/// expected_diagnostics: none
+/// test_status: stable
+/// ai_rule: Medical flows must use protected types for all PII (PatientId, MedicationCode), declare pii.read and audit.write effects, and redact protected values in audit entries.
+
+event MedicationCheckPerformed
+
+record Patient {
+  id: String
+  name: String
+  nhsNumber: String
+}
+
+record Medication {
+  code: String
+  name: String
+  doseUnit: String
+}
+
+record InteractionCheckRequest {
+  patientId: String
+  medicationA: String
+  medicationB: String
+}
+
+record InteractionCheckResponse {
+  hasInteraction: Bool
+  severity: String
+  advice: String
+}
+
+secure flow checkMedicationInteraction(
+  readonly request: Request
+) -> MedicationCheckResult
+
+contract {
+  types {
+    type MedicationCheckResult = Result<Response, MedicalError>
+  }
+
+  intent {
+    "Check whether two medications have a known interaction for a given patient. Returns severity and clinical advice."
+  }
+
+  request {
+    accepts InteractionCheckRequest
+    params {
+      patientId: unsafe String
+      medicationA: unsafe String
+      medicationB: unsafe String
+    }
+    requires {
+      actor
+      trace_id
+    }
+  }
+
+  response {
+    returns InteractionCheckResponse
+    exposes {
+      hasInteraction
+      severity
+      advice
+    }
+    denies {
+      nhsNumber
+      fullName
+      internalCode
+    }
+  }
+
+  context {
+    require actor
+    require trace_id
+  }
+
+  effects {
+    pii.read
+    database.read
+    audit.write
+  }
+
+  privacy {
+    contains PII
+    contains PHI
+    retention 10 years
+    deny protected NhsNumber to response
+    deny protected values in logs
+    require redaction before audit.write
+  }
+
+  errors {
+    returns {
+      MedicalError.NotFound
+      MedicalError.Unauthorised
+      MedicalError.Internal
+    }
+    map PatientNotFound to MedicalError.NotFound
+    map AccessDenied to MedicalError.Unauthorised
+    expose {
+      MedicalError.NotFound
+      MedicalError.Unauthorised
+    }
+    redact {
+      MedicalError.Internal
+    }
+    audit {
+      MedicalError.Internal
+      MedicalError.Unauthorised
+    }
+  }
+
+  rules {
+    require actor before database.read
+    require clinical_role on actor
+    require trace_id before audit.write
+    deny protected NhsNumber to response
+    require redaction before audit.write
+  }
+
+  observability {
+    trace flow
+    measure latency
+    deny protected values in logs
+    require trace_id
+  }
+
+  events {
+    emits MedicationCheckPerformed
+  }
+
+  audit {
+    require proof
+    require runtime report
+    require signed attestation
+  }
+}
+
+with effects [pii.read, database.read, audit.write] {
+  let actor = context.actor
+  let traceId = context.trace_id
+
+  unsafe let rawPatientId: String = request.params.patientId
+  unsafe let rawMedA: String = request.params.medicationA
+  unsafe let rawMedB: String = request.params.medicationB
+
+  let patientId: protected PatientId = validate.patientId(rawPatientId)?
+  let medCodeA: protected MedicationCode = validate.medicationCode(rawMedA)?
+  let medCodeB: protected MedicationCode = validate.medicationCode(rawMedB)?
+
+  let patient: Patient = PatientDB.findById(patientId)?
+  let medA: Medication = MedicationsDB.findByCode(medCodeA)?
+  let medB: Medication = MedicationsDB.findByCode(medCodeB)?
+
+  let result = InteractionDB.check({
+    patientId: patientId,
+    medicationA: medCodeA,
+    medicationB: medCodeB
+  })?
+
+  AuditLog.write({
+    event: "MedicationCheckPerformed",
+    actor: actor.id,
+    traceId: traceId,
+    patientId: redact(patientId),
+    medicationA: redact(medCodeA),
+    medicationB: redact(medCodeB),
+    hasInteraction: result.hasInteraction
+  })
+
+  emit MedicationCheckPerformed
+
+  return Ok(Response.okJson({
+    hasInteraction: result.hasInteraction,
+    severity: result.severity,
+    advice: result.advice
+  }))
+}

@@ -1,0 +1,158 @@
+﻿/// @file: lexer.lln
+/// @purpose: LogicN lexer written in LogicN — Phase 12 Stage B milestone
+/// @status: stub — parses correctly, execution requires Phase 12A loops
+
+// ============================================================
+// LogicN Self-Hosted Lexer
+//
+// Tokenises LogicN source text into a stream of Token values.
+// This file is the first component of the self-hosted compiler.
+//
+// Dependencies (all required before full execution):
+//   - while loops           (Phase 12A)
+//   - for item in list      (Phase 12A)
+//   - mut reassignment      (Phase 11A.2/11 runtime)
+//   - String.charAt()       (stdlib — available)
+//   - Array.empty()         (stdlib — available)
+//   - Array.append()        (stdlib — available)
+//   - Char classification   (stdlib — available)
+// ============================================================
+
+// ── Token types ─────────────────────────────────────────────
+
+enum TokenKind {
+  Identifier
+  Keyword
+  StringLiteral
+  NumberLiteral
+  CharLiteral
+  Operator
+  Symbol
+  Comment
+  DocComment
+  Newline
+  Eof
+  Unknown
+}
+
+record Token {
+  kind: TokenKind
+  value: String
+  line: Int
+  column: Int
+  start: Int
+  end: Int
+}
+
+record LexError {
+  message: String
+  line: Int
+  column: Int
+}
+
+// ── Active keywords ─────────────────────────────────────────
+// Must stay in sync with lexer.ts V1_ACTIVE_KEYWORDS
+
+record KeywordTable {
+  keywords: Array<String>
+}
+
+pure flow makeKeywordTable() -> KeywordTable {
+  return {
+    keywords: [
+      "flow", "secure", "pure", "guarded", "fn", "route",
+      "let", "mut", "readonly", "return", "if", "else", "match",
+      "type", "record", "enum", "import", "use", "true", "false",
+      "and", "or", "unless", "is", "for", "while",
+      "unsafe", "safe", "protected", "redacted",
+      "contract", "emit", "emits", "event", "effects",
+      "with", "intent", "governance", "compute", "target"
+    ]
+  }
+}
+
+pure fn isKeyword(value: String, table: KeywordTable) -> Bool {
+  return table.keywords.contains(value)
+}
+
+// ── Main lexer flow ─────────────────────────────────────────
+
+pure flow tokenize(source: String) -> LexerResult
+
+contract {
+  types {
+    type LexerResult = Result<Array<Token>, LexError>
+  }
+
+  intent {
+    "Tokenise LogicN source text into a stream of tokens.
+     Single-pass, deterministic, bounded by source length."
+  }
+}
+{
+  let keywords = makeKeywordTable()
+  mut tokens: Array<Token> = Array.empty()
+  mut pos: Int = 0
+  mut line: Int = 1
+  mut col: Int = 1
+
+  // NOTE: while loop below requires Phase 12A (loops) to execute.
+  // The flow parses correctly today but cannot be executed until
+  // Phase 12A is complete.
+
+  while pos < source.charCount() {
+    let ch: Option<Char> = source.charAt(pos)
+
+    match ch {
+      None => {
+        // End of source
+        let eof = { kind: TokenKind.Eof, value: "", line: line, column: col, start: pos, end: pos }
+        tokens = tokens.append(eof)
+        return Ok(tokens)
+      }
+
+      Some(c) => {
+        // Whitespace
+        if c is ' ' or c is '\t' or c is '\r' {
+          col = col + 1
+          pos = pos + 1
+        }
+
+        // Newline
+        else if c is '\n' {
+          let tok = { kind: TokenKind.Newline, value: "\n", line: line, column: col, start: pos, end: pos + 1 }
+          tokens = tokens.append(tok)
+          line = line + 1
+          col = 1
+          pos = pos + 1
+        }
+
+        // Identifier or keyword
+        else if c.isLetter() {
+          let startPos = pos
+          let startCol = col
+          mut ident: String = ""
+          while pos < source.charCount() and source.charAt(pos).map(x => x.isLetter() or x.isDigit()).unwrapOr(false) {
+            let nextCh = source.charAt(pos).unwrapOr(' ')
+            ident = ident + nextCh.toString()
+            pos = pos + 1
+            col = col + 1
+          }
+          let kind = if isKeyword(ident, keywords) { TokenKind.Keyword } else { TokenKind.Identifier }
+          let tok = { kind: kind, value: ident, line: line, column: startCol, start: startPos, end: pos }
+          tokens = tokens.append(tok)
+        }
+
+        // Fall through — return what we have so far (stub)
+        else {
+          pos = pos + 1
+          col = col + 1
+        }
+      }
+    }
+  }
+
+  let eof = { kind: TokenKind.Eof, value: "", line: line, column: col, start: pos, end: pos }
+  tokens = tokens.append(eof)
+  return Ok(tokens)
+}

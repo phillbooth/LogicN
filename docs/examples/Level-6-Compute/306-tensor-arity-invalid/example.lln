@@ -1,4 +1,5 @@
-﻿/// example: 306-tensor-arity-invalid
+/// example: 306-tensor-arity-invalid
+/// test_status: draft
 /// level: 6
 /// concept: Tensor requires exactly two type parameters: element type and shape
 /// expected_diagnostics: LLN-TYPE-009

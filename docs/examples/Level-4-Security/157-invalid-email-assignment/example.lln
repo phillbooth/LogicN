@@ -1,4 +1,5 @@
 /// example: 157-invalid-email-assignment
+/// test_status: draft
 /// level: 4
 /// concept: assigning String directly to protected Email is forbidden
 /// expected_diagnostics: LLN-TYPE-003

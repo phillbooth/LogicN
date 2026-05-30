@@ -1,0 +1,60 @@
+/// example: 472-physics-simulation
+/// level: 9
+/// concept: scientific domain — Mass, Force, Energy record types, pure kinetic energy calculation
+/// expected_diagnostics: none
+/// test_status: stable
+/// ai_rule: Scientific simulation flows are pure — no effects. Use Decimal for physical quantities to preserve precision. Record types group related physical properties.
+
+record Mass {
+  value: Decimal
+  unit: String
+}
+
+record Velocity {
+  value: Decimal
+  unit: String
+}
+
+record Force {
+  value: Decimal
+  unit: String
+}
+
+record Energy {
+  value: Decimal
+  unit: String
+}
+
+// Calculate kinetic energy: KE = 0.5 * mass * velocity^2
+pure flow calculateKineticEnergy(mass: Decimal, velocity: Decimal) -> Decimal {
+  let half: Decimal = Decimal("0.5")
+  let velocitySquared: Decimal = velocity * velocity
+  return half * mass * velocitySquared
+}
+
+// Calculate force from mass and acceleration: F = m * a
+pure flow calculateForce(mass: Decimal, acceleration: Decimal) -> Decimal {
+  return mass * acceleration
+}
+
+// Calculate work done: W = F * d
+pure flow calculateWork(force: Decimal, distance: Decimal) -> Decimal {
+  return force * distance
+}
+
+// Calculate power: P = W / t
+pure flow calculatePower(work: Decimal, timeSeconds: Decimal) -> Decimal {
+  return work / timeSeconds
+}
+
+// Compose a simulation step: given mass, velocity, and displacement
+// return kinetic energy and work done (force assumed constant).
+pure flow simulationStep(mass: Decimal, velocity: Decimal, force: Decimal, displacement: Decimal) -> Energy {
+  let kineticEnergy: Decimal = calculateKineticEnergy(mass, velocity)
+  let work: Decimal = calculateWork(force, displacement)
+  let totalEnergy: Decimal = kineticEnergy + work
+  return Energy {
+    value: totalEnergy,
+    unit: "J"
+  }
+}

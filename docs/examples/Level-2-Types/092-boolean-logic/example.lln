@@ -1,0 +1,35 @@
+/// example: 092-boolean-logic
+/// level: 2
+/// concept: Bool, true/false, if/else, and/or/not, comparisons
+/// expected_diagnostics: none
+/// test_status: stable
+/// ai_rule: Bool holds true or false. Use && and || for and/or. Use ! for not. Comparisons return Bool.
+
+pure flow describeAccess(age: Int, isVerified: Bool) -> String {
+  let isAdult: Bool = age >= 18
+  let isEligible: Bool = isAdult && isVerified
+
+  if isEligible {
+    return "access granted"
+  } else {
+    return "access denied"
+  }
+}
+
+pure flow checkAnyAdmin(isAdmin: Bool, isOwner: Bool) -> Bool {
+  return isAdmin || isOwner
+}
+
+pure flow requiresApproval(isApproved: Bool) -> String {
+  if !isApproved {
+    return "approval required"
+  }
+  return "approved"
+}
+
+pure flow compareValues(a: Int, b: Int) -> Bool {
+  let equal: Bool = a == b
+  let greater: Bool = a > b
+  let lte: Bool = a <= b
+  return equal || greater || lte
+}

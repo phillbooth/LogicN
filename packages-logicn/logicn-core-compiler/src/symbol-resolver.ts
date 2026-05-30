@@ -53,10 +53,12 @@ const BUILT_IN_VALUE_NAMES = new Set([
 ]);
 
 const STANDARD_PRELUDE = new Set([
+  // Core stdlib
   "constantTimeEquals",
   "redact",
   "validate",
   "sanitize",
+  "context",
   "json",
   "toml",
   "parse",
@@ -68,11 +70,34 @@ const STANDARD_PRELUDE = new Set([
   "File",
   "Money",
   "Response",
+  // ── Phase 11E: Domain databases ────────────────────────────────────────
+  "UsersDB", "PatientsDB", "PatientDB", "OrdersDB", "PaymentsDB", "AccountsDB",
+  // ── Phase 11E: AI models ────────────────────────────────────────────────
+  "ClassifierModel", "RiskModel", "EmbeddingModel",
+  // ── Phase 11E: Services ─────────────────────────────────────────────────
+  "PaymentService", "EmailService", "NotificationService",
+  // ── Phase 11E: Lowercase module names that appear as identifiers ────────
+  // (upper-case names like PatientId are suppressed by the capital-letter rule,
+  //  but lower-case module references need explicit prelude entries)
+  "patients", "orders", "payments", "accounts", "users",
+  // ── Standard library modules ─────────────────────────────────────────────
+  "Statistics", "Physics", "Chemistry", "Probability",
+  // ── Temporal constructors used as identifiers ────────────────────────────
+  "Date", "Time", "DateTime",
+  // ── Security constructors ────────────────────────────────────────────────
+  "Hash", "Signature",
+  // ── AI / ML constructors ─────────────────────────────────────────────────
+  "Classification", "Embedding", "Prompt",
 ]);
 
 class SymbolResolver {
   private readonly diagnostics: SymbolDiagnostic[] = [];
   private readonly scopes: Array<Map<string, AstNode>> = [];
+  private readonly importedNames: ReadonlySet<string>;
+
+  constructor(importedNames: readonly string[] = []) {
+    this.importedNames = new Set(importedNames);
+  }
 
   resolve(ast: AstNode): void {
     this.pushScope();
@@ -105,7 +130,7 @@ class SymbolResolver {
   }
 
   private seedPrelude(): void {
-    for (const name of [...BUILT_IN_VALUE_NAMES, ...STANDARD_PRELUDE]) {
+    for (const name of [...BUILT_IN_VALUE_NAMES, ...STANDARD_PRELUDE, ...this.importedNames]) {
       this.currentScope().set(name, { kind: "identifier", value: name });
     }
   }
@@ -309,8 +334,8 @@ function parseBindingName(value: string): string {
   return (colonIdx === -1 ? rest : rest.slice(0, colonIdx)).trim();
 }
 
-export function resolveSymbols(ast: AstNode): SymbolResolveResult {
-  const resolver = new SymbolResolver();
+export function resolveSymbols(ast: AstNode, importedNames?: readonly string[]): SymbolResolveResult {
+  const resolver = new SymbolResolver(importedNames ?? []);
   resolver.resolve(ast);
   return resolver.getResult();
 }

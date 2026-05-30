@@ -1,4 +1,5 @@
 /// example: 086-protected-not-redacted
+/// test_status: draft
 /// level: 2
 /// concept: protected value cannot be directly assigned to redacted binding
 /// expected_diagnostics: LLN-TYPE-002

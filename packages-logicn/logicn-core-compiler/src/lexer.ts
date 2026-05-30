@@ -75,7 +75,7 @@ export const V1_ACTIVE_KEYWORDS: ReadonlySet<string> = new Set([
   // Binding
   "let", "mut", "readonly",
   // Control flow
-  "match", "if", "else", "return",
+  "match", "if", "else", "return", "while", "for",
   // Declarations
   "type", "record", "enum", "import", "use",
   // Booleans
@@ -105,7 +105,7 @@ export const V1_ACTIVE_KEYWORDS: ReadonlySet<string> = new Set([
 export const V1_FUTURE_RESERVED: ReadonlySet<string> = new Set([
   "shared", "transfer", "remote", "atomic", "barrier",
   "async", "await", "yield", "comptime", "macro",
-  "trait", "impl", "where", "for", "while", "loop",
+  "trait", "impl", "where", "loop",
   "break", "continue",
   // Readable Logic Forms (proposal) — "until" still reserved for future use
   // See: docs/Knowledge-Bases/logicn-readable-logic-forms.md

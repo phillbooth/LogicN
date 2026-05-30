@@ -109,15 +109,16 @@ const INFERENCE_MARKERS: ReadonlySet<string> = new Set([
 
 const BUILT_IN_TYPES: ReadonlySet<string> = new Set([
   // Primitive
-  "Bool", "Char", "Void",
+  "Bool", "Boolean", "Char", "Void",
   // Numeric
   "Int", "Int8", "Int16", "Int32", "Int64",
   "UInt8", "UInt16", "UInt32", "UInt64",
-  "Float", "Float16", "Float32", "Float64", "Decimal",
+  "Float", "Float16", "Float32", "Float64", "Double", "Decimal",
   // Text
   "String", "SecureString",
   // Temporal
   "Timestamp", "Duration",
+  "Date", "Time", "DateTime",
   // Binary
   "Byte", "Bytes", "ReadOnlyView",
   // JSON
@@ -129,14 +130,42 @@ const BUILT_IN_TYPES: ReadonlySet<string> = new Set([
   // Numeric science / compute
   "Vector", "Matrix", "Tensor", "AnyTensor",
   // Domain / financial
-  "Money", "GBP", "USD", "EUR", "JPY",
+  "Money", "GBP", "USD", "EUR", "JPY", "CHF", "CAD", "AUD",
   // HTTP / API
-  "Request", "Response",
+  "Request", "Response", "Context",
   // Error types
   "Error", "ApiError", "EmailError", "PaymentError", "ValidationError", "WebhookError",
   "DecodeError",
   // Branded types
   "Brand",
+  // ── Security types ───────────────────────────────────────────────────────
+  "Hash", "Signature", "Secret",
+  // ── AI / ML types ────────────────────────────────────────────────────────
+  "Prompt", "Embedding", "Classification", "ModelOutput", "Token",
+  // ── Enterprise / governance types ────────────────────────────────────────
+  "Policy", "AuditRecord", "AuditProof", "ExecutionPlan", "RuntimeReport",
+  // ── Phase 11E: Domain identity types ────────────────────────────────────
+  "Email", "Url", "Path", "Hostname", "Port", "CurrencyCode", "Reference",
+  // Healthcare domain
+  "PatientId", "NhsNumber", "PatientName", "DateOfBirth",
+  // Financial domain
+  "AccountId", "CardNumber", "SortCode", "TransactionId", "CustomerId",
+  "OrderId",
+  // Identity / access domain
+  "UserId", "Actor", "TraceId", "TenantId", "Deadline",
+  // ── Phase 11E: Domain error types ───────────────────────────────────────
+  "AiError", "HealthError", "PatientError", "ReferralError", "NotificationError",
+  "ExportError", "RecordError", "UserError", "OrderError",
+  "AuthError", "PermissionError", "NetworkError",
+  // ── Phase 11E: AI / ML types ────────────────────────────────────────────
+  "Label", "ClassificationResult", "EmbeddingResult", "RiskScore",
+  // ── Phase 11E: Record / request / response types ─────────────────────────
+  "PatientReadRequest", "PatientProfileResponse", "PatientProfileRequest",
+  "CreatePatientRequest", "CreateOrderRequest", "CreateOrderResponse",
+  // ── Phase 11E: import-resolved types (populated at runtime via import declarations) ──
+  // These are registered here so the type checker accepts them without a local declaration.
+  "PatientRecord", "HealthRecord", "ClinicalActor", "HealthRecord",
+  "FinancialActor",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -157,6 +186,8 @@ const GENERIC_ARITY: ReadonlyMap<string, number> = new Map([
   ["Tensor",       2],  // Tensor<ElementType, Shape> — see logicn-tensor-arity-decision.md
   ["ReadOnlyView", 1],  // ReadOnlyView<T>
   ["Brand",        2],  // Brand<T, "Name">
+  ["Embedding",    1],  // Embedding<768> — dimensioned embedding vector
+  ["Secret",       1],  // Secret<ApiKey> — parameterised secret wrapper
 ]);
 
 // Example strings for each generic type — used in fix suggestions (suggestedFix prose)
@@ -174,6 +205,8 @@ const GENERIC_EXAMPLES: ReadonlyMap<string, string> = new Map([
   ["Tensor",       "Tensor<Float32, [Batch, Features]>"],
   ["ReadOnlyView", "ReadOnlyView<T>"],
   ["Brand",        "Brand<String, \"MyType\">"],
+  ["Embedding",    "Embedding<768>"],
+  ["Secret",       "Secret<ApiKey>"],
 ]);
 
 // ---------------------------------------------------------------------------
@@ -313,9 +346,13 @@ function isAssignmentCompatible(declared: string, inferred: string): boolean {
 
 class TypeChecker {
   private readonly diagnostics: TypeDiagnostic[] = [];
-  private readonly userDefinedTypes = new Set<string>();
+  private readonly userDefinedTypes: Set<string>;
   private readonly enumVariants = new Map<string, Set<string>>();
   private readonly bindingScopes: Array<Set<string>> = [];
+
+  constructor(importedTypes: readonly string[] = []) {
+    this.userDefinedTypes = new Set(importedTypes);
+  }
   /**
    * Phase 9A-2: user-defined types declared as `type X = Brand<T, "Name">`.
    * Bindings with these declared types require a validation gate — direct
@@ -1582,11 +1619,14 @@ function levenshtein(a: string, b: string): number {
  *   - All type references resolve to a built-in or user-declared type
  *   - All generic type instantiations use the correct number of type arguments
  *
- * @param ast  The root `program` node from `parseProgram()`.
+ * @param ast            The root `program` node from `parseProgram()`.
+ * @param importedTypes  Optional list of type names resolved from import declarations
+ *                       (Phase 11E). These are added to the user-defined type set so
+ *                       LLN-TYPE-001 is not emitted for them.
  * @returns    A result object containing all type diagnostics.
  */
-export function checkTypes(ast: AstNode): TypeCheckResult {
-  const checker = new TypeChecker();
+export function checkTypes(ast: AstNode, importedTypes?: readonly string[]): TypeCheckResult {
+  const checker = new TypeChecker(importedTypes ?? []);
   checker.check(ast);
   return checker.getResult();
 }

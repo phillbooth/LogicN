@@ -1,4 +1,5 @@
 /// example: 060-invalid-email-assignment
+/// test_status: draft
 /// level: 2
 /// concept: direct assignment to protected Email is forbidden
 /// expected_diagnostics: LLN-TYPE-002

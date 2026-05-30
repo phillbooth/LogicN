@@ -1,4 +1,5 @@
-﻿/// example: 084-unknown-type
+/// example: 084-unknown-type
+/// test_status: draft
 /// level: 2
 /// concept: unknown type name produces LLN-TYPE-001
 /// expected_diagnostics: LLN-TYPE-001

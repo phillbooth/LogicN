@@ -1,0 +1,32 @@
+/// example: 093-time-types
+/// level: 2
+/// concept: Duration, Timestamp, Duration.ofSeconds, add/subtract
+/// expected_diagnostics: none
+/// test_status: stable
+/// ai_rule: Duration is a time span. Timestamp is a point in time. Use Duration.ofSeconds, ofMinutes, ofHours, ofMs for construction.
+
+pure flow sessionTimeout() -> String {
+  let d: Duration = Duration.ofSeconds(30)
+  return d.toString()
+}
+
+pure flow buildDeadline(baseMs: Int, extraSeconds: Int) -> String {
+  let base: Duration = Duration.ofMs(baseMs)
+  let extra: Duration = Duration.ofSeconds(extraSeconds)
+  let total: Duration = base.add(extra)
+  return total.toString()
+}
+
+pure flow describeWindow(hours: Int, minutes: Int) -> String {
+  let h: Duration = Duration.ofHours(hours)
+  let m: Duration = Duration.ofMinutes(minutes)
+  let window: Duration = h.add(m)
+  return window.toString()
+}
+
+pure flow remainingTime(totalMs: Int, elapsedMs: Int) -> String {
+  let total: Duration = Duration.ofMs(totalMs)
+  let elapsed: Duration = Duration.ofMs(elapsedMs)
+  let remaining: Duration = total.subtract(elapsed)
+  return remaining.toString()
+}

@@ -1,4 +1,5 @@
 /// example: 464-enterprise-supply-chain
+/// test_status: draft
 /// level: 9
 /// concept: flow requiring a module capability that has not been accepted in the supply-chain manifest
 /// expected_diagnostics: LLN-MODULE-005

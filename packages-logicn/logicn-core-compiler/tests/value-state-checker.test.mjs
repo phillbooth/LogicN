@@ -449,6 +449,124 @@ flow test() -> String {
   });
 });
 
+// ── Phase 11B.2: User-defined gate functions ──────────────────────────────────
+
+describe("Value-state checker — Phase 11B.2 user-defined gates", () => {
+  it("fn starting with 'validate' is treated as a user gate", () => {
+    const result = parseAndCheck(`
+guarded flow test(readonly request: Request) -> String
+effects [database.write] {
+  fn validateAge(raw: String) -> Int {
+    return 25
+  }
+  unsafe let rawAge: String = request.body.age
+  let age: Int = validateAge(rawAge)
+  UsersDB.insert(age)
+  return "ok"
+}
+`);
+    const taintDiags = result.diagnostics.filter(d =>
+      d.code === "LLN-VALUESTATE-005" || d.code === "LLN-VALUESTATE-003"
+    );
+    assert.equal(taintDiags.length, 0, `validate* fn should break taint chain, got: ${taintDiags.map(d => d.code).join(", ")}`);
+  });
+
+  it("fn starting with 'sanitize' is treated as a user gate", () => {
+    const result = parseAndCheck(`
+guarded flow test(readonly request: Request) -> String
+effects [database.write] {
+  fn sanitizeInput(raw: String) -> String {
+    return raw
+  }
+  unsafe let rawVal: String = request.body.value
+  let clean: String = sanitizeInput(rawVal)
+  UsersDB.insert(clean)
+  return "ok"
+}
+`);
+    const taintDiags = result.diagnostics.filter(d =>
+      d.code === "LLN-VALUESTATE-005" || d.code === "LLN-VALUESTATE-003"
+    );
+    assert.equal(taintDiags.length, 0, `sanitize* fn should break taint chain, got: ${taintDiags.map(d => d.code).join(", ")}`);
+  });
+
+  it("fn starting with 'check' is treated as a user gate", () => {
+    const result = parseAndCheck(`
+guarded flow test(readonly request: Request) -> String
+effects [database.write] {
+  fn checkEmail(raw: String) -> String {
+    return raw
+  }
+  unsafe let rawEmail: String = request.body.email
+  let verified: String = checkEmail(rawEmail)
+  UsersDB.insert(verified)
+  return "ok"
+}
+`);
+    const taintDiags = result.diagnostics.filter(d =>
+      d.code === "LLN-VALUESTATE-005" || d.code === "LLN-VALUESTATE-003"
+    );
+    assert.equal(taintDiags.length, 0, `check* fn should break taint chain, got: ${taintDiags.map(d => d.code).join(", ")}`);
+  });
+
+  it("fn starting with 'verify' is treated as a user gate", () => {
+    const result = parseAndCheck(`
+guarded flow test(readonly request: Request) -> String
+effects [database.write] {
+  fn verifyToken(raw: String) -> String {
+    return raw
+  }
+  unsafe let rawToken: String = request.body.token
+  let safeToken: String = verifyToken(rawToken)
+  UsersDB.insert(safeToken)
+  return "ok"
+}
+`);
+    const taintDiags = result.diagnostics.filter(d =>
+      d.code === "LLN-VALUESTATE-005" || d.code === "LLN-VALUESTATE-003"
+    );
+    assert.equal(taintDiags.length, 0, `verify* fn should break taint chain, got: ${taintDiags.map(d => d.code).join(", ")}`);
+  });
+
+  it("fn NOT starting with a gate prefix is NOT treated as a user gate", () => {
+    const result = parseAndCheck(`
+guarded flow test(readonly request: Request) -> String
+effects [database.write] {
+  fn processInput(raw: String) -> String {
+    return raw
+  }
+  unsafe let rawVal: String = request.body.value
+  let processed: String = processInput(rawVal)
+  UsersDB.insert(processed)
+  return "ok"
+}
+`);
+    const taintDiags = result.diagnostics.filter(d =>
+      d.code === "LLN-VALUESTATE-005" || d.code === "LLN-VALUESTATE-003"
+    );
+    assert.ok(taintDiags.length > 0, `Non-gate fn should NOT break taint chain`);
+  });
+
+  it("user gate fn used with safe mut does not emit LLN-VALUESTATE-001", () => {
+    const result = parseAndCheck(`
+secure flow test(raw: String) -> Result<String, Error>
+effects [database.write] {
+  fn validateEmail(s: String) -> String {
+    return s
+  }
+  unsafe let rawEmail: String = raw
+  safe mut rawEmail = validateEmail(rawEmail)
+  let saved = DB.insert(rawEmail)?
+  return Ok("ok")
+}
+`);
+    assert.ok(
+      !hasDiag(result, "LLN-VALUESTATE-001"),
+      `User gate fn should satisfy safe mut gate requirement`
+    );
+  });
+});
+
 // ── Rust-style related locations ──────────────────────────────────────────────
 
 describe("Value-state checker — Rust-style related locations", () => {

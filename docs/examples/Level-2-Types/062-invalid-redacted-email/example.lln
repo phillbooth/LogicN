@@ -1,4 +1,5 @@
 /// example: 062-invalid-redacted-email
+/// test_status: draft
 /// level: 2
 /// concept: protected Email cannot be assigned to redacted Email directly
 /// expected_diagnostics: LLN-TYPE-002

@@ -1,4 +1,5 @@
 /// example: 107-pure-flow-calls-effectful-flow
+/// test_status: draft
 /// level: 3
 /// concept: pure flow cannot call an effectful flow
 /// expected_diagnostics: LLN-EFFECT-003

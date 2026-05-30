@@ -1,0 +1,109 @@
+/// example: 369-ai-classification-flow
+/// level: 7
+/// concept: full AI classify flow — ClassifierModel, compute target, protected input, redacted audit
+/// expected_diagnostics: none
+/// test_status: stable
+/// ai_rule: AI classification flows should declare contract.model { uses ClassifierModel }, compute target prefer [npu, gpu, cpu], and always redact protected inputs in audit log entries.
+
+event ClassificationStarted
+event ClassificationCompleted
+
+record ClassifyRequest {
+  text: String
+}
+
+record ClassifyResponse {
+  label: String
+  confidence: String
+}
+
+guarded flow classifyInput(readonly request: Request) -> ClassifyInputResult
+
+contract {
+  types {
+    type ClassifyInputResult = Result<Response, AiError>
+  }
+
+  intent {
+    "Classify user-provided text locally using an on-device model. No remote execution permitted."
+  }
+
+  request {
+    accepts ClassifyRequest
+    params {
+      text: unsafe String
+    }
+  }
+
+  response {
+    returns ClassifyResponse
+    exposes {
+      label
+      confidence
+    }
+    denies {
+      rawInput
+      modelWeights
+    }
+  }
+
+  model {
+    uses ClassifierModel
+  }
+
+  effects {
+    ai.inference
+    audit.write
+  }
+
+  privacy {
+    deny protected values in logs
+    require redaction before audit.write
+  }
+
+  rules {
+    require trace_id before audit.write
+  }
+
+  observability {
+    trace flow
+    measure latency
+    deny protected values in logs
+  }
+
+  events {
+    emits ClassificationStarted
+    emits ClassificationCompleted
+  }
+
+  audit {
+    require runtime report
+    require signed attestation
+  }
+}
+
+with effects [ai.inference, audit.write] {
+  compute target best { prefer [npu, gpu, cpu] deny [remote.execution] }
+
+  unsafe let rawText: String = request.params.text
+  let safeText: String = validate.sanitize(rawText)?
+
+  emit ClassificationStarted
+
+  let label: Label = ClassifierModel.classify(safeText)?
+  let confidence: Score = ClassifierModel.confidence(safeText)?
+
+  AuditLog.write({
+    event: "InputClassified",
+    label: label,
+    confidence: confidence,
+    input: redact(safeText)
+  })
+
+  emit ClassificationCompleted
+
+  return Ok(Response.okJson({
+    label: label.toString(),
+    confidence: confidence.toString()
+  }))
+}
