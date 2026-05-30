@@ -308,6 +308,10 @@ class TypeChecker {
    */
   private readonly brandedTypes = new Set<string>();
 
+  // ── Phase 11A.2: binding kind tracking (let / mut / readonly) ────────────
+  /** Per-scope map from binding name → declaration kind (for reassignment checks). */
+  private readonly bindingKindScopes: Array<Map<string, "let" | "mut" | "readonly">> = [];
+
   // ── Phase 8A: type inference state ───────────────────────────────────────
   /** Maps binding name → inferred base type string (per scope). */
   private readonly typeScopes: Array<Map<string, string>> = [];
