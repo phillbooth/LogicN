@@ -1,7 +1,7 @@
-﻿/// example: 119-effect-name-invalid
+/// example: 119-effect-name-invalid
 /// level: 3
 /// concept: non-canonical effect name is rejected
-/// expected_diagnostics: LLN-EFFECT-XXX
+/// expected_diagnostics: LLN-EFFECT-004
 /// test_status: stable
 /// ai_rule: Effect names must use the canonical dotted form (e.g. network.outbound, not network).
 

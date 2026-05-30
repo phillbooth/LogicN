@@ -1,7 +1,7 @@
 /// example: 207-protected-data-sharing-missing-authority
 /// level: 5
 /// concept: sending protected data externally without authority block
-/// expected_diagnostics: LLN-GOV-XXX
+/// expected_diagnostics: LLN-GOV-003
 /// ai_rule: Protected data cannot be sent externally without an authority block granting permission.
 
 secure flow sendReferral(patient: PatientRecord) -> SendReferralResult

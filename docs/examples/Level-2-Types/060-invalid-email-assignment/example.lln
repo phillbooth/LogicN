@@ -1,7 +1,7 @@
-﻿/// example: 060-invalid-email-assignment
+/// example: 060-invalid-email-assignment
 /// level: 2
 /// concept: direct assignment to protected Email is forbidden
-/// expected_diagnostics: LLN-TYPE-XXX
+/// expected_diagnostics: LLN-TYPE-002
 /// ai_rule: You cannot assign an unvalidated String to a protected type. Use validate.email(...).
 
 let email: protected Email = rawEmail

@@ -1,7 +1,7 @@
-﻿/// example: 107-pure-flow-calls-effectful-flow
+/// example: 107-pure-flow-calls-effectful-flow
 /// level: 3
 /// concept: pure flow cannot call an effectful flow
-/// expected_diagnostics: LLN-EFFECT-XXX
+/// expected_diagnostics: LLN-EFFECT-003
 /// ai_rule: A pure flow cannot call any flow that declares effects.
 
 pure flow buildPriceQuote(orderId: OrderId) -> Money<GBP> {

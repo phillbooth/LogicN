@@ -1,7 +1,7 @@
-﻿/// example: 105-missing-database-effect
+/// example: 105-missing-database-effect
 /// level: 3
 /// concept: undeclared database.write effect
-/// expected_diagnostics: LLN-EFFECT-XXX
+/// expected_diagnostics: LLN-EFFECT-001
 /// test_status: stable
 /// ai_rule: Every effect used in a flow body must be declared in with effects [...].
 

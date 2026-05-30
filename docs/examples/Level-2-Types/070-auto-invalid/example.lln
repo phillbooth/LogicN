@@ -1,7 +1,7 @@
-﻿/// example: 070-auto-invalid
+/// example: 070-auto-invalid
 /// level: 2
 /// concept: Auto requires an initializer
-/// expected_diagnostics: LLN-TYPE-XXX
+/// expected_diagnostics: LLN-TYPE-002
 /// ai_rule: Auto cannot infer a type without an initializer. Provide an initial value.
 
 let count: Auto

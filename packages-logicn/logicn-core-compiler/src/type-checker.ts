@@ -9,6 +9,10 @@
 //   LLN-TYPE-001  UnknownType              — type name not in scope
 //   LLN-TYPE-008  SilentNullDenied         — null / undefined used as value
 //   LLN-TYPE-009  InvalidGenericInstantiation — wrong generic arity
+//   LLN-TYPE-010  CollectionElementTypeMismatch — Array<T> element type mismatch
+//   LLN-TYPE-017  NumericPrecisionLoss     — implicit numeric narrowing (warning)
+//   LLN-TYPE-018  ProtectedBoundaryViolation — protected value assigned to plain type
+//   LLN-TYPE-019  RedactedBoundaryViolation  — redacted value cannot revert to plain type
 //   LLN-TYPE-020  ShadowedBinding          — binding shadows outer-scope name (warning)
 //   LLN-TYPE-021  NonExhaustiveMatch       — match missing arm(s)
 //   LLN-TYPE-022  UnreachablePattern       — arm after wildcard or exhausted set
@@ -16,11 +20,14 @@
 //
 // Implemented (continued):
 //   LLN-TYPE-003  InvalidNominalConversion — String → BrandedType requires gate (Phase 9A-2)
+//   LLN-TYPE-004  InvalidBinaryOperation   — extended with String+non-String, Bool arithmetic,
+//                                            String ordering comparisons
+//   LLN-BINDING-005  ImmutableBindingReassigned — let/param reassignment rejected (Phase 11A.2)
 //
 // Deferred (require full expression type inference or call graph):
 //   LLN-TYPE-002  TypeMismatch             — assignment compatibility (partial Phase 8A)
-//   LLN-TYPE-004..007  Operator / call / return type checking
-//   LLN-TYPE-010..019  Constraint, collection, tensor, symbol checks
+//   LLN-TYPE-005..007  Operator / call / return type checking
+//   LLN-TYPE-011..016  MapKey, Tensor, Channel, Enum, Generic, constraint checks
 //   Module-level import resolution
 //
 // Symbol resolver (LLN-NAME-001, LLN-NAME-003) lives in symbol-resolver.ts
@@ -270,24 +277,32 @@ function isAssignmentCompatible(declared: string, inferred: string): boolean {
   if (declared === inferred) return true;
   if (declared === "Auto" || declared === "" || inferred === "") return true;
 
+  // Strip governance qualifiers (protected/redacted) from inferred before comparing.
+  // "protected Email" is assignment-compatible with "Email" because the qualifier
+  // is additive. LLN-TYPE-018/019 handle the reverse case (plain X ← protected X).
+  let nInferred = inferred;
+  if (nInferred.startsWith("protected ")) nInferred = nInferred.slice(10).trim();
+  else if (nInferred.startsWith("redacted ")) nInferred = nInferred.slice(9).trim();
+  if (declared === nInferred) return true;
+
   // Strip generic args for comparison
   const declaredBase = declared.split("<")[0]?.trim() ?? declared;
-  const inferredBase = inferred.split("<")[0]?.trim() ?? inferred;
+  const inferredBase = nInferred.split("<")[0]?.trim() ?? nInferred;
   if (declaredBase === inferredBase) return true;
 
   // Numeric widening: Int literal is compatible with all numeric types
-  if (inferred === "Int"     && NUMERIC_TYPES.has(declared)) return true;
-  if (inferred === "Float"   && (declared === "Float"   || declared.startsWith("Float")))  return true;
-  if (inferred === "Decimal" && (declared === "Decimal" || declared.startsWith("Float")))  return true;
-  if (inferred === "Byte"    && (declared === "Byte"    || declared === "UInt8"))           return true;
+  if (nInferred === "Int"     && NUMERIC_TYPES.has(declared)) return true;
+  if (nInferred === "Float"   && (declared === "Float"   || declared.startsWith("Float"))) return true;
+  if (nInferred === "Decimal" && (declared === "Decimal" || declared.startsWith("Float"))) return true;
+  if (nInferred === "Byte"    && (declared === "Byte"    || declared === "UInt8"))          return true;
 
   // Algebraic type wrappers — coarse match for Phase 8A
-  if (inferred === "Result"  && declaredBase === "Result")  return true;
-  if (inferred === "Option"  && declaredBase === "Option")  return true;
-  if (inferred === "Money"   && declaredBase === "Money")   return true;
+  if (inferredBase === "Result"  && declaredBase === "Result")  return true;
+  if (inferredBase === "Option"  && declaredBase === "Option")  return true;
+  if (inferredBase === "Money"   && declaredBase === "Money")   return true;
 
   // Void for bare return in Void flows
-  if (inferred === "Void"    && declared === "Void")        return true;
+  if (nInferred === "Void" && declared === "Void") return true;
 
   return false;
 }
@@ -395,10 +410,12 @@ class TypeChecker {
 
   private pushBindingScope(): void {
     this.bindingScopes.push(new Set());
+    this.bindingKindScopes.push(new Map());
   }
 
   private popBindingScope(): void {
     this.bindingScopes.pop();
+    this.bindingKindScopes.pop();
   }
 
   private lookupBinding(name: string): boolean {
@@ -415,6 +432,22 @@ class TypeChecker {
   private registerBinding(name: string): void {
     const scope = this.bindingScopes[this.bindingScopes.length - 1];
     if (scope !== undefined && name !== "") scope.add(name);
+  }
+
+  // ── Phase 11A.2: binding kind registration + lookup ──────────────────────
+
+  private registerBindingKind(name: string, kind: "let" | "mut" | "readonly"): void {
+    const scope = this.bindingKindScopes[this.bindingKindScopes.length - 1];
+    if (scope !== undefined && name !== "") scope.set(name, kind);
+  }
+
+  /** Walk all scopes innermost-first; returns undefined if not found. */
+  private lookupBindingKind(name: string): "let" | "mut" | "readonly" | undefined {
+    for (let i = this.bindingKindScopes.length - 1; i >= 0; i--) {
+      const kind = this.bindingKindScopes[i]!.get(name);
+      if (kind !== undefined) return kind;
+    }
+    return undefined;
   }
 
   // ── Phase 8A: type scope management ──────────────────────────────────────
@@ -508,6 +541,15 @@ class TypeChecker {
         return undefined;
       }
 
+      case "listLiteral": {
+        const firstElement = node.children?.[0];
+        if (firstElement !== undefined) {
+          const elemType = this.inferType(firstElement);
+          if (elemType !== undefined) return `Array<${elemType}>`;
+        }
+        return "Array";
+      }
+
       case "callExpr": {
         const method = node.value ?? "";
         // Algebraic constructors
@@ -516,6 +558,8 @@ class TypeChecker {
         if (method === "Decimal")                return "Decimal";
         // Money constructors (receiver = Money)
         if (method === "gbp" || method === "usd" || method === "eur" || method === "jpy") return "Money";
+        // Record literal { field: value }
+        if (method === "#record") return "Record";
 
         // Existing: use flowReturnTypes
         const knownReturn = this.flowReturnTypes.get(method);
@@ -528,6 +572,10 @@ class TypeChecker {
         // Validation gates: validate.email(raw) → protected Email
         if (method === "email" && receiverType === undefined) return "protected Email";
         if (method.startsWith("validate.")) return "protected String";
+
+        // protect/redact helpers
+        if (method === "redact") return `redacted ${receiverType ?? ""}`.trim();
+        if (method === "protect") return `protected ${receiverType ?? ""}`.trim();
 
         // String methods → String
         if (receiverType === "String") {
@@ -544,7 +592,77 @@ class TypeChecker {
           if (method === "isEmpty") return "Bool";
         }
 
+        // Map methods
+        if (receiverType?.startsWith("Map<") || receiverType === "Map") {
+          if (method === "size") return "Int";
+          if (method === "has") return "Bool";
+          if (method === "isEmpty") return "Bool";
+          if (method === "get") {
+            // Map<K,V>.get() → Option<V>
+            const match = receiverType?.match(/^Map<[^,]+,\s*([^>]+)>/);
+            if (match?.[1] !== undefined) return `Option<${match[1].trim()}>`;
+            return "Option";
+          }
+        }
+
+        // Timestamp/Duration methods
+        if (method === "toMs" || method === "toSeconds" || method === "toMinutes") return "Int";
+        if (method === "toIso" || method === "toString" || method === "format") return "String";
+        if (method === "add" || method === "subtract") {
+          if (receiverType?.includes("Timestamp")) return "Timestamp";
+          if (receiverType?.includes("Duration")) return "Duration";
+        }
+        if (method === "before" || method === "after" || method === "equals") return "Bool";
+
+        // Option methods
+        if (receiverType === "Option" || receiverType?.startsWith("Option<")) {
+          if (method === "isSome" || method === "isNone") return "Bool";
+          if (method === "unwrapOr") return undefined; // returns T
+          if (method === "map") return "Option"; // returns Option<mapped>
+        }
+
+        // Result methods
+        if (receiverType === "Result" || receiverType?.startsWith("Result<")) {
+          if (method === "isOk" || method === "isErr") return "Bool";
+          if (method === "map" || method === "mapErr") return "Result";
+        }
+
+        // Numeric methods
+        if (["toFixed", "toString"].includes(method)) return "String";
+        if (["floor", "ceil", "round", "abs"].includes(method)) {
+          return receiverType === "Float" ? "Float" : "Int";
+        }
+        if (["clamp", "min", "max"].includes(method)) return receiverType ?? "Int";
+        if (method === "toInt") return "Result";
+        if (method === "toFloat") return "Result";
+
+        // Bytes methods
+        if (receiverType === "Bytes") {
+          if (method === "length" || method === "size") return "Int";
+          if (method === "isEmpty") return "Bool";
+          if (method === "toHex" || method === "toBase64" || method === "sha256Hex") return "String";
+          if (method === "sha256") return "Bytes";
+          if (method === "decode" || method === "toString") return "Result";
+        }
+
         return undefined;
+      }
+
+      case "errorPropagation": {
+        const inner = node.children?.[0];
+        if (inner === undefined) return undefined;
+        const innerType = this.inferType(inner);
+        // ? on Result<T, E> → infers T (the Ok branch)
+        if (innerType === "Result" || innerType?.startsWith("Result<")) {
+          const match = innerType?.match(/^Result<([^,>]+)/);
+          return match?.[1]?.trim() ?? undefined;
+        }
+        // ? on Option<T> → infers T
+        if (innerType === "Option" || innerType?.startsWith("Option<")) {
+          const match = innerType?.match(/^Option<([^>]+)/);
+          return match?.[1]?.trim() ?? undefined;
+        }
+        return innerType;
       }
 
       case "binaryExpr": {
@@ -575,11 +693,6 @@ class TypeChecker {
         return operand ? this.inferType(operand) : undefined;
       }
 
-      case "errorPropagation": {
-        // x? strips the Result wrapper — full unwrapped type needs Phase 8B
-        return undefined;
-      }
-
       default:
         return undefined;
     }
@@ -603,6 +716,8 @@ class TypeChecker {
           if (child.kind === "paramDecl") {
             const paramName = parseParamName(child.value ?? "");
             this.registerBinding(paramName);
+            // Phase 11A.2: flow parameters are immutable (readonly) by default
+            this.registerBindingKind(paramName, "readonly");
             // Register param type for inference
             const typeRef = child.children?.find((c) => c.kind === "typeRef");
             if (typeRef?.value) {
@@ -634,6 +749,8 @@ class TypeChecker {
           if (child.kind === "paramDecl") {
             const paramName = parseParamName(child.value ?? "");
             this.registerBinding(paramName);
+            // Phase 11A.2: fn parameters are also immutable (readonly)
+            this.registerBindingKind(paramName, "readonly");
             const typeRef = child.children?.find((c) => c.kind === "typeRef");
             if (typeRef?.value) {
               this.registerBindingType(paramName, parseTypeString(typeRef.value).base);
@@ -683,6 +800,25 @@ class TypeChecker {
                 `Return a value of type '${this.currentReturnType}', or correct the flow return type declaration.`,
               ));
             }
+          }
+        }
+        for (const child of node.children ?? []) this.walkNode(child);
+        return;
+      }
+
+      // ── Phase 11A.2: assignment to existing binding (LLN-BINDING-005) ───────
+      case "assignStmt": {
+        const targetName = node.value ?? "";
+        if (targetName !== "") {
+          const kind = this.lookupBindingKind(targetName);
+          if (kind === "let" || kind === "readonly") {
+            this.diagnostics.push(makeTCDiag(
+              "LLN-BINDING-005",
+              "IMMUTABLE_BINDING_REASSIGNED",
+              `Cannot reassign immutable binding '${targetName}'. Use 'mut' if reassignment is intended.`,
+              node.location,
+              `Change the declaration to: mut ${targetName}: ...`,
+            ));
           }
         }
         for (const child of node.children ?? []) this.walkNode(child);
@@ -785,6 +921,15 @@ class TypeChecker {
       this.checkBindingTypeAnnotation(node);
       // Phase 8A: register binding type and check assignment compatibility
       this.checkAndRegisterBindingType(node);
+      // Phase 11A.2: register binding kind for reassignment enforcement
+      const bkName = parseBindingName(node.value ?? "");
+      if (bkName !== "") {
+        const declKind: "let" | "mut" | "readonly" =
+          node.kind === "mutDecl" ? "mut"
+          : node.kind === "readonlyDecl" ? "readonly"
+          : "let";
+        this.registerBindingKind(bkName, declKind);
+      }
     }
 
     for (const child of node.children ?? []) {
@@ -853,8 +998,12 @@ class TypeChecker {
         this.registerBindingType(bindingName, registeredType !== "" ? registeredType : declaredBase);
 
         // Phase 8A: check assignment compatibility with init expression
+        // Skip LLN-TYPE-002 when the declared type has a governance qualifier (protected/redacted)
+        // — those bindings accept inferred protected/redacted types and the boundary checks
+        // (LLN-TYPE-018/019) cover the reverse direction.
+        const hasGovernanceQualifier = typeSection.startsWith("protected ") || typeSection.startsWith("redacted ");
         const initNode = node.children?.[0];
-        if (initNode !== undefined) {
+        if (!hasGovernanceQualifier && initNode !== undefined) {
           const inferredType = this.inferType(initNode);
           if (inferredType !== undefined && !isAssignmentCompatible(declaredBase, inferredType)) {
             this.diagnostics.push(makeTCDiag(
@@ -898,6 +1047,86 @@ class TypeChecker {
             ));
           }
         }
+
+        // LLN-TYPE-018 / LLN-TYPE-019: protected/redacted boundary violations
+        // Only check when the declared type is plain (no protection qualifier)
+        if (declaredBase !== "" && !typeSection.startsWith("protected ") && !typeSection.startsWith("redacted ")) {
+          const initNode2 = node.children?.[0];
+          if (initNode2 !== undefined) {
+            const inferredRhsType = this.inferType(initNode2);
+            if (inferredRhsType?.startsWith("protected ")) {
+              const protectedBase = inferredRhsType.slice("protected ".length).trim();
+              // Only flag if the base types match (it's clearly the same domain type)
+              if (protectedBase === declaredBase || protectedBase.endsWith(declaredBase)) {
+                this.diagnostics.push(makeTCDiag(
+                  "LLN-TYPE-018",
+                  "ProtectedBoundaryViolation",
+                  `Cannot assign 'protected ${protectedBase}' to '${declaredBase}'. The 'protected' qualifier is part of the type — either the binding should be 'protected ${declaredBase}', or the value must go through an authorised access gate.`,
+                  node.location,
+                  `Change the type annotation to: protected ${protectedBase}`,
+                  `protected ${protectedBase}`,
+                ));
+              }
+            }
+            // LLN-TYPE-019: redacted X assigned where plain X is required
+            if (inferredRhsType?.startsWith("redacted ")) {
+              const redactedBase = inferredRhsType.slice("redacted ".length).trim();
+              if (redactedBase === declaredBase || redactedBase.endsWith(declaredBase)) {
+                this.diagnostics.push(makeTCDiag(
+                  "LLN-TYPE-019",
+                  "RedactedBoundaryViolation",
+                  `Cannot convert 'redacted ${redactedBase}' back to '${declaredBase}'. Redaction is irreversible — a redacted value cannot be de-redacted.`,
+                  node.location,
+                  `Use the redacted value as-is, or do not redact it before this point.`,
+                ));
+              }
+            }
+          }
+        }
+
+        // LLN-TYPE-010: Array<T> element type mismatch
+        if (declaredBase === "Array") {
+          const parsed = parseTypeString(typeSection);
+          const elementType = parsed.args[0];
+          if (elementType && elementType !== "" && initNode !== undefined) {
+            if (initNode.kind === "listLiteral") {
+              for (const element of initNode.children ?? []) {
+                const elemInferred = this.inferType(element);
+                if (elemInferred !== undefined && elemInferred !== elementType &&
+                    !isAssignmentCompatible(elementType, elemInferred)) {
+                  this.diagnostics.push(makeTCDiag(
+                    "LLN-TYPE-010",
+                    "CollectionElementTypeMismatch",
+                    `Array<${elementType}> contains a '${elemInferred}' element. All elements must be '${elementType}'.`,
+                    element.location,
+                    `Change the element to a '${elementType}' value, or change the array type to Array<${elemInferred}>.`,
+                  ));
+                }
+              }
+            }
+          }
+        }
+
+        // LLN-TYPE-017: numeric precision loss (warning)
+        const PRECISION_ORDER: ReadonlyMap<string, number> = new Map([
+          ["Float16", 1], ["Float32", 2], ["Float", 3], ["Float64", 4],
+          ["Int8", 1], ["Int16", 2], ["Int32", 3], ["Int", 4], ["Int64", 5],
+        ]);
+        const declaredPrecision = PRECISION_ORDER.get(declaredBase);
+        const inferredPrecision = initNode !== undefined ? PRECISION_ORDER.get(this.inferType(initNode) ?? "") : undefined;
+        if (declaredPrecision !== undefined && inferredPrecision !== undefined &&
+            inferredPrecision > declaredPrecision) {
+          const inferred = this.inferType(initNode!) ?? "higher-precision type";
+          this.diagnostics.push({
+            code: "LLN-TYPE-017",
+            name: "NumericPrecisionLoss",
+            severity: "warning",
+            message: `Assigning '${inferred}' to '${declaredBase}' may lose precision. Use explicit conversion if narrowing is intended.`,
+            ...(node.location !== undefined ? { location: node.location } : {}),
+            suggestedFix: `Use an explicit cast or change the type to '${inferred}'.`,
+          });
+        }
+
       } else if (declaredBase === "Auto") {
         // Auto inference: register the inferred type
         const initNode = node.children?.[0];
@@ -975,6 +1204,44 @@ class TypeChecker {
       return; // Money<C> / Money<C> → Decimal ratio, valid
     }
 
+    // String + non-String = error
+    if (op === "+") {
+      if (leftBase === "String" && rightBase !== "String" && rightBase !== "") {
+        this.diagnostics.push(makeTCDiag(
+          "LLN-TYPE-004",
+          "InvalidBinaryOperation",
+          `Cannot use '+' between 'String' and '${rightBase}'. String concatenation requires both operands to be String.`,
+          location,
+          `Convert the '${rightBase}' to String first using .toString()`,
+        ));
+        return;
+      }
+      if (rightBase === "String" && leftBase !== "String" && leftBase !== "") {
+        this.diagnostics.push(makeTCDiag(
+          "LLN-TYPE-004",
+          "InvalidBinaryOperation",
+          `Cannot use '+' between '${leftBase}' and 'String'. String concatenation requires both operands to be String.`,
+          location,
+          `Convert the '${leftBase}' to String first using .toString()`,
+        ));
+        return;
+      }
+    }
+
+    // Bool arithmetic = error
+    if (["+", "-", "*", "/", "%"].includes(op)) {
+      if (leftBase === "Bool" || rightBase === "Bool") {
+        this.diagnostics.push(makeTCDiag(
+          "LLN-TYPE-004",
+          "InvalidBinaryOperation",
+          `Arithmetic operator '${op}' cannot be applied to Bool. Bool supports only '&&', '||', and '!'.`,
+          location,
+          `Use '&&' or '||' for boolean logic, not arithmetic operators.`,
+        ));
+        return;
+      }
+    }
+
     // Arithmetic operators
     if (["+", "-", "*", "/", "%"].includes(op)) {
       if (op === "+" && leftType === "String" && rightType === "String") return; // concat OK
@@ -1017,6 +1284,18 @@ class TypeChecker {
 
     // Comparison operators
     if (["<", "<=", ">", ">="].includes(op)) {
+      // String comparison with non-String = error
+      if ((leftBase === "String" && rightBase !== "String" && rightBase !== "") ||
+          (rightBase === "String" && leftBase !== "String" && leftBase !== "")) {
+        this.diagnostics.push(makeTCDiag(
+          "LLN-TYPE-004",
+          "InvalidBinaryOperation",
+          `Operator '${op}' cannot compare 'String' with '${leftBase === "String" ? rightBase : leftBase}'. Only same-type comparison is allowed.`,
+          location,
+          `Compare values of the same type.`,
+        ));
+        return;
+      }
       if (!ORDERABLE_TYPES.has(leftType) || !ORDERABLE_TYPES.has(rightType)) {
         this.diagnostics.push(makeTCDiag(
           "LLN-TYPE-004",

@@ -1,7 +1,7 @@
-﻿/// example: 162-invalid-audit-log
+/// example: 162-invalid-audit-log
 /// level: 4
 /// concept: passing protected value to audit sink without redaction
-/// expected_diagnostics: LLN-SEC-XXX
+/// expected_diagnostics: LLN-VALUESTATE-003
 /// ai_rule: Redact protected values before passing to audit sinks.
 
 AuditLog.write({ email: email })

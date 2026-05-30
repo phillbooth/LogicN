@@ -365,6 +365,90 @@ effects [database.read] {
   });
 });
 
+// ── Phase 11B.1: Two-hop taint propagation (LLN-VALUESTATE-005) ──────────────
+
+describe("Value-state checker — Phase 11B.1 two-hop taint propagation", () => {
+  it("emits LLN-VALUESTATE-005 for value derived from unsafe binding at sink", () => {
+    // The "laundered unsafe value" pattern
+    const result = parseAndCheck(`
+guarded flow search(readonly request: Request) -> String
+effects [database.read] {
+  unsafe let rawQuery: String = request.params.query
+  let cleaned: String = rawQuery.trim()
+  let data = UsersDB.query(cleaned)
+  return "ok"
+}
+`);
+    assert.ok(
+      result.diagnostics.some(d => d.code === "LLN-VALUESTATE-005" || d.code === "LLN-VALUESTATE-003"),
+      `Expected taint-at-sink for derived unsafe value, got: ${result.diagnostics.map(d => d.code).join(", ")}`,
+    );
+  });
+
+  it("does NOT emit taint diagnostic when value goes through a validation gate", () => {
+    const result = parseAndCheck(`
+guarded flow search(readonly request: Request) -> String
+effects [database.read] {
+  unsafe let rawQuery: String = request.params.query
+  let safeQuery: String = validate.searchQuery(rawQuery)?
+  let data = UsersDB.query(safeQuery)
+  return "ok"
+}
+`);
+    const taintDiags = result.diagnostics.filter(d =>
+      d.code === "LLN-VALUESTATE-005" || d.code === "LLN-VALUESTATE-003",
+    );
+    assert.equal(taintDiags.length, 0, `Validation gate should break taint chain, got: ${taintDiags.map(d => d.code).join(", ")}`);
+  });
+
+  it("propagates taint through method chain", () => {
+    const result = parseAndCheck(`
+guarded flow test(readonly request: Request) -> String
+effects [database.write] {
+  unsafe let raw: String = request.body.value
+  let step1: String = raw.trim()
+  let step2: String = step1.toLower()
+  UsersDB.insert(step2)
+  return "ok"
+}
+`);
+    const hasTaint = result.diagnostics.some(d =>
+      d.code === "LLN-VALUESTATE-005" || d.code === "LLN-VALUESTATE-003",
+    );
+    assert.ok(hasTaint, `Multi-hop taint through method chain should be caught, got: ${result.diagnostics.map(d => d.code).join(", ")}`);
+  });
+
+  it("LLN-VALUESTATE-005 includes why and risk fields", () => {
+    const result = parseAndCheck(`
+guarded flow test(readonly request: Request) -> String
+effects [database.write] {
+  unsafe let raw: String = request.body.value
+  let cleaned: String = raw.trim()
+  UsersDB.insert(cleaned)
+  return "ok"
+}
+`);
+    const diag = result.diagnostics.find(d => d.code === "LLN-VALUESTATE-005");
+    assert.ok(diag !== undefined, `Expected LLN-VALUESTATE-005`);
+    assert.ok(diag.why !== undefined, "Expected why field on LLN-VALUESTATE-005");
+    assert.ok(diag.risk !== undefined, "Expected risk field on LLN-VALUESTATE-005");
+  });
+
+  it("does not taint a plain let binding with no unsafe dependency", () => {
+    const result = parseAndCheck(`
+flow test() -> String {
+  let clean: String = "hello"
+  let upper: String = clean.toUpper()
+  return upper
+}
+`);
+    assert.ok(
+      !result.diagnostics.some(d => d.code === "LLN-VALUESTATE-005"),
+      "Should not emit LLN-VALUESTATE-005 for clean bindings",
+    );
+  });
+});
+
 // ── Rust-style related locations ──────────────────────────────────────────────
 
 describe("Value-state checker — Rust-style related locations", () => {

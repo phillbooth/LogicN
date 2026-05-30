@@ -461,7 +461,7 @@ flow renderScript() {
 
   it("diagnostic constants export complete arrays check — including LLN-SAFETY-* and LLN-RAWPTR-*", () => {
     assert.equal(LLN_SYNTAX_DIAGNOSTICS.length, 6); // 2 original + 4 new (006-009)
-    assert.equal(LLN_BINDING_DIAGNOSTICS.length, 4);
+    assert.equal(LLN_BINDING_DIAGNOSTICS.length, 6); // 4 original + LLN-BINDING-005 + LLN-BINDING-006 (Phase 11A.2)
     assert.equal(LLN_PIPELINE_DIAGNOSTICS.length, 5);
     assert.equal(LLN_INTENT_DIAGNOSTICS.length, 5);
     assert.equal(LLN_BLOCK_DIAGNOSTICS.length, 4);

@@ -4,6 +4,8 @@
 
 import { type AstNode, type FlowMeta } from "./parser.js";
 import { callStdlib, logicNValuesEqual, moneyBinary } from "./stdlib.js";
+import { type CapabilityHost } from "./runtime/capabilityHost.js";
+import { type RuntimeContext } from "./runtime/runtimeContext.js";
 
 export type LogicNValue =
   | { readonly __tag: "int";       readonly value: number }
@@ -133,12 +135,45 @@ class Interpreter {
   private readonly diagnostics: Array<{ code: string; message: string }> = [];
   private readonly flowIndex: ReadonlyMap<string, AstNode>;
   private readonly fnIndex = new Map<string, AstNode>();
+  capabilityHost: CapabilityHost | undefined;
 
   constructor(
     private readonly ast: AstNode,
     private readonly knownFlows: readonly FlowMeta[],
   ) {
     this.flowIndex = buildFlowIndex(ast);
+  }
+
+  private getContext(): RuntimeContext {
+    return {
+      flowName: "runtime",
+      startedAt: Date.now(),
+    };
+  }
+
+  private makeStdlibContext() {
+    return {
+      recordEffect: (effect: string) => this.effectsObserved.add(effect),
+      resolveIdentifier: (name: string) => this.lookup(name)?.value,
+      callFlow: async (name: string, fnArgs: ReadonlyMap<string, LogicNValue>) => {
+        const sub = new Interpreter(this.ast, this.knownFlows);
+        const result = await sub.runFlow(name, fnArgs);
+        for (const effect of result.effectsObserved) this.effectsObserved.add(effect);
+        this.auditEntries.push(...result.auditEntries);
+        return result.value;
+      },
+      applyFn: async (fn: LogicNValue, arg: LogicNValue) => {
+        if (fn.__tag === "unresolved" && this.flowIndex.has(fn.name)) {
+          const callArgs = new Map<string, LogicNValue>([["arg", arg]]);
+          const sub = new Interpreter(this.ast, this.knownFlows);
+          const result = await sub.runFlow(fn.name, callArgs);
+          for (const effect of result.effectsObserved) this.effectsObserved.add(effect);
+          this.auditEntries.push(...result.auditEntries);
+          return result.value;
+        }
+        return arg;
+      },
+    };
   }
 
   async runFlow(flowName: string, args: ReadonlyMap<string, LogicNValue>): Promise<FlowExecutionResult> {
@@ -531,32 +566,31 @@ class Interpreter {
     const evaluatedArgs: LogicNValue[] = [];
     for (const arg of args) evaluatedArgs.push(await this.evalExpr(arg));
 
+    // Route governed calls through the capability host when present
+    if (this.capabilityHost !== undefined) {
+      const capEffect = resolveCapabilityEffect(fullName);
+      if (capEffect !== undefined) {
+        const capId = `host.${capEffect}`;
+        const stdlibCtx = this.makeStdlibContext();
+        const result = await this.capabilityHost.execute(
+          {
+            capabilityId: capId,
+            effect: capEffect,
+            args: evaluatedArgs,
+            context: this.getContext(),
+          },
+          async (capArgs) =>
+            (await callStdlib(fullName, evaluatedReceiver, capArgs, stdlibCtx)) ?? LLN_VOID,
+        );
+        return result.value;
+      }
+    }
+
     const stdlibResult = await callStdlib(
       fullName,
       evaluatedReceiver,
       evaluatedArgs,
-      {
-        recordEffect: (effect) => this.effectsObserved.add(effect),
-        resolveIdentifier: (name) => this.lookup(name)?.value,
-        callFlow: async (name, fnArgs) => {
-          const sub = new Interpreter(this.ast, this.knownFlows);
-          const result = await sub.runFlow(name, fnArgs);
-          for (const effect of result.effectsObserved) this.effectsObserved.add(effect);
-          this.auditEntries.push(...result.auditEntries);
-          return result.value;
-        },
-        applyFn: async (fn, arg) => {
-          if (fn.__tag === "unresolved" && this.flowIndex.has(fn.name)) {
-            const callArgs = new Map<string, LogicNValue>([["arg", arg]]);
-            const sub = new Interpreter(this.ast, this.knownFlows);
-            const result = await sub.runFlow(fn.name, callArgs);
-            for (const effect of result.effectsObserved) this.effectsObserved.add(effect);
-            this.auditEntries.push(...result.auditEntries);
-            return result.value;
-          }
-          return arg;
-        },
-      },
+      this.makeStdlibContext(),
     );
     if (stdlibResult !== undefined) return stdlibResult;
 
@@ -590,6 +624,23 @@ class Interpreter {
     }
 
     if (fullName === "AuditLog.write") {
+      if (this.capabilityHost !== undefined) {
+        const auditArgs = evaluatedArgs;
+        const result = await this.capabilityHost.execute(
+          {
+            capabilityId: "host.audit.write",
+            effect: "audit.write",
+            args: auditArgs,
+            context: this.getContext(),
+          },
+          async (_capArgs) => {
+            this.effectsObserved.add("audit.write");
+            this.auditEntries.push(await this.buildAuditEntry(args));
+            return LLN_VOID;
+          },
+        );
+        return result.value;
+      }
       this.effectsObserved.add("audit.write");
       this.auditEntries.push(await this.buildAuditEntry(args));
       return LLN_VOID;
@@ -1043,6 +1094,32 @@ function makeApiErrorValue(status: number, message: string): LogicNValue {
     ["__isApiError", { __tag: "bool", value: true }],
   ]);
   return { __tag: "record", fields };
+}
+
+/**
+ * Maps a fully-qualified call name to a capability effect string, or
+ * returns undefined when the call is not a governed side-effectful operation.
+ */
+function resolveCapabilityEffect(fullName: string): string | undefined {
+  if (fullName.startsWith("http.") || fullName.startsWith("https.")) {
+    return "network.outbound";
+  }
+  if (fullName.startsWith("fs.") || fullName.startsWith("File.")) {
+    const isRead = fullName.includes("read") || fullName.includes("Read");
+    const isWrite = fullName.includes("write") || fullName.includes("Write");
+    if (isRead) return "filesystem.read";
+    if (isWrite) return "filesystem.write";
+  }
+  // Database calls: any receiver ending in DB or Database (e.g. UserDB.find)
+  if (/DB\.|Database\./.test(fullName)) {
+    const isWrite = /\.(insert|update|delete|write|save|create|upsert)/i.test(fullName);
+    return isWrite ? "database.write" : "database.read";
+  }
+  // AI model calls (e.g. AI.complete, Model.infer, Claude.generate)
+  if (/^(AI|Model|Claude|GPT|LLM)\./i.test(fullName)) {
+    return "ai.inference";
+  }
+  return undefined;
 }
 
 export async function executeFlow(

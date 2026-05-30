@@ -1,7 +1,7 @@
-﻿/// example: 114-secure-flow-missing-audit-effect
+/// example: 114-secure-flow-missing-audit-effect
 /// level: 3
 /// concept: secure flow calls AuditLog.write but does not declare audit.write
-/// expected_diagnostics: LLN-EFFECT-XXX
+/// expected_diagnostics: LLN-EFFECT-001
 /// test_status: stable
 /// ai_rule: AuditLog.write requires audit.write to be declared in the effect list.
 

@@ -14,11 +14,14 @@
 //   Rule 4   — SecureString cannot use == or be passed to log functions
 //              (LLN-SECRET-001: SecretValueLogged)
 //              (LLN-SECRET-002: SecretComparisonDenied)
+//   Phase 8B — String taint propagation
+//              (LLN-VALUESTATE-004: TaintedValuePropagation)
+//   Phase 11B.1 — Two-hop taint propagation
+//              (LLN-VALUESTATE-005: DerivedUnsafeValueAtSink)
 //
 // Phase 6 defers:
-//   - Full taint tracking through arbitrary expression trees
 //   - Custom @gate annotations
-//   - LLN-VALUESTATE-002, LLN-VALUESTATE-004, LLN-VALUESTATE-005
+//   - LLN-VALUESTATE-002
 //   - LLN-SECRET-003 (SecretSerializationDenied)
 // =============================================================================
 
@@ -110,8 +113,8 @@ function isGovernedSink(node: AstNode): boolean {
   const fullName =
     receiverName !== "" ? `${receiverName}.${methodName}` : methodName;
 
-  // Database write patterns: *DB.insert / update / delete / write
-  if (/\w*DB\.(insert|update\w*|delete|write)$/.test(fullName)) return true;
+  // Database patterns: *DB.insert / update / delete / write / query / find / select
+  if (/\w*DB\.(insert|update\w*|delete|write|query|find|select\w*)$/.test(fullName)) return true;
   // Audit log
   if (fullName === "AuditLog.write") return true;
   // Shell and filesystem
@@ -225,6 +228,15 @@ interface BindingInfo {
   readonly typeName: string;
   /** Location where this binding was declared — used for Rust-style related diagnostics. */
   readonly declaredAt?: SourceLocation;
+  /**
+   * Phase 11B.1 — Two-hop taint propagation.
+   * True when this binding was derived from an unsafe or tainted binding via
+   * a non-gate expression (e.g. rawQuery.trim()). Such bindings emit
+   * LLN-VALUESTATE-005 when they reach governed sinks.
+   */
+  readonly tainted?: boolean;
+  /** The original unsafe binding name this taint was derived from (for diagnostics). */
+  readonly taintSource?: string;
 }
 
 function parseBindingValue(value: string): BindingInfo {
@@ -251,6 +263,102 @@ function parseBindingValue(value: string): BindingInfo {
   const baseName = typeSection.split(/[<\s]/)[0] ?? typeSection;
 
   return { safetyPrefix, name, typeName: baseName };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 11B.1 — Taint expression analysis
+//
+// Determines whether an expression tree is derived from an unsafe or
+// tainted binding. Validation / redaction calls break the taint chain.
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true if `expr` references an unsafe or tainted binding anywhere in
+ * its tree, UNLESS the expression is a recognised validation/redaction gate
+ * (which breaks the taint chain).
+ */
+function isTaintedExpression(
+  expr: AstNode,
+  lookupBinding: (name: string) => BindingInfo | undefined,
+): boolean {
+  if (expr.kind === "identifier" && expr.value) {
+    const binding = lookupBinding(expr.value);
+    if (binding === undefined) return false;
+    return binding.safetyPrefix === "unsafe" || (binding.tainted === true);
+  }
+
+  if (expr.kind === "memberExpr") {
+    const receiver = expr.children?.[0];
+    return receiver !== undefined && isTaintedExpression(receiver, lookupBinding);
+  }
+
+  if (expr.kind === "callExpr") {
+    // Reconstruct the full qualified call name (e.g. "validate.searchQuery")
+    // by combining the receiver identifier/memberExpr name with the method name.
+    const fullCallName = buildFullCallName(expr);
+    // Gate calls break the taint chain — validate.*, sanitize.*, redact*, etc.
+    if (isGateCallName(fullCallName)) return false;
+
+    // For non-gate calls, check whether the receiver binding is itself tainted/unsafe,
+    // OR whether any of the call arguments are tainted.
+    // Note: the first child is the receiver (could be a namespace identifier or binding).
+    const firstChild = expr.children?.[0];
+    const args = expr.children?.slice(1) ?? [];
+
+    // Check if receiver is a tainted/unsafe BINDING (not a namespace like "UsersDB")
+    const receiverIsTainted =
+      firstChild !== undefined &&
+      firstChild.kind === "identifier" &&
+      (() => {
+        const b = lookupBinding(firstChild.value ?? "");
+        return b?.safetyPrefix === "unsafe" || b?.tainted === true;
+      })();
+
+    // Also recurse into memberExpr receivers (e.g. obj.prop.method())
+    const receiverMemberTainted =
+      firstChild !== undefined &&
+      firstChild.kind === "memberExpr" &&
+      isTaintedExpression(firstChild, lookupBinding);
+
+    const argsTainted = args.some((a) => isTaintedExpression(a, lookupBinding));
+    return receiverIsTainted || receiverMemberTainted || argsTainted;
+  }
+
+  if (expr.kind === "binaryExpr") {
+    const [left, right] = expr.children ?? [];
+    return (
+      (left !== undefined && isTaintedExpression(left, lookupBinding)) ||
+      (right !== undefined && isTaintedExpression(right, lookupBinding))
+    );
+  }
+
+  // errorPropagation (?) — the wrapped expression might be tainted
+  if (expr.kind === "errorPropagation") {
+    const inner = expr.children?.[0];
+    return inner !== undefined && isTaintedExpression(inner, lookupBinding);
+  }
+
+  return false;
+}
+
+/**
+ * Walks an expression tree to find the name of the first unsafe or tainted
+ * binding identifier it references. Used for building diagnostic messages.
+ */
+function findTaintSourceName(
+  expr: AstNode,
+  lookupBinding: (name: string) => BindingInfo | undefined,
+): string | undefined {
+  if (expr.kind === "identifier" && expr.value) {
+    const binding = lookupBinding(expr.value);
+    if (binding?.safetyPrefix === "unsafe") return binding.name;
+    if (binding?.tainted === true) return binding.taintSource ?? binding.name;
+  }
+  for (const child of expr.children ?? []) {
+    const found = findTaintSourceName(child, lookupBinding);
+    if (found !== undefined) return found;
+  }
+  return undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -375,9 +483,23 @@ class ValueStateChecker {
     const info = parseBindingValue(node.value ?? "");
     // Attach declaration location for Rust-style "declared here" diagnostics
     const locField = node.location !== undefined ? { declaredAt: node.location } : {};
-    this.registerBinding({ ...info, ...locField });
-    // Walk the init expression
+
+    // Phase 11B.1: propagate taint — if the init expression references an
+    // unsafe or tainted binding (via a non-gate call), the new binding is tainted.
     const init = node.children?.[0];
+    const taintField: { tainted?: boolean; taintSource?: string } = {};
+    if (init !== undefined && info.safetyPrefix !== "unsafe") {
+      // unsafe bindings already have safetyPrefix tracking; we only need taint
+      // propagation for plain let bindings derived from unsafe/tainted ones.
+      if (isTaintedExpression(init, (name) => this.lookupBinding(name))) {
+        const sourceName = findTaintSourceName(init, (name) => this.lookupBinding(name));
+        taintField.tainted = true;
+        if (sourceName !== undefined) taintField.taintSource = sourceName;
+      }
+    }
+
+    this.registerBinding({ ...info, ...locField, ...taintField });
+    // Walk the init expression
     if (init !== undefined) this.walkNode(init);
   }
 
@@ -399,9 +521,20 @@ class ValueStateChecker {
       }
     }
 
-    // Overwrite the previous unsafe registration with the new (possibly safe) one
+    // Overwrite the previous unsafe registration with the new (possibly safe) one.
+    // Phase 11B.1: propagate taint unless a gate clears it.
     const mutLocField = node.location !== undefined ? { declaredAt: node.location } : {};
-    this.registerBinding({ ...info, ...mutLocField });
+    const mutTaintField: { tainted?: boolean; taintSource?: string } = {};
+    if (init !== undefined && info.safetyPrefix !== "safe" && info.safetyPrefix !== "unsafe") {
+      if (isTaintedExpression(init, (name) => this.lookupBinding(name))) {
+        const sourceName = findTaintSourceName(init, (name) => this.lookupBinding(name));
+        mutTaintField.tainted = true;
+        if (sourceName !== undefined) mutTaintField.taintSource = sourceName;
+      }
+    }
+    // When safetyPrefix is "safe" and a gate is used, taint is intentionally cleared
+    // (the gate call gates are already excluded by isTaintedExpression).
+    this.registerBinding({ ...info, ...mutLocField, ...mutTaintField });
 
     if (init !== undefined) this.walkNode(init);
   }
@@ -451,7 +584,8 @@ class ValueStateChecker {
 
   /**
    * Recursively checks whether `node` or any of its descendants is an
-   * identifier that resolves to an `unsafe` binding.
+   * identifier that resolves to an `unsafe` binding (LLN-VALUESTATE-003) or
+   * a tainted-but-not-directly-unsafe binding (LLN-VALUESTATE-005).
    */
   private checkArgForUnsafeBinding(
     node: AstNode,
@@ -480,6 +614,29 @@ class ValueStateChecker {
             ...(related.length > 0 ? { relatedLocations: related } : {}),
             why: `'${binding.name}' was declared with 'unsafe let', meaning its value comes from an untrusted boundary source and has not been validated.`,
             risk: `Sending unvalidated boundary data to '${sinkName}' can cause injection attacks, data corruption, or governance violations.`,
+          },
+        ));
+      } else if (binding?.tainted === true) {
+        // Phase 11B.1 — LLN-VALUESTATE-005: derived unsafe value at sink
+        const sourceName = binding.taintSource ?? binding.name;
+        const related: DiagnosticRelatedLocation[] = [];
+        if (binding.declaredAt !== undefined) {
+          related.push({
+            message: `'${binding.name}' derived from unsafe binding '${sourceName}' here`,
+            location: binding.declaredAt,
+          });
+        }
+        this.diagnostics.push(makeVSDiag(
+          "LLN-VALUESTATE-005",
+          "DerivedUnsafeValueAtSink",
+          `Binding '${binding.name}' is derived from unsafe binding '${sourceName}' and cannot flow into governed sink '${sinkName}'. Even after transformation (e.g. .trim()), a value derived from unsafe input is still tainted.`,
+          location,
+          `Use a validation gate before the sink: let safe${binding.name.charAt(0).toUpperCase() + binding.name.slice(1)} = validate.${sourceName}(${sourceName})?`,
+          `validate.${sourceName}(${sourceName})?`,
+          {
+            ...(related.length > 0 ? { relatedLocations: related } : {}),
+            why: `'${binding.name}' was derived from '${sourceName}', which was declared with 'unsafe let'. String methods like .trim() and .toLower() do not remove taint.`,
+            risk: `Sending a transformed-but-tainted value to '${sinkName}' can cause injection attacks. Taint can only be removed by a validate.* or sanitize.* gate.`,
           },
         ));
       }

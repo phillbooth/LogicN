@@ -48,6 +48,16 @@ export {
   type ValueStateCheckResult,
 } from "./value-state-checker.js";
 
+/** LLN-VALUESTATE-005: A value derived from an unsafe binding reached a governed sink. */
+export const LLN_VALUESTATE_005 = {
+  code: "LLN-VALUESTATE-005",
+  name: "DERIVED_UNSAFE_VALUE_AT_SINK",
+  severity: "error" as const,
+  message: "A value derived from an unsafe binding reached a governed sink. Even after transformation (e.g. .trim()), a value derived from unsafe input is still tainted.",
+  why: "SQL injection and similar attacks pass through string methods like .trim(), .replace(), and .toLowerCase().",
+  suggestedFix: "Use a validation gate (validate.*, sanitize.*) to transform the unsafe value into a safe/validated type.",
+};
+
 // Phase 6 — Type Checker
 export {
   checkTypes,
@@ -64,6 +74,17 @@ export const LLN_TYPE_003 = {
     "Branded types (type X = Brand<T, \"Name\">) cannot be assigned a raw String value. "
     + "Use a validation gate such as validate.x(raw)? to produce a trusted branded value.",
 } as const;
+
+export const LLN_TYPE_010 = { code: "LLN-TYPE-010", name: "CollectionElementTypeMismatch", severity: "error", message: "Collection element type mismatch." } as const;
+export const LLN_TYPE_011 = { code: "LLN-TYPE-011", name: "MapKeyTypeViolation", severity: "error", message: "Map key or value type mismatch." } as const;
+export const LLN_TYPE_012 = { code: "LLN-TYPE-012", name: "TensorElementTypeMismatch", severity: "error", message: "Tensor element type does not match declared element type." } as const;
+export const LLN_TYPE_013 = { code: "LLN-TYPE-013", name: "TensorShapeIncompatibility", severity: "error", message: "Tensor shape incompatibility — shapes cannot be assigned or composed." } as const;
+export const LLN_TYPE_014 = { code: "LLN-TYPE-014", name: "ChannelTypeMismatch", severity: "error", message: "Channel element type mismatch." } as const;
+export const LLN_TYPE_015 = { code: "LLN-TYPE-015", name: "EnumVariantTypeMismatch", severity: "error", message: "Wrong enum variant used in this context." } as const;
+export const LLN_TYPE_016 = { code: "LLN-TYPE-016", name: "GenericConstraintViolation", severity: "error", message: "Type does not satisfy the required generic constraint." } as const;
+export const LLN_TYPE_017 = { code: "LLN-TYPE-017", name: "NumericPrecisionLoss", severity: "warning", message: "Implicit numeric narrowing may lose precision (e.g. Float64 → Float16)." } as const;
+export const LLN_TYPE_018 = { code: "LLN-TYPE-018", name: "ProtectedBoundaryViolation", severity: "error", message: "A protected value is used where the plain (unprotected) type is required. Remove the protection qualifier explicitly before use." } as const;
+export const LLN_TYPE_019 = { code: "LLN-TYPE-019", name: "RedactedBoundaryViolation", severity: "error", message: "A redacted value cannot be converted back to its original type. Redaction is irreversible." } as const;
 
 export {
   resolveSymbols,
@@ -180,6 +201,31 @@ export {
   type AttestationInputs,
   type AttestationKeyPair,
 } from "./attestation.js";
+
+// Phase 11C — Runtime Contract Enforcement
+export {
+  createContractEnforcer,
+  type ContractEnforcer,
+} from "./runtime/contractEnforcer.js";
+
+export type { ContractEnforcementRecord } from "./runtime/runtimeReport.js";
+export type { RuntimeContext } from "./runtime/runtimeContext.js";
+
+// Phase 11C — Capability Host
+export {
+  createCapabilityHost,
+  type CapabilityHost,
+  type CapabilityCall,
+  type CapabilityResult,
+  type CapabilityCheckResult,
+} from "./runtime/capabilityHost.js";
+
+// Phase 11D — Governed Memory (skeleton)
+export {
+  createGovernedMemory,
+  type GovernedMemory,
+  type GovernedValueTag,
+} from "./runtime/governedMemory.js";
 
 export interface CompilerInput {
   readonly projectRoot: string;

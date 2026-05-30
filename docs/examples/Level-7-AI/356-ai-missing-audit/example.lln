@@ -1,7 +1,7 @@
 /// example: 356-ai-missing-audit
 /// level: 7
 /// concept: secure AI flow that declares audit.write but omits the AuditLog.write call
-/// expected_diagnostics: LLN-GOV-XXX
+/// expected_diagnostics: LLN-GOV-002
 /// ai_rule: If a secure flow declares audit.write, it must call AuditLog.write before returning.
 
 secure flow scorePatient(readonly patient: Patient) -> ScorePatientResult

@@ -1,7 +1,7 @@
-﻿/// example: 116-effect-propagation-missing-parent
+/// example: 116-effect-propagation-missing-parent
 /// level: 3
 /// concept: caller missing effect required by callee
-/// expected_diagnostics: LLN-EFFECT-XXX
+/// expected_diagnostics: LLN-EFFECT-002
 /// test_status: stable
 /// ai_rule: If a callee declares an effect, the caller must declare it too.
 

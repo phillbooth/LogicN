@@ -1,0 +1,141 @@
+﻿# LogicN Capability Registry
+#
+# Single source of truth for the mapping between:
+#   - capability IDs  (used by capabilityHost.ts at runtime)
+#   - declared effects (used by effect-checker.ts and type-checker.ts)
+#   - contract section (used by contractEnforcer.ts)
+#
+# Used by:
+#   packages-logicn/logicn-core-compiler/src/effect-checker.ts
+#   packages-logicn/logicn-core-compiler/src/type-checker.ts
+#   packages-logicn/logicn-core-compiler/src/runtime/capabilityHost.ts (Phase 11C)
+#   packages-logicn/logicn-core-compiler/src/runtime/contractEnforcer.ts
+#
+# Rule: the interpreter MUST NOT call host resources directly.
+# It MUST call through capabilities in capabilityHost.ts.
+# Every capability call checks: declared effect? contract allows it? context valid?
+
+schema_version: "1.0"
+
+capabilities:
+
+  # ── Database ────────────────────────────────────────────────────────────────
+
+  - id: host.database.read
+    effect: database.read
+    category: database
+    trust_level: internal
+    requires_validation: false
+    contract_section: effects
+    description: "Read from a governed database. Data returned is trusted unless explicitly marked unsafe."
+
+  - id: host.database.write
+    effect: database.write
+    category: database
+    trust_level: internal
+    requires_validation: true
+    contract_section: effects
+    description: "Write to a governed database. Input must be validated before write."
+
+  # ── Audit ───────────────────────────────────────────────────────────────────
+
+  - id: host.audit.write
+    effect: audit.write
+    category: audit
+    trust_level: internal
+    requires_validation: false
+    contract_section: effects
+    description: "Write to the audit trail. Values must be redacted before inclusion."
+
+  # ── Network ─────────────────────────────────────────────────────────────────
+
+  - id: host.network.outbound
+    effect: network.outbound
+    category: network
+    trust_level: external
+    requires_validation: true
+    contract_section: effects
+    description: "Make outbound network call. Target must be declared, data must be governed."
+
+  - id: host.network.inbound
+    effect: network.inbound
+    category: network
+    trust_level: external
+    requires_validation: true
+    contract_section: effects
+    description: "Receive inbound network data. Always unsafe until validated."
+
+  # ── AI / Model Inference ────────────────────────────────────────────────────
+
+  - id: host.ai.inference
+    effect: ai.inference
+    category: ai
+    trust_level: internal
+    requires_validation: true
+    contract_section: effects
+    description: "Run AI model inference. Input must be validated. Local execution preferred."
+
+  - id: host.ai.training
+    effect: ai.training
+    category: ai
+    trust_level: internal
+    requires_validation: true
+    contract_section: effects
+    description: "AI training operation. Requires explicit data governance policy."
+
+  # ── Filesystem ──────────────────────────────────────────────────────────────
+
+  - id: host.filesystem.read
+    effect: filesystem.read
+    category: filesystem
+    trust_level: internal
+    requires_validation: false
+    contract_section: effects
+    description: "Read from the local filesystem."
+
+  - id: host.filesystem.write
+    effect: filesystem.write
+    category: filesystem
+    trust_level: internal
+    requires_validation: false
+    contract_section: effects
+    description: "Write to the local filesystem."
+
+  # ── Email / Notifications ───────────────────────────────────────────────────
+
+  - id: host.email.send
+    effect: email.send
+    category: notification
+    trust_level: external
+    requires_validation: true
+    contract_section: effects
+    description: "Send email. Recipient and content must be governed. PII must be redacted."
+
+  # ── Crypto / Attestation ───────────────────────────────────────────────────
+
+  - id: host.crypto.sign
+    effect: crypto.sign
+    category: crypto
+    trust_level: internal
+    requires_validation: false
+    contract_section: effects
+    description: "Produce a cryptographic signature. Key must be from approved key store."
+
+  - id: host.crypto.verify
+    effect: crypto.verify
+    category: crypto
+    trust_level: internal
+    requires_validation: false
+    contract_section: effects
+    description: "Verify a cryptographic signature."
+
+# ── Capability check order ─────────────────────────────────────────────────
+#
+# When capabilityHost.ts receives a capability call, it checks in order:
+#   1. Is this capability in the registry?
+#   2. Is the effect declared on the current flow?
+#   3. Does the contract allow it? (contractEnforcer.ts)
+#   4. Is the context valid? (actor, trace_id, deadline)
+#   5. Is the value-state safe? (validated inputs, no unsafe at sink)
+#
+# Only if all checks pass does the host perform the actual operation.

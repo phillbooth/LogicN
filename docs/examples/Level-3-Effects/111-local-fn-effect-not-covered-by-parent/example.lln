@@ -1,7 +1,7 @@
-﻿/// example: 111-local-fn-effect-not-covered-by-parent
+/// example: 111-local-fn-effect-not-covered-by-parent
 /// level: 3
 /// concept: local fn cannot use effects not declared by the containing flow
-/// expected_diagnostics: LLN-EFFECT-XXX
+/// expected_diagnostics: LLN-EFFECT-001
 /// test_status: stable
 /// ai_rule: A local fn is bound by the containing flow's effect declarations.
 

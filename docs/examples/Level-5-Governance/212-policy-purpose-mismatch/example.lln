@@ -1,7 +1,7 @@
 /// example: 212-policy-purpose-mismatch
 /// level: 5
 /// concept: declared purpose does not match observed template use
-/// expected_diagnostics: LLN-GOV-XXX
+/// expected_diagnostics: LLN-GOV-005
 /// ai_rule: The template used in a communication flow must match the declared purpose.
 
 secure flow emailPatient(patient: PatientRecord) -> EmailPatientResult

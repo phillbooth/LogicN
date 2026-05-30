@@ -45,3 +45,18 @@ export {
   recordLimitViolation,
   formatEnforcementRecord,
 } from "./runtimeReport.js";
+
+export {
+  createCapabilityHost,
+  type CapabilityHost,
+  type CapabilityCall,
+  type CapabilityResult,
+  type CapabilityCheckResult,
+  type CapabilityHostConfig,
+} from "./capabilityHost.js";
+
+export {
+  createGovernedMemory,
+  type GovernedMemory,
+  type GovernedValueTag,
+} from "./governedMemory.js";

@@ -1,7 +1,7 @@
-﻿/// example: 062-invalid-redacted-email
+/// example: 062-invalid-redacted-email
 /// level: 2
 /// concept: protected Email cannot be assigned to redacted Email directly
-/// expected_diagnostics: LLN-TYPE-XXX
+/// expected_diagnostics: LLN-TYPE-002
 /// ai_rule: Use redact(email) to explicitly redact a protected value before assigning to a redacted binding.
 
 let auditEmail: redacted Email = email

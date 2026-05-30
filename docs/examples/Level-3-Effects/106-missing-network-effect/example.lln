@@ -1,7 +1,7 @@
-﻿/// example: 106-missing-network-effect
+/// example: 106-missing-network-effect
 /// level: 3
 /// concept: undeclared network.outbound effect
-/// expected_diagnostics: LLN-EFFECT-XXX
+/// expected_diagnostics: LLN-EFFECT-001
 /// test_status: stable
 /// ai_rule: http.get and similar calls require network.outbound to be declared.
 
