@@ -21,22 +21,22 @@ enforced by tooling** — not inferred, guessed, or left to convention.
 ▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   5%
 ```
 
-**Passive Execution Plans and Target Bridges** — Phase 15: plan types + builder done
+**Passive Execution Plans and Target Bridges** — Phase 13: GIR → Plan → CPU/GPU/NPU/WASM/Photonic
 
 ```
-▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░  12%
+▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░  12%  (plan types done · runtime execution Phase 16 · target bridges Phase 21-22)
 ```
 
-**Runtime written in LogicN** — Stage B: LogicN compiler compiles itself — Major achievement milestone
+**Runtime written in LogicN** — Stage B: LogicN compiler compiles itself ← Major achievement milestone
 
 ```
-▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░  20%  (lexer.lln executing · parser.lln v0 written · compiler.capabilities.lln · SemanticGraph)
+▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░  20%  (lexer.lln executing · parser.lln v0 · compiler.capabilities.lln · SemanticGraph started)
 ```
 
 **TypeScript Runtime** — Stage A: compiler pipeline + execution engine running on Node.js
 
 ```
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░  85%  (1670 tests · 0 failures · 189/222 CEC stable)
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░  87%  (1670 tests · 0 failures · 189/222 CEC stable)
 ```
 
 | Layer | Status | % |
@@ -60,14 +60,16 @@ enforced by tooling** — not inferred, guessed, or left to convention.
 | CEC coverage | 189/222 stable, 10 domain suites, all real-world patterns | 85% |
 | Internal graph | BFS/DFS/topo, call graph, effect graph, SemanticGraph builder | 88% |
 | Stage B | lexer.lln executing, parser.lln v0 (flow headers), compiler.capabilities.lln (Phase 14) | 20% |
-| Passive execution plans | plan types + builder + attestation integration; runtime execution Phase 16 | 25% |
+| Passive execution plans | plan types + builder + attestation integration; runtime execution Phase 16; target bridges Phase 21-22 | 12% |
 | Root capability provider | full implementation; CLI stub only | 85% |
+| Post-quantum / hardware security | ML-DSA attestation, CHERI mapping, ARM MTE, TEE integration | 5% |
 
 ---
 
-*Stage A (TypeScript Runtime) must be complete before Stage B begins.
-At Stage B the compiler and runtime are rewritten in LogicN, removing the
-TypeScript bootstrap entirely and proving the governance model is real.*
+*Stage A (TypeScript Runtime) and Stage B (Runtime in LogicN) proceed in parallel.
+Stage A is the production path; Stage B proves the governance model by applying it
+to the compiler itself. When Stage B is complete, the TypeScript bootstrap is no
+longer needed.*
 
 ---
 
@@ -99,7 +101,7 @@ LogicN is three things building toward one platform:
 declared effects, no hidden nulls, no silent failures. Source files use `.lln`.
 
 **2. A compiler and checker** — a pipeline that enforces the language rules
-before code runs. Phases 3—12A are complete (1670 tests, 0 failures). The
+before code runs. Phases 3–15 are complete (1670 tests, 0 failures). The
 runtime, IR generation pipeline, and Stage B self-hosting compiler are the
 current focus.
 
@@ -147,18 +149,19 @@ LogicN is a **language-design and active compiler project**. It is not a product
 - GIR emitter — schema v1, tensor metadata, SemanticGraph builder, AI graph (logicn.ai.json), target affinity hints
 - CLI — check, check-strict, build, build-production, fix-effects, emit-ai-graph
 - Canonical Example Corpus — 222 `.lln` examples across 10 levels, 189/222 stable
-- Stage B milestone 1: lexer.lln — complete and executing end-to-end
-- Stage B milestone 2: parser.lln v0 — flow headers parsed from token stream
+- Stage B milestone 1: lexer.lln — complete and executing end-to-end (Phase 12A)
+- Stage B milestone 2: parser.lln v0 — flow headers parsed from token stream (Phase 13B)
 - Stage B milestone 3: compiler.capabilities.lln — capability declarations in LogicN (Phase 14)
 - Root capability provider — full implementation with compiler and user-runtime domains (Phase 14)
-- Passive execution plans — PassiveExecutionPlan type, buildExecutionPlan builder, executePlan runtime (Phase 15)
+- Passive execution plans — PassiveExecutionPlan type, buildExecutionPlan builder, executePlan stub (Phase 15)
+- GIR → execution plan pipeline — plan types, plan builder, attestation integration (Phase 15)
 
 **What is actively being built:**
 
+- Phase 16 — canonical hashing module, `logicn verify-selfhost`, `executePlan()` real runtime for secure/guarded flows
 - Type checker — LLN-TYPE-002 TypeMismatch, LLN-TYPE-005/006/007 call/return checking
-- Stage B — parser.lln body expression parsing (milestone 4)
-- Phase 16 — passive execution plan runtime execution across CPU/WASM targets
-- Post-Quantum security — ML-DSA attestation, CHERI capability hardware integration
+- Stage B milestone 4 — type-checker.lln (Phase 18)
+- Package system — `package.logicn.yaml` manifests, cross-module type resolution, LLN-NAME-003 (Phase 17)
 
 **What is not yet implemented:**
 
@@ -290,9 +293,35 @@ Phase 12A — While Loops and Mut Reassignment             ✅ complete
   while loops, for loops, mut reassignment, capabilityHost.
   Stage B milestone: lexer.lln and parser.lln v0 executing.
 
+Phase 13B — GIR Plan Pipeline                            ✅ complete
+  GIR → PassiveExecutionPlan plan types and plan builder.
+  Target affinity hints carried through to execution plan.
+  Stage B: parser.lln v0 — flow headers parsed from token stream.
+
+Phase 14 — Root Capability Provider                      ✅ complete
+  Root capability provider — compiler and user-runtime domains.
+  compiler.capabilities.lln — Stage B milestone 3.
+  Capability declarations written and enforced in LogicN.
+
+Phase 15 — Passive Execution Plans                       ✅ complete
+  PassiveExecutionPlan type, buildExecutionPlan builder.
+  executePlan stub integrated into runtime.
+  Attestation chain includes plan hash.
+  1670 tests, 0 failures.
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Stage A — TypeScript / Node.js Runtime                   ⬜ building (85%)
+Phase 16–20 — Active and Planned                         ⬜ see docs/Knowledge-Bases/logicn-roadmap-phase16-20.md
+
+Phase 16: Canonical hashing + executePlan() full runtime (1720+ tests target)
+Phase 17: Package system — package.logicn.yaml, cross-module types, CEC 200+
+Phase 18: type-checker.lln — Stage B milestone 4, type checker in LogicN
+Phase 19: Incremental parser + LSP skeleton
+Phase 20: Stage B complete — LogicN fully self-hosted, verify-selfhost PASS
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Stage A — TypeScript / Node.js Runtime                   ⬜ building (87%)
   LogicN source compiles through the full pipeline.
   Programs execute in the Node.js runtime via the AST interpreter.
   Effects enforced at runtime. Audit records written as JSONL.
@@ -306,7 +335,7 @@ Stage A — TypeScript / Node.js Runtime                   ⬜ building (85%)
        ↓  host APIs, native bridges, event loop
   V8 / C++ native internals
 
-Stage B — Runtime in LogicN                             ⬜ long-term (20%)
+Stage B — Runtime in LogicN                             ⬜ in progress (20%)
   The compiler and runtime are rewritten in LogicN.
   The TypeScript bootstrap layer is no longer needed.
   LogicN becomes self-hosted: the language proves its own model.
@@ -466,6 +495,7 @@ const effects = checkEffects(result.flows, result.ast);
 | `docs/Knowledge-Bases/logicn-compiler-pipeline.md` | Compiler passes 1–10 in order |
 | `docs/Knowledge-Bases/logicn-architecture-layers.md` | Five-layer architecture |
 | `docs/Examples/README.md` | Canonical Example Corpus index |
+| `docs/Knowledge-Bases/logicn-roadmap-phase16-20.md` | Phase 16–20 implementation roadmap |
 | `AGENTS.md` | AI coding tool instructions |
 
 **Core concept deep-dives:**
