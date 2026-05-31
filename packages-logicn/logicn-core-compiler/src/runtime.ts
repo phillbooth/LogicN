@@ -25,6 +25,7 @@ import { createCapabilityHost, type CapabilityHost } from "./runtime/capabilityH
 import type { ContractEnforcementRecord } from "./runtime/runtimeReport.js";
 import { checkSourceEscapes, type EscapeDiagnostic } from "./source-escape-checker.js";
 import { canonicalHash } from "./runtime/canonicalHash.js";
+import { checkNamingPolicy, type NamingPolicyDiagnostic } from "./naming-policy-checker.js";
 
 export type RuntimeMode = "check-only" | "dev" | "production" | "deterministic";
 
@@ -47,6 +48,8 @@ export interface RuntimeOptions {
   readonly emitAiGraph?: boolean;
   /** When true, build a PassiveExecutionPlan for the target flow and include it in the result. */
   readonly emitExecutionPlan?: boolean;
+  /** When true, naming policy violations are included in the ok=false condition. Default: false. */
+  readonly enforceNamingPolicy?: boolean;
 }
 
 export interface RuntimeResult {
@@ -56,6 +59,7 @@ export interface RuntimeResult {
   readonly diagnostics: readonly { code: string; severity: string; message: string }[];
   readonly governanceDiagnostics: readonly GovernanceDiagnostic[];
   readonly escapeDiagnostics: readonly EscapeDiagnostic[];
+  readonly namingDiagnostics?: readonly NamingPolicyDiagnostic[];
   readonly proofChain?: ExecutionProofChain;
   readonly attestation?: LogicNAttestation;
   readonly mode: RuntimeMode;
@@ -95,6 +99,10 @@ export async function run(
       message: diagnostic.message,
     });
   }
+
+  // Phase 17A: Naming policy checker (runs after symbol resolver)
+  const namingResult = checkNamingPolicy(parseResult.ast);
+  const namingDiags = namingResult.diagnostics;
 
   const typeResult = checkTypes(parseResult.ast);
   for (const diagnostic of typeResult.diagnostics) {
@@ -136,6 +144,9 @@ export async function run(
   }
 
   const hasErrors = allDiagnostics.some((diagnostic) => diagnostic.severity === "error");
+  const hasNamingErrors =
+    options.enforceNamingPolicy === true &&
+    namingDiags.some((d) => d.severity === "error" || d.severity === "warning");
 
   // Pass 7: Governance verification (runs even in check-only, uses profile to adjust severity)
   const profile = (mode === "check-only" ? "dev" : mode) as DeploymentProfile;
@@ -143,10 +154,11 @@ export async function run(
 
   if (mode === "check-only" || hasErrors) {
     return {
-      ok: !hasErrors,
+      ok: !hasErrors && !hasNamingErrors,
       diagnostics: allDiagnostics,
       governanceDiagnostics: govResult.diagnostics,
       escapeDiagnostics: escapeResult.diagnostics,
+      namingDiagnostics: namingDiags,
       mode,
     };
   }
@@ -290,12 +302,13 @@ export async function run(
 
   const isError = execution.value.__tag === "runtimeError" || execution.value.__tag === "error";
   return {
-    ok: !isError,
+    ok: !isError && !hasNamingErrors,
     value: execution.value,
     execution,
     diagnostics: allDiagnostics,
     governanceDiagnostics: govResult.diagnostics,
     escapeDiagnostics: escapeResult.diagnostics,
+    namingDiagnostics: namingDiags,
     ...(proofChain !== undefined ? { proofChain } : {}),
     ...(attestationResult !== undefined ? { attestation: attestationResult } : {}),
     mode,

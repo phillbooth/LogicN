@@ -1,0 +1,372 @@
+// =============================================================================
+// LogicN Phase 18D — Type Registry Constants
+//
+// TypeId, EffectFlags, and ComputeCompatibilityFlags — numeric representations
+// of types, effects, and compute properties for fast internal comparisons.
+//
+// Principle: use IDs internally; use string names only for diagnostics.
+//
+// Phase 18D: export the constants. The type checker still uses BUILT_IN_TYPES
+//   (string Set) internally — migration to TypeId happens in Phase 19.
+// Phase 19:  type-checker.ts migrates hot-path comparisons to TypeId.
+// Phase 21+: full TypeRegistry with shape fingerprints, structural checks.
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// TypeId — numeric identifiers for built-in LogicN types
+//
+// Use TypeId.Int instead of the string "Int" in hot-path comparisons.
+// Custom/user-defined types are assigned IDs >= 1000 by the symbol resolver.
+// ---------------------------------------------------------------------------
+
+export const TypeId = {
+  // Sentinel
+  Unknown:      0,
+
+  // Unit / void
+  Void:         1,
+  Unit:         2,
+
+  // Logical
+  Bool:         3,
+  Tri:          4,
+
+  // Integer
+  Int:          5,
+  Int8:         6,
+  Int16:        7,
+  Int32:        8,
+  Int64:        9,
+  UInt8:        10,
+  UInt16:       11,
+  UInt32:       12,
+  UInt64:       13,
+
+  // Floating point
+  Float16:      14,
+  Float32:      15,
+  Float64:      16,
+  Double:       17,
+  Decimal:      18,
+
+  // Text
+  String:       19,
+  Char:         20,
+  SecureString: 21,
+
+  // Binary
+  Byte:         22,
+  Bytes:        23,
+
+  // Temporal
+  Timestamp:    24,
+  Duration:     25,
+  Date:         26,
+  Time:         27,
+  DateTime:     28,
+
+  // JSON
+  Json:         29,
+
+  // Collections
+  Array:        30,
+  List:         31,
+  Set:          32,
+  Map:          33,
+  Option:       34,
+  Result:       35,
+
+  // Compute / AI
+  Tensor:       36,
+  AnyTensor:    37,
+  Vector:       38,
+  Matrix:       39,
+
+  // Security
+  Hash:         40,
+  Signature:    41,
+  Secret:       42,
+
+  // HTTP / API
+  Request:      43,
+  Response:     44,
+  Context:      45,
+
+  // Domain / financial
+  Money:        46,
+
+  // Branded
+  Brand:        47,
+
+  // AI types
+  Prompt:       48,
+  Embedding:    49,
+  Classification: 50,
+  ModelOutput:  51,
+
+  // Governance
+  AuditRecord:  52,
+  AuditProof:   53,
+  ExecutionPlan: 54,
+  RuntimeReport: 55,
+
+  // Custom types start at 1000 (assigned by symbol resolver)
+} as const;
+
+export type TypeIdValue = typeof TypeId[keyof typeof TypeId];
+
+/**
+ * Reverse map: type string name → TypeId numeric value.
+ * Populated from TypeId constant.
+ */
+export const TYPE_NAME_TO_ID: ReadonlyMap<string, TypeIdValue> = new Map(
+  Object.entries(TypeId).map(([name, id]) => [name, id as TypeIdValue]),
+);
+
+/**
+ * Look up a TypeId by name. Returns TypeId.Unknown for unrecognised types.
+ * Handles qualifier stripping (e.g. "protected Email" → "Email").
+ */
+export function resolveTypeId(typeName: string): TypeIdValue {
+  // Strip qualifiers: "protected Email" → "Email", "redacted String" → "String"
+  const bare = typeName.replace(/^(protected|redacted|unsafe|safe|secret)\s+/, "").trim();
+  // Strip generic args: "Array<Int>" → "Array", "Tensor<Float32, [768]>" → "Tensor"
+  const base = bare.indexOf("<") >= 0 ? bare.slice(0, bare.indexOf("<")).trim() : bare;
+  return (TYPE_NAME_TO_ID.get(base) ?? TypeId.Unknown) as TypeIdValue;
+}
+
+// ---------------------------------------------------------------------------
+// EffectFlags — bitset for common LogicN effects
+//
+// Enables fast subset checking: requiredEffects ⊆ declaredEffects becomes
+//   (required & declared) === required
+//
+// Keep full effect names for diagnostics/reports. Use flags only in hot-path.
+// Canonical list: docs/Knowledge-Bases/logicn-effect-registry.md
+// ---------------------------------------------------------------------------
+
+export const EffectFlags = {
+  None:            0,
+  DatabaseRead:    1 << 0,   // database.read
+  DatabaseWrite:   1 << 1,   // database.write
+  NetworkOutbound: 1 << 2,   // network.outbound
+  AuditWrite:      1 << 3,   // audit.write
+  AiInference:     1 << 4,   // ai.inference / ai.remoteInference
+  NetworkInbound:  1 << 5,   // network.inbound (webhooks, callbacks)
+  FileSystemRead:  1 << 6,   // filesystem.read
+  FileSystemWrite: 1 << 7,   // filesystem.write
+  CryptoVerify:    1 << 8,   // crypto.verify / crypto.password.verify
+  SecretAccess:    1 << 9,   // secret.access
+  StateRead:       1 << 10,  // state.read
+  StateWrite:      1 << 11,  // state.write
+  MessagePublish:  1 << 12,  // message.publish
+  ModelTrain:      1 << 13,  // ai.train (privileged)
+} as const;
+
+export type EffectFlagsMask = number;
+
+const EFFECT_NAME_TO_FLAG: ReadonlyMap<string, EffectFlagsMask> = new Map([
+  ["database.read",              EffectFlags.DatabaseRead],
+  ["database.write",             EffectFlags.DatabaseWrite],
+  ["network.outbound",           EffectFlags.NetworkOutbound],
+  ["audit.write",                EffectFlags.AuditWrite],
+  ["ai.inference",               EffectFlags.AiInference],
+  ["ai.remoteInference",         EffectFlags.AiInference],
+  ["network.inbound",            EffectFlags.NetworkInbound],
+  ["filesystem.read",            EffectFlags.FileSystemRead],
+  ["filesystem.write",           EffectFlags.FileSystemWrite],
+  ["crypto.verify",              EffectFlags.CryptoVerify],
+  ["crypto.password.verify",     EffectFlags.CryptoVerify],
+  ["secret.access",              EffectFlags.SecretAccess],
+  ["state.read",                 EffectFlags.StateRead],
+  ["state.write",                EffectFlags.StateWrite],
+  ["message.publish",            EffectFlags.MessagePublish],
+  ["ai.train",                   EffectFlags.ModelTrain],
+]);
+
+/**
+ * Converts an array of effect name strings to a combined EffectFlagsMask.
+ * Unknown effects are silently skipped — they are tracked in the full name array.
+ *
+ * Fast check: (effectsToFlags(required) & declared) === effectsToFlags(required)
+ */
+export function effectsToFlags(effects: readonly string[]): EffectFlagsMask {
+  let mask = EffectFlags.None;
+  for (const effect of effects) {
+    const flag = EFFECT_NAME_TO_FLAG.get(effect);
+    if (flag !== undefined) mask |= flag;
+  }
+  return mask;
+}
+
+/**
+ * Returns true when all required effects are declared.
+ * Fast bitset subset check: requiredEffects ⊆ declaredEffects.
+ */
+export function effectsSubset(required: EffectFlagsMask, declared: EffectFlagsMask): boolean {
+  return (required & declared) === required;
+}
+
+// ---------------------------------------------------------------------------
+// ComputeCompatibilityFlags — compiler-proven compute properties
+//
+// Set by the type checker on flows whose types + body satisfy the property.
+// The SemanticGraph and ExecutionPlanner map these to hardware targets.
+// The type checker proves properties; the backend makes placement decisions.
+// ---------------------------------------------------------------------------
+
+export const ComputeCompatibilityFlags = {
+  None:             0,
+  TensorCompilable: 1 << 0,  // all ops are tensor ops with no dynamic shapes
+  PureMath:         1 << 1,  // only mathematical operations, no I/O or side effects
+  FixedShape:       1 << 2,  // all tensor shapes are statically known at compile time
+  NoDynamicBranch:  1 << 3,  // no runtime-dependent control flow (suitable for NPU)
+  ReadonlyInputs:   1 << 4,  // all params are readonly — safe for APU shared memory
+  SIMDCompatible:   1 << 5,  // element-wise operations can use SIMD
+  QuantizationSafe: 1 << 6,  // types allow Int8 quantization without lossy error
+} as const;
+
+export type ComputeCompatibilityFlagsMask = number;
+
+// ---------------------------------------------------------------------------
+// GovernanceFlags — properties proven by the governance verifier
+//
+// Compact bitmask per flow. Many governance checks become:
+//   actualMask & forbiddenMask === 0
+//
+// Distinct from NodeFlags (parser-detected), EffectCheckerFlags (effect-proven),
+// and ComputeCompatibilityFlags (type-proven). These are GOVERNANCE-VERIFIER-proven.
+// ---------------------------------------------------------------------------
+
+export const GovernanceFlags = {
+  None:              0,
+  RequiresAudit:     1 << 0,  // flow uses a governed sink that mandates audit.write
+  DenyRemote:        1 << 1,  // flow denies remote.execution (compute governance)
+  ContainsPII:       1 << 2,  // flow handles protected or redacted PII data
+  AllowsNetwork:     1 << 3,  // flow declares or uses network.outbound
+  RequiresActor:     1 << 4,  // contract.context requires actor / user_id field
+  ProductionStrict:  1 << 5,  // flow is in production profile and verified error-free
+  RequiresIntent:    1 << 6,  // flow is a secure flow requiring an intent declaration
+  HasPolicy:         1 << 7,  // flow declares a policy block
+} as const;
+
+export type GovernanceFlagsMask = number;
+
+// ---------------------------------------------------------------------------
+// RuntimeManifest — per-flow compact governance manifest
+//
+// The runtime executes FROM this manifest — it does not re-verify governance.
+// The manifest is signed by the compiler via the attestation system.
+// ---------------------------------------------------------------------------
+
+export interface RuntimeManifest {
+  readonly schemaVersion: "lln.runtime.manifest.v1";
+  readonly flow: string;
+  readonly qualifier: string;
+  readonly requiresAudit: boolean;
+  readonly deniesRemote: boolean;
+  readonly allowedEffects: readonly string[];
+  readonly requiredContext: readonly string[];
+  readonly computeTarget: string;
+  readonly governanceFlagsMask: GovernanceFlagsMask;
+  readonly proofObligations: readonly string[];
+  readonly policyPurposes: readonly string[];
+  readonly verified: boolean;
+  /**
+   * Arena memory limit in megabytes, extracted from contract.memory { arena N mb }.
+   * Phase 22C: populated by extractArenaLimitMB from the governance verifier.
+   * Undefined when no arena memory constraint is declared.
+   */
+  readonly arenaLimitMb: number | undefined;
+}
+
+// ---------------------------------------------------------------------------
+// EffectCheckerFlags — properties proven by the effect checker
+//
+// Distinct from NodeFlags (parser-detected) and ComputeCompatibilityFlags
+// (type-checker-proven). These are EFFECT-CHECKER-proven authority properties.
+//
+// The effect checker sets these on flows that satisfy the condition.
+// The ExecutionPlanner uses them to select hardware targets.
+// The type checker does NOT set these — authority proofs require effect analysis.
+// ---------------------------------------------------------------------------
+
+export const EffectCheckerFlags = {
+  None:                  0,
+  PureComputeCandidate:  1 << 0,  // no database, network, filesystem, audit, or mutation outside scope
+  ParallelSafe:          1 << 1,  // no shared state — can run concurrently
+  KernelFusionCandidate: 1 << 2,  // pure math ops — can be fused into one loop
+  EffectFree:            1 << 3,  // truly no effects at all (strict subset of PureComputeCandidate)
+  ReadyForAPU:           1 << 4,  // readonly + pure + no I/O → APU shared-memory candidate
+  ReadyForNPU:           1 << 5,  // pure + no dynamic branch + tensor types → NPU candidate
+} as const;
+
+export type EffectCheckerFlagsMask = number;
+
+// ---------------------------------------------------------------------------
+// Tensor type parsing helpers
+//
+// Extracts element type and shape from a Tensor<ElementType, [d1, d2, ...]>
+// type string. Used by LLN-TYPE-030/031 checking.
+// ---------------------------------------------------------------------------
+
+export interface TensorTypeInfo {
+  readonly elementType: string;
+  readonly dimensions: readonly (number | "dynamic")[];
+  readonly valid: boolean;
+}
+
+/**
+ * Parses a Tensor<ElementType, [d1, d2, ...]> type string into its components.
+ *
+ * Returns `valid: false` if the string is not a well-formed Tensor type.
+ *
+ * Examples:
+ *   "Tensor<Float32, [768]>"              → { elementType: "Float32", dimensions: [768] }
+ *   "Tensor<Float32, [Batch, 768]>"       → { elementType: "Float32", dimensions: ["dynamic", 768] }
+ *   "Tensor<Int8, [32, 32]>"             → { elementType: "Int8", dimensions: [32, 32] }
+ */
+export function parseTensorType(typeName: string): TensorTypeInfo {
+  const INVALID: TensorTypeInfo = { elementType: "", dimensions: [], valid: false };
+
+  const trimmed = typeName.trim();
+  if (!trimmed.startsWith("Tensor<") || !trimmed.endsWith(">")) return INVALID;
+
+  const inner = trimmed.slice("Tensor<".length, -1).trim();
+  const commaIdx = inner.indexOf(",");
+  if (commaIdx === -1) return INVALID;
+
+  const elementType = inner.slice(0, commaIdx).trim();
+  const shapeRaw = inner.slice(commaIdx + 1).trim();
+
+  if (!shapeRaw.startsWith("[") || !shapeRaw.endsWith("]")) return INVALID;
+
+  const dimStr = shapeRaw.slice(1, -1).trim();
+  const dimParts = dimStr === "" ? [] : dimStr.split(",").map((s) => s.trim());
+
+  const dimensions: (number | "dynamic")[] = dimParts.map((d) => {
+    const n = Number(d);
+    return Number.isFinite(n) && d.match(/^\d+$/) ? n : "dynamic";
+  });
+
+  return { elementType, dimensions, valid: true };
+}
+
+/**
+ * Returns true when two tensor types are element-type compatible.
+ * Float32 ← Float32 ✅, Float32 ← Int8 ❌ (→ LLN-TYPE-030)
+ */
+export function tensorElementTypesCompatible(expected: string, actual: string): boolean {
+  return expected.trim() === actual.trim();
+}
+
+/**
+ * Returns true when two tensor shapes are dimension-count compatible.
+ * [768] and [768] → true. [Batch, 768] and [768] → false (→ LLN-TYPE-031)
+ */
+export function tensorDimensionCountsCompatible(
+  expected: readonly (number | "dynamic")[],
+  actual: readonly (number | "dynamic")[],
+): boolean {
+  return expected.length === actual.length;
+}

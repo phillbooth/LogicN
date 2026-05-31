@@ -1,4 +1,4 @@
-LLN-EFFECT-004
+LLN-EFFECT-005
 
-Unknown or non-canonical effect: network.
-Use the canonical form: network.outbound
+Broad alias 'network' used. Use the canonical form: network.outbound
+Broad aliases are warning-level (LLN-EFFECT-005); completely unknown names are error-level (LLN-EFFECT-004).

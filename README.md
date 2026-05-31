@@ -36,31 +36,37 @@ enforced by tooling** — not inferred, guessed, or left to convention.
 **TypeScript Runtime** — Stage A: compiler pipeline + execution engine running on Node.js
 
 ```
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░  90%  (1962 tests · 0 failures · 188/222 CEC stable)
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░  90%  (2286 tests · 0 failures · 188/222 CEC stable)
 ```
 
 | Layer | Status | % |
 |---|---|---|
-| Specification / KB | 302 docs, 222 examples, full type hierarchy, 16-section contracts | 99% |
-| Lexer | All v1 keywords, all literal forms, full spans, unicode escapes, depth limits | 99% |
-| Parser | Flows, fn, routes, all contracts, loops, record literals, Brand alias, authority/policy blocks | 96% |
+| Specification / KB | 312 docs, 222 examples, full type hierarchy, 16-section contracts, Phase 18-23 architecture docs | 99% |
+| Lexer | All v1 keywords, full spans, TokenKindId numeric enum, V1_DEPRECATED_RESERVED, LLN-LEX-004..006, slice-based scanning | 99% |
+| Parser | Flows, fn, routes, all contracts, loops, NodeFlags (8 flags), makeNode factory, byteSpan, recovery helpers, prefer [gpu/npu], contract.memory | 97% |
 | Symbol resolver | LLN-NAME-001/002/003, scope, prelude, domain types, cross-module shadow, naming policy | 58% |
 | Type checker | LLN-TYPE-001..022, LLN-BINDING-005, operator rules, Money cross-currency, match exhaustiveness | 82% |
 | Value-state checker | Taint, 2-hop taint, user gates, secrets, protected/redacted boundary, VALUESTATE-002/006/007 | 85% |
-| Effect checker | LLN-EFFECT-001..004, topoSort, inter-flow propagation, canonical aliases, fn helper propagation, inference tracking | 70% |
+| Effect checker | LLN-EFFECT-001..005, EffectCheckerFlags, FlowEffectSummary bitsets, LLN-STDLIB-001 enforcement, STDLIB_CAPABILITY_MAP wired | 84% |
 | Event checker | LLN-EVENT-001..005, declare-before-emit, contract emit validation | 80% |
-| Governance verifier | 12 codes, contract sets, response.denies, authority blocks, Phase 10C enforcement | 82% |
-| GIR emitter | Schema, tensor metadata, SemanticGraph, AI graph v2, target affinity hints | 76% |
+| Governance verifier | 12 codes + LLN-GOV-013, GovernanceFlags bitset, RuntimeManifest generation, contract.context extraction | 78% |
+| GIR emitter | Schema, tensor metadata (wasmSimd/gpu/npu/apu/fixedShape/quantized), sourceHash, entryPoints, allowedEffectsMask, WAT emitter skeleton | 72% |
 | Runtime / interpreter | Loops, assignment, capabilityHost, governed memory, escape checker, executePlan, canonical hashing | 85% |
-| Standard library | Money BigInt, Duration, Timestamp.format, String.format, Bytes.sha256, Statistics, Map/Array extended | 78% |
-| Route / HTTP | request/req dual-key, path params, JSON body, HTTP dispatch | 76% |
+| Standard library | Money BigInt, Duration, STDLIB_CAPABILITY_MAP, TRI_STDLIB_OPS, TENSOR_STDLIB_OPS, getStdlibWasmImport | 63% |
+| Route / HTTP | request parameter (canonical style), path params, JSON body, HTTP dispatch | 76% |
 | Audit / proof chain | JSONL, SHA-256 5-hash proof, verify, denial log | 82% |
 | Signed attestation | Ed25519 sign/verify, YAML, runtime integration | 88% |
-| CLI | check, check-strict, build, build-production, fix-effects, emit-ai-graph | 82% |
+| CLI | check, check-strict, build, build-production, build-deterministic, build --target=wasm-standalone, build --target=wasm-hybrid, fix-effects, emit-ai-graph | 85% |
 | CEC coverage | 188/222 stable, 10 domain suites, all real-world patterns | 85% |
 | Internal graph | BFS/DFS/topo, call graph, effect graph, SemanticGraph builder | 88% |
-| Stage B | lexer.lln executing, parser.lln v0 (flow headers), compiler.capabilities.lln (Phase 14) | 20% |
-| Passive execution plans | plan types + builder + attestation integration; executePlan partial runtime (Phase 16A); target bridges Phase 21-22 | 35% |
+| Stage B | lexer.lln executing, parser.lln v0, type-checker.lln, compiler.capabilities.lln — 0 parse errors on all 4 milestones | 22% |
+| Passive execution plans | plan types + builder + attestation + hashPassivePlan; executePlan wired; WAT emitter Phase 24 target | 40% |
+| WAT emitter | Type skeleton, renderWAT(), WATModule, WATFunction/Import/Export types — full instruction emission Phase 24 | 28% |
+| Type registry | TypeId (56 IDs), EffectFlags (14), GovernanceFlags (8), EffectCheckerFlags (6), ComputeCompatibilityFlags (7), parseTensorType() | 70% |
+| Lowering plans | TypedArrayLoweringPlan, MonomorphisationPlan, KernelFusionPlan, LazyIteratorChain — stubs ready for Phase 21-22 | 15% |
+| GPU/NPU/APU plans | WebGPUComputePlan, NPUKernelPlan, APUSharedMemoryPlan — stubs with correct type structure | 14% |
+| Register VM | RegisterBytecodeModule, full opcode set, emitBytecode() stub — tree-walker replacement Phase 23C | 12% |
+| Views (String/Bytes/Tensor) | StringView, BytesView, TensorView<T>, WASMLinearMemoryLayout — zero-copy WASM linear memory types | 18% |
 | Root capability provider | full implementation; CLI stub only | 85% |
 | Post-quantum / hardware security | ML-DSA attestation, CHERI mapping, ARM MTE, TEE integration | 5% |
 
@@ -83,7 +89,7 @@ coordinated compute
 audit proof
 ```
 
-**[Intent](docs/Knowledge-Bases/logicn-concept-intent.md)** — The explicit declaration of what a flow or system is *for*: its purpose, the authority it requires, the effects it may produce, the boundaries it must respect, and the outcomes it intends to deliver. Intent is machine-readable, compiler-visible, and enforceable — not documentation.
+**[Intent](docs/Knowledge-Bases/logicn-concept-intent.md)** — The explicit declaration of what a flow or system is *for*: its purpose, what effects it may produce, what boundaries it must respect, and the outcomes it intends to deliver. Intent guides optimisation and understanding — it does not grant authority. Authority is granted through `contract.effects`, capability declarations, and governance rules.
 
 **[Governed Execution Plan](docs/Knowledge-Bases/logicn-concept-governed-execution-plan.md)** — The compiler/runtime-generated operational contract that defines how execution is *permitted* to occur: which capabilities are granted, which effects are allowed, which resources may be accessed, which runtime targets are approved, and which behaviors are explicitly denied. The bridge between declared intent and actual execution.
 
@@ -101,7 +107,7 @@ LogicN is three things building toward one platform:
 declared effects, no hidden nulls, no silent failures. Source files use `.lln`.
 
 **2. A compiler and checker** — a pipeline that enforces the language rules
-before code runs. Phases 3–15, 16A and 17A are complete (1962 tests, 0 failures). The
+before code runs. Phases 3–15, 16A, 17A, 17C, 18A and 23 are complete (2286 tests, 0 failures). The
 runtime, IR generation pipeline, and Stage B self-hosting compiler are the
 current focus.
 
@@ -120,7 +126,7 @@ execution**:
 | errors as exceptions | errors as explicit typed `Result<T, E>` |
 | mutation is silent | `let` = immutable, `mut` = explicit, `readonly` = read-only view |
 | pointers implicit | ownership is declared: `borrow`, `move`, `pinned` |
-| side-effects hidden | effects declared on every flow: `effects [database.write]` |
+| side-effects hidden | effects declared in `contract { effects { database.write } }` |
 | unsafe is normal | `unsafe` requires `reason` + `fallback`, always explicit |
 | boundary data silently typed | `unsafe let raw` — untrusted until decoded to a safe type |
 | AI reads code | AI reads structured reports: diagnostics, source maps, intent manifests |
@@ -132,9 +138,9 @@ execution**:
 
 LogicN is a **language-design and active compiler project**. It is not a production runtime.
 
-**What works today (1962 tests, 0 failures):**
+**What works today (2286 tests, 0 failures):**
 
-- Full lexer — all v1 keywords, char/hex/binary literals, doc comments
+- Full lexer — all v1 keywords, char/hex/binary literals, doc comments, slice-based scanning, direct operator detection, file/line safety limits (Phase 18A)
 - Full parser — all flow qualifiers, match with exhaustiveness, enums with variants, record types with fields, fn helpers, route declarations, `protected`/`redacted` type qualifiers
 - Type checker — LLN-TYPE-001/003/004/008/009/011/017/020/021/022, LLN-BINDING-005 (immutable reassignment)
 - Symbol resolver — LLN-NAME-001 (undeclared names), LLN-NAME-002 (duplicate declarations)
@@ -143,7 +149,7 @@ LogicN is a **language-design and active compiler project**. It is not a product
 - Governance verifier — LLN-GOV-002/003/004/008/010/011/012, LLN-CONTEXT-001, contract set enforcement
 - Runtime / AST interpreter — while loops, for loops, mut reassignment, capabilityHost, governed memory, escape checker
 - Standard library — Money BigInt arithmetic, Duration, Timestamp.format, String.format, Bytes.sha256, Array/Option/Result methods
-- Route / HTTP dispatch — route declarations, request/req dual-key, path params, JSON body parsing
+- Route / HTTP dispatch — route declarations, request parameter (canonical style), path params, JSON body parsing
 - Audit / proof chain — JSONL append-only writer, 5-hash SHA-256 proof, denial log, verify
 - Signed attestation — Ed25519 sign/verify, YAML serialisation, runtime integration
 - GIR emitter — schema v1, tensor metadata, SemanticGraph builder, AI graph (logicn.ai.json), target affinity hints
@@ -158,6 +164,8 @@ LogicN is a **language-design and active compiler project**. It is not a product
 - Canonical hashing — canonicalHash, hashSource, hashGIR, hashPassivePlan, deterministic key-sorted JSON (Phase 16A)
 - Effect inference tracking — inferEffectsForOperation, buildFlowEffectSummary, inferred vs declared tracking (Phase 16A)
 - Naming policy checker — LLN_STYLE_001/002/SEC_001, checkNamingPolicy, configurable severity (Phase 17A)
+- Security mutation diagnostics — LLN_SEC_020 RuntimeMutation, LLN_SEC_021 PrototypeMutation (Phase 17C)
+- Bootstrap determinism — canonicalHash key-order independence, timestamp stripping, idempotent hash suite (Phase 17C)
 
 **What is actively being built:**
 
@@ -182,12 +190,30 @@ LogicN is a **language-design and active compiler project**. It is not a product
 // Data arriving from outside (HTTP, file, env) is marked `unsafe let`.
 // The compiler prevents it reaching typed sinks without a validation gate.
 //
-secure flow createPatient(readonly req: Request) -> Result<Response, ApiError>
-with effects [database.write, audit.write]
-intent "Create a patient record with protected PII handling" {
+secure flow createPatient(readonly request: Request) -> CreatePatientResult
 
+contract {
+  types {
+    type CreatePatientResult = Result<Response, ApiError>
+  }
+
+  intent {
+    "Create a patient record with protected PII handling."
+  }
+
+  effects {
+    database.write
+    audit.write
+  }
+
+  privacy {
+    contains PII
+    require redaction before audit.write
+  }
+}
+{
   unsafe let rawEmail: String =
-    req.body.email
+    request.body.email
 
   let email: protected Email =
     validate.email(rawEmail)?
@@ -218,9 +244,22 @@ pure flow calculateVat(price: Money<GBP>) -> Money<GBP> {
 //
 // Every effect must be declared. Missing effects are LLN-EFFECT-001.
 //
-guarded flow fetchRate(currency: CurrencyCode) -> Result<Decimal, NetworkError>
-with effects [network.outbound] {
+guarded flow fetchRate(currency: CurrencyCode) -> FetchRateResult
 
+contract {
+  types {
+    type FetchRateResult = Result<Decimal, NetworkError>
+  }
+
+  intent {
+    "Fetch an exchange rate from an external service."
+  }
+
+  effects {
+    network.outbound
+  }
+}
+{
   unsafe let rawResponse: String =
     http.get("/rates/" + currency)?
 
@@ -317,7 +356,7 @@ Phase 16A — Canonical Hashing                            ✅ complete
   hashSource, hashGIR, hashPassivePlan — typed hash helpers.
   Effect inference tracking — inferEffectsForOperation, buildFlowEffectSummary.
   Inferred vs declared effect distinction in FlowEffectSummary.
-  1962 tests, 0 failures.
+  1993 tests, 0 failures.
 
 Phase 17A — Naming Policy Checker                        ✅ complete
   LLN_STYLE_001 — camelCase enforcement for flows and variables.
@@ -325,6 +364,28 @@ Phase 17A — Naming Policy Checker                        ✅ complete
   LLN_STYLE_SEC_001 — naming rules for security-sensitive identifiers.
   checkNamingPolicy with configurable severity (warn / error).
   Exported from compiler public API.
+
+Phase 17C — Security Mutation Diagnostics + Bootstrap Determinism ✅ complete
+  LLN_SEC_020 — RuntimeMutation: detects illegal runtime object mutation.
+  LLN_SEC_021 — PrototypeMutation: detects prototype chain tampering.
+  Both diagnostics carry suggestedFix and are exported from dist/index.js.
+  bootstrap-determinism.test.mjs — 21 tests verifying canonicalHash key-order
+    independence, timestamp stripping, idempotence, and hash collision resistance.
+  1993 tests, 0 failures.
+
+Phase 18A — Lexer Performance + Safety Limits                ✅ complete
+  Slice-based scanning — identifiers and numbers use source.slice(start, pos)
+    instead of per-character string concatenation; eliminates O(n²) growth.
+  Direct operator detection — TWO_CHAR_OPERATORS array replaced with direct
+    character-pair if/else chains; removes array allocation on every token boundary.
+  LLN-LEX-004 FileTooLarge — rejects source over 10 MB before scanning begins;
+    also fires if token count exceeds 1,000,000 during scan.
+  LLN-LEX-005 LineTooLong — warning when a single line exceeds 10,000 characters.
+  lexer.lln Token record verified: 8 fields (kind, value, line, column, endLine,
+    endColumn, start, end) match the TypeScript Token interface exactly.
+  2286 tests, 0 failures.
+
+Phase 23 complete. Phase 24 next: real WAT instruction bodies for pure flows (unreachable stubs → actual instructions).
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -451,7 +512,7 @@ Layer 5: Audit Proof              — cryptographic evidence chain
 ```text
 C:\laragon\www\LO\
 ├── docs/
-│   ├── Knowledge-Bases/           302 spec docs, grammar, glossary, operator rules
+│   ├── Knowledge-Bases/           312 spec docs, grammar, glossary, operator rules
 │   └── Examples/                  222 canonical .lln examples across 10 levels
 ├── packages-logicn/
 │   ├── logicn-core-compiler/      compiler pipeline — lexer, parser, all checkers ← active
@@ -484,7 +545,7 @@ npm run build
 npm test
 ```
 
-1962 tests, 0 failures. The compiler accepts `.lln` source via `parseProgram()` and runs all checker passes.
+2286 tests, 0 failures. The compiler accepts `.lln` source via `parseProgram()` and runs all checker passes.
 
 ```typescript
 import { parseProgram, checkTypes, checkValueStates, checkEffects, resolveSymbols } from "@logicn/core-compiler";

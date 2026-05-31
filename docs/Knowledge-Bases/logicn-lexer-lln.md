@@ -1,6 +1,12 @@
 # LogicN Lexer — `src/lexer.lln`
 
-**Phase 16, Milestone 1**
+**Phase 16, Milestone 1 — updated Phase 18A/18D**
+
+**Phase 18A:** Token interface extended — `start`/`end` byte offsets, `endLine`/`endColumn` spans, `kindId` (TokenKindId numeric enum). Slice-based identifier scanning, direct lookahead for multi-char operators. LLN-LEX-004 (file > 10MB), LLN-LEX-005 (line > 10k chars), LLN-LEX-006 (> 100 diagnostics) implemented.
+
+**Phase 18D:** `TokenKindId` numeric enum exported — numeric IDs for Keyword(1), Identifier(0), String(2), etc. Parser `current()`/`peek()` synthetic EOF tokens now include `kindId: 11`.
+
+**Phase 25 target:** lexer.lln token-by-token parity with TypeScript lexer on all CEC examples.
 
 ## What it is
 
@@ -21,9 +27,9 @@ nesting depth limits for string interpolation and nested structures.
 
 | Feature | Source | Status |
 |---|---|---|
-| `while pos < n` loops | Phase 12A | Not built |
-| `mut` bindings with reassignment | Phase 11A.4/11 | Parsed; runtime wiring pending |
-| `for item in list` iteration | Phase 12A | Not built |
+| `while pos < n` loops | Phase 12A | ✅ Built — interpreter supports while |
+| `mut` bindings with reassignment | Phase 11A.4/11 | ✅ Built — LLN-BINDING-005/006 enforced |
+| `for item in list` iteration | Phase 12A | ✅ Built — forEachStmt in interpreter |
 | `String.charAt(pos)` | Stdlib | Available |
 | `String.codePoints()` | Stdlib | Available |
 | `Array.empty()` | Stdlib | Available |
@@ -33,8 +39,8 @@ nesting depth limits for string interpolation and nested structures.
 | `Result<T, E>` / `Ok` / `Err` | Phase 4 | Available |
 | `Option<T>` / `Some` / `None` | Phase 4 | Available |
 
-The primary Phase 12A blocker is `while` loop support in the interpreter.
-`mut` reassignment runtime wiring (Phase 11A.4) is the secondary blocker.
+Phase 12A blockers (while loops, mut reassignment) are resolved. The lexer.lln itself parses with 0 errors.
+Primary remaining blocker: token-by-token parity verification (Phase 25 target).
 
 ---
 
@@ -47,9 +53,10 @@ record Token {
   line: Int         // start line (1-based)
   column: Int       // start column (1-based)
   endLine: Int      // end line (1-based, inclusive)
-  endColumn: Int    // end column (1-based, exclusive)
-  start: Int        // byte offset start
-  end: Int          // byte offset end
+  endColumn: Int    // end column (1-based, exclusive — points after last char)
+  start: Int        // byte offset of token start (inclusive)
+  end: Int          // byte offset of token end (exclusive — equivalent to endOffset)
+                    // use source.slice(token.start, token.end) to recover raw text
 }
 
 enum TokenKind {
@@ -81,13 +88,16 @@ string (UTF-8 encoded).
 
 ## Diagnostics — LLN-LEX codes
 
-The lexer emits structured `LexError` values. Phase 16 formalises three codes:
+The lexer emits structured `LexError` values. Phase 16 formalised three codes;
+Phase 18A added two more:
 
 | Code | Name | When emitted |
 |---|---|---|
-| `LLN-LEX-001` | `UnterminatedString` | End of source reached inside a string literal without a closing `"` |
-| `LLN-LEX-002` | `InvalidUnicodeEscape` | A `\u` escape is malformed — fewer than 4 hex digits, or codepoint out of range |
-| `LLN-LEX-003` | `NestingDepthExceeded` | String interpolation or nested structure exceeds the maximum nesting depth (default: 64) |
+| `LLN-LEX-001` | `ExcessiveNesting` | Generic type nesting depth exceeds 8 levels |
+| `LLN-LEX-002` | `OversizedToken` | String literal or identifier exceeds 10,000 characters |
+| `LLN-LEX-003` | `InvalidUnicodeEscape` | A `\u` or `\u{}` escape is malformed or the codepoint is out of Unicode range |
+| `LLN-LEX-004` | `FileTooLarge` | Source file exceeds 10 MB, or token count exceeds 1,000,000 |
+| `LLN-LEX-005` | `LineTooLong` | A single line exceeds 10,000 characters (warning severity) |
 
 All errors carry `line`, `col`, and a human-readable `message`. The `code` field
 is a `String` holding the `LLN-LEX-XXX` identifier so tooling can switch on it.
@@ -419,6 +429,49 @@ contract {
   return Ok(tokens.append(eof))
 }
 ```
+
+---
+
+## Phase 18A optimizations (TypeScript reference implementation)
+
+Phase 18A applied three performance and correctness improvements to `src/lexer.ts`.
+These patterns should be mirrored in `lexer.lln` when the self-hosted lexer reaches
+execution capability.
+
+### Slice-based scanning
+
+Identifier and number scanning no longer builds a value string character by character.
+Instead, `advance()` moves the cursor without accumulating a string, and
+`source.slice(startPos, pos)` recovers the raw text in one allocation at the end.
+
+```
+Before: value += advance()  // string concatenation on every character
+After:  advance()           // cursor-only; value = source.slice(start, pos)
+```
+
+This eliminates O(n²) string growth for long tokens.
+
+### Direct operator detection
+
+The `TWO_CHAR_OPERATORS` array and `Array.includes()` call were replaced with
+direct character-pair comparisons using `if/else` chains. This removes an array
+allocation and an O(n) scan on every token boundary.
+
+```
+Before: TWO_CHAR_OPERATORS.includes(ch + peek(1))
+After:  if (ch === "-" && next === ">") twoChar = "->"
+        else if (ch === "=" && next === ">") twoChar = "=>"
+        // ... and so on for all 9 two-char operators
+```
+
+### Safety limits (LLN-LEX-004, LLN-LEX-005)
+
+Two new guards were added:
+
+- `LLN-LEX-004 FileTooLarge` — rejects source files over 10 MB before scanning begins.
+  Also fires if the token stream exceeds 1,000,000 tokens during scanning.
+- `LLN-LEX-005 LineTooLong` — emits a warning (not an error) when a completed line
+  exceeds 10,000 characters.
 
 ---
 

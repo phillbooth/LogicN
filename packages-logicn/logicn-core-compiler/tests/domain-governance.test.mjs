@@ -832,8 +832,9 @@ pure flow add(a: Int, b: Int) -> Int {
   });
 });
 
-describe("Effect checker — LLN-EFFECT-004 unknown / non-canonical effect name", () => {
-  it("emits LLN-EFFECT-004 for a non-canonical alias effect name", () => {
+describe("Effect checker — LLN-EFFECT-004 / LLN-EFFECT-005 non-canonical / broad alias names", () => {
+  it("emits LLN-EFFECT-005 for broad alias 'database' (use database.read or database.write)", () => {
+    // 'database' is a broad alias — emits LLN-EFFECT-005 (warning), not LLN-EFFECT-004 (error)
     const { effects } = runPipeline(`
 guarded flow getOrder(request: Request) -> Result<Order, OrderError>
 contract { effects { database } }
@@ -841,7 +842,7 @@ contract { effects { database } }
   return Ok(order)
 }
 `);
-    assert.ok(effectHasDiag(effects, "LLN-EFFECT-004"), "Expected LLN-EFFECT-004 for alias 'database'");
+    assert.ok(effectHasDiag(effects, "LLN-EFFECT-005"), "Expected LLN-EFFECT-005 for broad alias 'database'");
   });
 
   it("emits LLN-EFFECT-004 for a completely unknown effect name", () => {

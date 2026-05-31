@@ -286,9 +286,25 @@ Non-`.md` files (YAML, EBNF) are listed separately at the end.
 
 - logicn-phase-9-roadmap.md — Phase 9 roadmap (Phase 8 complete baseline)
 - logicn-phase-10-roadmap.md — Phase 10 roadmap (Active: Phase 9 complete)
-- logicn-roadmap.md — implementation roadmap (current state 2026-05-30)
+- logicn-roadmap.md — implementation roadmap (updated 2026-05-31, Phase 23 complete)
 - logicn-roadmap-phase16-20.md — Phase 16-20 roadmap (Phase 16 active)
+- logicn-phase-18-23-summary.md — Phase 18-23 complete summary (+293 tests, 10 new source files)
 - package-completion-status.md — (also listed under governance)
+
+### Architecture Specifications (Phase 18-23, current canonical)
+
+- logicn-architecture-high-roi-ideas.md — 16 high-ROI ideas, status by phase
+- logicn-effect-checker-architecture.md — effect checker arch: EffectCheckerFlags, LLN-STDLIB-001, bitsets
+- logicn-explicitness-principles.md — "nothing important hidden" — the core LogicN design principle
+- logicn-gir-emitter-architecture.md — GIR emitter: tensor metadata, WAT emitter, WASM lowering plan
+- logicn-governance-verifier-architecture.md — governance verifier: GovernanceFlags, RuntimeManifest
+- logicn-lexer-optimizations.md — lexer optimisation roadmap (slice scanning, TokenKindId, arena plan)
+- logicn-package-resolver-architecture.md — package resolver: hash/signature/targets/compute/LLN-PKG-*
+- logicn-runtime-interpreter-roadmap.md — runtime improvement roadmap: Lua VM, WASM, JIT, register VM
+- logicn-stdlib-architecture.md — stdlib: STDLIB_CAPABILITY_MAP, pure/effectful split, TRI_STDLIB_OPS
+- logicn-type-checker-architecture.md — type checker: TypeId, EffectFlags, tensor shape checking
+- logicn-value-state-checker-architecture.md — value-state: ValueStateFlags, SINK_REQUIREMENTS, LLN-GATE-001
+- logicn-cli-current.md — current CLI spec: all modes including --target wasm-standalone/hybrid
 
 ---
 
@@ -323,7 +339,7 @@ Docs with "Status: Future", "Stage B/C", "post-v1 implementation", or "Proposed 
 
 - ai-compute-plan.md — AI as declared typed planned compute (aspirational design direction)
 - async-task-model.md — async task model (Stage B)
-- bootstrap-runtime-roadmap.md — bootstrap runtime roadmap (Phase 17+)
+- bootstrap-runtime-roadmap.md — bootstrap runtime roadmap (Phase 1-2 complete, Phase 3-4 in progress)
 - certified-package-registry.md — certified package registry (Phase 17+)
 - controlled-parallelism.md — controlled parallelism (Stage B)
 - formal-proof-system.md — formal proof system (Stage B)

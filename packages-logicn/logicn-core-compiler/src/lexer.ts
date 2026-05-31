@@ -11,6 +11,8 @@
 //   LLN-LEX-001  ExcessiveNesting      — generic type nesting depth > 8
 //   LLN-LEX-002  OversizedToken        — string literal or identifier > 10,000 chars
 //   LLN-LEX-003  InvalidUnicodeEscape  — invalid \u or \u{} in string literal
+//   LLN-LEX-004  FileTooLarge          — source file exceeds 10 MB
+//   LLN-LEX-005  LineTooLong           — a single line exceeds 10,000 characters
 // =============================================================================
 
 // ---------------------------------------------------------------------------
@@ -31,8 +33,52 @@ export type TokenKind =
   | "newline"
   | "eof";
 
+/**
+ * Numeric token kind IDs for fast internal comparison.
+ *
+ * The parser can compare `token.kindId === TokenKindId.Keyword` instead of
+ * `token.kind === "keyword"` — avoids repeated string allocation and speeds up
+ * the hot parser loop. The readable `kind` string is kept for diagnostics and
+ * external API compatibility.
+ *
+ * Phase 19: parser will switch hot-path comparisons to kindId.
+ * Phase 20: compact Int32Array token stream will use these IDs directly.
+ */
+export const TokenKindId = {
+  Identifier: 0,
+  Keyword:    1,
+  String:     2,
+  Char:       3,
+  Number:     4,
+  Boolean:    5,
+  Operator:   6,
+  Symbol:     7,
+  Comment:    8,
+  DocComment: 9,
+  Newline:    10,
+  Eof:        11,
+} as const;
+export type TokenKindIdValue = typeof TokenKindId[keyof typeof TokenKindId];
+
+const TOKEN_KIND_ID_MAP: Readonly<Record<TokenKind, TokenKindIdValue>> = {
+  identifier: TokenKindId.Identifier,
+  keyword:    TokenKindId.Keyword,
+  string:     TokenKindId.String,
+  char:       TokenKindId.Char,
+  number:     TokenKindId.Number,
+  boolean:    TokenKindId.Boolean,
+  operator:   TokenKindId.Operator,
+  symbol:     TokenKindId.Symbol,
+  comment:    TokenKindId.Comment,
+  docComment: TokenKindId.DocComment,
+  newline:    TokenKindId.Newline,
+  eof:        TokenKindId.Eof,
+};
+
 export interface Token {
   readonly kind: TokenKind;
+  /** Numeric token kind ID for fast parser comparisons. See TokenKindId. */
+  readonly kindId: TokenKindIdValue;
   readonly value: string;
   /** 1-based start line number. */
   readonly line: number;
@@ -44,7 +90,11 @@ export interface Token {
   readonly endColumn: number;
   /** Byte offset of token start (inclusive). */
   readonly start: number;
-  /** Byte offset of token end (exclusive). */
+  /**
+   * Byte offset of token end (exclusive — points after last character).
+   * Equivalent to endOffset: the offset immediately after the last byte of this token.
+   * Use `source.slice(token.start, token.end)` to recover the raw source text.
+   */
   readonly end: number;
 }
 
@@ -97,10 +147,15 @@ export const V1_ACTIVE_KEYWORDS: ReadonlySet<string> = new Set([
   "safe", "validated", "unvalidated",
   // Value-state trust/secrecy markers (v1)
   "tainted", "secret", "protected", "redacted",
-  // Compute target declarations
-  "compute", "target",
+  // Compute target declarations and hardware preference hints (Phase 18)
+  // Targets: npu, gpu, apu, wasm, photonic are tokenized as identifiers when
+  // used as values (e.g. prefer [npu]) — they are NOT keywords.
+  // Only the declaration forms are keywords.
+  "compute", "target", "prefer",
   // Flow Contracts (Pilot Candidate) — docs/Knowledge-Bases/logicn-flow-contracts.md
   "contract", "emit", "emits", "event", "types",
+  // Resource declarations (Phase 17)
+  "resource",
   // Compile-time constants (allowed at top level; ordinary let/mut are not)
   "const",
   // Readable Logic Forms (Phase 9C) — promoted from future-reserved
@@ -112,7 +167,9 @@ export const V1_ACTIVE_KEYWORDS: ReadonlySet<string> = new Set([
 
 /** Words reserved for post-v1 grammar — produce LLN-SYNTAX-003 if used as identifiers. */
 export const V1_FUTURE_RESERVED: ReadonlySet<string> = new Set([
-  "shared", "transfer", "remote", "atomic", "barrier",
+  // Note: "remote" is intentionally NOT in this set — it is a valid compute-target
+  // capability name used in: compute target best { deny [remote.execution] }
+  "shared", "transfer", "atomic", "barrier",
   "async", "await", "yield", "comptime", "macro",
   "trait", "impl", "where", "loop",
   "break", "continue",
@@ -122,16 +179,36 @@ export const V1_FUTURE_RESERVED: ReadonlySet<string> = new Set([
   "until",
 ]);
 
+/**
+ * Words that will NEVER become LogicN keywords because they conflict with the
+ * governance model, no-monkey-patching rule, or deterministic execution model.
+ *
+ * These are NOT reserved by the lexer — they remain valid identifiers.
+ * This list exists as documentation for reviewers and AI tools:
+ *   "Do not propose these as future keywords."
+ *
+ * hot_reload        — implies mutable runtime behaviour; conflicts with LLN-SEC-020/021
+ * global_mutation   — implies shared mutable state; forbidden in LogicN
+ * spill             — implies hidden memory side-effect
+ * checkpoint        — implies implicit execution state mutation
+ * map_manifest      — too implementation-specific; conflicts with governed manifest model
+ */
+export const V1_DEPRECATED_RESERVED: ReadonlySet<string> = new Set([
+  "hot_reload",
+  "global_mutation",
+  "spill",
+  "checkpoint",
+  "map_manifest",
+]);
+
 // ---------------------------------------------------------------------------
 // Flow Contract keywords (Pilot Candidate)
 // See: docs/Knowledge-Bases/logicn-flow-contracts.md
 // ---------------------------------------------------------------------------
 // contract, emit, emits, event, types are added to V1_ACTIVE_KEYWORDS above.
 
-// Two-character operator sequences (order matters — longer first)
-const TWO_CHAR_OPERATORS: readonly string[] = [
-  "->", "=>", "==", "!=", "<=", ">=", "&&", "||", "..",
-];
+// Two-character operators are handled by direct character-pair checks inside lex().
+// This avoids an array allocation and an O(n) includes() search on every token boundary.
 
 // Single-character operators
 const ONE_CHAR_OPERATORS = new Set(["+", "-", "*", "/", "%", "=", "<", ">", "!", "&", "|", "?"]);
@@ -152,8 +229,27 @@ const SYMBOLS = new Set(["(", ")", "{", "}", "[", "]", ",", ":", ";", "."]);
  *                and any diagnostics.
  */
 export function lex(source: string, file: string): LexResult {
+  // ── LLN-LEX-004 / LLN-LEX-005 / LLN-LEX-006 safety limits ─────────────────
+  const MAX_FILE_SIZE  = 10 * 1024 * 1024; // 10 MB (LLN-LEX-004)
+  const MAX_LINE_LENGTH = 10_000;           // chars (LLN-LEX-005)
+  const MAX_TOKEN_COUNT = 1_000_000;        // tokens (internal guard)
+  const MAX_DIAGNOSTICS = 100;              // LLN-LEX-006: stop emitting after this many errors
+
   const tokens: Token[] = [];
   const diagnostics: LexerDiagnostic[] = [];
+
+  // LLN-LEX-004: Reject files that exceed the maximum size limit.
+  if (source.length > MAX_FILE_SIZE) {
+    const sizeError: LexerDiagnostic = {
+      code: "LLN-LEX-004",
+      name: "FileTooLarge",
+      severity: "error",
+      message: "File exceeds maximum size (10MB). Split into smaller files.",
+      location: { file, line: 1, column: 1 },
+    };
+    const eofToken: Token = { kind: "eof", kindId: TokenKindId.Eof, value: "", line: 1, column: 1, endLine: 1, endColumn: 1, start: 0, end: 0 };
+    return { tokens: [eofToken], diagnostics: [sizeError] };
+  }
 
   let pos = 0;
   let line = 1;
@@ -161,6 +257,9 @@ export function lex(source: string, file: string): LexResult {
 
   /** Current < nesting depth for generic types. */
   let genericDepth = 0;
+
+  /** Tracks the byte offset where the current line started (for LLN-LEX-005). */
+  let lineStartPos = 0;
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -174,6 +273,7 @@ export function lex(source: string, file: string): LexResult {
     if (ch === "\n") {
       line++;
       col = 1;
+      lineStartPos = pos;
     } else {
       col++;
     }
@@ -181,7 +281,7 @@ export function lex(source: string, file: string): LexResult {
   }
 
   function tok(kind: TokenKind, value: string, startPos: number, startLine: number, startCol: number): Token {
-    return { kind, value, line: startLine, column: startCol, endLine: line, endColumn: col, start: startPos, end: pos };
+    return { kind, kindId: TOKEN_KIND_ID_MAP[kind], value, line: startLine, column: startCol, endLine: line, endColumn: col, start: startPos, end: pos };
   }
 
   function diag(
@@ -192,6 +292,20 @@ export function lex(source: string, file: string): LexResult {
     diagCol: number,
     suggestedFix?: string,
   ): void {
+    // LLN-LEX-006: stop emitting diagnostics after MAX_DIAGNOSTICS to prevent
+    // denial-of-service via maliciously crafted source with thousands of errors.
+    if (diagnostics.length >= MAX_DIAGNOSTICS) {
+      if (diagnostics.length === MAX_DIAGNOSTICS) {
+        diagnostics.push({
+          code: "LLN-LEX-006",
+          name: "TooManyDiagnostics",
+          severity: "error",
+          message: `Lexer emitted ${MAX_DIAGNOSTICS} diagnostics. Further errors suppressed. Fix the first errors and re-compile.`,
+          location: { file, line: diagLine, column: diagCol },
+        });
+      }
+      return; // suppress further diagnostics
+    }
     const d: LexerDiagnostic = {
       code,
       name,
@@ -219,27 +333,51 @@ export function lex(source: string, file: string): LexResult {
 
     // ── Newline ────────────────────────────────────────────────────────────
     if (ch === "\n") {
+      // LLN-LEX-005: Check if the line just completed exceeds MAX_LINE_LENGTH.
+      const lineLength = startPos - lineStartPos;
+      if (lineLength > MAX_LINE_LENGTH) {
+        diagnostics.push({
+          code: "LLN-LEX-005",
+          name: "LineTooLong",
+          severity: "warning",
+          message: `Line ${startLine} exceeds maximum length (10,000 characters).`,
+          location: { file, line: startLine, column: 1 },
+        });
+      }
       advance();
       tokens.push(tok("newline", "\n", startPos, startLine, startCol));
+      // LLN-LEX-004: Guard against token count overflow.
+      if (tokens.length > MAX_TOKEN_COUNT) {
+        diagnostics.push({
+          code: "LLN-LEX-004",
+          name: "FileTooLarge",
+          severity: "error",
+          message: "Token count exceeds maximum limit (1,000,000). Split into smaller files.",
+          location: { file, line, column: col },
+        });
+        break;
+      }
       continue;
     }
 
     // ── Doc comment /// ────────────────────────────────────────────────────
     if (ch === "/" && peek(1) === "/" && peek(2) === "/") {
-      let value = "";
+      const scanStart = pos;
       while (pos < source.length && peek() !== "\n") {
-        value += advance();
+        advance();
       }
+      const value = source.slice(scanStart, pos);
       tokens.push(tok("docComment", value, startPos, startLine, startCol));
       continue;
     }
 
     // ── Line comment // ────────────────────────────────────────────────────
     if (ch === "/" && peek(1) === "/") {
-      let value = "";
+      const scanStart = pos;
       while (pos < source.length && peek() !== "\n") {
-        value += advance();
+        advance();
       }
+      const value = source.slice(scanStart, pos);
       tokens.push(tok("comment", value, startPos, startLine, startCol));
       continue;
     }
@@ -389,68 +527,79 @@ export function lex(source: string, file: string): LexResult {
 
     // ── Number literal (integer, decimal, base-prefixed, separators) ───────
     if (ch >= "0" && ch <= "9") {
-      let value = "";
-
       // Hex: 0x...
       if (ch === "0" && (peek(1) === "x" || peek(1) === "X")) {
-        value += advance(); // 0
-        value += advance(); // x
+        advance(); // 0
+        advance(); // x
         while (
           pos < source.length &&
           ((peek() >= "0" && peek() <= "9") ||
             (peek() >= "a" && peek() <= "f") ||
             (peek() >= "A" && peek() <= "F"))
         ) {
-          value += advance();
+          advance();
         }
-        tokens.push(tok("number", value, startPos, startLine, startCol));
+        tokens.push(tok("number", source.slice(startPos, pos), startPos, startLine, startCol));
         continue;
       }
 
       // Binary: 0b...
       if (ch === "0" && (peek(1) === "b" || peek(1) === "B")) {
-        value += advance(); // 0
-        value += advance(); // b
+        advance(); // 0
+        advance(); // b
         while (pos < source.length && (peek() === "0" || peek() === "1")) {
-          value += advance();
+          advance();
         }
-        tokens.push(tok("number", value, startPos, startLine, startCol));
+        tokens.push(tok("number", source.slice(startPos, pos), startPos, startLine, startCol));
         continue;
       }
 
       // Octal: 0o...
       if (ch === "0" && (peek(1) === "o" || peek(1) === "O")) {
-        value += advance(); // 0
-        value += advance(); // o
+        advance(); // 0
+        advance(); // o
         while (pos < source.length && peek() >= "0" && peek() <= "7") {
-          value += advance();
+          advance();
         }
-        tokens.push(tok("number", value, startPos, startLine, startCol));
+        tokens.push(tok("number", source.slice(startPos, pos), startPos, startLine, startCol));
         continue;
       }
 
       // Decimal (keep underscore support)
       while (pos < source.length && ((peek() >= "0" && peek() <= "9") || peek() === "_")) {
-        value += advance();
+        advance();
       }
       // Decimal part
       if (peek() === "." && peek(1) >= "0" && peek(1) <= "9") {
-        value += advance(); // dot
+        advance(); // dot
         while (pos < source.length && (peek() >= "0" && peek() <= "9")) {
-          value += advance();
+          advance();
         }
       }
-      tokens.push(tok("number", value, startPos, startLine, startCol));
+      tokens.push(tok("number", source.slice(startPos, pos), startPos, startLine, startCol));
       continue;
     }
 
     // ── Two-character operators ────────────────────────────────────────────
-    const twoChar = ch + peek(1);
-    if (TWO_CHAR_OPERATORS.includes(twoChar)) {
-      advance();
-      advance();
-      tokens.push(tok("operator", twoChar, startPos, startLine, startCol));
-      continue;
+    // Direct character-pair checks avoid array allocation and O(n) includes().
+    {
+      const next = peek(1);
+      let twoChar: string | undefined;
+      if      (ch === "-" && next === ">") twoChar = "->";
+      else if (ch === "=" && next === ">") twoChar = "=>";
+      else if (ch === "=" && next === "=") twoChar = "==";
+      else if (ch === "!" && next === "=") twoChar = "!=";
+      else if (ch === "<" && next === "=") twoChar = "<=";
+      else if (ch === ">" && next === "=") twoChar = ">=";
+      else if (ch === "&" && next === "&") twoChar = "&&";
+      else if (ch === "|" && next === "|") twoChar = "||";
+      else if (ch === "." && next === ".") twoChar = "..";
+      if (twoChar !== undefined) {
+        advance();
+        advance();
+        tokens.push(tok("operator", twoChar, startPos, startLine, startCol));
+        continue;
+      }
     }
 
     // ── Single-character operators ─────────────────────────────────────────
@@ -485,21 +634,23 @@ export function lex(source: string, file: string): LexResult {
 
     // ── Identifiers and keywords ───────────────────────────────────────────
     if (isIdentStart(ch)) {
-      let value = "";
-      let oversized = false;
+      const identStart = pos;
+      // advance() tracks line/col; we collect the value via slice afterwards.
       while (pos < source.length && isIdentContinue(peek())) {
-        value += advance();
-        if (!oversized && value.length > 10_000) {
-          oversized = true;
-          diag(
-            "LLN-LEX-002",
-            "OversizedToken",
-            "String literal or identifier exceeds maximum length (10,000 characters).",
-            startLine,
-            startCol,
-            "Split large string literals or shorten identifier names.",
-          );
-        }
+        advance();
+      }
+      const value = source.slice(identStart, pos);
+
+      // LLN-LEX-002: Oversized identifier check.
+      if (value.length > 10_000) {
+        diag(
+          "LLN-LEX-002",
+          "OversizedToken",
+          "String literal or identifier exceeds maximum length (10,000 characters).",
+          startLine,
+          startCol,
+          "Split large string literals or shorten identifier names.",
+        );
       }
 
       if (V1_ACTIVE_KEYWORDS.has(value)) {
@@ -533,7 +684,7 @@ export function lex(source: string, file: string): LexResult {
   }
 
   // ── EOF sentinel ───────────────────────────────────────────────────────────
-  tokens.push({ kind: "eof", value: "", line, column: col, endLine: line, endColumn: col, start: pos, end: pos });
+  tokens.push({ kind: "eof", kindId: TokenKindId.Eof, value: "", line, column: col, endLine: line, endColumn: col, start: pos, end: pos });
 
   return { tokens, diagnostics };
 }

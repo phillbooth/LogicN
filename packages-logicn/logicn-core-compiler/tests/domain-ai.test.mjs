@@ -838,13 +838,14 @@ contract { effects { ai } }
   return Ok(Response.ok({}))
 }
 `);
+    // 'ai' is a broad alias — emits LLN-EFFECT-005 (BroadAliasUsed) not LLN-EFFECT-004
     assert.ok(
-      hasEffectDiag(effectResults, "LLN-EFFECT-004"),
-      "Expected LLN-EFFECT-004 for non-canonical effect name 'ai'",
+      hasEffectDiag(effectResults, "LLN-EFFECT-005"),
+      "Expected LLN-EFFECT-005 for broad alias effect name 'ai'",
     );
     const aliasHint = effectResults
       .flatMap((r) => r.diagnostics)
-      .find((d) => d.code === "LLN-EFFECT-004");
+      .find((d) => d.code === "LLN-EFFECT-005");
     assert.equal(aliasHint?.suggestedCode, "ai.inference", "Expected suggestedCode to be 'ai.inference'");
   });
 });

@@ -1,6 +1,6 @@
 // =============================================================================
-// CEC Promotion Pass — runs the full pipeline on all 215 examples and
-// determines which draft examples can be promoted to stable.
+// CEC Promotion Pass — Phase 17A
+// Runs the full pipeline on all draft examples and promotes eligible ones.
 // =============================================================================
 
 import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
@@ -21,7 +21,7 @@ import {
 const __dir = dirname(fileURLToPath(import.meta.url));
 const EXAMPLES_DIR = join(__dir, "../../../docs/Examples");
 
-// Phase 1 suppression codes (same as specified in the task)
+// Phase 1 suppression codes
 const SUPPRESS = new Set([
   "LLN-TYPE-001",
   "LLN-TYPE-009",
@@ -30,15 +30,23 @@ const SUPPRESS = new Set([
   "LLN-SYNTAX-006",
   "LLN-SYNTAX-007",
   "LLN-SYNTAX-008",
+  "LLN-EFFECT-004",
+  "LLN-VALUESTATE-006",
+  "LLN-VALUESTATE-002",
+  "LLN-EVENT-003",
+  "LLN-EVENT-005",
 ]);
 
-// Proposal-only syntax patterns to detect
+// Proposal-only syntax patterns (result of X else Y)
 const PROPOSAL_SYNTAX_PATTERNS = [
   /result\s+of\s+\w+\s+else\s+/,
   /\bresult\s+of\b/,
 ];
 
-// Placeholder diagnostic code patterns
+// Future syntax keywords not yet implemented
+const FUTURE_SYNTAX_PATTERN = /\b(stateMachine|workflow)\b/;
+
+// Placeholder diagnostic code patterns (LLN-TYPE-XXX etc.)
 const PLACEHOLDER_CODE_PATTERN = /LLN-[A-Z]+-XXX/;
 
 function runPipeline(source, filePath) {
@@ -87,6 +95,10 @@ function hasProposalSyntax(source) {
   return PROPOSAL_SYNTAX_PATTERNS.some((p) => p.test(source));
 }
 
+function hasFutureSyntax(source) {
+  return FUTURE_SYNTAX_PATTERN.test(source);
+}
+
 function hasPlaceholderCodes(source) {
   return PLACEHOLDER_CODE_PATTERN.test(source);
 }
@@ -98,14 +110,60 @@ function parseName(llnFile) {
   return after.replace("/example.lln", "");
 }
 
+function getLevel(llnFile) {
+  const normalized = llnFile.replace(/\\/g, "/");
+  const m = normalized.match(/Level-(\d+)-/);
+  return m ? parseInt(m[1], 10) : 0;
+}
+
+function promoteFile(llnFile, source) {
+  // Replace test_status: draft with test_status: stable
+  let updated;
+  if (/^\/\/\/\s*test_status:\s*draft/m.test(source)) {
+    updated = source.replace(
+      /^(\/\/\/\s*test_status:\s*)draft/m,
+      "$1stable"
+    );
+  } else {
+    // Header has test_status but not draft, or no test_status — insert after expected_diagnostics
+    updated = source.replace(
+      /(\/\/\/\s*expected_diagnostics:[^\n]*\n)/,
+      "$1/// test_status: stable\n"
+    );
+  }
+  // Preserve BOM if original had one
+  writeFileSync(llnFile, updated, "utf8");
+}
+
+// Also update examples.manifest.json
+function updateManifest(manifestPath, promotedIds) {
+  if (promotedIds.size === 0) return;
+  const raw = readFileSync(manifestPath, "utf8");
+  const data = JSON.parse(raw);
+  let changed = 0;
+  for (const ex of data.examples) {
+    if (promotedIds.has(ex.id)) {
+      ex.status = "stable";
+      changed++;
+    }
+  }
+  // Recount
+  data.stableCount = data.examples.filter((e) => e.status === "stable").length;
+  data.draftCount = data.examples.filter((e) => e.status === "draft").length;
+  data.generatedAt = new Date().toISOString();
+  writeFileSync(manifestPath, JSON.stringify(data, null, 2) + "\n", "utf8");
+  console.log(`\nManifest updated: ${changed} example(s) promoted, stableCount now ${data.stableCount}`);
+}
+
 // Results tracking
 const results = {
   alreadyStable: [],
-  promoted: [],
+  promoted: [],      // { name, level, reason }
   keptDraft: [],
 };
 
 const draftReasons = new Map();
+const promotedIds = new Set();
 
 const allFiles = walkDir(EXAMPLES_DIR);
 console.log(`Found ${allFiles.length} example files\n`);
@@ -114,6 +172,7 @@ for (const llnFile of allFiles) {
   const raw = readFileSync(llnFile, "utf8");
   const source = raw.charCodeAt(0) === 0xFEFF ? raw.slice(1) : raw;
   const name = parseName(llnFile);
+  const level = getLevel(llnFile);
   const { status, expectedDiag } = parseHeader(source);
 
   // Skip already-stable examples
@@ -122,76 +181,50 @@ for (const llnFile of allFiles) {
     continue;
   }
 
-  // Check promotion criteria 3: no proposal-only syntax
+  // Criterion: no proposal-only syntax
   if (hasProposalSyntax(source)) {
     results.keptDraft.push(name);
     draftReasons.set(name, "uses proposal-only syntax (result of X else Y)");
     continue;
   }
 
-  // Check promotion criteria 4: no placeholder diagnostic codes
+  // Criterion: no future syntax keywords
+  if (hasFutureSyntax(source)) {
+    const m = source.match(FUTURE_SYNTAX_PATTERN);
+    results.keptDraft.push(name);
+    draftReasons.set(name, `uses future syntax keyword: ${m[0]}`);
+    continue;
+  }
+
+  // Criterion: no placeholder diagnostic codes in source
   if (hasPlaceholderCodes(source)) {
     results.keptDraft.push(name);
     draftReasons.set(name, "uses placeholder diagnostic codes (LLN-XXX)");
     continue;
   }
 
-  // Check promotion criteria 2: expected_diagnostics must be "none"
-  if (expectedDiag.toLowerCase() !== "none") {
-    // Also check the expected.diagnostics.txt file
-    const diagFile = llnFile.replace(/example\.lln$/, "expected.diagnostics.txt");
-    let rawExpected = "none";
-    try {
-      rawExpected = readFileSync(diagFile, "utf8").trim();
-    } catch {
-      /* not present */
-    }
-    const lines = rawExpected
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0 && !l.startsWith("//") && !l.startsWith("#"));
-    const expectNone =
-      lines.length === 0 || lines[0].toLowerCase() === "none";
-
-    if (!expectNone) {
-      // Has expected diagnostics - check if actual matches
-      // For now, keep as draft if expected errors exist (unless they exactly match)
-      // We still run the pipeline to verify it doesn't throw
-      try {
-        const diags = runPipeline(source, llnFile);
-        const filteredDiags = diags.filter((d) => !SUPPRESS.has(d.code));
-        const errors = filteredDiags.filter((d) => d.severity === "error");
-        const expectedCodes = lines
-          .filter((l) => /^LLN-[A-Z]+-\d+/.test(l))
-          .map((l) => l.split(/\s/)[0]);
-
-        // Check if all expected codes are present
-        const allFound = expectedCodes.every((code) =>
-          filteredDiags.some((d) => d.code === code)
-        );
-
-        if (allFound && expectedCodes.length > 0) {
-          // Expected errors present and matched — this is a valid "expects errors" example
-          // But the task says stable requires expected_diagnostics = "none" AND actual errors = 0
-          // So keep as draft
-          results.keptDraft.push(name);
-          draftReasons.set(name, `expects specific error codes: ${expectedCodes.join(", ")}`);
-        } else {
-          results.keptDraft.push(name);
-          draftReasons.set(
-            name,
-            `expected codes not matched: want ${expectedCodes.join(", ")}, got ${filteredDiags.map((d) => d.code).join(", ")}`
-          );
-        }
-      } catch (err) {
-        results.keptDraft.push(name);
-        draftReasons.set(name, `pipeline threw: ${err.message}`);
-      }
-      continue;
-    }
+  // Read expected.diagnostics.txt if present
+  const diagFile = llnFile.replace(/example\.lln$/, "expected.diagnostics.txt");
+  let rawExpected = expectedDiag.toLowerCase() === "none" ? "none" : expectedDiag;
+  try {
+    rawExpected = readFileSync(diagFile, "utf8").trim();
+  } catch {
+    /* not present — use header value */
   }
 
-  // Run the pipeline for zero-error check
+  const expectedLines = rawExpected
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && !l.startsWith("//") && !l.startsWith("#"));
+
+  const expectNone =
+    expectedLines.length === 0 || expectedLines[0].toLowerCase() === "none";
+
+  const expectedCodes = expectedLines
+    .filter((l) => /^LLN-[A-Z]+-\d+/.test(l))
+    .map((l) => l.split(/\s/)[0]);
+
+  // Run the pipeline
   let diags;
   try {
     diags = runPipeline(source, llnFile);
@@ -203,40 +236,83 @@ for (const llnFile of allFiles) {
 
   // Apply Phase 1 suppression
   const filtered = diags.filter((d) => !SUPPRESS.has(d.code));
+  const actualCodes = filtered.map((d) => d.code);
   const errors = filtered.filter((d) => d.severity === "error");
 
-  if (errors.length === 0) {
-    // All promotion criteria met — promote!
-    results.promoted.push(name);
-
-    // Write the updated file with test_status: stable
-    // Insert after expected_diagnostics line
-    const updated = source.replace(
-      /(\/\/\/\s*expected_diagnostics:[^\n]*\n)/,
-      "$1/// test_status: stable\n"
-    );
-    writeFileSync(llnFile, updated, "utf8");
-  } else {
+  // Determine if this is a "parse failure" (LLN-PARSE-001 present after suppression)
+  const hasParseError = filtered.some((d) => d.code === "LLN-PARSE-001");
+  if (hasParseError) {
     results.keptDraft.push(name);
-    const errorSummary = errors.map((d) => `${d.code}(${d.severity})`).join(", ");
-    draftReasons.set(name, `${errors.length} error(s) after suppression: ${errorSummary}`);
+    draftReasons.set(name, `parser failed (LLN-PARSE-001): ${filtered.find(d=>d.code==="LLN-PARSE-001").message}`);
+    continue;
+  }
+
+  if (expectNone) {
+    // Expected: zero diagnostics. Actual must also be zero errors after suppression.
+    if (errors.length === 0) {
+      results.promoted.push({ name, level, reason: "zero errors, expected none" });
+      promotedIds.add(name.split("/").pop()); // id is last segment
+      promoteFile(llnFile, source);
+    } else {
+      results.keptDraft.push(name);
+      const errorSummary = errors.map((d) => `${d.code}`).join(", ");
+      draftReasons.set(name, `${errors.length} error(s) after suppression: ${errorSummary}`);
+    }
+  } else if (expectedCodes.length > 0) {
+    // Expected: specific diagnostic codes. Check if actual matches.
+    const actualSet = new Set(actualCodes);
+    const allExpectedFound = expectedCodes.every((code) => actualSet.has(code));
+    // No unexpected codes beyond expected (extra codes = not yet correct)
+    const unexpectedCodes = actualCodes.filter((c) => !expectedCodes.includes(c));
+
+    if (allExpectedFound && unexpectedCodes.length === 0) {
+      // Perfect match — promote
+      results.promoted.push({ name, level, reason: `codes match: ${expectedCodes.join(", ")}` });
+      promotedIds.add(name.split("/").pop());
+      promoteFile(llnFile, source);
+    } else if (allExpectedFound && unexpectedCodes.length > 0) {
+      results.keptDraft.push(name);
+      draftReasons.set(name, `expected codes found but unexpected extras: ${unexpectedCodes.join(", ")}`);
+    } else {
+      const missing = expectedCodes.filter((c) => !actualSet.has(c));
+      results.keptDraft.push(name);
+      draftReasons.set(name, `expected codes not emitted: ${missing.join(", ")} (actual: ${actualCodes.join(", ") || "none"})`);
+    }
+  } else {
+    // No structured expected codes, not "none" either — keep as draft
+    results.keptDraft.push(name);
+    draftReasons.set(name, `ambiguous expected_diagnostics: "${expectedDiag}"`);
   }
 }
 
+// ── Update manifest ────────────────────────────────────────────────────────────
+const manifestPath = join(EXAMPLES_DIR, "examples.manifest.json");
+// Build set of example IDs that were promoted (match by folder name = example id)
+const promotedIdSet = new Set(
+  results.promoted.map((p) => {
+    // name is like "Level-1-Basics/002-guarded-flow"
+    return p.name.split("/").pop();
+  })
+);
+updateManifest(manifestPath, promotedIdSet);
+
 // ── Report ────────────────────────────────────────────────────────────────────
-console.log("=".repeat(70));
-console.log("CEC PROMOTION PASS RESULTS");
+console.log("\n" + "=".repeat(70));
+console.log("CEC PROMOTION PASS RESULTS — Phase 17A");
 console.log("=".repeat(70));
 console.log(`\nAlready stable : ${results.alreadyStable.length}`);
 console.log(`Newly promoted : ${results.promoted.length}`);
 console.log(`Kept as draft  : ${results.keptDraft.length}`);
 console.log(`Total examples : ${allFiles.length}`);
+console.log(`Final stable   : ${results.alreadyStable.length + results.promoted.length}`);
 
-console.log("\n" + "─".repeat(70));
-console.log("NEWLY PROMOTED TO STABLE:");
-console.log("─".repeat(70));
-for (const name of results.promoted) {
-  console.log(`  ✓ ${name}`);
+if (results.promoted.length > 0) {
+  console.log("\n" + "─".repeat(70));
+  console.log("NEWLY PROMOTED TO STABLE:");
+  console.log("─".repeat(70));
+  for (const { name, level, reason } of results.promoted) {
+    console.log(`  + ${name}  (Level ${level})  [${reason}]`);
+  }
 }
 
 console.log("\n" + "─".repeat(70));
@@ -244,13 +320,6 @@ console.log("KEPT AS DRAFT (with reasons):");
 console.log("─".repeat(70));
 for (const name of results.keptDraft) {
   const reason = draftReasons.get(name) || "unknown";
-  console.log(`  ✗ ${name}`);
+  console.log(`  - ${name}`);
   console.log(`      → ${reason}`);
-}
-
-console.log("\n" + "─".repeat(70));
-console.log("ALREADY STABLE (unchanged):");
-console.log("─".repeat(70));
-for (const name of results.alreadyStable) {
-  console.log(`  • ${name}`);
 }

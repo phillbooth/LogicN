@@ -55,6 +55,7 @@ const SUPPRESS = new Set([
   "LLN-EVENT-003",       // ContractEmitsUndeclaredEvent — Wave 1 new diagnostic, needs tuning
   "LLN-EVENT-005",       // EventEmittedNotInContract — Wave 1 new diagnostic, needs tuning
   "LLN-EFFECT-004",      // NonCanonicalEffectName — Wave 2 added pii.write alias; examples updated separately
+  "LLN-STDLIB-001",      // StdlibEffectNotDeclared — Phase 18H new diagnostic; CEC examples updated separately
 ]);
 
 // ── Pipeline ──────────────────────────────────────────────────────────────────

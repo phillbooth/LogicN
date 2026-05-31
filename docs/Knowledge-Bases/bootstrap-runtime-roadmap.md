@@ -2,8 +2,18 @@
 
 ## Status
 
-Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
-Planned for: Phase 17+
+```
+Phase 1 complete: Node.js bootstrap runtime (Stage A) ✅ — 2286 tests
+Phase 2 complete: GIR (Governance IR) stabilised ✅ — GIR v1 schema, canonical hash, PassiveExecutionPlan
+Phase 3 in progress: WAT emitter skeleton (Phase 19-23), Register VM types (Phase 23C), WASM target Phase 24
+Phase 4 planned: Phase 25-28 — Stage B self-hosting (lexer.lln token parity, parser.lln, type-checker.lln)
+Phase 5 planned: Phase 28-29 — Full Stage B; LogicN verifies its own governed artifacts
+```
+
+Current bootstrap architecture:
+- Stage A TypeScript runtime: tree-walking interpreter, capabilityHost, audit trail ✅
+- Stage A WASM path: WAT emitter skeleton → Phase 24 real instruction emission
+- Stage B: lexer.lln (executing), parser.lln v0, type-checker.lln, compiler.capabilities.lln — 0 parse errors ✅
 
 ## Definition
 

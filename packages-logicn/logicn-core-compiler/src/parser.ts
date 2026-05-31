@@ -72,14 +72,28 @@ export type AstNodeKind =
   // Governance blocks
   | "authorityDecl"
   | "policyDecl"
+  // Resource declarations (Phase 17)
+  | "resourceDecl"
   // Literal expression nodes
   | "charLiteral"
-  | "listLiteral";
+  | "listLiteral"
+  // Hardware hints (Phase 18) — parser preserves, backend decides
+  | "preferHint";
 
 export interface SourceLocation {
   readonly file: string;
   readonly line: number;
   readonly column: number;
+  /** Byte offset of the first character of this token (= token.start). */
+  readonly offset?: number;
+  /** Line of the last character of this token. */
+  readonly endLine?: number;
+  /** Column of the last character of this token. */
+  readonly endColumn?: number;
+  /** Byte offset after the last character (= token.end). Used for IDE squiggles and AI patch ranges. */
+  readonly endOffset?: number;
+  /** endOffset - offset. Convenient for source-map and AI repair tools. */
+  readonly length?: number;
 }
 
 export interface AstNode {
@@ -94,6 +108,24 @@ export interface AstNode {
    * The formatter preserves this style; the compiler uses value (canonical).
    */
   readonly readableForm?: string;
+  /**
+   * Optional call-style marker set by the parser.
+   * "method" indicates this callExpr was parsed as receiver.method(args) —
+   * children[0] is the receiver expression, children[1..] are the arguments.
+   * Absent or undefined means a plain call: all children are arguments.
+   */
+  readonly callStyle?: "method";
+  /**
+   * Structural bitmask set by the parser on flow/fn declaration nodes.
+   * Encodes: HasContract, HasEffects, HasCompute, TensorCandidate, ReadonlyInputs.
+   *
+   * Downstream passes (SemanticGraph, ExecutionPlanner, Backend) use this to
+   * skip re-analysis. Hardware meaning (GPU/NPU/Photonic) is assigned by the
+   * backend, not the parser.
+   *
+   * @see NodeFlags
+   */
+  readonly flags?: NodeFlagsMask;
 }
 
 export interface ParseDiagnostic {
@@ -111,6 +143,11 @@ export interface ParseDiagnostic {
   readonly why?: string;
   /** Elm-style: what goes wrong if ignored. */
   readonly risk?: string;
+  /**
+   * Exact byte range [startOffset, endOffset] of the offending token or span.
+   * Enables AI agents and IDE integrations to make safe, non-overlapping edits.
+   */
+  readonly byteSpan?: readonly [number, number];
 }
 
 /** Metadata extracted from a flow declaration header. */
@@ -159,6 +196,57 @@ const INFIX_OPERATOR_TABLE: ReadonlyMap<string, InfixEntry> = new Map([
   ["/",  { precedence: 60, associativity: "left" }],
   ["%",  { precedence: 60, associativity: "left" }],
 ]);
+
+// ---------------------------------------------------------------------------
+// NodeFlags — structural bitmask attached to flow/fn AST nodes
+//
+// Purpose: let downstream passes (SemanticGraph, ExecutionPlanner, Backend)
+//   skip costly re-analysis. Flags are structural-only and hardware-neutral:
+//   the backend decides what TensorCandidate means for GPU vs NPU vs Photonic.
+//
+// Rule: parser sets flags; compiler/SemanticGraph validates compatibility.
+//   LLN-COMPUTE-001 (incompatible pattern for compute target) is a compiler
+//   diagnostic, NOT a parser diagnostic.
+// ---------------------------------------------------------------------------
+
+export const NodeFlags = {
+  None:            0,
+  HasContract:     1 << 0,   // flow declares a contract { } block
+  HasEffects:      1 << 1,   // flow declares at least one effect
+  HasCompute:      1 << 2,   // flow declares a compute { } or prefer [...] block
+  TensorCandidate: 1 << 3,   // flow has Tensor<> in params or return type
+  ReadonlyInputs:  1 << 4,   // all parameters are readonly-qualified
+  IsPure:          1 << 5,   // flow qualifier is "pure"
+  IsSecure:        1 << 6,   // flow qualifier is "secure"
+  HasPrivacy:      1 << 7,   // flow contract declares a privacy block
+} as const;
+export type NodeFlagsMask = number;
+
+// ---------------------------------------------------------------------------
+// AST node factory
+//
+// Creates AstNode objects with a consistent property layout (kind, location,
+// value, children, readableForm, flags) so all instances share the same V8
+// hidden class. Use for all new node construction; retrofit existing inline
+// literals opportunistically.
+//
+// flags defaults to 0 (NodeFlags.None) and is omitted from the object when 0,
+// preserving the existing shape for nodes that carry no flags.
+// ---------------------------------------------------------------------------
+
+function makeNode(
+  kind: AstNodeKind,
+  location: SourceLocation,
+  value = "",
+  children: readonly AstNode[] = [],
+  readableForm = "",
+  flags = 0,
+): AstNode {
+  if (flags !== 0) {
+    return { kind, location, value, children, readableForm, flags };
+  }
+  return { kind, location, value, children, readableForm };
+}
 
 // ---------------------------------------------------------------------------
 // Parser
@@ -221,6 +309,7 @@ class Parser {
         case "authority": return this.parseAuthorityBlock();
         case "policy":   return this.parsePolicyBlock();
         case "compute":  return this.parseComputeTarget();
+        case "prefer":   return this.parsePreferHint();
         case "route":    return this.parseRouteDecl();
         case "contract": {
           // contract set Name { } — reusable contract template (peek at next token)
@@ -232,6 +321,7 @@ class Parser {
           return this.parseContractDecl();
         }
         case "event":    return this.parseEventDecl();
+        case "resource": return this.parseResourceDecl();
         case "let": {
           // LLN-SYNTAX-006: let at top level is not allowed
           this.emit(
@@ -276,7 +366,7 @@ class Parser {
               "UNSAFE_LET_AT_TOP_LEVEL",
               `'unsafe let' is only allowed inside a secure flow. Boundary data must be owned by a governed flow.`,
               this.loc(),
-              `Move into a secure flow: secure flow name(readonly req: Request) { unsafe let ... }`,
+              `Move into a secure flow: secure flow name(readonly request: Request) { unsafe let ... }`,
             );
           } else {
             this.emitUnexpected(`Unexpected 'unsafe' at top level.`);
@@ -384,6 +474,14 @@ class Parser {
     let effectsNode: AstNode | undefined;
     let effectNames: string[] = [];
     if (this.currentIs("keyword", "with") && this.peek(1).kind === "keyword" && this.peek(1).value === "effects") {
+      // LLN-SYNTAX-LEGACY-001: 'with effects [...]' is the old form; warn and continue.
+      this.emitWarning(
+        "LLN-SYNTAX-LEGACY-001",
+        "LegacyEffectsSyntax",
+        "'with effects [...]' is legacy syntax. Use 'contract { effects { ... } }' instead.",
+        this.loc(),
+        "Replace 'with effects [database.write]' with:\n  contract {\n    effects {\n      database.write\n    }\n  }",
+      );
       this.advance(); // consume "with"
       const result = this.parseEffectsDecl();
       effectsNode = result.node;
@@ -410,9 +508,20 @@ class Parser {
         flowClauses.push(this.parseContractDecl());
         continue;
       }
+      if (this.currentIs("keyword", "prefer")) {
+        flowClauses.push(this.parsePreferHint());
+        continue;
+      }
       // `with effects [...]` may also appear AFTER the contract block
       if (this.currentIs("keyword", "with") && this.peek(1).kind === "keyword" && this.peek(1).value === "effects") {
         if (effectsNode === undefined) {
+          this.emitWarning(
+            "LLN-SYNTAX-LEGACY-001",
+            "LegacyEffectsSyntax",
+            "'with effects [...]' is legacy syntax. Use 'contract { effects { ... } }' instead.",
+            this.loc(),
+            "Replace 'with effects [database.write]' with:\n  contract {\n    effects {\n      database.write\n    }\n  }",
+          );
           this.advance(); // consume "with"
           const result = this.parseEffectsDecl();
           effectsNode = result.node;
@@ -500,7 +609,38 @@ class Parser {
       body,
     ];
 
-    return { kind, value: name, location: loc, children };
+    // Compute structural NodeFlags for downstream passes.
+    // Flags are hardware-neutral: TensorCandidate does not imply a target —
+    // the backend (SemanticGraph → ExecutionPlanner) maps that later.
+    const contractNode    = flowClauses.find((c) => c.kind === "contractDecl");
+    const hasContractFlag = contractNode !== undefined;
+    // HasCompute: explicit compute { } block OR prefer [...] hint
+    const hasComputeFlag  = flowClauses.some(
+      (c) => c.kind === "computeTargetBlock" || c.kind === "preferHint",
+    );
+    const hasEffectsFlag  = effectNames.length > 0;
+    const tensorCandidate = returnType.includes("Tensor") ||
+      params.some((p) => (p.value ?? "").includes("Tensor"));
+    const readonlyInputs  = params.length > 0 &&
+      params.every((p) => (p.value ?? "").startsWith("readonly "));
+    // HasPrivacy: contract block contains a privacy sub-block
+    const hasPrivacyFlag  = hasContractFlag && (contractNode?.children ?? []).some(
+      (c) => c.kind === "identifier" &&
+        (typeof c.value === "string") &&
+        (c.value === "privacy:block" || c.value.startsWith("privacy:")),
+    );
+
+    const flags: NodeFlagsMask =
+      (hasContractFlag ? NodeFlags.HasContract     : NodeFlags.None) |
+      (hasEffectsFlag  ? NodeFlags.HasEffects      : NodeFlags.None) |
+      (hasComputeFlag  ? NodeFlags.HasCompute      : NodeFlags.None) |
+      (tensorCandidate ? NodeFlags.TensorCandidate : NodeFlags.None) |
+      (readonlyInputs  ? NodeFlags.ReadonlyInputs  : NodeFlags.None) |
+      (qualifier === "pure"   ? NodeFlags.IsPure   : NodeFlags.None) |
+      (qualifier === "secure" ? NodeFlags.IsSecure : NodeFlags.None) |
+      (hasPrivacyFlag  ? NodeFlags.HasPrivacy      : NodeFlags.None);
+
+    return { kind, value: name, location: loc, children, ...(flags !== 0 ? { flags } : {}) };
   }
 
   private parseSecureOrPureFlow(): AstNode {
@@ -1354,7 +1494,7 @@ class Parser {
         this.advance();
 
         if (this.currentIs("symbol", "(")) {
-          // Method call
+          // Method call: receiver.method(args)
           this.advance(); // (
           const args = this.parseArgList();
           this.expect("symbol", ")");
@@ -1363,6 +1503,7 @@ class Parser {
             value: member,
             location: loc,
             children: [expr, ...args],
+            callStyle: "method",
           };
         } else {
           expr = { kind: "memberExpr", value: member, location: loc, children: [expr] };
@@ -2031,6 +2172,55 @@ class Parser {
     };
   }
 
+  // ── Hardware hint (prefer [...]) ─────────────────────────────────────────
+
+  /**
+   * Parses `prefer [gpu]`, `prefer [npu]`, `prefer [apu]`, `prefer [cpu]`,
+   * or `prefer [npu, gpu, cpu]` (priority list).
+   *
+   * This is a hardware preference hint only. The parser preserves it as a
+   * `preferHint` AST node. The SemanticGraph and ExecutionPlanner decide
+   * what the hint means for each backend. The parser does NOT validate
+   * hardware compatibility — that is a compiler/planner concern.
+   *
+   * Sets NodeFlags.HasCompute on the enclosing flow declaration.
+   */
+  private parsePreferHint(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "prefer"
+    this.skipNewlines();
+
+    const targets: string[] = [];
+
+    if (this.currentIs("symbol", "[")) {
+      this.advance(); // consume [
+      while (!this.currentIs("symbol", "]") && !this.isEof()) {
+        this.skipNewlines();
+        const tok = this.current();
+        if (tok.kind === "identifier" || tok.kind === "keyword") {
+          targets.push(tok.value);
+          this.advance();
+        } else if (this.currentIs("symbol", ",")) {
+          this.advance();
+        } else {
+          this.advance(); // skip unexpected
+        }
+      }
+      if (this.currentIs("symbol", "]")) this.advance(); // consume ]
+    } else {
+      // Bare `prefer gpu` (no brackets) — accept as shorthand
+      const tok = this.current();
+      if (tok.kind === "identifier" || tok.kind === "keyword") {
+        targets.push(tok.value);
+        this.advance();
+      }
+    }
+
+    // Encode targets as value string: "npu,gpu,cpu"
+    const value = targets.join(",") || "cpu";
+    return { kind: "preferHint", value, location: loc };
+  }
+
   // ── fn helper declaration (inside flow body only) ─────────────────────────
 
   /**
@@ -2366,6 +2556,15 @@ class Parser {
 
       if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "observability") {
         children.push(this.parseContractSubBlock("observability"));
+        this.skipNewlines();
+        continue;
+      }
+
+      // `memory { arena <size> }` — explicit memory budget declaration.
+      // Compiler infers arena lifetime automatically; developer declares the bound.
+      // Feeds: PassiveExecutionPlan, WASM memory limits, Arena allocation decisions.
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "memory") {
+        children.push(this.parseContractSubBlock("memory"));
         this.skipNewlines();
         continue;
       }
@@ -2773,6 +2972,206 @@ class Parser {
     return { kind: "contractSetDecl", value: name, location: loc, children };
   }
 
+  // ── Resource declaration (Phase 17) ──────────────────────────────────────
+
+  /**
+   * Parses a `resource Name { fields operations { } policy { } }` declaration.
+   *
+   * Syntax:
+   *   resource UserProfile {
+   *     id: UserId
+   *     email: protected Email
+   *     name: String
+   *
+   *     operations {
+   *       create effects [database.write, audit.write]
+   *       read   effects [database.read]
+   *     }
+   *
+   *     policy {
+   *       require audit on create, update, delete
+   *       deny delete unless role.admin
+   *     }
+   *   }
+   *
+   * Phase 17 semantics (enforcement) are deferred; this parser captures all
+   * sections structurally.
+   *
+   * Returns: { kind: "resourceDecl", value: name, location, children: [...fields, operationsBlock?, policyBlock?] }
+   */
+  private parseResourceDecl(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "resource"
+    this.skipNewlines();
+
+    // Resource name
+    const nameTok = this.current();
+    const name = nameTok.kind === "identifier" ? nameTok.value : "<unknown>";
+    if (nameTok.kind === "identifier") this.advance();
+    this.skipNewlines();
+
+    const children: AstNode[] = [];
+
+    if (!this.currentIs("symbol", "{")) {
+      return { kind: "resourceDecl", value: name, location: loc, children };
+    }
+
+    this.advance(); // consume {
+    this.skipNewlines();
+
+    while (!this.currentIs("symbol", "}") && !this.isEof()) {
+      const tok = this.current();
+
+      // operations { ... }
+      if ((tok.kind === "identifier" || tok.kind === "keyword") && tok.value === "operations") {
+        const opLoc = this.loc();
+        this.advance(); // consume "operations"
+        this.skipNewlines();
+        const opChildren: AstNode[] = [];
+
+        if (this.currentIs("symbol", "{")) {
+          this.advance(); // consume {
+          this.skipNewlines();
+
+          while (!this.currentIs("symbol", "}") && !this.isEof()) {
+            const opTok = this.current();
+            if (opTok.kind === "identifier" || opTok.kind === "keyword") {
+              const opName = opTok.value;
+              const opChildLoc = this.loc();
+              this.advance(); // consume operation name (create, read, update, delete)
+              this.skipNewlines();
+
+              // effects [a, b, ...]
+              let effectsList = "";
+              if ((this.current().kind === "keyword" || this.current().kind === "identifier") &&
+                  this.current().value === "effects") {
+                this.advance(); // consume "effects"
+                this.skipNewlines();
+                if (this.currentIs("symbol", "[")) {
+                  this.advance(); // consume [
+                  const parts: string[] = [];
+                  while (!this.currentIs("symbol", "]") && !this.isEof()) {
+                    const et = this.current();
+                    if (et.kind === "identifier" || et.kind === "keyword") {
+                      let effectName = et.value;
+                      this.advance();
+                      // Consume dot-path
+                      while (this.currentIs("symbol", ".")) {
+                        this.advance();
+                        const next = this.current();
+                        if (next.kind === "identifier" || next.kind === "keyword") {
+                          effectName += "." + next.value;
+                          this.advance();
+                        } else break;
+                      }
+                      parts.push(effectName);
+                    } else if (this.currentIs("symbol", ",")) {
+                      this.advance();
+                    } else {
+                      this.advance();
+                    }
+                    this.skipNewlines();
+                  }
+                  if (this.currentIs("symbol", "]")) this.advance(); // consume ]
+                  effectsList = parts.join(",");
+                }
+              }
+
+              opChildren.push({
+                kind: "identifier",
+                value: `op:${opName}${effectsList !== "" ? `:${effectsList}` : ""}`,
+                location: opChildLoc,
+              });
+            } else {
+              this.advance();
+            }
+            this.skipNewlines();
+          }
+
+          if (this.currentIs("symbol", "}")) this.advance(); // consume }
+        }
+
+        children.push({ kind: "identifier", value: "operations:block", location: opLoc, children: opChildren });
+        this.skipNewlines();
+        continue;
+      }
+
+      // policy { ... } — resource-specific policy (separate from top-level policy keyword)
+      if ((tok.kind === "identifier" || tok.kind === "keyword") && tok.value === "policy") {
+        const polLoc = this.loc();
+        this.advance(); // consume "policy"
+        this.skipNewlines();
+        const polChildren: AstNode[] = [];
+
+        if (this.currentIs("symbol", "{")) {
+          this.advance(); // consume {
+          this.skipNewlines();
+
+          while (!this.currentIs("symbol", "}") && !this.isEof()) {
+            const polTok = this.current();
+
+            // require | deny clause — consume the rest of the line
+            if ((polTok.kind === "identifier" || polTok.kind === "keyword") &&
+                (polTok.value === "require" || polTok.value === "deny")) {
+              const clauseKind = polTok.value;
+              const clauseLoc = this.loc();
+              this.advance(); // consume "require" / "deny"
+              const parts: string[] = [];
+              while (!this.isEof() && this.current().kind !== "newline" && !this.currentIs("symbol", "}")) {
+                parts.push(this.current().value);
+                this.advance();
+              }
+              polChildren.push({
+                kind: "identifier",
+                value: `policy:${clauseKind} ${parts.join(" ")}`.trimEnd(),
+                location: clauseLoc,
+              });
+            } else {
+              this.advance();
+            }
+            this.skipNewlines();
+          }
+
+          if (this.currentIs("symbol", "}")) this.advance(); // consume }
+        }
+
+        children.push({ kind: "identifier", value: "policy:block", location: polLoc, children: polChildren });
+        this.skipNewlines();
+        continue;
+      }
+
+      // Field declaration: name: [qualifier] TypeRef
+      // A field line starts with an identifier followed by ":"
+      if ((tok.kind === "identifier" || tok.kind === "keyword") &&
+          this.peek(1).kind === "symbol" && this.peek(1).value === ":") {
+        const fieldLoc = this.loc();
+        const fieldName = tok.value;
+        this.advance(); // consume field name
+        this.advance(); // consume ":"
+        this.skipNewlines();
+        const typeRef = this.parseTypeRef();
+        children.push({
+          kind: "paramDecl",
+          value: `${fieldName}: ${typeRef.value ?? ""}`,
+          location: fieldLoc,
+        });
+        this.skipNewlines();
+        continue;
+      }
+
+      // Skip anything else (newlines already handled by skipNewlines)
+      if (this.currentIs("symbol", "{")) {
+        this.skipBalancedBraces();
+      } else {
+        this.advance();
+      }
+      this.skipNewlines();
+    }
+
+    this.expect("symbol", "}");
+    return { kind: "resourceDecl", value: name, location: loc, children };
+  }
+
   /**
    * Parses a top-level `event EventName` declaration.
    * Global event declarations are referenced in contract.events blocks.
@@ -2955,12 +3354,35 @@ class Parser {
     suggestedFix?: string,
     suggestedCode?: string,
   ): void {
+    const byteSpan: readonly [number, number] | undefined =
+      location.offset !== undefined && location.endOffset !== undefined
+        ? [location.offset, location.endOffset]
+        : undefined;
     const d: ParseDiagnostic = {
       code, name, severity: "error", message, location,
       ...(suggestedFix === undefined ? {} : { suggestedFix }),
       ...(suggestedCode === undefined ? {} : { suggestedCode }),
+      ...(byteSpan === undefined ? {} : { byteSpan }),
     };
     this.diagnostics.push(d);
+  }
+
+  private emitWarning(
+    code: string,
+    name: string,
+    message: string,
+    location: SourceLocation,
+    suggestedFix?: string,
+  ): void {
+    const byteSpan: readonly [number, number] | undefined =
+      location.offset !== undefined && location.endOffset !== undefined
+        ? [location.offset, location.endOffset]
+        : undefined;
+    this.diagnostics.push({
+      code, name, severity: "warning", message, location,
+      ...(suggestedFix === undefined ? {} : { suggestedFix }),
+      ...(byteSpan === undefined ? {} : { byteSpan }),
+    });
   }
 
   private emitUnexpected(message: string): void {
@@ -2970,11 +3392,11 @@ class Parser {
   // ── Token stream helpers ───────────────────────────────────────────────────
 
   private current(): Token {
-    return this.tokens[this.pos] ?? { kind: "eof", value: "", line: 0, column: 0, endLine: 0, endColumn: 0, start: 0, end: 0 };
+    return this.tokens[this.pos] ?? { kind: "eof", kindId: 11, value: "", line: 0, column: 0, endLine: 0, endColumn: 0, start: 0, end: 0 };
   }
 
   private peek(offset: number): Token {
-    return this.tokens[this.pos + offset] ?? { kind: "eof", value: "", line: 0, column: 0, endLine: 0, endColumn: 0, start: 0, end: 0 };
+    return this.tokens[this.pos + offset] ?? { kind: "eof", kindId: 11, value: "", line: 0, column: 0, endLine: 0, endColumn: 0, start: 0, end: 0 };
   }
 
   private advance(): Token {
@@ -3003,6 +3425,74 @@ class Parser {
     }
   }
 
+  // ── Panic-mode recovery helpers ───────────────────────────────────────────
+  //
+  // One syntax error must not cascade into many LLN-PARSE-001 diagnostics.
+  // Each helper advances to a safe resynchronisation point:
+  //
+  //   recoverToStatement()       — newline, ";", or "}"  (within a block)
+  //   recoverToBlock()           — opening "{"           (before a body)
+  //   recoverToContractSection() — next known contract section keyword
+  //   skipToNextDeclaration()    — next top-level keyword (existing)
+  //   skipTopLevelStatement()    — skip past continuation lines (existing)
+  //
+  // These are NOT wired to every parse site yet — they are added as tools
+  // for new parser code and progressive retrofit.
+
+  /**
+   * Advances past tokens until a statement boundary: newline, ";", or "}".
+   * Does not consume the boundary token. Safe to call inside a flow body.
+   */
+  private recoverToStatement(): void {
+    while (!this.isEof()) {
+      const tok = this.current();
+      if (tok.kind === "newline" || this.currentIs("symbol", ";") || this.currentIs("symbol", "}")) {
+        break;
+      }
+      this.advance();
+    }
+  }
+
+  /**
+   * Advances past tokens until the opening "{" of the next block.
+   * Use when the parser expected a block but got something else.
+   */
+  private recoverToBlock(): void {
+    while (!this.isEof()) {
+      if (this.currentIs("symbol", "{")) break;
+      // Also stop at top-level flow keywords so we don't consume the next flow
+      const tok = this.current();
+      if (tok.kind === "keyword" && (
+        tok.value === "flow" || tok.value === "pure" || tok.value === "secure" ||
+        tok.value === "guarded" || tok.value === "contract"
+      )) break;
+      this.advance();
+    }
+  }
+
+  /**
+   * Advances to the next known contract section keyword or closing "}" of the
+   * contract block. Use when an unknown token is encountered inside a contract.
+   *
+   * Known sections: intent, effects, request, response, context, model,
+   * timeouts, retries, limits, privacy, errors, rules, observability,
+   * events, audit, types, targets, governance, use.
+   */
+  private recoverToContractSection(): void {
+    const CONTRACT_SECTIONS = new Set([
+      "intent", "effects", "request", "response", "context", "model",
+      "timeouts", "retries", "limits", "privacy", "errors", "rules",
+      "observability", "events", "audit", "types", "targets", "governance", "use",
+      "memory",  // contract.memory { arena 8.mb } — explicit memory budget
+    ]);
+    while (!this.isEof()) {
+      if (this.currentIs("symbol", "}")) break;
+      const tok = this.current();
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && CONTRACT_SECTIONS.has(tok.value)) break;
+      this.advance();
+    }
+  }
+
   /**
    * Advances the token stream forward until a top-level declaration keyword is
    * found (or EOF), preventing cascading LLN-PARSE-001 errors from one bad
@@ -3019,6 +3509,7 @@ class Parser {
       "route", "contract", "event",
       "authority", "policy",
       "intent", "governance", "api", "compute",
+      "resource",
     ]);
 
     while (!this.isEof()) {
@@ -3102,7 +3593,16 @@ class Parser {
 
   private loc(): SourceLocation {
     const tok = this.current();
-    return { file: this.file, line: tok.line, column: tok.column };
+    return {
+      file: this.file,
+      line: tok.line,
+      column: tok.column,
+      offset: tok.start,
+      endLine: tok.endLine,
+      endColumn: tok.endColumn,
+      endOffset: tok.end,
+      length: tok.end - tok.start,
+    };
   }
 
   /**

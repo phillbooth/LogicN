@@ -3,8 +3,18 @@
 ## Status
 
 ```
-Phase 13 — Specification (partially implemented via effect checker)
+Phase 19A — LLN-STDLIB-001 enforcement complete
+Phase 18D  — EffectFlags bitset, effectsToFlags(), effectsSubset() implemented
+Phase 18H  — STDLIB_CAPABILITY_MAP wired (35+ stdlib functions → required effects → WASM imports)
+Phase 19A  — LLN-STDLIB-001: File.readText without filesystem.read → compile error
+Phase 20A  — RuntimeManifest.requiredContext populated from contract.context
 ```
+
+**Key files:**
+- `src/stdlib-registry.ts` — STDLIB_CAPABILITY_MAP, getStdlibRequiredEffects(), getStdlibWasmImport()
+- `src/type-registry.ts` — EffectFlags (14-bit bitset), effectsToFlags(), effectsSubset()
+- `src/effect-checker.ts` — LLN-STDLIB-001 enforcement, LLN-EFFECT-001..005
+- `src/gir-emitter.ts` — GIRFlow.allowedEffectsMask populated from declared effects
 
 ## TL;DR
 
@@ -133,6 +143,61 @@ LogicN's static capability proofs shift this work to compile time:
 | Governance diff | Not possible | CI can diff plans between commits |
 
 Static proofs do not replace runtime enforcement. They reduce redundant runtime discovery by proving authority before execution begins.
+
+---
+
+## LLN-STDLIB-001: Stdlib Capability Enforcement (Phase 19A)
+
+The compiler now checks that every effectful stdlib function call has its required effect declared.
+
+```logicn
+// ❌ LLN-STDLIB-001: File.readText requires filesystem.read — not declared
+guarded flow loadConfig() -> String
+contract { effects { database.read } }
+{
+  let text = File.readText("/etc/config.txt")?
+  return text
+}
+
+// ✅ Correct: filesystem.read declared
+guarded flow loadConfig() -> String
+contract { effects { database.read filesystem.read } }
+{
+  let text = File.readText("/etc/config.txt")?
+  return text
+}
+```
+
+This is enforced by `STDLIB_CAPABILITY_MAP` in `src/stdlib-registry.ts`, which maps 35+ stdlib functions to their required effects and their WASM import names. The WASM import name is used by the `--target wasm-standalone` build to generate the correct import table.
+
+```typescript
+// STDLIB_CAPABILITY_MAP examples:
+"File.readText"   → { requiredEffects: ["filesystem.read"],  wasmImport: "host:fs.readText" }
+"Http.post"       → { requiredEffects: ["network.outbound"],  wasmImport: "host:http.post" }
+"AuditLog.write"  → { requiredEffects: ["audit.write"],       wasmImport: "host:audit.write" }
+"Hash.sha256"     → { requiredEffects: [],                    wasmImport: undefined }  // pure
+```
+
+## EffectFlags Bitset (Phase 18D)
+
+For fast O(1) effect subset checking at runtime and in the effect checker:
+
+```typescript
+// Phase 18D: EffectFlags bitset
+const EffectFlags = {
+  DatabaseRead: 1 << 0, DatabaseWrite: 1 << 1,
+  NetworkOutbound: 1 << 2, AuditWrite: 1 << 3,
+  AiInference: 1 << 4, ...
+}
+
+// Check: required ⊆ declared
+const ok = effectsSubset(
+  effectsToFlags(["database.read", "audit.write"]),  // required
+  flow.allowedEffectsMask,                            // declared (from GIR)
+);
+```
+
+`GIRFlow.allowedEffectsMask` is populated by `emitGIR()` from the flow's `declaredEffects`. The runtime and WASM backend both use this mask instead of re-checking strings.
 
 ---
 

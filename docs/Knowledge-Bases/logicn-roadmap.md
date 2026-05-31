@@ -3,10 +3,12 @@
 ## Current State (2026-05-31)
 
 ```
-1688 tests · 0 failures · 74% Stage A weighted (Lexer 99%, type checker 72%)
+2286 tests · 0 failures · ~74% Stage A weighted
 189/222 CEC examples stable in CI
-~18,500 lines TypeScript source (42 source files)
-305 KB documents (13 marked superseded, 13 marked future/aspirational)
+~22,000 lines TypeScript source (~50 source files)
+~312 KB documents (13 marked superseded, 13 marked future/aspirational)
+
+Phase 23 complete. Phase 24 next: real WAT instruction bodies.
 ```
 
 ---
@@ -34,9 +36,55 @@
 | Phase 12A | Loops (while/for each), assignment runtime, lexer.lln executing |
 | Phase 13A/B | SemanticGraph, AI graph v2, CLI (logicn check/build/emit), LLN-SOURCE-ESCAPE-001 |
 | Phase 14 | Root capability provider, compiler.capabilities.lln, LLN-BUILD-001 |
-| Phase 15 | Passive execution plans (type + builder + attestation integration) |
-| Lexer 99% | endLine/endColumn spans, LLN-LEX-001/002/003, unicode escapes |
+| Phase 15 | Passive execution plans, hashPassivePlan, executePlan wired, attestation integration |
+| Lexer 99% | endLine/endColumn spans, slice-based scanning, direct operator lookahead |
 | KB cleanup | 00-KB-INDEX.md, 11 v02 docs marked superseded, 24 aspirational docs marked future |
+| Phase 16A | canonicalHash, hashGIR, hashSource, hashPassivePlan, bootstrap determinism tests (12 tests) |
+| Phase 17A | Package manifest resolver, naming policy checker, LLN-STYLE-001/002 |
+| Phase 17C | LLN_SEC_020/021 constants, project security audit (0 monkey patching found) |
+| Phase 18A | Lexer: LLN-LEX-004..006, TokenKindId numeric enum, V1_DEPRECATED_RESERVED |
+| Phase 18B | Package resolver: hash/signature/targets/compute/installScript, LLN-PKG-001..005, getResolverReport() |
+| Phase 18 | Parser: full source spans, byteSpan, makeNode factory, emitWarning, recovery helpers (recoverToStatement/Block/ContractSection), LLN-SYNTAX-LEGACY-001, req→request |
+| Phase 18 | NodeFlags (8 flags: HasContract/HasEffects/HasCompute/TensorCandidate/ReadonlyInputs/IsPure/IsSecure/HasPrivacy), prefer [gpu/npu/apu], preferHint AST node |
+| Phase 18 | Monkey-patch checker: LLN-SEC-020/021 source-level detection |
+| Phase 18C | ValueStateFlags (8 flags), SINK_REQUIREMENTS (structured registry), getSinkRequirement(), LLN-GATE-001 |
+| Phase 18D | TypeId (56 IDs), EffectFlags (14 flags), ComputeCompatibilityFlags (7 flags), parseTensorType(), LLN-TYPE-030/031 |
+| Phase 18E | EffectCheckerFlags (6 flags), FlowEffectSummary bitsets, EffectCheckerMode, LLN-EFFECT-005 (BroadAliasUsed — broad aliases now warning not error) |
+| Phase 18F | GovernanceFlags (8 flags), RuntimeManifest type, governanceFlagsByFlow, runtimeManifests in GovernanceVerifyResult |
+| Phase 18G | GIR: expanded tensor metadata (wasmSimd/gpu/npu/apu/fixedShape/quantized), sourceHash, entryPoints, allowedEffectsMask, paramDecl tensor extraction |
+| Phase 18H | Stdlib registry: STDLIB_CAPABILITY_MAP (35+ functions), STDLIB_MODULE_KIND, TENSOR_STDLIB_OPS, TRI_STDLIB_OPS, getStdlibWasmImport(), LLN-STDLIB-001 |
+| Phase 19A | LLN-STDLIB-001 enforcement wired into effect checker (File.readText without filesystem.read → compile error) |
+| Phase 19B/C | WAT emitter improved, LEGACY_EFFECT_CALL_PATTERNS_COUNT tracked, WASM CLI modes added |
+| Phase 20A/B | RuntimeManifest.requiredContext from contract.context, LLN-GOV-013 BoundaryViolation, BoundaryGraph types |
+| Phase 21A-D | TypedArrayLoweringPlan, MonomorphisationPlan, KernelFusionPlan, LazyIteratorChain, PRODUCTION_ERASURE/DEV_ERASURE |
+| Phase 22A-C | WASMSIMDCapability, WebGPUComputePlan, NPUKernelPlan, Arena from contract.memory |
+| Phase 23A-D | APUSharedMemoryPlan, RegisterBytecodeModule (full opcode set), StringView/BytesView/TensorView, WASMLinearMemoryLayout |
+
+---
+
+## Phase 24 — Next (Real WAT Bodies)
+
+**Goal:** A pure flow must compile to runnable WAT, pass wat2wasm, and execute in wasmtime.
+Stubs with `unreachable` → actual instructions from PassiveExecutionPlan steps.
+
+```
+24A  Real WAT instruction emission for pure flows
+24B  Capability imports for effectful stdlib (host:* WASM imports from STDLIB_CAPABILITY_MAP)
+24C  First deployable WASM service (wasm-standalone or wasm-hybrid)
+EXAMPLE: examples/wasm-hello-world/
+```
+
+## Phase 25-29 — Planned
+
+```
+Phase 25: Auth service in WASM, Stage B lexer token parity
+Phase 26: Healthcare/Finance apps, Stage B parser parity
+Phase 27: AI inference app, TypedArray lowering in WAT, WASM SIMD
+Phase 28: Stage B full self-hosting — all 4 milestones produce matching output
+Phase 29: Package registry, Register VM production, all examples in --production mode
+```
+
+**Rule for every phase:** ship at least one production-grade example alongside the compiler improvement.
 
 ---
 
@@ -109,9 +157,9 @@ The `contractEnforcer.ts` and `capabilityHost.ts` are built but not connected to
 | Symbol resolver | 90%+ | 80% |
 | Standard library | 85%+ | 68% |
 | Runtime execution | 85%+ | 78% |
-| Package/import system | Working | Not built |
-| Loops/iteration | Basic while/for each | Not built |
-| Assignment expressions | mut x = x + 1 | Parsed (assignStmt), runtime pending |
+| Package/import system | Working | Phase 17A+ in progress |
+| Loops/iteration | Basic while/for each | ✅ Phase 12A |
+| Assignment expressions | mut x = x + 1 | ✅ Phase 12A |
 
 ### Stage B Milestones
 
@@ -122,7 +170,7 @@ Milestone 1: src/lexer.lln                    [SPEC WRITTEN]
   Produces identical token stream.
   First proof that LogicN can describe its own tools.
   Spec: docs/Knowledge-Bases/logicn-lexer-lln.md
-  Stub: parses today; execution blocked on Phase 12A while-loops.
+  Target: Phase 25 (token parity).
 
 Milestone 2: src/parser.lln
   The LogicN parser written in LogicN.
@@ -143,10 +191,9 @@ Milestone 5: full bootstrap
 ### Stage B Gap (currently ~14%)
 
 Primary blockers:
-1. **Package/import system** (11E) — the compiler is multi-file
-2. **Loops** — compiler needs iteration (`while`, `for each`)
-3. **Assignment expressions** — `mut x = x + 1` runtime wiring
-4. **Stdlib completeness** — String processing, file I/O, collections
+1. **Package/import system** (11E) — the compiler is multi-file; Phase 17A manifest resolver done, AST import resolution pending
+2. **Stdlib completeness** — String processing, file I/O, collections
+3. **WAT instruction bodies** (Phase 24) — needed before lexer.lln can be compiled to WASM
 
 ---
 
@@ -238,20 +285,19 @@ Tree-sitter-style incremental parsing + WASM isolation = safe AI-agent edit loop
 
 ```
 NOW (active):
+  24   — Real WAT instruction bodies for pure flows
   11D  — Governed Memory Blocks (full enforcement)
-  11E  — Package/import system
+  11E  — Package/import system (CEC unlock)
   11C  — Wire contractEnforcer into execution
 
 NEXT:
-  12.1 — Loops (while, for each)
-  12.2 — Assignment expression runtime wiring
-  12.3 — Stdlib completeness (file I/O, full collections)
-  12.4 — src/lexer.lln — first Stage B milestone
+  25   — Auth service in WASM, Stage B lexer token parity
+  26   — Healthcare/Finance apps, Stage B parser parity
 
 THEN:
-  13A  — WASM sandbox
-  13B  — GPU/NPU target bridges
-  14   — Parser hardening + CHERI mapping
+  27   — AI inference app, TypedArray lowering in WAT, WASM SIMD
+  28   — Stage B full self-hosting (all 4 milestones match)
+  29   — Package registry, Register VM production, all examples in --production
 ```
 
 ---
@@ -291,9 +337,9 @@ Adds the first-class keywords needed to express the Application Patterns handboo
 
 ### Phase 17 Prerequisites
 
-- Phase 11E (package/import system) — `service {}` needs cross-module types
-- Phase 15 (passive execution plans) — `stateMachine {}` transitions map to plan steps
-- Semantic graph (Phase 13) — `resource {}` and `command`/`query` need graph-queryable intent nodes
+- Phase 11E (package/import system) — `service {}` needs cross-module types; Phase 17A manifest resolver complete, full import AST resolution pending
+- Phase 15 (passive execution plans) — complete; `stateMachine {}` transitions map to plan steps
+- Semantic graph (Phase 13A/B) — complete; `resource {}` and `command`/`query` need graph-queryable intent nodes
 
 ---
 

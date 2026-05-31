@@ -15,8 +15,11 @@ export {
   lex,
   V1_ACTIVE_KEYWORDS,
   V1_FUTURE_RESERVED,
+  V1_DEPRECATED_RESERVED,
+  TokenKindId,
   type Token,
   type TokenKind,
+  type TokenKindIdValue,
   type LexResult,
   type LexerDiagnostic,
 } from "./lexer.js";
@@ -48,9 +51,37 @@ export const LLN_LEX_003 = {
   suggestedFix: "Use \\u{XXXXXX} with 1-6 hex digits, or \\uXXXX with exactly 4.",
 } as const;
 
+/** LLN-LEX-004: Source file exceeds the 10 MB maximum. */
+export const LLN_LEX_004 = {
+  code: "LLN-LEX-004",
+  name: "FileTooLarge",
+  severity: "error" as const,
+  message: "File exceeds maximum size (10MB). Split into smaller files.",
+} as const;
+
+/** LLN-LEX-005: A single line exceeds 10,000 characters. */
+export const LLN_LEX_005 = {
+  code: "LLN-LEX-005",
+  name: "LineTooLong",
+  severity: "warning" as const,
+  message: "Line exceeds maximum length (10,000 characters).",
+} as const;
+
+/** LLN-LEX-006: Lexer emitted too many diagnostics; further errors suppressed. */
+export const LLN_LEX_006 = {
+  code: "LLN-LEX-006",
+  name: "TooManyDiagnostics",
+  severity: "error" as const,
+  message: "Lexer emitted the maximum number of diagnostics (100). Further errors suppressed. Fix the first errors and re-compile.",
+  why: "Emitting thousands of cascading diagnostics from a single malformed file wastes resources and obscures the root cause.",
+  suggestedFix: "Fix the first reported errors — cascading errors usually disappear once the root cause is resolved.",
+} as const;
+
 // Phase 4 — Parser
 export {
   parseProgram,
+  NodeFlags,
+  type NodeFlagsMask,
   type AstNode,
   type AstNodeKind,
   type ParseResult,
@@ -59,26 +90,75 @@ export {
   type SourceLocation as ParserSourceLocation,
 } from "./parser.js";
 
-// Phase 5 — Effect Checker
+// Phase 5 / 18E / 18H / 19A — Effect Checker
 export {
   checkEffects,
   checkFlowEffects,
+  checkStdlibEffects,
   effectResultsToDiagnostics,
   EFFECT_REGISTRY,
+  LEGACY_EFFECT_CALL_PATTERNS_COUNT,
   inferEffectsForOperation,
   inferDirectEffectsForFlow,
   buildFlowEffectSummary,
   type EffectCheckResult,
   type EffectDiagnostic,
   type FlowEffectSummary,
+  type EffectCheckerMode,
 } from "./effect-checker.js";
 
-// Phase 6 — Value-State Checker
+// Phase 18D / 18E / 18F — Type Registry
+export {
+  TypeId,
+  EffectFlags,
+  EffectCheckerFlags,
+  GovernanceFlags,
+  ComputeCompatibilityFlags,
+  effectsToFlags,
+  effectsSubset,
+  resolveTypeId,
+  parseTensorType,
+  tensorElementTypesCompatible,
+  tensorDimensionCountsCompatible,
+  TYPE_NAME_TO_ID,
+  type TypeIdValue,
+  type EffectFlagsMask,
+  type EffectCheckerFlagsMask,
+  type GovernanceFlagsMask,
+  type ComputeCompatibilityFlagsMask,
+  type TensorTypeInfo,
+  type RuntimeManifest,
+} from "./type-registry.js";
+
+// Phase 6 / 18C — Value-State Checker
 export {
   checkValueStates,
+  ValueStateFlags,
+  SINK_REQUIREMENTS,
+  getSinkRequirement,
   type ValueStateDiagnostic,
   type ValueStateCheckResult,
+  type ValueStateFlagsMask,
+  type SinkRequirement,
 } from "./value-state-checker.js";
+
+// ---------------------------------------------------------------------------
+// Gate diagnostics — LLN-GATE-001
+//
+// Reserved for Phase 19 @gate annotation enforcement.
+// When a flow is annotated @gate, callers must use error propagation (?)
+// and the result must transition the binding from unsafe to safe.
+// ---------------------------------------------------------------------------
+
+/** LLN-GATE-001: @gate-annotated flow called without required error propagation or state transition. */
+export const LLN_GATE_001 = {
+  code: "LLN-GATE-001",
+  name: "GateAnnotationRequired",
+  severity: "error" as const,
+  message: "This flow is annotated @gate. Callers must use error propagation (?) and assign the result to a 'safe mut' binding.",
+  why: "@gate flows are the only way to transition data from unsafe to safe. Without the ? operator, errors are silently ignored and the transition is not proven.",
+  suggestedFix: "Change the call to: safe mut name = gateFn(value)?",
+} as const;
 
 /** LLN-VALUESTATE-005: A value derived from an unsafe binding reached a governed sink. */
 export const LLN_VALUESTATE_005 = {
@@ -118,6 +198,28 @@ export const LLN_TYPE_016 = { code: "LLN-TYPE-016", name: "TensorShapeMismatch",
 export const LLN_TYPE_017 = { code: "LLN-TYPE-017", name: "QuantizedPrecisionMismatch", severity: "warning", message: "Cannot mix quantized (Int8) and floating-point (Float32) without explicit dequantize(). General numeric narrowing is LLN-TYPE-002." } as const;
 export const LLN_TYPE_018 = { code: "LLN-TYPE-018", name: "InvalidRuntimeTargetType", severity: "error", message: "This type cannot exist in the selected compute target." } as const;
 export const LLN_TYPE_019 = { code: "LLN-TYPE-019", name: "UnknownSymbol", severity: "error", message: "Symbol is not defined in the current scope." } as const;
+
+// LLN-TYPE-030/031 — Tensor element type and dimension checking (Phase 18D)
+
+/** LLN-TYPE-030: Tensor operations received mismatched element types. */
+export const LLN_TYPE_030 = {
+  code: "LLN-TYPE-030",
+  name: "TensorElementTypeMismatch",
+  severity: "error" as const,
+  message: "Tensor element types do not match. Float32 and Int8 tensors cannot be combined without explicit conversion.",
+  why: "Mixed-precision tensor operations produce undefined results on GPU/NPU targets. All tensors in an operation must share the same element type, or use explicit quantize()/dequantize().",
+  suggestedFix: "Use dequantize() to convert Int8 to Float32 before the operation, or quantize() to convert Float32 to Int8.",
+} as const;
+
+/** LLN-TYPE-031: Tensor operations received incompatible dimension counts. */
+export const LLN_TYPE_031 = {
+  code: "LLN-TYPE-031",
+  name: "TensorDimensionMismatch",
+  severity: "error" as const,
+  message: "Tensor dimension counts do not match. [768] (rank 1) cannot be used where [Batch, 768] (rank 2) is expected.",
+  why: "Rank mismatch causes silent shape errors in tensor operations. NPU/GPU kernels require matching rank at compile time.",
+  suggestedFix: "Use Tensor.unsqueeze() to add a batch dimension, or Tensor.squeeze() to remove one.",
+} as const;
 
 /** LLN-VALUESTATE-006: A protected value was assigned to a plain (unprotected) binding. */
 export const LLN_VALUESTATE_006 = {
@@ -160,12 +262,76 @@ export {
   type ImportResolveResult,
 } from "./import-resolver.js";
 
-// Phase 17A — Package Manifest Resolver
+// Phase 17A / 18B — Package Manifest Resolver
 export {
   loadPackageManifest,
   resolvePackageTypes,
+  checkPackageCapabilityExpansion,
+  checkInstallScript,
+  checkPackageProvenance,
+  getResolverReport,
   type PackageManifest,
+  type PackageTargets,
+  type PackageCompute,
+  type PackageResolverDiagnostic,
+  type CapabilityExpansionResult,
+  type ResolverReport,
+  type ResolvedPackageEntry,
 } from "./package-resolver.js";
+
+// ---------------------------------------------------------------------------
+// Package resolver diagnostics — LLN-PKG-001..005
+// ---------------------------------------------------------------------------
+
+/** LLN-PKG-001: Package declares capabilities not present in the lockfile snapshot. */
+export const LLN_PKG_001 = {
+  code: "LLN-PKG-001",
+  name: "CapabilityExpanded",
+  severity: "error" as const,
+  message: "Package declares new capabilities not present in the lockfile. This is a breaking security change — review and re-approve.",
+  why: "Hidden capability expansion is a supply-chain attack vector. Any new capability must be explicitly reviewed before the lockfile is updated.",
+  suggestedFix: "Run 'logicn package audit' to review the new capability declarations, then update the lockfile after explicit approval.",
+} as const;
+
+/** LLN-PKG-002: Package comes from an unregistered or unverified registry. */
+export const LLN_PKG_002 = {
+  code: "LLN-PKG-002",
+  name: "UntrustedRegistry",
+  severity: "error" as const,
+  message: "Package comes from an unregistered or unverified registry. LogicN requires all packages to come from a declared trusted registry.",
+  why: "Dependency confusion attacks inject malicious packages via unofficial registries.",
+  suggestedFix: "Add the registry to the project's trusted registry list, or switch to a verified source.",
+} as const;
+
+/** LLN-PKG-003: Package manifest has no content-addressable hash. */
+export const LLN_PKG_003 = {
+  code: "LLN-PKG-003",
+  name: "MissingHash",
+  severity: "warning" as const,
+  message: "Package has no content-addressable hash. Without a hash, tamper detection and reproducible builds are not possible.",
+  why: "A package without a hash can be silently replaced with a different version.",
+  suggestedFix: "Add 'hash: sha256:<hex>' to the package manifest. Run 'logicn package hash' to generate it.",
+} as const;
+
+/** LLN-PKG-004: Package declares or attempts an install script; default policy denies. */
+export const LLN_PKG_004 = {
+  code: "LLN-PKG-004",
+  name: "InstallScriptDenied",
+  severity: "error" as const,
+  message: "Package attempts to declare an install script. LogicN denies install scripts by default.",
+  why: "Install scripts execute arbitrary code during package resolution — a major supply-chain attack surface.",
+  suggestedFix: "Remove the installScript declaration. If absolutely necessary, configure an explicit resolver policy with signature verification.",
+} as const;
+
+/** LLN-PKG-005: Package has no signature; origin cannot be cryptographically verified. */
+export const LLN_PKG_005 = {
+  code: "LLN-PKG-005",
+  name: "MissingSignature",
+  severity: "warning" as const,
+  message: "Package has no signature. Origin cannot be cryptographically verified.",
+  why: "An unsigned package cannot prove it came from the claimed publisher. It could be a substituted or tampered build.",
+  suggestedFix: "Sign the package with 'logicn package sign' and add 'signature:' to the manifest.",
+} as const;
 
 // Phase 17A — Naming Policy Checker
 export {
@@ -236,6 +402,28 @@ export {
   type AuditWriter,
 } from "./audit-writer.js";
 
+// Phase 19 / 22A — WAT Emitter (WebAssembly Text Format) — skeleton + SIMD types
+export {
+  emitWAT,
+  renderWAT,
+  buildWATModule,
+  logicNTypeToWAT,
+  DEFAULT_WAT_MEMORY,
+  DEFAULT_WASM_SIMD,
+  type WATModule,
+  type WATEmitResult,
+  type WATFunction,
+  type WATImport,
+  type WATExport,
+  type WATFuncType,
+  type WATValType,
+  type WATMemory,
+  type WATFlowInput,
+  type WATGIRInput,
+  type WASMSIMDCapability,
+  type WATSIMDInstruction,
+} from "./wat-emitter.js";
+
 // Stage A - Runtime Pipeline
 export {
   run,
@@ -270,6 +458,44 @@ export {
   type StdlibContext,
 } from "./stdlib.js";
 
+// Phase 18H — Standard Library Registry
+export {
+  STDLIB_CAPABILITY_MAP,
+  STDLIB_MODULE_KIND,
+  TENSOR_STDLIB_OPS,
+  TRI_STDLIB_OPS,
+  getStdlibRequiredEffects,
+  getStdlibModuleKind,
+  getStdlibWasmImport,
+  type StdlibCapabilityEntry,
+  type StdlibModuleKind,
+  type TensorOpInfo,
+  type TriOpInfo,
+} from "./stdlib-registry.js";
+
+// ---------------------------------------------------------------------------
+// Stdlib diagnostics — LLN-STDLIB-001
+// ---------------------------------------------------------------------------
+
+/**
+ * LLN-STDLIB-001: An effectful stdlib function was called without the
+ * required effect being declared in the flow's contract.
+ *
+ * Example: calling File.readText() without declaring filesystem.read.
+ * The STDLIB_CAPABILITY_MAP defines required effects per function.
+ *
+ * This diagnostic is emitted by the effect checker when a stdlib call is
+ * detected in the flow body but the corresponding effect is not declared.
+ */
+export const LLN_STDLIB_001 = {
+  code: "LLN-STDLIB-001",
+  name: "StdlibEffectNotDeclared",
+  severity: "error" as const,
+  message: "Effectful stdlib function called without declaring the required effect in the contract.",
+  why: "Every stdlib function that performs I/O, network access, filesystem access, or secret reads must be explicitly declared as an effect. This enables static governance proof and WASM import table generation.",
+  suggestedFix: "Add the required effect to the contract: contract { effects { filesystem.read } }",
+} as const;
+
 // Stage A - Proof Chain
 export {
   buildProofChain,
@@ -284,7 +510,9 @@ export {
 // Stage A - Governance Verifier
 export {
   verifyGovernance,
+  extractArenaLimitMB,
   LLN_GOV_003,
+  LLN_GOV_013,
   LLN_CONTEXT_001,
   LLN_GOV_011,
   LLN_GOV_012,
@@ -292,6 +520,36 @@ export {
   type GovernanceVerifyResult,
   type DeploymentProfile,
 } from "./governance-verifier.js";
+
+// Stage A - Boundary Graph
+export {
+  buildBoundaryGraph,
+  type BoundaryGraph,
+  type BoundaryNodeData,
+  type BoundaryCheckResult,
+} from "./boundary-graph.js";
+
+// ---------------------------------------------------------------------------
+// Effect diagnostics — LLN-EFFECT-005
+// ---------------------------------------------------------------------------
+
+/**
+ * LLN-EFFECT-005: Effect name is a broad alias without a specific dot-path qualifier.
+ *
+ * Broad aliases (`network`, `database`, `filesystem`, `ai`, `audit`) are demoted
+ * in favour of canonical names (`network.outbound`, `database.read`, etc.) because
+ * they can imply broader authority than intended and are ambiguous in governance audits.
+ *
+ * Severity: warning in development mode, error in production mode.
+ */
+export const LLN_EFFECT_005 = {
+  code: "LLN-EFFECT-005",
+  name: "BroadAliasUsed",
+  severity: "warning" as const,
+  message: "Effect name is a broad alias. Use the canonical dot-path name to precisely declare authority.",
+  why: "Broad aliases are ambiguous and may grant more authority than intended in future LogicN versions. Canonical names are stable, auditable, and governance-traceable.",
+  suggestedFix: "Replace 'network' with 'network.outbound', 'database' with 'database.read' or 'database.write', 'filesystem' with 'filesystem.read' or 'filesystem.write'.",
+} as const;
 
 // Phase 9B — Event Checker
 export {
@@ -361,6 +619,61 @@ export {
   hashGIR,
   hashPassivePlan,
 } from "./runtime/canonicalHash.js";
+
+// Phase 21A/B/C/D — Lowering Plans (TypedArray, Monomorphisation, Kernel Fusion, Lazy Iterator)
+export {
+  buildTypedArrayLoweringPlan,
+  buildMonomorphisationPlan,
+  buildKernelFusionPlan,
+  buildLazyIteratorChain,
+  ELEMENT_TYPE_TO_TYPED_ARRAY,
+  PRODUCTION_ERASURE,
+  DEV_ERASURE,
+  type TypedArrayLoweringEntry,
+  type TypedArrayLoweringPlan,
+  type EraseableMetadata,
+  type MonomorphisationCandidate,
+  type MonomorphisationSpecialisation,
+  type MonomorphisationPlan,
+  type KernelFusionGroup,
+  type KernelFusionPlan,
+  type LazyIteratorOp,
+  type LazyIteratorStage,
+  type LazyIteratorChain,
+} from "./lowering-plan.js";
+
+// Phase 22B / 23A/B — GPU, NPU, and APU Plans
+export {
+  buildWebGPUPlan,
+  buildNPUPlan,
+  buildAPUSharedMemoryPlan,
+  type WebGPUComputePlan,
+  type NPUKernelPlan,
+  type APUSharedBuffer,
+  type APUSharedMemoryPlan,
+} from "./gpu-plan.js";
+
+// Phase 23C — Register VM Bytecode
+export {
+  emitBytecode,
+  type RegisterId,
+  type ConstantPoolIndex,
+  type RegisterOpcode,
+  type RegisterInstruction,
+  type RegisterFunction,
+  type RegisterBytecodeModule,
+} from "./register-vm.js";
+
+// Phase 23D — StringView, BytesView, TensorView (zero-copy buffer views)
+export {
+  createStringView,
+  createBytesView,
+  sliceStringView,
+  type StringView,
+  type BytesView,
+  type TensorView,
+  type WASMLinearMemoryLayout,
+} from "./views.js";
 
 export interface CompilerInput {
   readonly projectRoot: string;
@@ -563,6 +876,26 @@ export const LLN_SYNTAX_DIAGNOSTICS = [
   LLN_SYNTAX_008,
   LLN_SYNTAX_009,
 ] as const;
+
+// ---------------------------------------------------------------------------
+// Legacy syntax diagnostics — LLN-SYNTAX-LEGACY-001
+// ---------------------------------------------------------------------------
+
+/**
+ * LLN-SYNTAX-LEGACY-001: `with effects [...]` is legacy syntax.
+ *
+ * Fired as a warning by the parser when the old `with effects [database.write]`
+ * form is detected. The canonical form is `contract { effects { database.write } }`.
+ *
+ * The legacy form remains parseable for backwards compatibility.
+ */
+export const LLN_SYNTAX_LEGACY_001 = {
+  code: "LLN-SYNTAX-LEGACY-001",
+  name: "LegacyEffectsSyntax",
+  severity: "warning" as const,
+  message: "'with effects [...]' is legacy syntax. Use 'contract { effects { ... } }' instead.",
+  suggestedFix: "Replace 'with effects [database.write]' with:\n  contract {\n    effects {\n      database.write\n    }\n  }",
+} as const;
 
 // ---------------------------------------------------------------------------
 // Binding diagnostics — LLN-BINDING-001..004
@@ -957,6 +1290,29 @@ export const LLN_MEMORY_DIAGNOSTICS = [
 ] as const;
 
 // ---------------------------------------------------------------------------
+// Compute-target diagnostics — LLN-COMPUTE-001
+//
+// Emitted by the SemanticGraph / ExecutionPlanner (NOT the parser) when a
+// flow's body contains patterns incompatible with its declared compute target.
+//
+// Example trigger: a flow declares `compute { target npu }` but contains
+//   `while random()` — non-deterministic iteration cannot map to an NPU.
+//
+// The parser sets NodeFlags.HasCompute so the compiler knows to check;
+// the actual compatibility proof lives in the semantic/planner layer.
+// ---------------------------------------------------------------------------
+
+/** LLN-COMPUTE-001: Pattern is not compatible with the declared compute target. */
+export const LLN_COMPUTE_001 = {
+  code: "LLN-COMPUTE-001",
+  name: "ComputeTargetIncompatiblePattern",
+  severity: "warning" as const,
+  message: "This pattern may not map efficiently to the declared compute target (NPU/GPU/TPU).",
+  why: "NPU and GPU targets require deterministic, data-parallel patterns. Non-deterministic control flow (random(), dynamic dispatch, unbounded loops) cannot be compiled to fixed-function hardware.",
+  suggestedFix: "Use pure, deterministic operations compatible with the target. Move non-deterministic logic to a CPU-qualified flow.",
+} as const;
+
+// ---------------------------------------------------------------------------
 // Backend / CLI diagnostics — LLN-BACKEND-001
 // ---------------------------------------------------------------------------
 
@@ -1071,6 +1427,39 @@ export const LLN_SAFETY_DIAGNOSTICS = [
   LLN_SAFETY_005,
   LLN_SAFETY_006,
 ] as const;
+
+// Phase 18 — Monkey-Patch Checker (source-level SEC-020/021 detection)
+export {
+  checkMonkeyPatching,
+  checkMonkeyPatchingSource,
+  type MonkeyPatchDiagnostic,
+  type MonkeyPatchCheckResult,
+} from "./monkey-patch-checker.js";
+
+// ---------------------------------------------------------------------------
+// Security diagnostics — LLN-SEC-020..021
+//
+// Source-level detection: fired by checkMonkeyPatching() / checkMonkeyPatchingSource().
+// LLN-BACKEND-001 is reserved for the future JS emitter (ambient authority checks).
+// ---------------------------------------------------------------------------
+
+/** LLN-SEC-020: Runtime behaviour modification is prohibited in LogicN. */
+export const LLN_SEC_020 = {
+  code: "LLN-SEC-020",
+  name: "RuntimeMutation",
+  severity: "error" as const,
+  message: "Runtime behaviour modification is prohibited in LogicN. Use adapters, interfaces, or mocks instead of patching runtime objects.",
+  suggestedFix: "Declare an adapter implementing the interface, or use a mock in test boundaries.",
+} as const;
+
+/** LLN-SEC-021: Prototype or object mutation after definition is prohibited. */
+export const LLN_SEC_021 = {
+  code: "LLN-SEC-021",
+  name: "PrototypeMutation",
+  severity: "error" as const,
+  message: "Prototype or object mutation after definition is prohibited. LogicN requires declared behaviour.",
+  suggestedFix: "Use type declarations, adapters, or explicit contract extensions.",
+} as const;
 
 // ---------------------------------------------------------------------------
 // Governed surface types — surfaces that require intent declarations

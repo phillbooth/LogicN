@@ -182,6 +182,21 @@ const BUILT_IN_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 // ---------------------------------------------------------------------------
+// String-backed domain types
+// These are built-in identity/domain types whose underlying representation is
+// String. They are permitted in string concatenation (+) without requiring an
+// explicit .toString() conversion — the type checker treats them as string-
+// compatible operands for the + operator.
+// ---------------------------------------------------------------------------
+
+const STRING_BASED_TYPES: ReadonlySet<string> = new Set([
+  "CurrencyCode", "Email", "Url", "Path", "Hostname", "Reference",
+  "UserId", "Actor", "TraceId", "TenantId",
+  "PatientId", "NhsNumber", "PatientName",
+  "AccountId", "TransactionId", "CustomerId", "OrderId",
+]);
+
+// ---------------------------------------------------------------------------
 // Generic arity rules
 // Canonical source: docs/Knowledge-Bases/formal-type-system-spec.md Section 3
 // ---------------------------------------------------------------------------
@@ -631,9 +646,14 @@ class TypeChecker {
         // Record literal { field: value }
         if (method === "#record") return "Record";
 
-        // Existing: use flowReturnTypes
-        const knownReturn = this.flowReturnTypes.get(method);
-        if (knownReturn !== undefined) return knownReturn;
+        // Use flowReturnTypes only for plain calls (not method calls).
+        // A method call (receiver.method) may share a name with a user-defined flow,
+        // but its return type is determined by the library, not the flow declaration.
+        const isMethod = (node as AstNode & { callStyle?: string }).callStyle === "method";
+        if (!isMethod) {
+          const knownReturn = this.flowReturnTypes.get(method);
+          if (knownReturn !== undefined) return knownReturn;
+        }
 
         // Stdlib return type inference
         const receiverNode = node.children?.[0];
@@ -951,12 +971,16 @@ class TypeChecker {
       // ── Phase 8A: call argument count checking ────────────────────────────
       case "callExpr": {
         const flowName = node.value ?? "";
+        // Skip arity/type checking for method calls (receiver.method(args)).
+        // These are external library calls, not user-defined flow calls.
+        if ((node as AstNode & { callStyle?: string }).callStyle === "method") {
+          for (const child of node.children ?? []) this.walkNode(child);
+          return;
+        }
         const paramTypes = this.flowParamTypes.get(flowName);
         if (paramTypes !== undefined) {
-          // children[0] may be receiver — args start after receiver for method calls
-          const isMethodCall = node.children?.[0]?.kind === "identifier" ||
-            node.children?.[0]?.kind === "memberExpr";
-          const argNodes = isMethodCall ? (node.children ?? []).slice(1) : (node.children ?? []);
+          // Plain call: all children are arguments.
+          const argNodes = node.children ?? [];
 
           // LLN-TYPE-007: wrong argument count
           if (argNodes.length !== paramTypes.length) {
@@ -1287,12 +1311,14 @@ class TypeChecker {
     }
 
     // String + non-String = error
-    // Exception: if the non-String operand is an unknown/user-defined type (not in
+    // Exception 1: if the non-String operand is an unknown/user-defined type (not in
     // BUILT_IN_TYPES), skip TYPE-004 — TYPE-001 was already emitted for the unknown
     // type, and user types may legitimately support concatenation via toString().
+    // Exception 2: STRING_BASED_TYPES are domain identity types backed by String;
+    // they are valid string concatenation operands without explicit .toString().
     if (op === "+") {
       if (leftBase === "String" && rightBase !== "String" && rightBase !== "") {
-        if (BUILT_IN_TYPES.has(rightBase)) {
+        if (BUILT_IN_TYPES.has(rightBase) && !STRING_BASED_TYPES.has(rightBase)) {
           this.diagnostics.push(makeTCDiag(
             "LLN-TYPE-004",
             "InvalidBinaryOperation",
@@ -1304,7 +1330,7 @@ class TypeChecker {
         return;
       }
       if (rightBase === "String" && leftBase !== "String" && leftBase !== "") {
-        if (BUILT_IN_TYPES.has(leftBase)) {
+        if (BUILT_IN_TYPES.has(leftBase) && !STRING_BASED_TYPES.has(leftBase)) {
           this.diagnostics.push(makeTCDiag(
             "LLN-TYPE-004",
             "InvalidBinaryOperation",

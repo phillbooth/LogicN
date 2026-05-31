@@ -1,0 +1,107 @@
+/// @file: type-checker.lln
+/// @purpose: LogicN type checker written in LogicN — Stage B Milestone 4
+/// @milestone: Stage-B-Type-Checker
+/// @status: v0 — checks return type names against known built-ins
+
+record TypeDiagnostic {
+  code: String
+  name: String
+  severity: String
+  message: String
+  flowName: String
+  typeName: String
+}
+
+record TypeCheckResult {
+  diagnostics: Array<TypeDiagnostic>
+  checkedFlows: Int
+  errorCount: Int
+}
+
+pure flow knownBuiltInTypes() -> Array<String>
+contract {
+  intent { "All built-in LogicN type names valid without declaration." }
+}
+{
+  return [
+    "Bool", "Boolean", "Char", "Void",
+    "Int", "Int8", "Int16", "Int32", "Int64",
+    "Float", "Float16", "Float32", "Float64", "Double", "Decimal",
+    "String", "SecureString",
+    "Timestamp", "Duration",
+    "Byte", "Bytes",
+    "Array", "Set", "Map", "List",
+    "Option", "Result", "Unit",
+    "Tensor", "Vector", "Matrix",
+    "Money", "GBP", "USD", "EUR", "JPY",
+    "Request", "Response", "Context",
+    "Error", "ApiError", "ValidationError",
+    "Brand", "Email", "UserId", "PatientId",
+    "Actor", "TraceId",
+    "Auto"
+  ]
+}
+
+pure flow isKnownType(typeName: String, known: Array<String>) -> Bool
+contract {
+  intent { "True if typeName is empty or in the known types list. Ignores generics and qualifiers." }
+}
+{
+  let trimmed = typeName.trim()
+  if trimmed.isEmpty() {
+    return true
+  }
+  if known.contains(trimmed) {
+    return true
+  }
+  // Strip generic params: "Array<String>" → check "Array"
+  let ltIdx = trimmed.indexOf("<")
+  if ltIdx > 0 {
+    let base = trimmed.slice(0, ltIdx).trim()
+    return known.contains(base)
+  }
+  return false
+}
+
+pure flow makeDiag(typeName: String, flowName: String) -> TypeDiagnostic
+contract {
+  intent { "Build a LLN-TYPE-001 diagnostic for an unknown type annotation." }
+}
+{
+  return {
+    code: "LLN-TYPE-001",
+    name: "UnknownType",
+    severity: "error",
+    message: "Unknown type '" + typeName + "' — is it declared?",
+    flowName: flowName,
+    typeName: typeName
+  }
+}
+
+pure flow typeCheck(flows: Array<FlowDecl>) -> TypeCheckResult
+contract {
+  intent { "Stage B v0: emit LLN-TYPE-001 for unknown return type names in flow declarations." }
+}
+{
+  let known = knownBuiltInTypes()
+  mut diags: Array<TypeDiagnostic> = Array.empty()
+  mut pos: Int = 0
+
+  while pos < flows.length() {
+    let maybeFlow = flows.get(pos)
+    if maybeFlow.isSome() {
+      let flow = maybeFlow.unwrapOr({ name: "", returnType: "", qualifier: "flow", params: [], effects: [] })
+      let ret = flow.returnType
+      unless isKnownType(ret, known) {
+        diags = diags.append(makeDiag(ret, flow.name))
+      }
+    }
+    pos = pos + 1
+  }
+
+  return {
+    diagnostics: diags,
+    checkedFlows: flows.length(),
+    errorCount: diags.length()
+  }
+}

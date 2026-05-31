@@ -27,6 +27,7 @@
 
 import { type AstNode, type AstNodeKind, type FlowMeta, type SourceLocation } from "./parser.js";
 import { type EffectCheckResult } from "./effect-checker.js";
+import { GovernanceFlags, type GovernanceFlagsMask, type RuntimeManifest } from "./type-registry.js";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -45,6 +46,18 @@ export interface GovernanceVerifyResult {
   readonly diagnostics: readonly GovernanceDiagnostic[];
   readonly intentStatus: ReadonlyMap<string, "satisfied" | "missing" | "mismatch">;
   readonly proofObligations: readonly string[];
+  /**
+   * Per-flow GovernanceFlags bitmask. Consumers can fast-check properties without
+   * re-running the verifier: (flags & GovernanceFlags.RequiresAudit) !== 0.
+   * Phase 18F: populated by the verifier for all verified flows.
+   */
+  readonly governanceFlagsByFlow: ReadonlyMap<string, GovernanceFlagsMask>;
+  /**
+   * Per-flow RuntimeManifest. Empty in "dev" profile; populated in "production"
+   * and "deterministic" profiles.
+   * Phase 18F: minimal manifest — full manifest (with audit chain) is Phase 20.
+   */
+  readonly runtimeManifests: readonly RuntimeManifest[];
 }
 
 export type DeploymentProfile = "dev" | "production" | "deterministic" | "check-only";
@@ -171,6 +184,16 @@ export const LLN_GOV_012 = {
   name: "ContractSetRequirementNotMet",
   severity: "warning" as const,
   message: "Contract set requires audit.write but the flow does not declare it.",
+} as const;
+
+/** LLN-GOV-013: A pure flow calls a flow with effects. Pure flows cannot cross into governed boundaries. */
+export const LLN_GOV_013 = {
+  code: "LLN-GOV-013",
+  name: "BoundaryViolation",
+  severity: "error" as const,
+  message: "A pure flow calls a flow with effects. Pure flows cannot cross into governed boundaries.",
+  why: "Pure flows are proven effect-free. Calling an effectful flow breaks this proof.",
+  suggestedFix: "Change 'pure flow' to 'guarded flow' and declare the required effects.",
 } as const;
 
 /** LLN-GOV-005: policy { purpose "read-only" } but flow also uses database.write (or similar). */
@@ -380,6 +403,29 @@ function extractRequiredContextFields(flowNode: AstNode): Set<string> {
 }
 
 /**
+ * Extracts required context field names from a flow's contract.context block.
+ * Returns an array of field names (after stripping the "require:" prefix).
+ * Finds contractDecl children with value "context:block", then collects
+ * identifier children whose value starts with "require:".
+ */
+function extractRequiredContext(flowNode: AstNode): string[] {
+  const contractNode = (flowNode.children ?? []).find((c) => c.kind === "contractDecl");
+  if (contractNode === undefined) return [];
+
+  const result: string[] = [];
+  for (const child of contractNode.children ?? []) {
+    if (child.kind === "identifier" && child.value === "context:block") {
+      for (const rc of child.children ?? []) {
+        if (rc.kind === "identifier" && rc.value?.startsWith("require:")) {
+          result.push(rc.value.slice("require:".length));
+        }
+      }
+    }
+  }
+  return result;
+}
+
+/**
  * Checks whether a given context field name is referenced in the flow body.
  * Looks for any identifier node with value matching the field name, or
  * member access patterns like `context.actor` (memberExpr/callExpr with the field name).
@@ -409,6 +455,46 @@ function isContextFieldAccessed(flowNode: AstNode, fieldName: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 22C — Arena memory extraction
+// ---------------------------------------------------------------------------
+
+/**
+ * Extracts the arena memory limit (in MB) from a flow's contract.memory block.
+ *
+ * The memory block is stored in the AST as:
+ *   contractDecl
+ *     identifier { value: "memory:block" }
+ *       identifier { value: "decl:arena 8 mb" }
+ *
+ * Returns the arena size in megabytes, or undefined if no arena declaration exists.
+ */
+export function extractArenaLimitMB(flowNode: AstNode): number | undefined {
+  // Find the contractDecl child
+  const contractDecl = (flowNode.children ?? []).find((c) => c.kind === "contractDecl");
+  if (contractDecl === undefined) return undefined;
+
+  // Find the memory:block identifier child
+  const memoryBlock = (contractDecl.children ?? []).find(
+    (c) => c.kind === "identifier" && c.value === "memory:block",
+  );
+  if (memoryBlock === undefined) return undefined;
+
+  // Find a child with value starting "decl:arena"
+  for (const child of memoryBlock.children ?? []) {
+    if (child.kind === "identifier" && child.value?.startsWith("decl:arena")) {
+      // Parse the number from "decl:arena 8 mb" → 8
+      const match = child.value.match(/decl:arena\s+(\d+(?:\.\d+)?)\s*mb/i);
+      if (match?.[1] !== undefined) {
+        const mb = Number(match[1]);
+        return Number.isFinite(mb) ? mb : undefined;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
 // Verifier implementation
 // ---------------------------------------------------------------------------
 
@@ -417,6 +503,9 @@ class GovernanceVerifier {
   private readonly intentStatus = new Map<string, "satisfied" | "missing" | "mismatch">();
   private readonly proofObligations: string[] = [];
   private knownContractSets: Map<string, AstNode> = new Map();
+  private readonly governanceFlagsByFlow = new Map<string, GovernanceFlagsMask>();
+  private readonly runtimeManifests: RuntimeManifest[] = [];
+  private currentProfile: DeploymentProfile = "dev";
 
   verify(
     ast: AstNode,
@@ -424,6 +513,7 @@ class GovernanceVerifier {
     effectResults: readonly EffectCheckResult[],
     profile: DeploymentProfile,
   ): void {
+    this.currentProfile = profile;
     // Collect all contractSetDecl nodes from top-level program children
     this.knownContractSets = new Map();
     for (const child of ast.children ?? []) {
@@ -450,7 +540,7 @@ class GovernanceVerifier {
     for (const flow of flows) {
       const flowNode = findFlowNode(ast, flow.name);
       const effectResult = effectResults.find((r) => r.flowName === flow.name);
-      this.verifyFlow(flow, flowNode, effectResult, profile);
+      this.verifyFlow(flow, flowNode, effectResult, profile, flows, effectResults);
     }
   }
 
@@ -459,6 +549,8 @@ class GovernanceVerifier {
       diagnostics: [...this.diagnostics],
       intentStatus: new Map(this.intentStatus),
       proofObligations: [...this.proofObligations],
+      governanceFlagsByFlow: new Map(this.governanceFlagsByFlow),
+      runtimeManifests: [...this.runtimeManifests],
     };
   }
 
@@ -467,6 +559,8 @@ class GovernanceVerifier {
     flowNode: AstNode | undefined,
     effectResult: EffectCheckResult | undefined,
     profile: DeploymentProfile,
+    allFlows: readonly FlowMeta[] = [],
+    allEffectResults: readonly EffectCheckResult[] = [],
   ): void {
     const loc = flow.location;
 
@@ -697,6 +791,38 @@ class GovernanceVerifier {
       }
     }
 
+    // ── LLN-GOV-013: pure flow crossing into governed boundary ────────────
+    // If a pure flow body contains a callExpr whose name resolves to a flow
+    // in the program that is "guarded" or "secure", emit LLN-GOV-013.
+    if (flowNode !== undefined && flow.qualifier === "pure") {
+      const callNodes = findNodes(flowNode, "callExpr");
+      for (const callNode of callNodes) {
+        const calleeName = callNode.value ?? "";
+        if (calleeName === "") continue;
+        // Check if calleeName matches a guarded or secure flow in the program
+        const calleeEffectResult = allEffectResults.find(
+          (r) => r.flowName === calleeName,
+        );
+        // Also check the flows list for qualifier
+        const calleeFlowMeta = allFlows.find((f) => f.name === calleeName);
+        const isGoverned =
+          calleeFlowMeta?.qualifier === "guarded" ||
+          calleeFlowMeta?.qualifier === "secure" ||
+          (calleeEffectResult?.declaredEffects ?? []).length > 0;
+        if (isGoverned) {
+          this.diagnostics.push(makeGovDiag(
+            LLN_GOV_013.code,
+            LLN_GOV_013.name,
+            "error",
+            `Pure flow '${flow.name}' calls '${calleeName}' which is a governed or effectful flow. ` +
+            LLN_GOV_013.message,
+            callNode.location ?? loc,
+            LLN_GOV_013.suggestedFix,
+          ));
+        }
+      }
+    }
+
     // ── LLN-GOV-011/012: contract set references ──────────────────────────
     if (flowNode !== undefined) {
       // Find contractDecl child of the flow
@@ -741,6 +867,59 @@ class GovernanceVerifier {
             }
           }
         }
+      }
+    }
+
+    // ── Compute GovernanceFlags bitmask for this flow ─────────────────────
+    {
+      const fn = flowNode;
+      const hasAuditEff  = flow.declaredEffects.includes("audit.write");
+      const hasAuditCall = fn !== undefined && hasCallTo(fn, /^AuditLog\.write$/);
+      const hasDbWrite   = flow.declaredEffects.includes("database.write");
+      const deniedTargets = fn !== undefined ? extractDeniedTargets(fn) : [];
+      const hasRemoteDenied   = deniedTargets.some((t) => t === "remote.execution" || t === "remote");
+      const hasNetworkOutbound = flow.declaredEffects.includes("network.outbound");
+      const hasPII       = flow.declaredEffects.some((e) => e.startsWith("pii.") || e.startsWith("phi."));
+      const hasPolicy    = fn !== undefined && (fn.children ?? []).some((c) => c.kind === "policyDecl");
+      const hasIntent    = fn !== undefined && hasIntentDecl(fn);
+      const requiresIntent  = flow.qualifier === "secure" && !hasIntent;
+      const isProduction    = this.currentProfile === "production" || this.currentProfile === "deterministic";
+      const noErrors        = !this.diagnostics.some((d) => d.severity === "error");
+
+      const requiredContext = fn !== undefined ? extractRequiredContext(fn) : [];
+      const needsActor = requiredContext.some((f) => f === "actor" || f === "user_id");
+
+      const mask: GovernanceFlagsMask =
+        ((hasAuditEff || hasAuditCall || hasDbWrite) ? GovernanceFlags.RequiresAudit : GovernanceFlags.None) |
+        (hasRemoteDenied            ? GovernanceFlags.DenyRemote        : GovernanceFlags.None) |
+        (hasPII                     ? GovernanceFlags.ContainsPII        : GovernanceFlags.None) |
+        (hasNetworkOutbound         ? GovernanceFlags.AllowsNetwork      : GovernanceFlags.None) |
+        (hasPolicy                  ? GovernanceFlags.HasPolicy          : GovernanceFlags.None) |
+        (requiresIntent             ? GovernanceFlags.RequiresIntent     : GovernanceFlags.None) |
+        (isProduction && noErrors   ? GovernanceFlags.ProductionStrict   : GovernanceFlags.None) |
+        (needsActor                 ? GovernanceFlags.RequiresActor      : GovernanceFlags.None);
+
+      this.governanceFlagsByFlow.set(flow.name, mask);
+
+      // Generate RuntimeManifest for production/deterministic profiles
+      if (isProduction) {
+        const arenaLimitMb = fn !== undefined ? extractArenaLimitMB(fn) : undefined;
+        const manifest: RuntimeManifest = {
+          schemaVersion: "lln.runtime.manifest.v1",
+          flow: flow.name,
+          qualifier: flow.qualifier,
+          requiresAudit:    (mask & GovernanceFlags.RequiresAudit) !== 0,
+          deniesRemote:     (mask & GovernanceFlags.DenyRemote)    !== 0,
+          allowedEffects:   [...flow.declaredEffects].sort(),
+          requiredContext:  requiredContext,
+          computeTarget:    "best",   // Phase 20: extracted from compute block
+          governanceFlagsMask: mask,
+          proofObligations: this.proofObligations.filter((o) => o.includes(flow.name)),
+          policyPurposes:   fn !== undefined ? extractPolicyPurposes(fn) : [],
+          verified:         noErrors,
+          arenaLimitMb,
+        };
+        this.runtimeManifests.push(manifest);
       }
     }
   }

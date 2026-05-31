@@ -25,6 +25,7 @@ import { checkValueStates } from "./value-state-checker.js";
 import { checkEffects } from "./effect-checker.js";
 import { checkSourceEscapes } from "./source-escape-checker.js";
 import { verifyGovernance } from "./governance-verifier.js";
+import { checkNamingPolicy } from "./naming-policy-checker.js";
 import { buildAiGraph } from "./gir-emitter.js";
 import { EFFECT_REGISTRY } from "./effect-checker.js";
 import { canonicalHash, hashSource } from "./runtime/canonicalHash.js";
@@ -48,6 +49,9 @@ type CliMode =
   | "check-strict"
   | "build"
   | "build-production"
+  | "build-deterministic"
+  | "build-wasm-standalone"   // WASM/WASI module, no JS runtime required
+  | "build-wasm-hybrid"       // JS capability shell + WASM pure-flow core
   | "fix-effects"
   | "emit-ai-graph"
   | "verify-selfhost";
@@ -229,6 +233,25 @@ function compileFile(
     );
   }
 
+  // Phase 17A: Naming policy checker
+  // In check-strict and build-production modes, naming issues are informational (warnings).
+  // enforceNamingPolicy=true means they are shown but do not block the build on their own
+  // (the CLI counts errors; naming diagnostics are always emitted as warnings here).
+  const namingResult = checkNamingPolicy(parseResult.ast);
+  for (const d of namingResult.diagnostics) {
+    // In strict/production modes naming issues are emitted as warnings (informational).
+    // They do not become errors at the CLI level — enforceNamingPolicy affects runtime ok flag only.
+    pushDiag(
+      diagnostics,
+      d.code,
+      "warning",
+      d.message,
+      filePath,
+      d.location?.line,
+      d.location?.column,
+    );
+  }
+
   // Governance verification (for build-production mode)
   if (mode === "build-production") {
     const govResult = verifyGovernance(
@@ -403,9 +426,19 @@ function parseArgs(): { readonly mode: CliMode; readonly targetDir: string } {
     case "check":
       mode = flags.has("--strict") ? "check-strict" : "check";
       break;
-    case "build":
-      mode = flags.has("--production") ? "build-production" : "build";
+    case "build": {
+      const target = [...args.slice(1)].find((a) => a.startsWith("--target="))?.slice("--target=".length) ?? "";
+      if (flags.has("--production") || flags.has("--deterministic")) {
+        mode = flags.has("--deterministic") ? "build-deterministic" : "build-production";
+      } else if (target === "wasm-standalone" || flags.has("--target=wasm-standalone")) {
+        mode = "build-wasm-standalone";
+      } else if (target === "wasm-hybrid" || flags.has("--target=wasm-hybrid")) {
+        mode = "build-wasm-hybrid";
+      } else {
+        mode = "build";
+      }
       break;
+    }
     case "fix":
       if (!flags.has("--effects")) {
         process.stderr.write("[error] logicn fix requires --effects flag\n");
@@ -427,13 +460,16 @@ function parseArgs(): { readonly mode: CliMode; readonly targetDir: string } {
       process.stderr.write(
         "Usage: logicn <command> [options] [path]\n" +
         "Commands:\n" +
-        "  check              Check .lln files (dev mode)\n" +
-        "  check --strict     Check .lln files (strict mode)\n" +
-        "  build              Build .lln files\n" +
-        "  build --production Build with governance enforcement\n" +
-        "  fix --effects      Suggest missing effect declarations\n" +
-        "  emit --ai-graph    Emit build/semantic/logicn.ai.json\n" +
-        "  verify-selfhost    Verify deterministic (reproducible) build\n",
+        "  check                        Check .lln files (dev mode)\n" +
+        "  check --strict               Check .lln files (strict mode)\n" +
+        "  build                        Build .lln files (JS bootstrap)\n" +
+        "  build --production           Build with full governance enforcement\n" +
+        "  build --deterministic        Build with strict reproducibility checks\n" +
+        "  build --target=wasm-standalone  Emit WASM/WASI module (no JS required)\n" +
+        "  build --target=wasm-hybrid   Emit JS shell + WASM pure-flow core\n" +
+        "  fix --effects                Suggest missing effect declarations\n" +
+        "  emit --ai-graph              Emit build/semantic/logicn.ai.json\n" +
+        "  verify-selfhost              Verify deterministic (reproducible) build\n",
       );
       process.exit(1);
   }
@@ -484,6 +520,18 @@ function main(): void {
 
     if (result.aiGraphJson !== undefined) {
       allAiGraphParts.push(result.aiGraphJson);
+    }
+  }
+
+  // WASM target modes — emit a stub notice (full WAT emitter is Phase 19)
+  if (mode === "build-wasm-standalone" || mode === "build-wasm-hybrid") {
+    const targetName = mode === "build-wasm-standalone" ? "wasm-standalone" : "wasm-hybrid";
+    if (totalErrors === 0) {
+      process.stdout.write(
+        `[info] --target=${targetName}: governance checks passed. ` +
+        `WAT emitter is planned for Phase 19. ` +
+        `Output: build/wasm/${targetName}/\n`,
+      );
     }
   }
 

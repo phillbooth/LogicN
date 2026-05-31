@@ -1,9 +1,9 @@
 /// example: 119-effect-name-invalid
 /// level: 3
-/// concept: non-canonical effect name is rejected
-/// expected_diagnostics: LLN-EFFECT-004
+/// concept: broad alias effect name triggers LLN-EFFECT-005 warning
+/// expected_diagnostics: LLN-EFFECT-005
 /// test_status: stable
-/// ai_rule: Effect names must use the canonical dotted form (e.g. network.outbound, not network).
+/// ai_rule: Effect names must use the canonical dotted form (e.g. network.outbound, not network). Broad aliases like 'network' emit LLN-EFFECT-005 (BroadAliasUsed); unknown names emit LLN-EFFECT-004.
 
 guarded flow fetchRate(currency: String) -> FetchRateResult
 
@@ -13,11 +13,11 @@ contract {
   }
 
   intent {
-    "Fetch exchange rate — BUG: effect name 'network' is not canonical; must be 'network.outbound'."
+    "Fetch exchange rate — BUG: effect name 'network' is a broad alias; use 'network.outbound'."
   }
 
   effects {
-    network  // BUG: non-canonical — LLN-EFFECT-004 fires; use network.outbound
+    network  // BUG: broad alias — LLN-EFFECT-005 fires; use network.outbound
   }
 }
 {

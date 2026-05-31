@@ -9,6 +9,8 @@
 
 import { type AstNode, type AstNodeKind, type ParseDiagnostic, type FlowMeta, type SourceLocation } from "./parser.js";
 import { buildCallGraph, topoSort, detectCycle } from "@logicn/devtools-graph-algorithms";
+import { effectsToFlags, type EffectFlagsMask, EffectCheckerFlags, type EffectCheckerFlagsMask } from "./type-registry.js";
+import { getStdlibRequiredEffects } from "./stdlib-registry.js";
 
 // ---------------------------------------------------------------------------
 // FlowEffectSummary — per-flow effect inference summary
@@ -20,6 +22,20 @@ export interface FlowEffectSummary {
   readonly inferredEffects: readonly string[];
   readonly missingEffects: readonly string[];
   readonly extraEffects?: readonly string[];  // future: declared but not inferred
+  /**
+   * Bitset representation of declaredEffects for fast subset checks.
+   * Use effectsSubset(required, declaredEffectsMask) for O(1) checking.
+   * Phase 18E: populated by buildFlowEffectSummary().
+   */
+  readonly declaredEffectsMask: EffectFlagsMask;
+  readonly inferredEffectsMask: EffectFlagsMask;
+  readonly missingEffectsMask: EffectFlagsMask;
+  /**
+   * Effect-checker-proven properties for this flow.
+   * PureComputeCandidate, ParallelSafe, KernelFusionCandidate, etc.
+   * @see EffectCheckerFlags
+   */
+  readonly checkerFlags: EffectCheckerFlagsMask;
 }
 
 // ---------------------------------------------------------------------------
@@ -117,6 +133,7 @@ export function inferDirectEffectsForFlow(
 
 /**
  * Builds a FlowEffectSummary for a flow, comparing declared vs inferred effects.
+ * Computes EffectFlags bitset masks and EffectCheckerFlags properties.
  */
 export function buildFlowEffectSummary(
   flowNode: AstNode,
@@ -127,11 +144,40 @@ export function buildFlowEffectSummary(
   const declaredSet = new Set(declaredEffects);
   const missingEffects = inferredEffects.filter(e => !declaredSet.has(e));
 
+  const declaredEffectsMask = effectsToFlags(declaredEffects);
+  const inferredEffectsMask = effectsToFlags(inferredEffects);
+  const missingEffectsMask  = effectsToFlags(missingEffects);
+
+  // Compute EffectCheckerFlags: properties proven by effect analysis.
+  // PureComputeCandidate: pure qualifier AND no I/O effects inferred or declared.
+  const isPure = meta.qualifier === "pure";
+  const hasNoIO = inferredEffects.length === 0 && declaredEffects.length === 0;
+  const hasNoInferredIO = inferredEffects.length === 0;
+
+  const pureComputeCandidate = isPure && hasNoInferredIO;
+  const effectFree           = isPure && hasNoIO;
+  const parallelSafe         = isPure && hasNoInferredIO;  // pure + no inferred I/O → safe to parallelize
+  const kernelFusionCandidate = isPure && hasNoIO;          // truly effect-free → all ops can fuse
+  const readyForAPU          = pureComputeCandidate;        // purity is the APU prerequisite; shape check is type-checker's job
+  const readyForNPU          = pureComputeCandidate;        // purity prerequisite; tensor check is type-checker's job
+
+  const checkerFlags: EffectCheckerFlagsMask =
+    (pureComputeCandidate  ? EffectCheckerFlags.PureComputeCandidate  : EffectCheckerFlags.None) |
+    (parallelSafe          ? EffectCheckerFlags.ParallelSafe          : EffectCheckerFlags.None) |
+    (kernelFusionCandidate ? EffectCheckerFlags.KernelFusionCandidate : EffectCheckerFlags.None) |
+    (effectFree            ? EffectCheckerFlags.EffectFree            : EffectCheckerFlags.None) |
+    (readyForAPU           ? EffectCheckerFlags.ReadyForAPU           : EffectCheckerFlags.None) |
+    (readyForNPU           ? EffectCheckerFlags.ReadyForNPU           : EffectCheckerFlags.None);
+
   return {
     flowName: meta.name,
     declaredEffects,
     inferredEffects,
     missingEffects,
+    declaredEffectsMask,
+    inferredEffectsMask,
+    missingEffectsMask,
+    checkerFlags,
   };
 }
 
@@ -161,7 +207,16 @@ export interface EffectCheckResult {
   readonly declaredEffects: readonly string[];
   readonly observedEffects: readonly string[];
   readonly diagnostics: readonly EffectDiagnostic[];
+  /** Effect-checker-proven properties. See EffectCheckerFlags. */
+  readonly checkerFlags: EffectCheckerFlagsMask;
 }
+
+/**
+ * Effect checker run mode.
+ * "development" — warn on missing effects (friendly for development).
+ * "production"  — error on missing, unknown, or broad-alias effects.
+ */
+export type EffectCheckerMode = "development" | "production";
 
 const CANONICAL_EFFECTS = new Set([
   "database.read", "database.write",
@@ -205,6 +260,12 @@ const EFFECT_NAME_ALIASES: ReadonlyMap<string, string> = new Map([
 // Known effect-producing call patterns
 // ---------------------------------------------------------------------------
 
+// Phase 19 (legacy): regex-based call pattern matching for effect inference.
+// Being replaced by STDLIB_CAPABILITY_MAP AST-based lookups (Phase 19A, LLN-STDLIB-001).
+// These patterns remain for backward compatibility with non-stdlib call patterns
+// (e.g. *DB.insert, *Payment.charge) that are not in STDLIB_CAPABILITY_MAP.
+// Phase 20: migrate *DB.* and *Payment.* patterns to a structured registry.
+// Do not add new regex patterns here — add to STDLIB_CAPABILITY_MAP instead.
 const EFFECT_CALL_PATTERNS: ReadonlyMap<RegExp, string> = new Map([
   // Database
   [/\b\w+DB\.insert\b/, "database.write"],
@@ -249,6 +310,13 @@ const EFFECT_CALL_PATTERNS: ReadonlyMap<RegExp, string> = new Map([
   [/\bNative\w+\.\w+/, "unsafe.native"],
 ]);
 
+/**
+ * Tracks the number of legacy regex patterns remaining in EFFECT_CALL_PATTERNS.
+ * Used by tests to monitor migration progress toward STDLIB_CAPABILITY_MAP.
+ * Target: 0 (all patterns migrated). Phase 20 goal.
+ */
+export const LEGACY_EFFECT_CALL_PATTERNS_COUNT = EFFECT_CALL_PATTERNS.size;
+
 const PURE_FORBIDDEN_EFFECTS = new Set([
   "database.read", "database.write",
   "network.outbound", "network.external", "network.inbound", "network.internal",
@@ -289,6 +357,7 @@ function buildContractEffectsBlock(effects: readonly string[]): string {
 export function checkEffects(
   flows: readonly FlowMeta[],
   ast: AstNode,
+  mode: EffectCheckerMode = "production",
 ): readonly EffectCheckResult[] {
   const effectfulFlows = new Set(
     flows
@@ -297,7 +366,7 @@ export function checkEffects(
   );
   const callGraph = buildFlowCallGraph(flows, ast);
 
-  return flows.map((flow) => checkFlowEffects(flow, ast, flows, callGraph, effectfulFlows));
+  return flows.map((flow) => checkFlowEffects(flow, ast, flows, callGraph, effectfulFlows, mode));
 }
 
 export function checkFlowEffects(
@@ -310,6 +379,7 @@ export function checkFlowEffects(
       .filter((candidate) => candidate.qualifier !== "pure" && candidate.declaredEffects.length > 0)
       .map((candidate) => candidate.name),
   ),
+  mode: EffectCheckerMode = "production",
 ): EffectCheckResult {
   const diagnostics: EffectDiagnostic[] = [];
   const flowNode = findFlowNode(ast, flow.name);
@@ -417,12 +487,33 @@ export function checkFlowEffects(
     }
   }
 
+  // LLN-STDLIB-001: check stdlib calls against STDLIB_CAPABILITY_MAP
+  if (flowNode !== undefined) {
+    for (const diag of checkStdlibEffects(flow, flowNode, mode)) {
+      diagnostics.push(diag);
+    }
+  }
+
+  // Compute EffectCheckerFlags for this flow
+  const isPure = flow.qualifier === "pure";
+  const hasNoInferredIO = observedEffects.size === 0;
+  const hasNoIO = hasNoInferredIO && flow.declaredEffects.length === 0;
+  const pureComputeCandidate  = isPure && hasNoInferredIO;
+  const checkerFlags: EffectCheckerFlagsMask =
+    (pureComputeCandidate     ? EffectCheckerFlags.PureComputeCandidate  : EffectCheckerFlags.None) |
+    (pureComputeCandidate     ? EffectCheckerFlags.ParallelSafe          : EffectCheckerFlags.None) |
+    (isPure && hasNoIO        ? EffectCheckerFlags.KernelFusionCandidate : EffectCheckerFlags.None) |
+    (isPure && hasNoIO        ? EffectCheckerFlags.EffectFree            : EffectCheckerFlags.None) |
+    (pureComputeCandidate     ? EffectCheckerFlags.ReadyForAPU           : EffectCheckerFlags.None) |
+    (pureComputeCandidate     ? EffectCheckerFlags.ReadyForNPU           : EffectCheckerFlags.None);
+
   return {
     flowName: flow.name,
     qualifier: flow.qualifier,
     declaredEffects: flow.declaredEffects,
     observedEffects: [...observedEffects],
     diagnostics,
+    checkerFlags,
   };
 }
 
@@ -430,19 +521,41 @@ export function checkFlowEffects(
 // Validation helpers
 // ---------------------------------------------------------------------------
 
+// Broad aliases are the short forms without a dot-path qualifier.
+// Using these emits LLN-EFFECT-005 (BroadAliasUsed — warning, not error).
+// Other non-canonical names emit LLN-EFFECT-004 (error).
+const BROAD_EFFECT_ALIASES: ReadonlySet<string> = new Set([
+  "network", "database", "filesystem", "secret", "ai", "audit", "pii", "phi",
+]);
+
 function validateDeclaredEffectNames(flow: FlowMeta, diagnostics: EffectDiagnostic[]): void {
   for (const effect of flow.declaredEffects) {
     const canonical = EFFECT_NAME_ALIASES.get(effect);
     if (canonical !== undefined) {
-      diagnostics.push({
-        code: "LLN-EFFECT-004",
-        name: "NON_CANONICAL_EFFECT",
-        severity: "error",
-        message: `Effect "${effect}" is not a canonical effect name. Use "${canonical}".`,
-        location: flow.location,
-        suggestedFix: `Replace "${effect}" with "${canonical}" in the effects declaration.`,
-        suggestedCode: canonical,
-      });
+      if (BROAD_EFFECT_ALIASES.has(effect)) {
+        // LLN-EFFECT-005: broad alias — warn, not error; developer should use canonical form
+        diagnostics.push({
+          code: "LLN-EFFECT-005",
+          name: "BroadAliasUsed",
+          severity: "warning",
+          message: `Effect "${effect}" is a broad alias. Use the canonical name "${canonical}" to precisely declare authority.`,
+          location: flow.location,
+          suggestedFix: `Replace "${effect}" with "${canonical}" in the effects declaration.`,
+          suggestedCode: canonical,
+          why: `Broad aliases are ambiguous and may grant more authority than intended. "${effect}" maps to "${canonical}" but a future LogicN version may expand the meaning.`,
+        });
+      } else {
+        // Other alias variants (e.g. "http.get" → "network.outbound") — non-canonical, error
+        diagnostics.push({
+          code: "LLN-EFFECT-004",
+          name: "NON_CANONICAL_EFFECT",
+          severity: "error",
+          message: `Effect "${effect}" is not a canonical effect name. Use "${canonical}".`,
+          location: flow.location,
+          suggestedFix: `Replace "${effect}" with "${canonical}" in the effects declaration.`,
+          suggestedCode: canonical,
+        });
+      }
     } else if (!CANONICAL_EFFECTS.has(effect)) {
       diagnostics.push({
         code: "LLN-EFFECT-004",
@@ -498,6 +611,69 @@ function validateInterFlowPropagation(
       }
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// LLN-STDLIB-001: stdlib call requires undeclared effect
+// ---------------------------------------------------------------------------
+
+/**
+ * Walks the AST for callExpr nodes in a flow's body.
+ * For each call, reconstructs the full qualified name (receiver.method or method)
+ * and looks it up in STDLIB_CAPABILITY_MAP.
+ * If found AND any required effect is NOT in flow.declaredEffects → emit LLN-STDLIB-001.
+ *
+ * Severity: "error" in production mode, "warning" in development mode.
+ */
+export function checkStdlibEffects(
+  flow: FlowMeta,
+  flowNode: AstNode,
+  mode: EffectCheckerMode = "production",
+): readonly EffectDiagnostic[] {
+  const diagnostics: EffectDiagnostic[] = [];
+  const declared = new Set(flow.declaredEffects);
+  const severity: "error" | "warning" = mode === "production" ? "error" : "warning";
+
+  function walk(node: AstNode): void {
+    if (node.kind === "callExpr") {
+      const methodName = node.value ?? "";
+      const receiver = node.children?.[0];
+      const receiverName =
+        receiver?.kind === "identifier" ? (receiver.value ?? "") : "";
+      const fullName =
+        receiverName !== "" ? `${receiverName}.${methodName}` : methodName;
+
+      // Check full qualified name first, then plain method name as fallback
+      const namesToCheck: string[] = fullName !== methodName
+        ? [fullName, methodName]
+        : [methodName];
+
+      for (const name of namesToCheck) {
+        const requiredEffects = getStdlibRequiredEffects(name);
+        if (requiredEffects === undefined) continue;  // not in stdlib map
+
+        for (const requiredEffect of requiredEffects) {
+          if (requiredEffect === "") continue;  // pure stdlib call — no effect needed
+          if (!declared.has(requiredEffect)) {
+            diagnostics.push({
+              code: "LLN-STDLIB-001",
+              name: "StdlibEffectNotDeclared",
+              severity,
+              message: `${name} requires ${requiredEffect} which is not declared in the contract.`,
+              ...(node.location !== undefined ? { location: node.location } : {}),
+              suggestedFix: `Add ${requiredEffect} to the contract: contract { effects { ${requiredEffect} } }`,
+              suggestedCode: requiredEffect,
+            });
+          }
+        }
+        break;  // matched the first name that exists in the map; don't double-report
+      }
+    }
+    for (const child of node.children ?? []) walk(child);
+  }
+
+  walk(flowNode);
+  return diagnostics;
 }
 
 function collectTransitiveCalledEffects(

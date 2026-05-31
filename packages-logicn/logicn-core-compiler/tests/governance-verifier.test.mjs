@@ -4,6 +4,7 @@ import {
   parseProgram,
   checkEffects,
   verifyGovernance,
+  extractArenaLimitMB,
   LLN_GOV_003,
   LLN_CONTEXT_001,
   LLN_GOV_011,
@@ -662,6 +663,62 @@ describe("Governance verifier — LLN-GOV-009 privileged flow missing capability
     assert.equal(LLN_GOV_009.code, "LLN-GOV-009");
     assert.equal(LLN_GOV_009.name, "PrivilegedFlowMissingCapability");
     assert.equal(LLN_GOV_009.severity, "warning");
+  });
+});
+
+// =============================================================================
+// Phase 22C — extractArenaLimitMB
+// =============================================================================
+
+describe("extractArenaLimitMB: contract.memory arena extraction", () => {
+  it("returns undefined for a node with no contractDecl", () => {
+    // Minimal AST node with no children
+    const node = { kind: "flowDecl", value: "test", children: [] };
+    assert.equal(extractArenaLimitMB(node), undefined);
+  });
+
+  it("returns undefined for contractDecl with no memory:block", () => {
+    const node = {
+      kind: "flowDecl",
+      value: "test",
+      children: [
+        {
+          kind: "contractDecl",
+          value: undefined,
+          children: [
+            { kind: "identifier", value: "effects:block", children: [] },
+          ],
+        },
+      ],
+    };
+    assert.equal(extractArenaLimitMB(node), undefined);
+  });
+
+  it("returns 8 for contract { memory { arena 8 mb } } structure", () => {
+    const node = {
+      kind: "flowDecl",
+      value: "test",
+      children: [
+        {
+          kind: "contractDecl",
+          value: undefined,
+          children: [
+            {
+              kind: "identifier",
+              value: "memory:block",
+              children: [
+                {
+                  kind: "identifier",
+                  value: "decl:arena 8 mb",
+                  children: [],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    assert.equal(extractArenaLimitMB(node), 8);
   });
 });
 

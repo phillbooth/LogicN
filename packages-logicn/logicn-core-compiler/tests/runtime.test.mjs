@@ -55,3 +55,75 @@ flow bad() -> UnknownType {
     assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code === "LLN-TYPE-001"));
   });
 });
+
+describe("Runtime pipeline — naming policy", () => {
+  it("Get_User flow with enforceNamingPolicy:false does not cause run failure", async () => {
+    const result = await run(
+      `flow Get_User() -> String { return "ok" }`,
+      "test.lln",
+      "Get_User",
+      new Map(),
+      { enforceNamingPolicy: false },
+    );
+    assert.equal(result.ok, true);
+  });
+
+  it("Get_User flow with enforceNamingPolicy:true causes ok=false", async () => {
+    const result = await run(
+      `flow Get_User() -> String { return "ok" }`,
+      "test.lln",
+      "Get_User",
+      new Map(),
+      { enforceNamingPolicy: true },
+    );
+    assert.equal(result.ok, false);
+    assert.ok(
+      result.namingDiagnostics !== undefined && result.namingDiagnostics.length > 0,
+      "Should have naming diagnostics when enforcing",
+    );
+  });
+
+  it("LLN-STYLE-001 fires for PascalCase flow name Get_User", async () => {
+    const result = await run(
+      `flow Get_User() -> String { return "ok" }`,
+      "test.lln",
+      "Get_User",
+      new Map(),
+      { enforceNamingPolicy: false },
+    );
+    assert.ok(
+      result.namingDiagnostics !== undefined &&
+        result.namingDiagnostics.some((d) => d.code === "LLN-STYLE-001"),
+      "Expected LLN-STYLE-001 for Get_User",
+    );
+  });
+
+  it("LLN-STYLE-002 fires for lowercase type name userId", async () => {
+    const result = await run(
+      `type userId = String\nflow getUser() -> String { return "ok" }`,
+      "test.lln",
+      "getUser",
+      new Map(),
+      { enforceNamingPolicy: false },
+    );
+    assert.ok(
+      result.namingDiagnostics !== undefined &&
+        result.namingDiagnostics.some((d) => d.code === "LLN-STYLE-002"),
+      "Expected LLN-STYLE-002 for userId type",
+    );
+  });
+
+  it("namingDiagnostics field is present in RuntimeResult", async () => {
+    const result = await run(
+      `pure flow greet() -> String { return "hello" }`,
+      "test.lln",
+      "greet",
+      new Map(),
+      { enforceNamingPolicy: false },
+    );
+    assert.ok(
+      Object.prototype.hasOwnProperty.call(result, "namingDiagnostics"),
+      "RuntimeResult should always include namingDiagnostics field",
+    );
+  });
+});

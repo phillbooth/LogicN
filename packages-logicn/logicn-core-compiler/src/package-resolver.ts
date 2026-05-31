@@ -16,6 +16,21 @@ import { join } from "node:path";
 // Public types
 // ---------------------------------------------------------------------------
 
+export interface PackageTargets {
+  readonly cpu?: string;
+  readonly wasm?: string;
+  readonly npu?: string;
+  readonly gpu?: string;
+  readonly apu?: string;
+  readonly photonic?: string;
+}
+
+export interface PackageCompute {
+  readonly tensor_shapes?: readonly string[];
+  readonly supports?: readonly string[];
+  readonly photonic_compatible?: boolean;
+}
+
 export interface PackageManifest {
   readonly name: string;
   readonly version: string;
@@ -26,6 +41,232 @@ export interface PackageManifest {
   };
   readonly effects?: readonly string[];
   readonly capabilities?: readonly string[];
+  /** SHA-256 content-addressable hash — identity is content, not name+version. */
+  readonly hash?: string;
+  /** Ed25519 or similar package signature — proves origin, prevents tampering. */
+  readonly signature?: string;
+  /** Source registry URL — auditable origin for every resolved package. */
+  readonly registry?: string;
+  /**
+   * Install script policy — defaults to "deny".
+   * Packages MUST NOT run code during installation unless the project's
+   * resolver policy explicitly allows signed install scripts.
+   */
+  readonly installScript?: "deny" | "allow";
+  /** Target variants — resolver selects based on project policy and availability. */
+  readonly targets?: PackageTargets;
+  /**
+   * Compute compatibility metadata.
+   * Passed through to SemanticGraph and ExecutionPlanner — resolver does not
+   * plan hardware placement.
+   */
+  readonly compute?: PackageCompute;
+}
+
+// ---------------------------------------------------------------------------
+// Package resolver diagnostic types
+// ---------------------------------------------------------------------------
+
+export interface PackageResolverDiagnostic {
+  readonly code: string;
+  readonly name: string;
+  readonly severity: "error" | "warning";
+  readonly message: string;
+  readonly packageName?: string;
+  readonly suggestedFix?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Capability expansion check
+//
+// Detects when a new package version declares more capabilities than the
+// lockfile snapshot — a breaking security change that must be reviewed.
+// Fires LLN-PKG-001.
+// ---------------------------------------------------------------------------
+
+export interface CapabilityExpansionResult {
+  readonly expanded: boolean;
+  readonly addedCapabilities: readonly string[];
+  readonly diagnostics: readonly PackageResolverDiagnostic[];
+}
+
+/**
+ * Compares a resolved manifest against the lockfile snapshot.
+ * Returns LLN-PKG-001 if the new manifest declares capabilities
+ * not present in the lockfile.
+ */
+export function checkPackageCapabilityExpansion(
+  resolved: PackageManifest,
+  lockfileCapabilities: readonly string[],
+): CapabilityExpansionResult {
+  const lockfileSet = new Set(lockfileCapabilities);
+  const added = (resolved.capabilities ?? []).filter((c) => !lockfileSet.has(c));
+
+  if (added.length === 0) {
+    return { expanded: false, addedCapabilities: [], diagnostics: [] };
+  }
+
+  return {
+    expanded: true,
+    addedCapabilities: added,
+    diagnostics: [{
+      code: "LLN-PKG-001",
+      name: "CapabilityExpanded",
+      severity: "error",
+      packageName: resolved.name,
+      message: `Package '${resolved.name}@${resolved.version}' declares new capabilities not present in the lockfile: ${added.join(", ")}. This is a breaking security change — review and re-approve.`,
+      suggestedFix: "Update the lockfile after explicitly reviewing the new capability declarations.",
+    }],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Install script check
+//
+// All packages default to "deny" for install scripts.
+// Fires LLN-PKG-004 if installScript is "allow" (or any non-deny value).
+// ---------------------------------------------------------------------------
+
+/**
+ * Checks the install script policy for a package.
+ * Default is deny — packages must not run code during installation.
+ */
+export function checkInstallScript(manifest: PackageManifest): readonly PackageResolverDiagnostic[] {
+  if (manifest.installScript !== undefined && manifest.installScript !== "deny") {
+    return [{
+      code: "LLN-PKG-004",
+      name: "InstallScriptDenied",
+      severity: "error",
+      packageName: manifest.name,
+      message: `Package '${manifest.name}' attempts to declare an install script. LogicN denies install scripts by default. Only explicitly approved, signed packages may run install-time code.`,
+      suggestedFix: "Remove the installScript declaration, or configure an explicit resolver policy with signature verification.",
+    }];
+  }
+  return [];
+}
+
+// ---------------------------------------------------------------------------
+// Package provenance check
+//
+// Warns when a package lacks a hash or signature.
+// Fires LLN-PKG-003 (missing hash) and LLN-PKG-005 (missing signature).
+// ---------------------------------------------------------------------------
+
+/**
+ * Checks that a package manifest has both a content hash and a signature.
+ * Missing hash → LLN-PKG-003. Missing signature → LLN-PKG-005.
+ */
+export function checkPackageProvenance(manifest: PackageManifest): readonly PackageResolverDiagnostic[] {
+  const diags: PackageResolverDiagnostic[] = [];
+
+  if (!manifest.hash || !manifest.hash.startsWith("sha256:")) {
+    diags.push({
+      code: "LLN-PKG-003",
+      name: "MissingHash",
+      severity: "warning",
+      packageName: manifest.name,
+      message: `Package '${manifest.name}@${manifest.version}' has no content-addressable hash. Without a hash, tamper detection and reproducible builds are not possible.`,
+      suggestedFix: "Add 'hash: sha256:<hex>' to the package manifest. Run 'logicn package hash' to generate it.",
+    });
+  }
+
+  if (!manifest.signature) {
+    diags.push({
+      code: "LLN-PKG-005",
+      name: "MissingSignature",
+      severity: "warning",
+      packageName: manifest.name,
+      message: `Package '${manifest.name}@${manifest.version}' has no signature. Origin cannot be cryptographically verified.`,
+      suggestedFix: "Sign the package with 'logicn package sign' and add 'signature:' to the manifest.",
+    });
+  }
+
+  return diags;
+}
+
+// ---------------------------------------------------------------------------
+// Resolver report
+//
+// Generates structured output for AI tooling, CI, and audit.
+// ---------------------------------------------------------------------------
+
+export interface ResolverReport {
+  readonly schemaVersion: "lln.resolver.report.v1";
+  readonly generatedAt: string;
+  readonly packages: readonly ResolvedPackageEntry[];
+  readonly capabilities: readonly string[];
+  readonly targets: readonly string[];
+  readonly diagnostics: readonly PackageResolverDiagnostic[];
+}
+
+export interface ResolvedPackageEntry {
+  readonly name: string;
+  readonly version: string;
+  readonly hash: string | undefined;
+  readonly trusted: boolean;
+  readonly effects: readonly string[];
+  readonly capabilities: readonly string[];
+  readonly targets: readonly string[];
+  readonly photonic_compatible: boolean;
+}
+
+/**
+ * Generates a resolver report from a list of resolved manifests.
+ * Used by AI tooling, CI, and audit systems.
+ *
+ * The report is hardware-neutral: it lists target availability but does not
+ * make hardware placement decisions. The SemanticGraph and ExecutionPlanner
+ * decide which target to use for each flow.
+ */
+export function getResolverReport(
+  manifests: readonly PackageManifest[],
+  generatedAt: string,
+): ResolverReport {
+  const allCapabilities = new Set<string>();
+  const allTargets = new Set<string>();
+  const allDiagnostics: PackageResolverDiagnostic[] = [];
+
+  const packages: ResolvedPackageEntry[] = manifests.map((m) => {
+    for (const cap of m.capabilities ?? []) allCapabilities.add(cap);
+
+    const targets: string[] = [];
+    if (m.targets) {
+      for (const key of ["cpu", "wasm", "npu", "gpu", "apu", "photonic"] as const) {
+        if (m.targets[key] !== undefined) {
+          targets.push(key);
+          allTargets.add(key);
+        }
+      }
+    }
+    if (targets.length === 0) {
+      targets.push("cpu"); // default
+      allTargets.add("cpu");
+    }
+
+    // Run provenance and install script checks
+    allDiagnostics.push(...checkPackageProvenance(m));
+    allDiagnostics.push(...checkInstallScript(m));
+
+    return {
+      name: m.name,
+      version: m.version,
+      hash: m.hash,
+      trusted: !!m.hash && !!m.signature,
+      effects: m.effects ?? [],
+      capabilities: m.capabilities ?? [],
+      targets,
+      photonic_compatible: m.compute?.photonic_compatible ?? false,
+    };
+  });
+
+  return {
+    schemaVersion: "lln.resolver.report.v1",
+    generatedAt,
+    packages,
+    capabilities: [...allCapabilities].sort(),
+    targets: [...allTargets].sort(),
+    diagnostics: allDiagnostics,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -211,12 +452,20 @@ function asStringArray(val: unknown): readonly string[] {
   return [];
 }
 
+function asSubObject(val: unknown): Record<string, unknown> {
+  if (val !== null && typeof val === "object" && !Array.isArray(val)) {
+    return val as Record<string, unknown>;
+  }
+  return {};
+}
+
 function parseManifest(yaml: ParsedYaml): PackageManifest | undefined {
   const name = typeof yaml["name"] === "string" ? yaml["name"] : "";
   const version = typeof yaml["version"] === "string" ? yaml["version"] : "";
 
   if (name === "" || version === "") return undefined;
 
+  // exports: { types, flows, events }
   const exportsRaw = yaml["exports"];
   let types: readonly string[] = [];
   let flows: readonly string[] = [];
@@ -232,12 +481,60 @@ function parseManifest(yaml: ParsedYaml): PackageManifest | undefined {
   const effects = asStringArray(yaml["effects"]);
   const capabilities = asStringArray(yaml["capabilities"]);
 
+  // Provenance fields
+  const hash = typeof yaml["hash"] === "string" ? yaml["hash"] : undefined;
+  const signature = typeof yaml["signature"] === "string" ? yaml["signature"] : undefined;
+  const registry = typeof yaml["registry"] === "string" ? yaml["registry"] : undefined;
+
+  // Install script policy — explicit "allow" only; everything else is deny
+  const rawInstallScript = typeof yaml["installScript"] === "string" ? yaml["installScript"] : undefined;
+  const installScript: "deny" | "allow" | undefined =
+    rawInstallScript === "allow" ? "allow" : rawInstallScript === "deny" ? "deny" : undefined;
+
+  // targets: { cpu, wasm, npu, gpu, apu, photonic }
+  let targets: PackageTargets | undefined;
+  const targetsRaw = asSubObject(yaml["targets"]);
+  const TARGET_KEYS = ["cpu", "wasm", "npu", "gpu", "apu", "photonic"] as const;
+  const targetEntries: Partial<Record<typeof TARGET_KEYS[number], string>> = {};
+  let hasTargets = false;
+  for (const key of TARGET_KEYS) {
+    const sub = asSubObject(targetsRaw[key]);
+    const path = typeof sub["path"] === "string" ? sub["path"] : undefined;
+    if (path !== undefined) {
+      targetEntries[key] = path;
+      hasTargets = true;
+    }
+  }
+  if (hasTargets) targets = targetEntries as PackageTargets;
+
+  // compute: { tensor_shapes, supports, photonic_compatible }
+  let compute: PackageCompute | undefined;
+  const computeRaw = asSubObject(yaml["compute"]);
+  if (Object.keys(computeRaw).length > 0) {
+    const tensor_shapes = asStringArray(computeRaw["tensor_shapes"]);
+    const supports = asStringArray(computeRaw["supports"]);
+    const pc = computeRaw["photonic_compatible"];
+    const photonic_compatible =
+      pc === true || pc === "true" ? true : pc === false || pc === "false" ? false : undefined;
+    compute = {
+      ...(tensor_shapes.length > 0 ? { tensor_shapes } : {}),
+      ...(supports.length > 0 ? { supports } : {}),
+      ...(photonic_compatible !== undefined ? { photonic_compatible } : {}),
+    };
+  }
+
   return {
     name,
     version,
     exports: { types, flows, events },
     effects,
     capabilities,
+    ...(hash !== undefined ? { hash } : {}),
+    ...(signature !== undefined ? { signature } : {}),
+    ...(registry !== undefined ? { registry } : {}),
+    ...(installScript !== undefined ? { installScript } : {}),
+    ...(targets !== undefined ? { targets } : {}),
+    ...(compute !== undefined ? { compute } : {}),
   };
 }
 

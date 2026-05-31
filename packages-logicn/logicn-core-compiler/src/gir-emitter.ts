@@ -8,6 +8,7 @@ import { type EffectCheckResult } from "./effect-checker.js";
 import { SemanticGraphBuilder, type SemanticGraph } from "@logicn/devtools-graph-algorithms";
 import { buildExecutionPlan as _buildExecutionPlanImpl } from "./runtime/executionPlan.js";
 import type { PassiveExecutionPlan } from "./runtime/executionPlan.js";
+import { effectsToFlags } from "./type-registry.js";
 
 export interface GIREffect {
   readonly declared: readonly string[];
@@ -50,11 +51,22 @@ export interface GIRTensorInfo {
   /** Shape descriptor, e.g. "[Batch, 768]" or "DynamicShape". */
   readonly shape: string;
   /**
-   * True when the element type and shape are known to be compatible with
-   * photonic target bridges. Float16/Float32 with concrete or dynamic shapes
-   * are compatible. Int8 (quantized) requires explicit dequantization.
+   * True when the element type and shape are compatible with photonic bridges.
+   * Float16/Float32 with concrete or dynamic shapes. Int8 requires dequantize.
    */
   readonly photonic_compatible: boolean;
+  /** True when element-wise ops can use WASM SIMD (Float32, Float64, Int8 — fixed or dynamic shape). */
+  readonly wasmSimdCompatible: boolean;
+  /** True when element type and shape are compatible with GPU shader execution (Float32/Float16, any shape). */
+  readonly gpuCompatible: boolean;
+  /** True when deterministic + fixed shape + Float32 or Int8 → suitable for NPU kernel. */
+  readonly npuCompatible: boolean;
+  /** True when readonly + pure + fixed shape → APU shared-memory zero-copy candidate. */
+  readonly apuSharedMemoryCandidate: boolean;
+  /** True when all dimensions are statically known integers (no Batch, Seq, Dynamic). */
+  readonly fixedShape: boolean;
+  /** True when element type is Int8 — requires explicit dequantize() before mixing with Float32. */
+  readonly quantized: boolean;
 }
 
 export interface GIRTargetAffinity {
@@ -89,6 +101,12 @@ export interface GIRFlow {
     readonly hasSensitivityQualifiers: boolean;
     readonly effectCount: number;
   };
+  /**
+   * EffectFlags bitmask of all declared effects. Enables O(1) subset checks
+   * at runtime: (allowed & required) === required.
+   * Populated from type-registry EffectFlags in Phase 18G.
+   */
+  readonly allowedEffectsMask: number;
 }
 
 export interface GIRProgram {
@@ -97,6 +115,17 @@ export interface GIRProgram {
   readonly flows: readonly GIRFlow[];
   /** SHA-256 of canonical GIR (set after emission). */
   readonly girHash?: string;
+  /**
+   * SHA-256 of the source text that produced this GIR.
+   * Links GIR back to its source for audit chain and deterministic verification.
+   */
+  readonly sourceHash?: string;
+  /**
+   * Names of flows that are API/route entry points (annotated with route declarations
+   * or referenced by the route registry). Empty when not yet resolved.
+   * Phase 18G: populated from routeDecl nodes at program scope.
+   */
+  readonly entryPoints: readonly string[];
 }
 
 export interface GIREmitResult {
@@ -190,8 +219,26 @@ export function emitGIR(
   ast: AstNode,
   flows: readonly FlowMeta[],
   effectResults: readonly EffectCheckResult[],
+  opts: { sourceHash?: string } = {},
 ): GIREmitResult {
   const resultByFlow = new Map(effectResults.map((result) => [result.flowName, result]));
+
+  // Collect entry points from routeDecl nodes at program scope
+  const entryPoints: string[] = [];
+  for (const child of ast.children ?? []) {
+    if (child.kind === "routeDecl" && child.value !== undefined) {
+      // routeDecl.value encodes method:path; extract the flow name from children
+      const flowChild = (child.children ?? []).find(
+        (c) => c.kind === "identifier" && c.value?.startsWith("flow:"),
+      );
+      if (flowChild?.value !== undefined) {
+        const flowName = flowChild.value.slice("flow:".length);
+        if (flowName !== "" && !entryPoints.includes(flowName)) {
+          entryPoints.push(flowName);
+        }
+      }
+    }
+  }
 
   const girFlows = flows.map((flow) => {
     const flowNode = findFlowNode(ast, flow.name);
@@ -225,6 +272,8 @@ export function emitGIR(
 
     const contractMeta = flowNode === undefined ? undefined : extractContractMeta(flowNode);
 
+    const allowedEffectsMask = effectsToFlags(flow.declaredEffects);
+
     const flowGIR: GIRFlow = {
       name: flow.name,
       qualifier: flow.qualifier,
@@ -238,6 +287,7 @@ export function emitGIR(
       ...(targetAffinity !== undefined ? { target_affinity: targetAffinity } : {}),
       capabilities,
       ...(contractMeta !== undefined ? { contract: contractMeta } : {}),
+      allowedEffectsMask,
     };
     return flowGIR;
   });
@@ -247,6 +297,8 @@ export function emitGIR(
       schemaVersion: "lln.gir.v1",
       generatedAt: new Date().toISOString(),
       flows: girFlows,
+      entryPoints,
+      ...(opts.sourceHash !== undefined ? { sourceHash: opts.sourceHash } : {}),
     },
     diagnostics: [],
   };
@@ -414,10 +466,13 @@ const PHOTONIC_FLOAT_TYPES = new Set(["Float16", "Float32", "Float"]);
 
 /**
  * Extracts tensor binding metadata from a flow node.
- * Looks for letDecl/mutDecl bindings whose type annotation starts with "Tensor".
+ * Looks for paramDecl, letDecl, mutDecl, and readonlyDecl nodes whose
+ * type annotation starts with "Tensor". Parameters are the most common
+ * source of Tensor types (e.g. pure flow embed(v: Tensor<Float32, [768]>)).
  */
 function extractTensors(flowNode: AstNode): GIRTensorInfo[] {
   const declarations = [
+    ...findNodes(flowNode, "paramDecl"),
     ...findNodes(flowNode, "letDecl"),
     ...findNodes(flowNode, "mutDecl"),
     ...findNodes(flowNode, "readonlyDecl"),
@@ -438,7 +493,13 @@ function extractTensors(flowNode: AstNode): GIRTensorInfo[] {
         type: typeStr,
         elementType: "Unknown",
         shape: "Erased",
-        photonic_compatible: false, // unknown element type — cannot confirm
+        photonic_compatible: false,
+        wasmSimdCompatible: false,
+        gpuCompatible: false,
+        npuCompatible: false,
+        apuSharedMemoryCandidate: false,
+        fixedShape: false,
+        quantized: false,
       });
       continue;
     }
@@ -449,12 +510,31 @@ function extractTensors(flowNode: AstNode): GIRTensorInfo[] {
     const elementType = firstComma === -1 ? inner.trim() : inner.slice(0, firstComma).trim();
     const shape = firstComma === -1 ? "Unknown" : inner.slice(firstComma + 1).trim();
 
-    // Photonic compatibility: known float types with concrete or dynamic shapes
-    const isFloatType = PHOTONIC_FLOAT_TYPES.has(elementType);
-    const isConcreteShape = shape.includes("[") || shape === "DynamicShape";
-    const photonic_compatible = isFloatType && isConcreteShape;
+    // Derive compute compatibility flags
+    const isFloatType      = PHOTONIC_FLOAT_TYPES.has(elementType);
+    const isQuantized      = elementType === "Int8";
+    const isConcreteShape  = shape.includes("[") || shape === "DynamicShape";
+    // Fixed shape: no dynamic dim labels (Batch, Seq, etc.) — all dims are integers
+    const isFixedShape     = shape.includes("[") &&
+      !shape.split(",").some((d) => d.trim().match(/^[A-Za-z]/));
 
-    tensors.push({ name: parsed.name, type: typeStr, elementType, shape, photonic_compatible });
+    const photonic_compatible    = isFloatType && isConcreteShape;
+    // WASM SIMD: Float32/Float64/Int8 with any shape (element-wise ops)
+    const wasmSimdCompatible     = (isFloatType || isQuantized) && isConcreteShape;
+    // GPU: Float32/Float16 with any shape (shader-compatible)
+    const gpuCompatible          = PHOTONIC_FLOAT_TYPES.has(elementType) && isConcreteShape;
+    // NPU: Float32 or Int8, fixed shape, deterministic
+    const npuCompatible          = (isFloatType || isQuantized) && isFixedShape;
+    // APU shared memory: readonly + pure context + fixed shape (proven by caller flags)
+    const apuSharedMemoryCandidate = isFixedShape && isFloatType;
+
+    tensors.push({
+      name: parsed.name, type: typeStr, elementType, shape,
+      photonic_compatible, wasmSimdCompatible, gpuCompatible,
+      npuCompatible, apuSharedMemoryCandidate,
+      fixedShape: isFixedShape,
+      quantized: isQuantized,
+    });
   }
 
   return tensors;

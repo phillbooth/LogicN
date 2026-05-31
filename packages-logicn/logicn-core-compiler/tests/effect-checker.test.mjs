@@ -255,7 +255,8 @@ guarded flow processOrder(order: Order) -> Result<OrderId, ProcessError>
 
 // intentional: guarded flows in source strings use "with effects [...]" canonical syntax
 describe("Effect checker - canonical effect names", () => {
-  it("effects [network] emits LLN-EFFECT-004 with suggestion network.outbound", () => {
+  it("effects [network] emits LLN-EFFECT-005 (BroadAliasUsed) with suggestion network.outbound", () => {
+    // 'network' is a broad alias — now emits LLN-EFFECT-005 (warning), not LLN-EFFECT-004 (error)
     const { effectResults } = parseAndCheck(`
 guarded flow fetchRate(currency: String) -> Result<Decimal, RateError>
   with effects [network]
@@ -264,11 +265,12 @@ guarded flow fetchRate(currency: String) -> Result<Decimal, RateError>
   return json.decode(rawResponse)
 }
 `);
-    const diag = effectResults.flatMap((r) => r.diagnostics).find((d) => d.code === "LLN-EFFECT-004");
+    const diag = effectResults.flatMap((r) => r.diagnostics).find((d) => d.code === "LLN-EFFECT-005");
     assert.equal(diag?.suggestedCode, "network.outbound");
   });
 
-  it("effects [database] emits LLN-EFFECT-004 with suggestion database.read", () => {
+  it("effects [database] emits LLN-EFFECT-005 (BroadAliasUsed) with suggestion database.read", () => {
+    // 'database' is a broad alias — now emits LLN-EFFECT-005 (warning), not LLN-EFFECT-004 (error)
     const { effectResults } = parseAndCheck(`
 guarded flow loadOrder(order: Order) -> Result<Order, OrderError>
   with effects [database]
@@ -276,7 +278,7 @@ guarded flow loadOrder(order: Order) -> Result<Order, OrderError>
   return Ok(OrdersDB.find(order.id)?)
 }
 `);
-    const diag = effectResults.flatMap((r) => r.diagnostics).find((d) => d.code === "LLN-EFFECT-004");
+    const diag = effectResults.flatMap((r) => r.diagnostics).find((d) => d.code === "LLN-EFFECT-005");
     assert.equal(diag?.suggestedCode, "database.read");
   });
 

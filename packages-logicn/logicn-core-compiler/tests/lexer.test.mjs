@@ -8,6 +8,8 @@ import {
   LLN_LEX_001,
   LLN_LEX_002,
   LLN_LEX_003,
+  LLN_LEX_004,
+  LLN_LEX_005,
 } from "../dist/index.js";
 
 describe("Lexer — keyword table", () => {
@@ -384,5 +386,74 @@ describe("Lexer — LLN-LEX-003 unicode escape sequences", () => {
     assert.ok(str !== undefined);
     // "Hello" in BMP escapes
     assert.ok(str.value.includes("Hello"), `Expected 'Hello' in value, got: ${JSON.stringify(str.value)}`);
+  });
+});
+
+describe("Lexer — Phase 18A: Token endLine / endColumn (Task 1 verification)", () => {
+  it("Token interface has endLine and endColumn fields", () => {
+    const result = lex("flow", "test.lln");
+    const tok = result.tokens.find((t) => t.value === "flow");
+    assert.ok(tok !== undefined);
+    assert.equal(typeof tok.endLine, "number", "endLine should be a number");
+    assert.equal(typeof tok.endColumn, "number", "endColumn should be a number");
+    assert.equal(tok.endLine, 1);
+    assert.equal(tok.endColumn, 5); // "flow" is 4 chars, col starts at 1, end is 5
+  });
+
+  it("Token has start and end byte offsets (end serves as endOffset)", () => {
+    const source = "let x";
+    const result = lex(source, "test.lln");
+    const letTok = result.tokens.find((t) => t.value === "let");
+    assert.ok(letTok !== undefined);
+    assert.equal(letTok.start, 0);
+    assert.equal(letTok.end, 3);
+    // end == endOffset: source.slice(start, end) == value
+    assert.equal(source.slice(letTok.start, letTok.end), "let");
+  });
+});
+
+describe("Lexer — Phase 18A: LLN-LEX-004 file too large (Task 5)", () => {
+  it("exports LLN_LEX_004 with correct code and name", () => {
+    assert.equal(LLN_LEX_004.code, "LLN-LEX-004");
+    assert.equal(LLN_LEX_004.name, "FileTooLarge");
+    assert.equal(LLN_LEX_004.severity, "error");
+  });
+
+  it("emits LLN-LEX-004 and returns early for source > 10MB", () => {
+    // Build a source string just over 10MB
+    const oversize = "x".repeat(10 * 1024 * 1024 + 1);
+    const result = lex(oversize, "big.lln");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-LEX-004");
+    assert.ok(diag !== undefined, "Expected LLN-LEX-004 for source > 10MB");
+    assert.equal(diag.severity, "error");
+    // Should return early with only the EOF token
+    assert.equal(result.tokens.length, 1);
+    assert.equal(result.tokens[0]?.kind, "eof");
+  });
+});
+
+describe("Lexer — Phase 18A: LLN-LEX-005 line too long (Task 5)", () => {
+  it("exports LLN_LEX_005 with correct code and name", () => {
+    assert.equal(LLN_LEX_005.code, "LLN-LEX-005");
+    assert.equal(LLN_LEX_005.name, "LineTooLong");
+    assert.equal(LLN_LEX_005.severity, "warning");
+  });
+
+  it("emits LLN-LEX-005 for a line longer than 10,000 characters", () => {
+    // A line of 10,001 identifier characters followed by a newline
+    const longLine = "a".repeat(10_001) + "\n";
+    const result = lex(longLine, "test.lln");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-LEX-005");
+    assert.ok(diag !== undefined, "Expected LLN-LEX-005 for line > 10,000 chars");
+    assert.equal(diag.severity, "warning");
+    assert.equal(diag.location?.line, 1);
+  });
+
+  it("does not emit LLN-LEX-005 for a line of exactly 10,000 characters", () => {
+    const normalLine = "a".repeat(10_000) + "\n";
+    const result = lex(normalLine, "test.lln");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-LEX-005");
+    // LLN-LEX-002 may fire (oversized identifier) but LLN-LEX-005 should not
+    assert.ok(diag === undefined, "Should not emit LLN-LEX-005 for exactly 10,000 chars");
   });
 });

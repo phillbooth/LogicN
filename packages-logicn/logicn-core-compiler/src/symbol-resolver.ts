@@ -155,6 +155,11 @@ const STANDARD_PRELUDE = new Set([
   "Hash", "Signature",
   // ── AI / ML constructors ─────────────────────────────────────────────────
   "Classification", "Embedding", "Prompt",
+  // ── Common resource names (Phase 17) ─────────────────────────────────────
+  // These are common PascalCase resource names. PascalCase is already suppressed
+  // in checkIdentifierUse(), but operation call forms like User.create are
+  // also suppressed by the PascalCase rule on the receiver.
+  "User", "Patient", "Order", "Product", "Invoice", "Record",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -272,6 +277,13 @@ class SymbolResolver {
             ? "enum"
             : "type";
         this.typeTable.set(typeName, { kind, location: node.location });
+      }
+    } else if (node.kind === "resourceDecl" && node.value !== undefined) {
+      // Register resource names as type-like declarations so they can be referenced
+      const resourceName = node.value.trim();
+      this.currentScope().set(resourceName, node);
+      if (node.location !== undefined) {
+        this.typeTable.set(resourceName, { kind: "type", location: node.location });
       }
     } else if (node.kind === "intentDecl" && node.value !== undefined && node.value.startsWith("event:")) {
       // Events are stored as intentDecl with value "event:<name>" by the parser
@@ -455,6 +467,14 @@ class SymbolResolver {
       case "recordDecl":
         // Task 3 — Record fields are scoped to the record — push a fresh scope so that
         // field names from different records don't conflict with each other.
+        this.pushScope();
+        this.walkChildren(node, "type");
+        this.popScope();
+        return;
+
+      case "resourceDecl":
+        // Resource declarations have fields (paramDecl) and sub-blocks (operations, policy).
+        // Walk children in type context so field typeRefs are not checked as identifiers.
         this.pushScope();
         this.walkChildren(node, "type");
         this.popScope();

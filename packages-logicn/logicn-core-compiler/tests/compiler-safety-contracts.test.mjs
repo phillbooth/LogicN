@@ -46,6 +46,8 @@ import {
   LLN_SAFETY_005,
   LLN_SAFETY_006,
   LLN_SAFETY_DIAGNOSTICS,
+  LLN_SEC_020,
+  LLN_SEC_021,
 } from "../dist/index.js";
 
 describe("logicn-core-compiler syntax safety contracts", () => {
@@ -457,6 +459,28 @@ flow renderScript() {
     assert.equal(LLN_SAFETY_DIAGNOSTICS.length, 6);
     assert.ok(LLN_SAFETY_DIAGNOSTICS.every((d) => d.code.startsWith("LLN-SAFETY-")));
     assert.ok(LLN_SAFETY_DIAGNOSTICS.every((d) => d.severity === "error"));
+  });
+
+  it("LLN_SEC_020 has code LLN-SEC-020, name RuntimeMutation, severity error, and suggestedFix", () => {
+    assert.equal(LLN_SEC_020.code, "LLN-SEC-020");
+    assert.equal(LLN_SEC_020.name, "RuntimeMutation");
+    assert.equal(LLN_SEC_020.severity, "error");
+    assert.ok(typeof LLN_SEC_020.message === "string" && LLN_SEC_020.message.length > 0);
+    assert.ok(typeof LLN_SEC_020.suggestedFix === "string" && LLN_SEC_020.suggestedFix.length > 0);
+  });
+
+  it("LLN_SEC_021 has code LLN-SEC-021, name PrototypeMutation, severity error, and suggestedFix", () => {
+    assert.equal(LLN_SEC_021.code, "LLN-SEC-021");
+    assert.equal(LLN_SEC_021.name, "PrototypeMutation");
+    assert.equal(LLN_SEC_021.severity, "error");
+    assert.ok(typeof LLN_SEC_021.message === "string" && LLN_SEC_021.message.length > 0);
+    assert.ok(typeof LLN_SEC_021.suggestedFix === "string" && LLN_SEC_021.suggestedFix.length > 0);
+  });
+
+  it("LLN_SEC_020 and LLN_SEC_021 are exported from dist/index.js", () => {
+    // Verified by the fact that this test file imported them without error.
+    assert.ok(LLN_SEC_020 !== undefined, "LLN_SEC_020 must be exported");
+    assert.ok(LLN_SEC_021 !== undefined, "LLN_SEC_021 must be exported");
   });
 
   it("diagnostic constants export complete arrays check — including LLN-SAFETY-* and LLN-RAWPTR-*", () => {

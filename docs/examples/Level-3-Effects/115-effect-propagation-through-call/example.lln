@@ -1,8 +1,8 @@
-﻿/// example: 115-effect-propagation-through-call
+/// example: 115-effect-propagation-through-call
 /// level: 3
 /// concept: effect propagation through a flow call chain
 /// expected_diagnostics: none
-/// test_status: draft
+/// test_status: stable
 /// ai_rule: A flow calling another flow must declare all effects required by the callee.
 
 guarded flow saveOrder(order: Order) -> SaveOrderResult

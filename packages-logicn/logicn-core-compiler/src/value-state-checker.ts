@@ -101,6 +101,99 @@ function makeVSDiag(
 }
 
 // ---------------------------------------------------------------------------
+// ValueStateFlags — internal bitset for fast value-state checks
+//
+// Downstream passes (SemanticGraph, ExecutionPlanner, Backend) can use bit
+// operations instead of string comparisons:
+//   if (flags & ValueStateFlags.Unsafe && !(flags & ValueStateFlags.Safe)) → error
+//
+// These flags describe how trusted the data is (value-state).
+// Protected/Redacted/Secret describe sensitivity (privacy qualifier).
+// Both can apply to the same binding.
+//
+// Usage: assign flags during binding analysis; check at sink sites.
+// Phase 19: BindingInfo gains a `flags` field replacing string safetyPrefix.
+// ---------------------------------------------------------------------------
+
+export const ValueStateFlags = {
+  None:      0,
+  Unsafe:    1 << 0,  // from request.body / params — untrusted boundary input
+  Safe:      1 << 1,  // after a recognised gate function
+  Validated: 1 << 2,  // explicitly validated — subset of Safe
+  Tainted:   1 << 3,  // derived from Unsafe via non-gate expression
+  Protected: 1 << 4,  // protected qualifier — may be used internally, not raw
+  Redacted:  1 << 5,  // redacted qualifier — may be logged/audited, not reversed
+  Secret:    1 << 6,  // SecureString — approved operations only
+  ReadOnly:  1 << 7,  // readonly binding — APU shared-memory candidate
+} as const;
+export type ValueStateFlagsMask = number;
+
+// ---------------------------------------------------------------------------
+// SinkRequirement — structured requirement per governed sink
+//
+// Each governed sink declares what value-state its arguments must have.
+// This is the authoritative machine-readable sink registry. Diagnostics,
+// AI tooling, and the SemanticGraph all consume this directly.
+//
+// Canonical source: docs/Knowledge-Bases/stdlib-gates.yaml §sinks
+// When adding a sink, update stdlib-gates.yaml first, then mirror here.
+// ---------------------------------------------------------------------------
+
+export interface SinkRequirement {
+  /** Minimum required state: any value that does NOT satisfy this is a violation. */
+  readonly requiredState: "safe" | "validated" | "redacted" | "nonPII";
+  /** Human-readable policy note for diagnostics and AI tools. */
+  readonly policyNote: string;
+  /** Matching strategy: exact full name, or pattern (checked separately). */
+  readonly match: "exact" | "pattern";
+}
+
+/**
+ * Named sink requirements — exact-match entries only.
+ * Pattern-matched sinks (wildcards like *DB.write) are handled by isGovernedSink().
+ * Use getSinkRequirement() to query both.
+ */
+export const SINK_REQUIREMENTS: ReadonlyMap<string, SinkRequirement> = new Map<string, SinkRequirement>([
+  ["AuditLog.write",     { requiredState: "redacted",  policyNote: "Audit logs must not contain raw PII. Use redact() before logging.", match: "exact" }],
+  ["database.write",     { requiredState: "validated", policyNote: "All database writes require validated data.", match: "exact" }],
+  ["network.outbound",   { requiredState: "validated", policyNote: "Network output must be validated before transmission.", match: "exact" }],
+  ["response.body",      { requiredState: "safe",      policyNote: "API response bodies must use safe, validated values.", match: "exact" }],
+  ["log.write",          { requiredState: "redacted",  policyNote: "Log writes must not include secrets or raw PII.", match: "exact" }],
+  ["ai.remoteInference", { requiredState: "validated", policyNote: "AI calls must use validated, governed inputs.", match: "exact" }],
+  ["shell.exec",         { requiredState: "validated", policyNote: "Shell commands must use validated arguments to prevent injection.", match: "exact" }],
+  ["FileSystem.write",   { requiredState: "safe",      policyNote: "Filesystem writes require safe values.", match: "exact" }],
+]);
+
+/**
+ * Returns the SinkRequirement for a given call name, or undefined if not a
+ * governed sink. Checks exact-match registry first, then falls back to pattern
+ * matching for wildcard sinks (e.g. *DB.insert).
+ */
+export function getSinkRequirement(fullCallName: string): SinkRequirement | undefined {
+  const exact = SINK_REQUIREMENTS.get(fullCallName);
+  if (exact !== undefined) return exact;
+
+  // Pattern-matched sinks — require validated state
+  if (/\w*DB\.(insert|update\w*|delete|write|query|find|select\w*)$/.test(fullCallName)) {
+    return { requiredState: "validated", policyNote: "Database operations require validated data.", match: "pattern" };
+  }
+  if (/^https?\.(post|put|patch|delete)$/.test(fullCallName)) {
+    return { requiredState: "validated", policyNote: "HTTP write methods require validated data.", match: "pattern" };
+  }
+  if (/^EmailService\.(send\w*|deliver)$/.test(fullCallName)) {
+    return { requiredState: "validated", policyNote: "Email sends require validated data.", match: "pattern" };
+  }
+  if (/\w+Payment\.(charge|process|submit)$/.test(fullCallName)) {
+    return { requiredState: "validated", policyNote: "Payment operations require validated data.", match: "pattern" };
+  }
+  if (/^fs\.write\w*$/.test(fullCallName)) {
+    return { requiredState: "safe", policyNote: "Filesystem writes require safe values.", match: "pattern" };
+  }
+
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
 // Governed sinks
 //
 // Calls whose arguments must not be unsafe bindings.
