@@ -228,6 +228,7 @@ contract {
   });
 
   it("parses contract with effects block", () => {
+    // intentional: testing combined with effects [...] inline header + contract.effects block parser support
     const src = `guarded flow f() -> Void with effects [database.write]
 contract {
   effects {

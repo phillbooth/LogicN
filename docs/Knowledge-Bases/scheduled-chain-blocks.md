@@ -1,5 +1,10 @@
 # Scheduled Chain Blocks
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Stage B
+
 ## Definition
 
 LSGR avoids hidden runtime polymorphism inside the Execution Coordination

@@ -2,6 +2,7 @@
 /// level: 9
 /// concept: declared purpose does not match the template used in the flow body
 /// expected_diagnostics: LLN-GOV-005
+/// test_status: draft
 /// ai_rule: The template or action used in the flow body must be consistent with the purpose declared in the policy block.
 
 secure flow emailPatientMismatch(readonly request: Request) -> EmailPatientMismatchResult

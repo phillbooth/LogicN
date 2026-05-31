@@ -275,9 +275,12 @@ describe("Self-Hosted Parser — secure flow with readonly parameter", () => {
 // Section 5: with effects clause
 // ---------------------------------------------------------------------------
 
+// intentional: parser.lln (self-hosted parser v0) parses "with effects [...]" clause;
+// these source strings test that the self-hosted parser correctly captures dotted effect names
 describe("Self-Hosted Parser — with effects clause", () => {
 
   it("parses a single effect name", async () => {
+    // intentional: testing with effects [...] parser support in self-hosted parser.lln
     const result = await pipeline("pure flow fetch() -> String with effects [io.read] { return x }");
     const [flow] = flowsList(result);
     assert.deepEqual(effectsList(flow), ["io.read"]);

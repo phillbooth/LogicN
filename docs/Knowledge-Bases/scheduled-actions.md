@@ -1,5 +1,10 @@
 # Scheduled Actions
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Stage B
+
 ## Definition
 
 A **scheduled action** is the flow that runs because a trigger fired and the Scheduler dispatched it.

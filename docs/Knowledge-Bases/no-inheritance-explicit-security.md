@@ -132,7 +132,7 @@ Use secure flows:
 secure flow grantRole(
   request: GrantRoleRequest,
   ctx: RequestContext
-) -> Result<UserAdminResponse, ApiError>
+) -> GrantRoleResult
   capabilities {
     require users.role.grant
     require audit.write
@@ -142,6 +142,11 @@ secure flow grantRole(
     allow db.write
     allow audit.write
   }
+contract {
+  types {
+    type GrantRoleResult = Result<UserAdminResponse, ApiError>
+  }
+}
 {
   let user = try UsersRepository.findRequired(request.userId)
   let updated = try UserRoles.grant(user, request.role)

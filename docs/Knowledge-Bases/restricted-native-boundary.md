@@ -85,8 +85,13 @@ native module CryptoNative {
 ```logicn
 flow hashPassword(
   request: Password.hash
-) -> Result<Password.response, ApiError>
+) -> HashPasswordResult
   permission use password_hash
+contract {
+  types {
+    type HashPasswordResult = Result<Password.response, ApiError>
+  }
+}
 {
   let hash = CryptoNative.hash(
     algorithm: "argon2id",

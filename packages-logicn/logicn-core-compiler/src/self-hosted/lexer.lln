@@ -1,6 +1,6 @@
 /// @file: lexer.lln
-/// @purpose: LogicN lexer written in LogicN — Phase 12 Stage B milestone
-/// @status: executable — Phase 12A loops active, simplified for current capabilities
+/// @purpose: LogicN lexer written in LogicN — Phase 16 milestone
+/// @status: executable — Phase 12A loops active; Phase 16 adds endLine/endColumn, unicode escapes, depth limits
 
 // ============================================================
 // LogicN Self-Hosted Lexer
@@ -38,10 +38,12 @@ enum TokenKind {
 record Token {
   kind: TokenKind
   value: String
-  line: Int
-  col: Int
-  start: Int
-  end: Int
+  line: Int         // start line (1-based)
+  column: Int       // start column (1-based)
+  endLine: Int      // end line (1-based, inclusive)
+  endColumn: Int    // end column (1-based, exclusive)
+  start: Int        // byte offset start
+  end: Int          // byte offset end
 }
 
 record LexError {
@@ -151,7 +153,7 @@ contract {
 
     match ch {
       None => {
-        let eof = { kind: TokenKind.Eof, value: "", line: line, col: col, start: pos, end: pos }
+        let eof = { kind: TokenKind.Eof, value: "", line: line, column: col, endLine: line, endColumn: col, start: pos, end: pos }
         tokens = tokens.append(eof)
         return Ok(tokens)
       }
@@ -176,7 +178,9 @@ contract {
 
         // Newline
         else if c is '\n' {
-          let tok = { kind: TokenKind.Newline, value: "\n", line: line, col: col, start: pos, end: pos + 1 }
+          let startLine = line
+          let startCol = col
+          let tok = { kind: TokenKind.Newline, value: "\n", line: startLine, column: startCol, endLine: startLine, endColumn: startCol + 1, start: pos, end: pos + 1 }
           tokens = tokens.append(tok)
           line = line + 1
           col = 1
@@ -186,6 +190,7 @@ contract {
         // Identifier or keyword (starts with a letter)
         else if c.isLetter() {
           let startPos = pos
+          let startLine = line
           let startCol = col
           let result = scanWord(source, pos, srcLen)
           let ident = result.first().unwrapOr("")
@@ -195,11 +200,11 @@ contract {
           pos = endPos
           let isKw = keywords.contains(ident)
           if isKw {
-            let tok = { kind: TokenKind.Keyword, value: ident, line: line, col: startCol, start: startPos, end: pos }
+            let tok = { kind: TokenKind.Keyword, value: ident, line: startLine, column: startCol, endLine: line, endColumn: col, start: startPos, end: pos }
             tokens = tokens.append(tok)
           }
           else {
-            let tok = { kind: TokenKind.Identifier, value: ident, line: line, col: startCol, start: startPos, end: pos }
+            let tok = { kind: TokenKind.Identifier, value: ident, line: startLine, column: startCol, endLine: line, endColumn: col, start: startPos, end: pos }
             tokens = tokens.append(tok)
           }
         }
@@ -207,6 +212,7 @@ contract {
         // Digits — number literal
         else if c.isDigit() {
           let startPos = pos
+          let startLine = line
           let startCol = col
           let result = scanDigits(source, pos, srcLen)
           let num = result.first().unwrapOr("")
@@ -214,13 +220,15 @@ contract {
           let endPos = endPosStr.toInt().unwrapOr(pos)
           col = col + (endPos - startPos)
           pos = endPos
-          let tok = { kind: TokenKind.NumberLiteral, value: num, line: line, col: startCol, start: startPos, end: pos }
+          let tok = { kind: TokenKind.NumberLiteral, value: num, line: startLine, column: startCol, endLine: line, endColumn: col, start: startPos, end: pos }
           tokens = tokens.append(tok)
         }
 
         // Symbol or operator — emit Symbol for now
         else {
-          let tok = { kind: TokenKind.Symbol, value: c.toString(), line: line, col: col, start: pos, end: pos + 1 }
+          let startLine = line
+          let startCol = col
+          let tok = { kind: TokenKind.Symbol, value: c.toString(), line: startLine, column: startCol, endLine: line, endColumn: col + 1, start: pos, end: pos + 1 }
           tokens = tokens.append(tok)
           pos = pos + 1
           col = col + 1
@@ -229,7 +237,7 @@ contract {
     }
   }
 
-  let eof = { kind: TokenKind.Eof, value: "", line: line, col: col, start: pos, end: pos }
+  let eof = { kind: TokenKind.Eof, value: "", line: line, column: col, endLine: line, endColumn: col, start: pos, end: pos }
   tokens = tokens.append(eof)
   return Ok(tokens)
 }

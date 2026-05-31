@@ -2,6 +2,7 @@
 /// level: 1
 /// concept: match on Result
 /// expected_diagnostics: none
+/// test_status: draft
 /// ai_rule: Every match on Result must handle both Ok and Err.
 
 match parseAge("42") {

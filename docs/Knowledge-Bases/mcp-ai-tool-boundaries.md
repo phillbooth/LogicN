@@ -131,8 +131,13 @@ contract ai_tool CustomerLookupTool {
 flow answerCustomerQuestion(
   request: SupportQuestion,
   ctx: RequestContext
-) -> Result<SupportAnswer, AiToolError>
+) -> AnswerCustomerQuestionResult
   permission use support_ai_assistant
+contract {
+  types {
+    type AnswerCustomerQuestionResult = Result<SupportAnswer, AiToolError>
+  }
+}
 {
   let customer = try CustomerSupportMcp.getCustomerById(request.customerId)
     using CustomerLookupTool

@@ -1,12 +1,12 @@
 # LogicN — Implementation Roadmap
 
-## Current State (2026-05-30)
+## Current State (2026-05-31)
 
 ```
-809 tests · 0 failures · 86% overall
-108/215 CEC examples stable in CI
-11,855 lines TypeScript source
-283 KB documents
+1688 tests · 0 failures · 74% Stage A weighted (Lexer 99%, type checker 72%)
+189/222 CEC examples stable in CI
+~18,500 lines TypeScript source (42 source files)
+305 KB documents (13 marked superseded, 13 marked future/aspirational)
 ```
 
 ---
@@ -31,6 +31,12 @@
 | Phase 11B | Two-hop taint propagation (LLN-VALUESTATE-005) |
 | Phase 11C | Runtime layer skeleton: contractEnforcer, timeoutPolicy, retryPolicy, limitPolicy, capabilityHost, governedMemory |
 | Type checker 98% | LLN-TYPE-010..019, complete inferType(), isAssignmentCompatible governess qualifier fix |
+| Phase 12A | Loops (while/for each), assignment runtime, lexer.lln executing |
+| Phase 13A/B | SemanticGraph, AI graph v2, CLI (logicn check/build/emit), LLN-SOURCE-ESCAPE-001 |
+| Phase 14 | Root capability provider, compiler.capabilities.lln, LLN-BUILD-001 |
+| Phase 15 | Passive execution plans (type + builder + attestation integration) |
+| Lexer 99% | endLine/endColumn spans, LLN-LEX-001/002/003, unicode escapes |
+| KB cleanup | 00-KB-INDEX.md, 11 v02 docs marked superseded, 24 aspirational docs marked future |
 
 ---
 
@@ -267,6 +273,27 @@ Source stays stable.
 Targets evolve.
 Governance remains above every target.
 ```
+
+---
+
+## Phase 17 — Application Pattern Keywords
+
+Adds the first-class keywords needed to express the Application Patterns handbook
+(see `docs/patterns/applications/README.md`).
+
+| Feature | Pattern | Description |
+|---|---|---|
+| `resource {}` | 01 — CRUD Resource | Declares a governed CRUD resource with effect-bounded read/write/delete flows |
+| `command`/`query` annotations | 03 — Commands & Queries | Separates read and write flows; compiler infers effects from annotation |
+| `stateMachine {}` | 06 — State Machines | Named states with guarded, compiler-checked transitions |
+| `service {}` keyword | 10 — Microservices | Declares a service boundary with its own manifest and capability set |
+| `logicn docker init` | Docker integration | Generates a governed Dockerfile + capability manifest from a `service {}` declaration |
+
+### Phase 17 Prerequisites
+
+- Phase 11E (package/import system) — `service {}` needs cross-module types
+- Phase 15 (passive execution plans) — `stateMachine {}` transitions map to plan steps
+- Semantic graph (Phase 13) — `resource {}` and `command`/`query` need graph-queryable intent nodes
 
 ---
 

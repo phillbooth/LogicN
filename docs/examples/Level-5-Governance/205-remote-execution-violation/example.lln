@@ -2,6 +2,7 @@
 /// level: 5
 /// concept: compute target remote violates governance policy
 /// expected_diagnostics: LLN-GOV-004
+/// test_status: draft
 /// ai_rule: Specifying remote as the compute target when governance denies it is a policy violation.
 
 secure flow runFraudModel(input: FraudInput) -> RunFraudModelResult

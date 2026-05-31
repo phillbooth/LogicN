@@ -501,8 +501,15 @@ type CreateOrderResponse {
 }
 
 secure flow createOrder(input: CreateOrderRequest)
-  -> Result<CreateOrderResponse, ApiError>
-  effects [database.write]
+  -> CreateOrderFlowResult
+contract {
+  types {
+    type CreateOrderFlowResult = Result<CreateOrderResponse, ApiError>
+  }
+  effects {
+    database.write
+  }
+}
 {
   ...
 }

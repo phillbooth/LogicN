@@ -1,5 +1,10 @@
 # Node-Hosted Runtime Roadmap
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Phase 17+
+
 ## Purpose
 
 LogicN must be honest about its current execution model.

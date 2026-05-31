@@ -1,5 +1,10 @@
 # Governed Event-Driven Execution
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Stage B
+
 ## Definition
 
 LogicN supports event-driven execution but is not a purely event-driven system. It is a **governed execution runtime** that supports event-driven workloads safely.

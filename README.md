@@ -36,31 +36,31 @@ enforced by tooling** — not inferred, guessed, or left to convention.
 **TypeScript Runtime** — Stage A: compiler pipeline + execution engine running on Node.js
 
 ```
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░  87%  (1670 tests · 0 failures · 189/222 CEC stable)
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░  90%  (1962 tests · 0 failures · 188/222 CEC stable)
 ```
 
 | Layer | Status | % |
 |---|---|---|
 | Specification / KB | 302 docs, 222 examples, full type hierarchy, 16-section contracts | 99% |
-| Lexer | All 56 keywords, all literal forms, char/hex/binary/doc-comment | 99% |
-| Parser | Flows, fn, routes, all contracts, loops, record literals, Brand alias | 94% |
-| Symbol resolver | LLN-NAME-001/002, scope, prelude, domain types; LLN-NAME-003 deferred | 75% |
-| Type checker | LLN-TYPE-001/003/004/008/009/011/017/020/021/022, LLN-BINDING-005; 12 codes deferred | 72% |
-| Value-state checker | Taint, 2-hop taint, user gates, secrets, protected/redacted boundary | 82% |
-| Effect checker | LLN-EFFECT-001..004, topoSort, inter-flow propagation, canonical aliases | 72% |
-| Event checker | LLN-EVENT-001/002, declare-before-emit | 90% |
-| Governance verifier | 9 codes, contract sets, response.denies, Phase 10C enforcement; 5 deferred | 73% |
-| GIR emitter | Schema, tensor metadata, SemanticGraph, AI graph, target affinity hints | 70% |
-| Runtime / interpreter | Loops, assignment, capabilityHost, governed memory, escape checker | 86% |
-| Standard library | Money BigInt, Duration, Timestamp.format, String.format, Bytes.sha256 | 74% |
+| Lexer | All v1 keywords, all literal forms, full spans, unicode escapes, depth limits | 99% |
+| Parser | Flows, fn, routes, all contracts, loops, record literals, Brand alias, authority/policy blocks | 96% |
+| Symbol resolver | LLN-NAME-001/002/003, scope, prelude, domain types, cross-module shadow, naming policy | 58% |
+| Type checker | LLN-TYPE-001..022, LLN-BINDING-005, operator rules, Money cross-currency, match exhaustiveness | 82% |
+| Value-state checker | Taint, 2-hop taint, user gates, secrets, protected/redacted boundary, VALUESTATE-002/006/007 | 85% |
+| Effect checker | LLN-EFFECT-001..004, topoSort, inter-flow propagation, canonical aliases, fn helper propagation, inference tracking | 70% |
+| Event checker | LLN-EVENT-001..005, declare-before-emit, contract emit validation | 80% |
+| Governance verifier | 12 codes, contract sets, response.denies, authority blocks, Phase 10C enforcement | 82% |
+| GIR emitter | Schema, tensor metadata, SemanticGraph, AI graph v2, target affinity hints | 76% |
+| Runtime / interpreter | Loops, assignment, capabilityHost, governed memory, escape checker, executePlan, canonical hashing | 85% |
+| Standard library | Money BigInt, Duration, Timestamp.format, String.format, Bytes.sha256, Statistics, Map/Array extended | 78% |
 | Route / HTTP | request/req dual-key, path params, JSON body, HTTP dispatch | 76% |
 | Audit / proof chain | JSONL, SHA-256 5-hash proof, verify, denial log | 82% |
 | Signed attestation | Ed25519 sign/verify, YAML, runtime integration | 88% |
 | CLI | check, check-strict, build, build-production, fix-effects, emit-ai-graph | 82% |
-| CEC coverage | 189/222 stable, 10 domain suites, all real-world patterns | 85% |
+| CEC coverage | 188/222 stable, 10 domain suites, all real-world patterns | 85% |
 | Internal graph | BFS/DFS/topo, call graph, effect graph, SemanticGraph builder | 88% |
 | Stage B | lexer.lln executing, parser.lln v0 (flow headers), compiler.capabilities.lln (Phase 14) | 20% |
-| Passive execution plans | plan types + builder + attestation integration; runtime execution Phase 16; target bridges Phase 21-22 | 12% |
+| Passive execution plans | plan types + builder + attestation integration; executePlan partial runtime (Phase 16A); target bridges Phase 21-22 | 35% |
 | Root capability provider | full implementation; CLI stub only | 85% |
 | Post-quantum / hardware security | ML-DSA attestation, CHERI mapping, ARM MTE, TEE integration | 5% |
 
@@ -101,7 +101,7 @@ LogicN is three things building toward one platform:
 declared effects, no hidden nulls, no silent failures. Source files use `.lln`.
 
 **2. A compiler and checker** — a pipeline that enforces the language rules
-before code runs. Phases 3–15 are complete (1670 tests, 0 failures). The
+before code runs. Phases 3–15, 16A and 17A are complete (1962 tests, 0 failures). The
 runtime, IR generation pipeline, and Stage B self-hosting compiler are the
 current focus.
 
@@ -132,13 +132,13 @@ execution**:
 
 LogicN is a **language-design and active compiler project**. It is not a production runtime.
 
-**What works today (1670 tests, 0 failures):**
+**What works today (1962 tests, 0 failures):**
 
 - Full lexer — all v1 keywords, char/hex/binary literals, doc comments
 - Full parser — all flow qualifiers, match with exhaustiveness, enums with variants, record types with fields, fn helpers, route declarations, `protected`/`redacted` type qualifiers
 - Type checker — LLN-TYPE-001/003/004/008/009/011/017/020/021/022, LLN-BINDING-005 (immutable reassignment)
 - Symbol resolver — LLN-NAME-001 (undeclared names), LLN-NAME-002 (duplicate declarations)
-- Value-state checker — LLN-VALUESTATE-001/003/004/005/006/007, LLN-SECRET-001/002, 2-hop taint, user-defined gates
+- Value-state checker — LLN-VALUESTATE-001..007, LLN-SECRET-001/002/003, 2-hop taint, user-defined gates, cross-conditional taint
 - Effect checker — LLN-EFFECT-001..004 with guarded/pure/secure flow support, inter-flow propagation, canonical alias resolution
 - Governance verifier — LLN-GOV-002/003/004/008/010/011/012, LLN-CONTEXT-001, contract set enforcement
 - Runtime / AST interpreter — while loops, for loops, mut reassignment, capabilityHost, governed memory, escape checker
@@ -148,20 +148,23 @@ LogicN is a **language-design and active compiler project**. It is not a product
 - Signed attestation — Ed25519 sign/verify, YAML serialisation, runtime integration
 - GIR emitter — schema v1, tensor metadata, SemanticGraph builder, AI graph (logicn.ai.json), target affinity hints
 - CLI — check, check-strict, build, build-production, fix-effects, emit-ai-graph
-- Canonical Example Corpus — 222 `.lln` examples across 10 levels, 189/222 stable
+- Canonical Example Corpus — 222 `.lln` examples across 10 levels, 188/222 stable
 - Stage B milestone 1: lexer.lln — complete and executing end-to-end (Phase 12A)
 - Stage B milestone 2: parser.lln v0 — flow headers parsed from token stream (Phase 13B)
 - Stage B milestone 3: compiler.capabilities.lln — capability declarations in LogicN (Phase 14)
 - Root capability provider — full implementation with compiler and user-runtime domains (Phase 14)
 - Passive execution plans — PassiveExecutionPlan type, buildExecutionPlan builder, executePlan stub (Phase 15)
 - GIR → execution plan pipeline — plan types, plan builder, attestation integration (Phase 15)
+- Canonical hashing — canonicalHash, hashSource, hashGIR, hashPassivePlan, deterministic key-sorted JSON (Phase 16A)
+- Effect inference tracking — inferEffectsForOperation, buildFlowEffectSummary, inferred vs declared tracking (Phase 16A)
+- Naming policy checker — LLN_STYLE_001/002/SEC_001, checkNamingPolicy, configurable severity (Phase 17A)
 
 **What is actively being built:**
 
-- Phase 16 — canonical hashing module, `logicn verify-selfhost`, `executePlan()` real runtime for secure/guarded flows
+- Phase 16B — `logicn verify-selfhost`, `executePlan()` full runtime for secure/guarded flows
 - Type checker — LLN-TYPE-002 TypeMismatch, LLN-TYPE-005/006/007 call/return checking
 - Stage B milestone 4 — type-checker.lln (Phase 18)
-- Package system — `package.logicn.yaml` manifests, cross-module type resolution, LLN-NAME-003 (Phase 17)
+- Package system — `package.logicn.yaml` manifests, cross-module type resolution, LLN-NAME-003 (Phase 17B)
 
 **What is not yet implemented:**
 
@@ -307,21 +310,35 @@ Phase 15 — Passive Execution Plans                       ✅ complete
   PassiveExecutionPlan type, buildExecutionPlan builder.
   executePlan stub integrated into runtime.
   Attestation chain includes plan hash.
-  1670 tests, 0 failures.
+  1826 tests, 0 failures.
+
+Phase 16A — Canonical Hashing                            ✅ complete
+  canonicalHash — deterministic key-sorted JSON hashing.
+  hashSource, hashGIR, hashPassivePlan — typed hash helpers.
+  Effect inference tracking — inferEffectsForOperation, buildFlowEffectSummary.
+  Inferred vs declared effect distinction in FlowEffectSummary.
+  1962 tests, 0 failures.
+
+Phase 17A — Naming Policy Checker                        ✅ complete
+  LLN_STYLE_001 — camelCase enforcement for flows and variables.
+  LLN_STYLE_002 — PascalCase enforcement for types and enums.
+  LLN_STYLE_SEC_001 — naming rules for security-sensitive identifiers.
+  checkNamingPolicy with configurable severity (warn / error).
+  Exported from compiler public API.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Phase 16–20 — Active and Planned                         ⬜ see docs/Knowledge-Bases/logicn-roadmap-phase16-20.md
 
-Phase 16: Canonical hashing + executePlan() full runtime (1720+ tests target)
-Phase 17: Package system — package.logicn.yaml, cross-module types, CEC 200+
+Phase 16B: logicn verify-selfhost, executePlan() full runtime for secure/guarded flows
+Phase 17B: Package system — package.logicn.yaml, cross-module types, CEC 200+
 Phase 18: type-checker.lln — Stage B milestone 4, type checker in LogicN
 Phase 19: Incremental parser + LSP skeleton
 Phase 20: Stage B complete — LogicN fully self-hosted, verify-selfhost PASS
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Stage A — TypeScript / Node.js Runtime                   ⬜ building (87%)
+Stage A — TypeScript / Node.js Runtime                   ⬜ building (90%)
   LogicN source compiles through the full pipeline.
   Programs execute in the Node.js runtime via the AST interpreter.
   Effects enforced at runtime. Audit records written as JSONL.
@@ -467,7 +484,7 @@ npm run build
 npm test
 ```
 
-1670 tests, 0 failures. The compiler accepts `.lln` source via `parseProgram()` and runs all checker passes.
+1962 tests, 0 failures. The compiler accepts `.lln` source via `parseProgram()` and runs all checker passes.
 
 ```typescript
 import { parseProgram, checkTypes, checkValueStates, checkEffects, resolveSymbols } from "@logicn/core-compiler";

@@ -201,6 +201,268 @@ describe("Stdlib - Timestamp.format (Phase 9A-3)", () => {
   });
 });
 
+// ── New: Array extended methods ───────────────────────────────────────────────
+
+describe("Stdlib - Array.chunk", () => {
+  it("chunk([1,2,3,4,5], 2) -> 3 sub-arrays", async () => {
+    const list = { __tag: "list", items: [1,2,3,4,5].map(v => ({ __tag: "int", value: v })) };
+    const r = await callStdlib("chunk", list, [{ __tag: "int", value: 2 }], ctx());
+    assert.equal(r?.__tag, "list");
+    assert.equal(r?.items.length, 3);
+    assert.equal(r?.items[0]?.__tag, "list");
+    assert.equal(r?.items[0]?.items.length, 2);
+    assert.equal(r?.items[2]?.items.length, 1); // last chunk has 1 element
+  });
+});
+
+describe("Stdlib - Array.flatten", () => {
+  it("flatten([[1,2],[3,4]]) -> [1,2,3,4]", async () => {
+    const inner1 = { __tag: "list", items: [{ __tag: "int", value: 1 }, { __tag: "int", value: 2 }] };
+    const inner2 = { __tag: "list", items: [{ __tag: "int", value: 3 }, { __tag: "int", value: 4 }] };
+    const outer = { __tag: "list", items: [inner1, inner2] };
+    const r = await callStdlib("flatten", outer, [], ctx());
+    assert.equal(r?.__tag, "list");
+    assert.equal(r?.items.length, 4);
+    assert.equal(r?.items[0]?.value, 1);
+    assert.equal(r?.items[3]?.value, 4);
+  });
+});
+
+describe("Stdlib - Array.average", () => {
+  it("average([1,2,3]) -> 2.0", async () => {
+    const list = { __tag: "list", items: [1,2,3].map(v => ({ __tag: "int", value: v })) };
+    const r = await callStdlib("average", list, [], ctx());
+    assert.equal(r?.__tag, "float");
+    assert.equal(r?.value, 2);
+  });
+});
+
+describe("Stdlib - Array.median", () => {
+  it("median([1,2,3,4,5]) -> 3 (odd length)", async () => {
+    const list = { __tag: "list", items: [1,2,3,4,5].map(v => ({ __tag: "int", value: v })) };
+    const r = await callStdlib("median", list, [], ctx());
+    assert.equal(r?.value, 3);
+  });
+  it("median([1,2,3,4]) -> 2.5 (even length)", async () => {
+    const list = { __tag: "list", items: [1,2,3,4].map(v => ({ __tag: "int", value: v })) };
+    const r = await callStdlib("median", list, [], ctx());
+    assert.equal(r?.__tag, "float");
+    assert.equal(r?.value, 2.5);
+  });
+});
+
+describe("Stdlib - Array.partition", () => {
+  it("partition returns [passing, failing]", async () => {
+    const list = { __tag: "list", items: [1,2,3,4].map(v => ({ __tag: "int", value: v })) };
+    // predicate: item > 2
+    const predFn = {
+      __tag: "function",
+      name: "gt2",
+      params: [],
+      body: null,
+      closure: null,
+      applyFn: async (_fn, arg) => ({ __tag: "bool", value: arg.value > 2 }),
+    };
+    const mockCtx = {
+      recordEffect: () => {},
+      resolveIdentifier: () => undefined,
+      callFlow: async () => LLN_VOID,
+      applyFn: async (_fn, arg) => ({ __tag: "bool", value: arg.value > 2 }),
+    };
+    const r = await callStdlib("partition", list, [predFn], mockCtx);
+    assert.equal(r?.__tag, "list");
+    assert.equal(r?.items.length, 2);
+    assert.equal(r?.items[0]?.__tag, "list"); // passing
+    assert.equal(r?.items[0]?.items.length, 2); // 3 and 4
+    assert.equal(r?.items[1]?.items.length, 2); // 1 and 2
+  });
+});
+
+describe("Stdlib - Array.tally", () => {
+  it("tally counts occurrences", async () => {
+    const list = { __tag: "list", items: ["a","b","a","c","b","a"].map(v => ({ __tag: "string", value: v })) };
+    const r = await callStdlib("tally", list, [], ctx());
+    assert.equal(r?.__tag, "record");
+    assert.equal(r?.fields.get("a")?.__tag, "int");
+    assert.equal(r?.fields.get("a")?.value, 3);
+    assert.equal(r?.fields.get("b")?.value, 2);
+    assert.equal(r?.fields.get("c")?.value, 1);
+  });
+});
+
+// ── New: Statistics module ────────────────────────────────────────────────────
+
+describe("Stdlib - Statistics.mean", () => {
+  it("Statistics.mean([1,2,3,4,5]) -> 3.0", async () => {
+    const list = { __tag: "list", items: [1,2,3,4,5].map(v => ({ __tag: "int", value: v })) };
+    const r = await callStdlib("Statistics.mean", undefined, [list], ctx());
+    assert.equal(r?.__tag, "float");
+    assert.equal(r?.value, 3);
+  });
+});
+
+describe("Stdlib - Statistics.median", () => {
+  it("Statistics.median([1,2,3,4,5]) -> 3", async () => {
+    const list = { __tag: "list", items: [1,2,3,4,5].map(v => ({ __tag: "int", value: v })) };
+    const r = await callStdlib("Statistics.median", undefined, [list], ctx());
+    assert.equal(r?.value, 3);
+  });
+  it("Statistics.median([2,4]) -> 3.0", async () => {
+    const list = { __tag: "list", items: [2,4].map(v => ({ __tag: "int", value: v })) };
+    const r = await callStdlib("Statistics.median", undefined, [list], ctx());
+    assert.equal(r?.__tag, "float");
+    assert.equal(r?.value, 3);
+  });
+});
+
+describe("Stdlib - Statistics.stddev", () => {
+  it("stddev([2,4,4,4,5,5,7,9]) population stddev is 2", async () => {
+    const list = { __tag: "list", items: [2,4,4,4,5,5,7,9].map(v => ({ __tag: "int", value: v })) };
+    const r = await callStdlib("Statistics.stddev", undefined, [list], ctx());
+    assert.equal(r?.__tag, "float");
+    assert.ok(Math.abs(r?.value - 2) < 0.001, `Expected ~2, got ${r?.value}`);
+  });
+});
+
+describe("Stdlib - Statistics.sum", () => {
+  it("Statistics.sum([1,2,3]) -> 6", async () => {
+    const list = { __tag: "list", items: [1,2,3].map(v => ({ __tag: "int", value: v })) };
+    const r = await callStdlib("Statistics.sum", undefined, [list], ctx());
+    assert.equal(r?.__tag, "int");
+    assert.equal(r?.value, 6);
+  });
+});
+
+// ── New: String regex methods ─────────────────────────────────────────────────
+
+describe("Stdlib - String.matchesPattern", () => {
+  it('matchesPattern("hello", "hel.*") -> true', async () => {
+    const r = await callStdlib("matchesPattern", { __tag: "string", value: "hello" }, [{ __tag: "string", value: "hel.*" }], ctx());
+    assert.equal(r?.__tag, "bool");
+    assert.equal(r?.value, true);
+  });
+  it('matchesPattern("world", "^hel") -> false', async () => {
+    const r = await callStdlib("matchesPattern", { __tag: "string", value: "world" }, [{ __tag: "string", value: "^hel" }], ctx());
+    assert.equal(r?.value, false);
+  });
+  it("invalid pattern returns err", async () => {
+    const r = await callStdlib("matchesPattern", { __tag: "string", value: "hello" }, [{ __tag: "string", value: "[invalid" }], ctx());
+    assert.equal(r?.__tag, "err");
+  });
+});
+
+describe("Stdlib - String.extractGroups", () => {
+  it("extracts capture groups", async () => {
+    const r = await callStdlib("extractGroups", { __tag: "string", value: "2024-03-15" }, [{ __tag: "string", value: "(\\d{4})-(\\d{2})-(\\d{2})" }], ctx());
+    assert.equal(r?.__tag, "list");
+    assert.equal(r?.items.length, 3);
+    assert.equal(r?.items[0]?.value, "2024");
+    assert.equal(r?.items[1]?.value, "03");
+  });
+  it("returns empty list when no match", async () => {
+    const r = await callStdlib("extractGroups", { __tag: "string", value: "hello" }, [{ __tag: "string", value: "(\\d+)" }], ctx());
+    assert.equal(r?.__tag, "list");
+    assert.equal(r?.items.length, 0);
+  });
+});
+
+describe("Stdlib - String.replacePattern", () => {
+  it("replaces all matches", async () => {
+    const r = await callStdlib("replacePattern", { __tag: "string", value: "hello world hello" }, [{ __tag: "string", value: "hello" }, { __tag: "string", value: "hi" }], ctx());
+    assert.equal(r?.__tag, "string");
+    assert.equal(r?.value, "hi world hi");
+  });
+});
+
+// ── New: Map improvements ─────────────────────────────────────────────────────
+
+describe("Stdlib - Map.filter", () => {
+  it("filter keeps only matching entries", async () => {
+    const map = {
+      __tag: "record",
+      fields: new Map([
+        ["a", { __tag: "int", value: 1 }],
+        ["b", { __tag: "int", value: 2 }],
+        ["c", { __tag: "int", value: 3 }],
+      ]),
+    };
+    // predicate: entry.value > 1
+    const mockCtx = {
+      recordEffect: () => {},
+      resolveIdentifier: () => undefined,
+      callFlow: async () => LLN_VOID,
+      applyFn: async (_fn, entry) => {
+        const v = entry.fields?.get("value");
+        return { __tag: "bool", value: v?.value > 1 };
+      },
+    };
+    const predFn = { __tag: "function", name: "pred" };
+    const r = await callStdlib("filter", map, [predFn], mockCtx);
+    assert.equal(r?.__tag, "record");
+    assert.equal(r?.fields.has("a"), false);
+    assert.equal(r?.fields.has("b"), true);
+    assert.equal(r?.fields.has("c"), true);
+  });
+});
+
+describe("Stdlib - Map.mapValues", () => {
+  it("transforms values, keeps keys", async () => {
+    const map = {
+      __tag: "record",
+      fields: new Map([
+        ["x", { __tag: "int", value: 10 }],
+        ["y", { __tag: "int", value: 20 }],
+      ]),
+    };
+    // transform: v * 2
+    const mockCtx = {
+      recordEffect: () => {},
+      resolveIdentifier: () => undefined,
+      callFlow: async () => LLN_VOID,
+      applyFn: async (_fn, v) => ({ __tag: "int", value: v.value * 2 }),
+    };
+    const transFn = { __tag: "function", name: "double" };
+    const r = await callStdlib("mapValues", map, [transFn], mockCtx);
+    assert.equal(r?.__tag, "record");
+    assert.equal(r?.fields.get("x")?.value, 20);
+    assert.equal(r?.fields.get("y")?.value, 40);
+  });
+});
+
+describe("Stdlib - Map.toList", () => {
+  it("converts map to list of {key, value} records", async () => {
+    const map = {
+      __tag: "record",
+      fields: new Map([
+        ["foo", { __tag: "string", value: "bar" }],
+      ]),
+    };
+    const r = await callStdlib("toList", map, [], ctx());
+    assert.equal(r?.__tag, "list");
+    assert.equal(r?.items.length, 1);
+    assert.equal(r?.items[0]?.__tag, "record");
+    assert.equal(r?.items[0]?.fields.get("key")?.value, "foo");
+    assert.equal(r?.items[0]?.fields.get("value")?.value, "bar");
+  });
+});
+
+describe("Stdlib - Map.fromList", () => {
+  it("creates Map from Array<{key, value}> records", async () => {
+    const entry = {
+      __tag: "record",
+      fields: new Map([
+        ["key", { __tag: "string", value: "name" }],
+        ["value", { __tag: "string", value: "LogicN" }],
+      ]),
+    };
+    const list = { __tag: "list", items: [entry] };
+    const r = await callStdlib("Map.fromList", undefined, [list], ctx());
+    assert.equal(r?.__tag, "record");
+    assert.equal(r?.fields.get("name")?.__tag, "string");
+    assert.equal(r?.fields.get("name")?.value, "LogicN");
+  });
+});
+
 // ── Phase 9A-3: BigInt decimal arithmetic precision ───────────────────────────
 
 describe("Stdlib - BigInt decimal arithmetic (Phase 9A-3)", () => {

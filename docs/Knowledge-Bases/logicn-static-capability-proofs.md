@@ -35,8 +35,11 @@ LogicN's capability system answers the question before execution begins: *does t
 
 ```logicn
 secure flow getPatient(id: PatientId)
-  -> Result<PatientRecord, PatientError>
+  -> GetPatientResult
 contract {
+  types {
+    type GetPatientResult = Result<PatientRecord, PatientError>
+  }
   effects {
     database.read
     audit.write
@@ -64,8 +67,11 @@ The contract declares both effects. Static proof passes. No runtime capability d
 
 ```logicn
 secure flow getPatient(id: PatientId)
-  -> Result<PatientRecord, PatientError>
+  -> GetPatientResult
 contract {
+  types {
+    type GetPatientResult = Result<PatientRecord, PatientError>
+  }
   effects {
     database.read
     // audit.write is missing
@@ -246,8 +252,11 @@ fn fetchRate(productId: ProductId) -> Result<Rate, NetworkError>
 }
 
 secure flow processOrder(order: OrderRequest)
-  -> Result<OrderResponse, OrderError>
+  -> ProcessOrderResult
 contract {
+  types {
+    type ProcessOrderResult = Result<OrderResponse, OrderError>
+  }
   effects {
     database.write
     // network.outbound missing — processOrder calls fetchRate

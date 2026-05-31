@@ -171,11 +171,12 @@ contract {
 
 ```logicn
 secure flow createPatient(readonly request: Request)
--> Result<Response, ApiError>
+-> CreatePatientResponse
 
 contract {
 
   types {
+    type CreatePatientResponse = Result<Response, ApiError>
     type CreatePatientResult = Result<PatientId, ValidationError>
   }
 

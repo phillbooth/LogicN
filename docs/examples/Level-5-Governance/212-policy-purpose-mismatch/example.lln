@@ -2,6 +2,7 @@
 /// level: 5
 /// concept: declared purpose does not match observed template use
 /// expected_diagnostics: LLN-GOV-005
+/// test_status: draft
 /// ai_rule: The template used in a communication flow must match the declared purpose.
 
 secure flow emailPatient(patient: PatientRecord) -> EmailPatientResult

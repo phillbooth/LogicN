@@ -1,5 +1,13 @@
 # Layered Rate Limits
 
+## Status
+
+```
+Status: Active — governing policy
+Scope:  Boot-level, route-level, and permission-level rate limit declarations
+See also: network-boundary-policy.md, boot-main-startup-defaults.md, permission-capability-actor-model.md
+```
+
 ## Definition
 
 LogicN rate limits are **layered** — each layer has its own responsibility and the strictest applicable limit wins.

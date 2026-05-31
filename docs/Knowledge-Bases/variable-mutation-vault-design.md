@@ -1,5 +1,10 @@
 # Variable Mutation Vault Design
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Stage B
+
 ## Purpose
 
 This concept defines the LogicN direction for:

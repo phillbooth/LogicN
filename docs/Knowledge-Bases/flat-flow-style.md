@@ -1,5 +1,14 @@
 # Flat Flow Style
 
+## Status
+
+```
+Status: Active — style rule, compiler-enforced
+Scope:  Flow nesting depth, guard clauses, match preference
+Diagnostic: LNN-STYLE-012 (deep nesting warning)
+See also: branching-model.md, logicn-syntax-if-match-optional.md, flat-flow-style principle in architecture-good-taste-principles.md
+```
+
 ## Definition
 
 LogicN enforces flat flow style as the preferred pattern for control flow.

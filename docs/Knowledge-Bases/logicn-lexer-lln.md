@@ -1,6 +1,6 @@
 # LogicN Lexer — `src/lexer.lln`
 
-**Phase 12 Stage B, Milestone 1**
+**Phase 16, Milestone 1**
 
 ## What it is
 
@@ -10,6 +10,10 @@ its own tools.
 
 When compiled by the TypeScript bootstrapper and executed, `lexer.lln` must
 produce an identical token stream to the existing TypeScript lexer (`src/lexer.ts`).
+
+Phase 16 additions include: precise end-position tracking (`endLine`/`endColumn`
+on every token), unicode escape sequences in string literals (`\uXXXX`), and
+nesting depth limits for string interpolation and nested structures.
 
 ---
 
@@ -40,8 +44,12 @@ The primary Phase 12A blocker is `while` loop support in the interpreter.
 record Token {
   kind: TokenKind
   value: String
-  line: Int
-  column: Int
+  line: Int         // start line (1-based)
+  column: Int       // start column (1-based)
+  endLine: Int      // end line (1-based, inclusive)
+  endColumn: Int    // end column (1-based, exclusive)
+  start: Int        // byte offset start
+  end: Int          // byte offset end
 }
 
 enum TokenKind {
@@ -49,16 +57,49 @@ enum TokenKind {
   Keyword
   StringLiteral
   NumberLiteral
+  CharLiteral
   Operator
   Symbol
   Comment
+  DocComment
   Newline
   Eof
+  Unknown
 }
 ```
 
 `Token` is a pure data record — no methods, no owned resources. It is safe to
 copy freely inside the `Array<Token>` return value.
+
+`endLine`/`endColumn` give the exclusive end position of the token's last
+character, matching the half-open range convention used by LSP. For single-line
+tokens `endLine == line`. For a newline token, `endLine == line` and
+`endColumn == column + 1`. `start`/`end` are byte offsets into the raw source
+string (UTF-8 encoded).
+
+---
+
+## Diagnostics — LLN-LEX codes
+
+The lexer emits structured `LexError` values. Phase 16 formalises three codes:
+
+| Code | Name | When emitted |
+|---|---|---|
+| `LLN-LEX-001` | `UnterminatedString` | End of source reached inside a string literal without a closing `"` |
+| `LLN-LEX-002` | `InvalidUnicodeEscape` | A `\u` escape is malformed — fewer than 4 hex digits, or codepoint out of range |
+| `LLN-LEX-003` | `NestingDepthExceeded` | String interpolation or nested structure exceeds the maximum nesting depth (default: 64) |
+
+All errors carry `line`, `col`, and a human-readable `message`. The `code` field
+is a `String` holding the `LLN-LEX-XXX` identifier so tooling can switch on it.
+
+```logicn
+record LexError {
+  code: String      // e.g. "LLN-LEX-001"
+  message: String
+  line: Int
+  col: Int
+}
+```
 
 ---
 
@@ -70,7 +111,7 @@ pure flow tokenize(source: String) -> LexerResult
 contract {
   types {
     type LexerResult = Result<Array<Token>, LexError>
-    type LexError = { message: String, line: Int, column: Int }
+    type LexError = { code: String, message: String, line: Int, col: Int }
   }
 
   intent {
@@ -94,6 +135,10 @@ contract {
           value: ""
           line: line
           column: col
+          endLine: line
+          endColumn: col
+          start: pos
+          end: pos
         }
         tokens = tokens.append(eof)
         return Ok(tokens)
@@ -109,11 +154,17 @@ contract {
           }
 
           '\n' => {
+            let startLine = line
+            let startCol = col
             let tok: Token = Token {
               kind: TokenKind.Newline
               value: "\n"
-              line: line
-              column: col
+              line: startLine
+              column: startCol
+              endLine: startLine
+              endColumn: startCol + 1
+              start: pos
+              end: pos + 1
             }
             tokens = tokens.append(tok)
             pos = pos + 1
@@ -141,6 +192,10 @@ contract {
     value: ""
     line: line
     column: col
+    endLine: line
+    endColumn: col
+    start: pos
+    end: pos
   }
   tokens = tokens.append(eof)
   return Ok(tokens)
@@ -193,7 +248,7 @@ pure flow scanIdentifier(source: String, pos: Int, line: Int, col: Int) -> Token
   } else {
     TokenKind.Identifier
   }
-  return Token { kind: kind, value: word, line: line, column: col }
+  return Token { kind: kind, value: word, line: line, column: col, endLine: line, endColumn: col + word.charCount(), start: pos, end: end }
 }
 ```
 
@@ -213,7 +268,7 @@ pure flow scanString(source: String, pos: Int, line: Int, col: Int) -> Result<To
     let ch: Option<Char> = source.charAt(i)
     match ch {
       None => {
-        return Err(LexError { message: "Unterminated string literal", line: line, column: col })
+        return Err(LexError { code: "LLN-LEX-001", message: "Unterminated string literal", line: line, col: col })
       }
       Some(c) => {
         match c {
@@ -224,6 +279,10 @@ pure flow scanString(source: String, pos: Int, line: Int, col: Int) -> Result<To
               value: chars
               line: line
               column: col
+              endLine: line
+              endColumn: col + (i - pos) + 1
+              start: pos
+              end: i + 1
             })
           }
           '\\' => {
@@ -231,7 +290,7 @@ pure flow scanString(source: String, pos: Int, line: Int, col: Int) -> Result<To
             let next: Option<Char> = source.charAt(i + 1)
             match next {
               None => {
-                return Err(LexError { message: "Incomplete escape sequence", line: line, column: col })
+                return Err(LexError { code: "LLN-LEX-001", message: "Incomplete escape sequence", line: line, col: col })
               }
               Some(esc) => {
                 match esc {
@@ -239,6 +298,14 @@ pure flow scanString(source: String, pos: Int, line: Int, col: Int) -> Result<To
                   't'  => { chars = chars + "\t" }
                   '"'  => { chars = chars + "\"" }
                   '\\' => { chars = chars + "\\" }
+                  'u'  => {
+                    // Unicode escape \uXXXX — Phase 16
+                    // Validate 4 hex digits; emit LLN-LEX-002 on failure
+                    chars = chars + scanUnicodeEscape(source, i + 2).unwrapOrErr(
+                      LexError { code: "LLN-LEX-002", message: "Invalid unicode escape", line: line, col: col }
+                    )
+                    i = i + 4
+                  }
                   _    => { chars = chars + "\\" + esc.toString() }
                 }
                 i = i + 2
@@ -254,7 +321,7 @@ pure flow scanString(source: String, pos: Int, line: Int, col: Int) -> Result<To
     }
   }
 
-  return Err(LexError { message: "Unterminated string literal", line: line, column: col })
+  return Err(LexError { code: "LLN-LEX-001", message: "Unterminated string literal", line: line, col: col })
 }
 ```
 
@@ -291,7 +358,7 @@ pure flow scanNumber(source: String, pos: Int, line: Int, col: Int) -> Token {
   }
 
   let numStr: String = source.slice(pos, i)
-  return Token { kind: TokenKind.NumberLiteral, value: numStr, line: line, column: col }
+  return Token { kind: TokenKind.NumberLiteral, value: numStr, line: line, column: col, endLine: line, endColumn: col + (i - pos), start: pos, end: i }
 }
 ```
 
@@ -317,6 +384,8 @@ This stub is valid LogicN as understood by the current parser (Phase 4+). It
 will parse successfully but cannot be executed until Phase 12A loop support
 lands. It serves as a placeholder that can be loaded by the bootstrapper.
 
+Phase 16: the stub now uses the full 8-field Token record.
+
 ```logicn
 pure flow tokenize(source: String) -> LexerResult
 
@@ -341,6 +410,10 @@ contract {
     value: ""
     line: 1
     column: 1
+    endLine: 1
+    endColumn: 1
+    start: 0
+    end: 0
   }
 
   return Ok(tokens.append(eof))

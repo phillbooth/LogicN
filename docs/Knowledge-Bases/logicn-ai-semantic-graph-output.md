@@ -88,7 +88,7 @@ intent UserLookup {
 }
 
 secure flow getUser(id: UserId, ctx: RequestContext)
-    -> Result<UserRecord, UserError>
+    -> GetUserResult
 intent UserLookup
 effects [database.read]
 capabilities [users.read]
@@ -96,7 +96,13 @@ context.requires [trace_id, actor_id]
 privacy {
     handles [protected Email, protected UserId]
     redact before audit.write
-} {
+}
+contract {
+  types {
+    type GetUserResult = Result<UserRecord, UserError>
+  }
+}
+{
     let row = db.query(Users, id) ?
     let user: UserRecord = Users.fromRow(row) ?
     return Ok(user)

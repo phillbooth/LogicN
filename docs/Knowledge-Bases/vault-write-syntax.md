@@ -1,5 +1,10 @@
 # Vault Write Syntax
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Stage B
+
 ## Definition
 
 LogicN standardises vault write operations using the vault object as the direct actor:

@@ -1,4 +1,4 @@
-/// example: 467-protected-response-body
+﻿/// example: 467-protected-response-body
 /// test_status: draft
 /// level: 9
 /// concept: Protected value in response body requires policy
@@ -7,13 +7,13 @@
 secure flow getProfile(readonly request: Request) -> GetProfileResult
 
 contract {
-  // Result alias — protected value in response body without policy triggers LLN-GOV-003
+  // Result alias â€” protected value in response body without policy triggers LLN-GOV-003
   types {
     type GetProfileResult = Result<Response, ApiError>
   }
 
   intent {
-    "Return patient profile — demonstrates protected value in response body without policy."
+    "Return patient profile â€” demonstrates protected value in response body without policy."
   }
 
   effects {

@@ -1,5 +1,14 @@
 # Server Platform Support
 
+## Status
+
+```
+Status: Active — platform tier decisions
+Scope:  Linux/container (Tier 1), bare metal (Tier 2), Windows/IIS (Tier 3),
+        shared hosting (Tier 4), serverless (Tier 5)
+See also: logicn-core-network-governance.md, quiet-runtime-secure-defaults.md, bootstrap-runtime-roadmap.md
+```
+
 ## Principle
 
 LogicN targets **Linux first** but not Linux-only. Its security model lives inside LogicN itself — not inside the web server or reverse proxy configuration.

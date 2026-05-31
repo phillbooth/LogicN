@@ -2,6 +2,7 @@
 /// level: 3
 /// concept: effect propagation through a flow call chain
 /// expected_diagnostics: none
+/// test_status: draft
 /// ai_rule: A flow calling another flow must declare all effects required by the callee.
 
 guarded flow saveOrder(order: Order) -> SaveOrderResult

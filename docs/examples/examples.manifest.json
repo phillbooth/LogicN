@@ -1,0 +1,3659 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-05-31",
+  "totalExamples": 222,
+  "stableCount": 188,
+  "draftCount": 34,
+  "examples": [
+    {
+      "id": "001-pure-flow",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "pure flow",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Money",
+        "contract",
+        "flow",
+        "for"
+      ],
+      "aiRule": "Use pure flow for deterministic logic with no effects."
+    },
+    {
+      "id": "002-guarded-flow",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "guarded flow",
+      "status": "draft",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow",
+        "for",
+        "unsafe"
+      ],
+      "aiRule": "Use guarded flow when the flow performs declared effects."
+    },
+    {
+      "id": "003-secure-flow",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "secure flow",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "record",
+        "unsafe"
+      ],
+      "aiRule": "Use secure flow at trust boundaries such as HTTP/API requests."
+    },
+    {
+      "id": "004-local-fn-helper",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "fn helper",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Money",
+        "contract",
+        "flow",
+        "fn"
+      ],
+      "aiRule": "fn is a local helper defined inside a flow. It cannot declare effects."
+    },
+    {
+      "id": "005-let-binding",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "let binding",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [],
+      "aiRule": "let declares an immutable binding."
+    },
+    {
+      "id": "006-mut-binding",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "mut binding",
+      "status": "draft",
+      "expectedDiagnostics": [],
+      "features": [],
+      "aiRule": "mut declares a mutable binding that can be reassigned."
+    },
+    {
+      "id": "007-readonly-parameter",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "readonly parameter",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "contract",
+        "flow",
+        "for"
+      ],
+      "aiRule": "readonly parameters cannot be reassigned inside the flow."
+    },
+    {
+      "id": "008-readonly-local-binding",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "readonly local binding",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": []
+    },
+    {
+      "id": "009-unsafe-let-boundary",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "unsafe let \u2014 boundary input",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "unsafe"
+      ],
+      "aiRule": "Data from external boundaries starts as unsafe."
+    },
+    {
+      "id": "010-result-return",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "Result return type",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "contract",
+        "flow"
+      ],
+      "aiRule": "Use Result<T, E> for fallible operations instead of exceptions."
+    },
+    {
+      "id": "011-option-return",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "Option return type",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Option",
+        "contract",
+        "flow"
+      ],
+      "aiRule": "Use Option<T> instead of null."
+    },
+    {
+      "id": "012-match-result",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "match on Result",
+      "status": "draft",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "match"
+      ],
+      "aiRule": "Every match on Result must handle both Ok and Err."
+    },
+    {
+      "id": "013-match-option",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "match on Option",
+      "status": "draft",
+      "expectedDiagnostics": [],
+      "features": [
+        "Option",
+        "match"
+      ],
+      "aiRule": "Every match on Option must handle both Some and None."
+    },
+    {
+      "id": "014-enum-basic",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "enum declaration",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "enum"
+      ]
+    },
+    {
+      "id": "015-record-basic",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "record type",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "record"
+      ]
+    },
+    {
+      "id": "016-type-alias",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "type alias",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": []
+    },
+    {
+      "id": "017-domain-brand-type",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "branded domain type",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [],
+      "aiRule": "Use Brand<String, Name> to make domain types distinct at compile time."
+    },
+    {
+      "id": "018-protected-type-label",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "protected type qualifier",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "protected"
+      ],
+      "aiRule": "protected marks a validated but sensitive value."
+    },
+    {
+      "id": "019-redacted-type-label",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "redacted type qualifier",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "redacted"
+      ],
+      "aiRule": "redacted marks a value that has been masked for safe output."
+    },
+    {
+      "id": "020-invalid-fn-top-level",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "fn cannot be declared at top level",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-SYNTAX-005"
+      ],
+      "features": [
+        "Money",
+        "fn"
+      ]
+    },
+    {
+      "id": "021-flow-contract-basic",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "flow contract block with types, intent, and events",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Array",
+        "Result",
+        "and",
+        "contract",
+        "events",
+        "flow",
+        "match",
+        "protected"
+      ],
+      "aiRule": "Use contract { } to group flow-local metadata \u2014 types, intent, and events \u2014 in one governed location."
+    },
+    {
+      "id": "022-no-toplevel-let",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "top-level let bindings are rejected",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-SYNTAX-006"
+      ],
+      "features": [
+        "contract",
+        "flow"
+      ],
+      "aiRule": "All executable bindings belong inside flows. Top-level scope is for declarations only."
+    },
+    {
+      "id": "023-readable-logic-forms",
+      "level": 1,
+      "levelName": "Basics",
+      "concept": "readable operator aliases \u2014 and, or, unless, is",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "and",
+        "contract",
+        "flow",
+        "for",
+        "or",
+        "unless"
+      ],
+      "aiRule": "Readable forms are aliases. 'and' = &&, 'or' = ||, 'unless' = if !cond, 'is' = ==. Same AST."
+    },
+    {
+      "id": "051-int-basic",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Int type",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [],
+      "aiRule": "Int is the standard integer type in LogicN."
+    },
+    {
+      "id": "052-decimal-basic",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Decimal type",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [],
+      "aiRule": "Use Decimal(\"...\") constructor for exact decimal values. Avoids floating-point rounding."
+    },
+    {
+      "id": "053-string-basic",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "String type",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [],
+      "aiRule": "String holds UTF-8 text. Untrusted strings should be wrapped in unsafe let."
+    },
+    {
+      "id": "054-bool-basic",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Bool type",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [],
+      "aiRule": "Bool values are true or false."
+    },
+    {
+      "id": "055-byte-basic",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Byte type",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [],
+      "aiRule": "Byte holds a single 8-bit unsigned integer, often written as a hex literal."
+    },
+    {
+      "id": "056-char-basic",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Char type",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [],
+      "aiRule": "Char holds a single Unicode character, written with single quotes."
+    },
+    {
+      "id": "057-email-type",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "protected Email domain type",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "protected",
+        "unsafe"
+      ],
+      "aiRule": "Email values come from validate.email()."
+    },
+    {
+      "id": "058-patient-id-type",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "protected PatientId domain type",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "protected",
+        "unsafe"
+      ],
+      "aiRule": "PatientId values come from validate.patientId()."
+    },
+    {
+      "id": "059-nhs-number-type",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "protected NhsNumber domain type",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "protected",
+        "unsafe"
+      ],
+      "aiRule": "NhsNumber values come from validate.nhsNumber()."
+    },
+    {
+      "id": "060-invalid-email-assignment",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "direct assignment to protected Email is forbidden",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-TYPE-003"
+      ],
+      "features": [
+        "flow",
+        "protected"
+      ],
+      "aiRule": "You cannot assign an unvalidated String to a protected type. Use validate.email(...)."
+    },
+    {
+      "id": "061-redacted-email",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "redacted Email label",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "redacted"
+      ],
+      "aiRule": "Use redact() to convert a protected value to a redacted value for audit logging."
+    },
+    {
+      "id": "062-invalid-redacted-email",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "protected Email cannot be assigned to redacted Email directly",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-TYPE-002"
+      ],
+      "features": [
+        "protected",
+        "redacted"
+      ],
+      "aiRule": "Use redact(email) to explicitly redact a protected value before assigning to a redacted binding."
+    },
+    {
+      "id": "063-option-some",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Option<T> with Some value",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Option"
+      ],
+      "aiRule": "Option<T> represents a value that may be absent. Some(value) wraps a present value."
+    },
+    {
+      "id": "064-option-none",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Option<T> with None value",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Option"
+      ],
+      "aiRule": "None represents the absence of a value in Option<T>."
+    },
+    {
+      "id": "065-option-invalid-arity",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Option<T> requires exactly one type parameter",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-TYPE-009"
+      ],
+      "features": [
+        "Option",
+        "flow"
+      ],
+      "aiRule": "Option takes exactly 1 type parameter."
+    },
+    {
+      "id": "066-result-success",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Result<T,E> Ok variant",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result"
+      ],
+      "aiRule": "Result<T, E> represents success (Ok) or failure (Err). Use Ok(value) for success."
+    },
+    {
+      "id": "067-result-error",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Result<T,E> Err variant",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result"
+      ],
+      "aiRule": "Use Err(errorValue) to represent a typed failure in Result<T,E>."
+    },
+    {
+      "id": "068-result-invalid-arity",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Result<T,E> requires exactly two type parameters",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-TYPE-009"
+      ],
+      "features": [
+        "Result",
+        "flow"
+      ],
+      "aiRule": "Result takes exactly 2 type parameters: the success type and the error type."
+    },
+    {
+      "id": "069-auto-inference",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Auto type inference",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [],
+      "aiRule": "Auto means infer the type from the initializer expression."
+    },
+    {
+      "id": "070-auto-invalid",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Auto requires an initializer",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-TYPE-002"
+      ],
+      "features": [],
+      "aiRule": "Auto cannot infer a type without an initializer. Provide an initial value."
+    },
+    {
+      "id": "071-money-gbp",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Money<GBP> type",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Money"
+      ],
+      "aiRule": "Use Money.gbp(\"...\") to create GBP monetary values with exact precision."
+    },
+    {
+      "id": "072-money-add-same-currency",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Money<GBP> addition with same currency",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Money"
+      ],
+      "aiRule": "Money<GBP> + Money<GBP> is valid and yields Money<GBP>."
+    },
+    {
+      "id": "073-money-cross-currency-invalid",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "cross-currency Money addition is forbidden",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-TYPE-004"
+      ],
+      "features": [
+        "Money",
+        "flow"
+      ],
+      "aiRule": "Money types with different currency parameters cannot be added together."
+    },
+    {
+      "id": "074-money-times-decimal",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Money<GBP> multiplied by Decimal",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Money"
+      ],
+      "aiRule": "Money<GBP> * Decimal is valid and scales the monetary amount."
+    },
+    {
+      "id": "075-money-divide-decimal",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Money<GBP> divided by Decimal",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Money"
+      ],
+      "aiRule": "Money<GBP> / Decimal is valid and yields Money<GBP>."
+    },
+    {
+      "id": "076-money-times-money-invalid",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Money multiplied by Money is forbidden",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-TYPE-004"
+      ],
+      "features": [
+        "Money",
+        "flow"
+      ],
+      "aiRule": "Money cannot be multiplied by Money. Use Decimal for scaling factors."
+    },
+    {
+      "id": "077-money-ratio",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Money<GBP> / Money<GBP> yields Decimal",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Money"
+      ],
+      "aiRule": "Dividing Money<GBP> by Money<GBP> produces a dimensionless Decimal ratio."
+    },
+    {
+      "id": "078-money-ratio-cross-currency-invalid",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "cross-currency Money ratio is forbidden",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-TYPE-004"
+      ],
+      "features": [
+        "Money",
+        "flow"
+      ],
+      "aiRule": "Money ratio requires matching currency parameters."
+    },
+    {
+      "id": "079-tensor-basic",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Tensor<Dtype, Shape> with static shape",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Tensor"
+      ],
+      "aiRule": "Tensor requires two type parameters: element type and shape."
+    },
+    {
+      "id": "080-tensor-dynamic-shape",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Tensor<Dtype, DynamicShape>",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Tensor"
+      ],
+      "aiRule": "Use DynamicShape when tensor dimensions are not known at compile time."
+    },
+    {
+      "id": "081-tensor-invalid-arity",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Tensor requires exactly two type parameters",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-TYPE-009"
+      ],
+      "features": [
+        "Tensor",
+        "flow"
+      ],
+      "aiRule": "Tensor<Dtype, Shape> requires both element type and shape parameters."
+    },
+    {
+      "id": "082-readonly-view",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "ReadOnlyView<T> generic type",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [],
+      "aiRule": "ReadOnlyView<T> exposes a collection without mutation methods."
+    },
+    {
+      "id": "083-readonly-view-invalid",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "ReadOnlyView requires exactly one type parameter",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-TYPE-009"
+      ],
+      "features": [
+        "flow"
+      ],
+      "aiRule": "ReadOnlyView takes exactly 1 type parameter."
+    },
+    {
+      "id": "084-unknown-type",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "unknown type name produces LLN-TYPE-001",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-TYPE-001"
+      ],
+      "features": [
+        "flow"
+      ],
+      "aiRule": "All types must be declared or imported. Unknown type names are compile errors."
+    },
+    {
+      "id": "085-type-mismatch",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "type mismatch produces LLN-TYPE-002",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-TYPE-002"
+      ],
+      "features": [
+        "flow"
+      ],
+      "aiRule": "The right-hand side of a binding must match the declared type."
+    },
+    {
+      "id": "086-protected-not-redacted",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "protected value cannot be directly assigned to redacted binding",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-TYPE-002"
+      ],
+      "features": [
+        "protected",
+        "redacted"
+      ],
+      "aiRule": "Use redact(email) to convert a protected value to a redacted value."
+    },
+    {
+      "id": "087-protected-email-audit",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "full protected -> redacted -> audit pattern",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "redacted"
+      ],
+      "aiRule": "Redact protected values before writing to audit sinks."
+    },
+    {
+      "id": "088-array-range",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Array.range static constructor",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Array",
+        "and",
+        "contract",
+        "flow"
+      ],
+      "aiRule": "Use Array.range(from, to) to generate a sequence of integers."
+    },
+    {
+      "id": "089-duration-type",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Duration type and arithmetic",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "and",
+        "contract",
+        "flow"
+      ],
+      "aiRule": "Duration is a time span \u2014 use Duration.ofMs, ofSeconds, ofMinutes, ofHours."
+    },
+    {
+      "id": "090-result-sequence",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Result.sequence converts Array<Result<T,E>> to Result<Array<T>, E>",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Array",
+        "Result",
+        "and",
+        "contract",
+        "flow",
+        "or"
+      ],
+      "aiRule": "Use Result.sequence to collect all Ok values or short-circuit on the first Err."
+    },
+    {
+      "id": "091-trust-sensitivity-independent",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "trust and sensitivity are independent axes",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Array",
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "or",
+        "protected",
+        "unsafe"
+      ],
+      "aiRule": "unsafe let = trust state. protected = sensitivity state. These are orthogonal."
+    },
+    {
+      "id": "092-boolean-logic",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Bool, true/false, if/else, and/or/not, comparisons",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "and",
+        "contract",
+        "flow",
+        "or"
+      ],
+      "aiRule": "Bool holds true or false. Use && and || for and/or. Use ! for not."
+    },
+    {
+      "id": "093-time-types",
+      "level": 2,
+      "levelName": "Types",
+      "concept": "Duration, Timestamp, Duration.ofSeconds, add/subtract",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "and",
+        "contract",
+        "flow"
+      ],
+      "aiRule": "Duration is a time span. Timestamp is a point in time."
+    },
+    {
+      "id": "101-pure-no-effects",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "pure flow has no effects",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Money",
+        "contract",
+        "effects",
+        "flow",
+        "for"
+      ],
+      "aiRule": "Pure flows cannot perform I/O or call effectful operations."
+    },
+    {
+      "id": "102-guarded-database-write",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "guarded flow declaring database.write effect",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "Declare database.write when writing to a database."
+    },
+    {
+      "id": "103-guarded-network-outbound",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "guarded flow declaring network.outbound effect",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow",
+        "for",
+        "unsafe"
+      ],
+      "aiRule": "Declare network.outbound when making outbound HTTP or network calls."
+    },
+    {
+      "id": "104-multiple-effects",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "flow declaring multiple effects",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "record"
+      ],
+      "aiRule": "List all required effects in the contract effects block."
+    },
+    {
+      "id": "105-missing-database-effect",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "undeclared database.write effect",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-EFFECT-001"
+      ],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "Every effect used in a flow body must be declared in the contract effects block."
+    },
+    {
+      "id": "106-missing-network-effect",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "undeclared network.outbound effect",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-EFFECT-001"
+      ],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow",
+        "unsafe"
+      ],
+      "aiRule": "http.get and similar calls require network.outbound to be declared."
+    },
+    {
+      "id": "107-pure-flow-calls-effectful-flow",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "pure flow cannot call an effectful flow",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-EFFECT-003"
+      ],
+      "features": [
+        "Money",
+        "contract",
+        "flow"
+      ],
+      "aiRule": "A pure flow cannot call any flow that declares effects."
+    },
+    {
+      "id": "108-guarded-flow-calls-effectful-flow",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "guarded flow can call effectful flow when it declares the same effects",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Money",
+        "Result",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "A guarded flow may call effectful flows provided it declares all required effects."
+    },
+    {
+      "id": "109-local-fn-pure-helper",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "local fn as a pure helper inside a flow",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Money",
+        "flow",
+        "fn"
+      ],
+      "aiRule": "fn is a local helper inside a flow. It cannot be declared at the top level."
+    },
+    {
+      "id": "110-local-fn-uses-parent-effect",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "local fn may use effects declared by the containing flow",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "contract",
+        "effects",
+        "flow",
+        "fn",
+        "unsafe"
+      ],
+      "aiRule": "Local fn may use effects only when the containing flow declares them."
+    },
+    {
+      "id": "111-local-fn-effect-not-covered-by-parent",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "local fn cannot use effects not declared by the containing flow",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-EFFECT-001"
+      ],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow",
+        "fn",
+        "unsafe"
+      ],
+      "aiRule": "A local fn is bound by the containing flow's effect declarations."
+    },
+    {
+      "id": "112-local-fn-cannot-declare-effects",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "local fn cannot declare its own effects",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-SEC-014"
+      ],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow",
+        "fn"
+      ],
+      "aiRule": "Only flow declarations may declare effects. Local fn cannot have with effects [...]."
+    },
+    {
+      "id": "113-secure-flow-with-effects",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "secure flow with full effects pattern",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "record",
+        "redacted",
+        "unsafe"
+      ],
+      "aiRule": "Secure flows require audit.write alongside operational effects."
+    },
+    {
+      "id": "114-secure-flow-missing-audit-effect",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "secure flow calls AuditLog.write but does not declare audit.write",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-EFFECT-001"
+      ],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "unsafe"
+      ],
+      "aiRule": "AuditLog.write requires audit.write to be declared in the effect list."
+    },
+    {
+      "id": "115-effect-propagation-through-call",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "effect propagation through a flow call chain",
+      "status": "draft",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "A flow calling another flow must declare all effects required by the callee."
+    },
+    {
+      "id": "116-effect-propagation-missing-parent",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "caller missing effect required by callee",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-EFFECT-002"
+      ],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "If a callee declares an effect, the caller must declare it too."
+    },
+    {
+      "id": "117-effectful-operation-in-pure-flow",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "filesystem.read in a pure flow is forbidden",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-EFFECT-003"
+      ],
+      "features": [
+        "Result",
+        "contract",
+        "flow",
+        "unsafe"
+      ],
+      "aiRule": "Pure flows cannot perform any I/O, including filesystem reads."
+    },
+    {
+      "id": "118-filesystem-read-guarded",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "guarded flow with filesystem.read effect",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "contract",
+        "effects",
+        "flow",
+        "unsafe"
+      ],
+      "aiRule": "Declare filesystem.read when reading from the filesystem."
+    },
+    {
+      "id": "119-effect-name-invalid",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "non-canonical effect name is rejected",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-EFFECT-004"
+      ],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow",
+        "unsafe"
+      ],
+      "aiRule": "Effect names must use the canonical dotted form (e.g. network.outbound, not network)."
+    },
+    {
+      "id": "120-effect-summary-example",
+      "level": 3,
+      "levelName": "Effects",
+      "concept": "comprehensive effects example showing all patterns",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "redacted",
+        "unsafe"
+      ],
+      "aiRule": "Declare every effect used. pure = no effects. guarded/secure = explicit effect list in contract."
+    },
+    {
+      "id": "151-http-request-boundary",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "HTTP request data enters as unsafe",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "or",
+        "protected",
+        "unsafe"
+      ],
+      "aiRule": "Request data starts as unsafe. Always use unsafe let for values from request.body."
+    },
+    {
+      "id": "152-file-boundary",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "file content enters as unsafe",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "contract",
+        "effects",
+        "flow",
+        "unsafe"
+      ],
+      "aiRule": "External files are unsafe. Use unsafe let for data read from the filesystem."
+    },
+    {
+      "id": "153-environment-boundary",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "environment variables enter as unsafe",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow",
+        "unsafe"
+      ],
+      "aiRule": "Environment values are unsafe. Treat them as untrusted external input."
+    },
+    {
+      "id": "154-validate-email",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "validating unsafe email to protected Email",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "record",
+        "unsafe"
+      ],
+      "aiRule": "Email values come from validate.email(). The ? propagates validation failure."
+    },
+    {
+      "id": "155-validate-patient-id",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "validating unsafe patientId to protected PatientId",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "or",
+        "protected",
+        "record",
+        "unsafe"
+      ],
+      "aiRule": "PatientId values come from validate.patientId()."
+    },
+    {
+      "id": "156-validate-nhs-number",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "validating unsafe nhsNumber to protected NhsNumber",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "redacted",
+        "unsafe"
+      ],
+      "aiRule": "NhsNumber values come from validate.nhsNumber()."
+    },
+    {
+      "id": "157-invalid-email-assignment",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "assigning String directly to protected Email is forbidden",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-TYPE-003"
+      ],
+      "features": [
+        "flow",
+        "protected"
+      ],
+      "aiRule": "Cannot assign String directly to Email. Use validate.email(...)."
+    },
+    {
+      "id": "158-redact-email",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "redact() converts protected Email to redacted Email",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "protected",
+        "redacted"
+      ],
+      "aiRule": "Protected values become redacted through redact(). Use for audit logging."
+    },
+    {
+      "id": "159-redact-patient-id",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "redact() converts protected PatientId to redacted PatientId",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "protected",
+        "redacted"
+      ],
+      "aiRule": "Use redact() to safely prepare protected PatientId for audit logs."
+    },
+    {
+      "id": "160-protected-not-redacted",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "protected value cannot be directly assigned to redacted binding",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-TYPE-002"
+      ],
+      "features": [
+        "protected",
+        "redacted"
+      ],
+      "aiRule": "Protected values must be explicitly redacted. Use redact(email)."
+    },
+    {
+      "id": "161-safe-audit-log",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "safe audit log write with redacted value",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "redacted"
+      ],
+      "aiRule": "Protected -> Redacted -> Audit is the canonical LogicN trust flow for sensitive data."
+    },
+    {
+      "id": "162-invalid-audit-log",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "unsafe value reaches audit sink without validation",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-VALUESTATE-003"
+      ],
+      "features": [
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "unsafe"
+      ],
+      "aiRule": "Unsafe boundary data must be validated before reaching any governed sink including AuditLog."
+    },
+    {
+      "id": "163-unsafe-audit-log",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "passing unsafe value to audit sink",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-VALUESTATE-003"
+      ],
+      "features": [
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "unsafe"
+      ],
+      "aiRule": "Unsafe values must be validated before reaching any sink."
+    },
+    {
+      "id": "164-safe-database-write",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "protected value is safe to write to database",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "record",
+        "unsafe"
+      ],
+      "aiRule": "Validated protected values can be stored in a database sink with database.write declared."
+    },
+    {
+      "id": "165-unsafe-database-write",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "unsafe value cannot be written to a database sink",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-VALUESTATE-003"
+      ],
+      "features": [
+        "contract",
+        "effects",
+        "flow",
+        "unsafe"
+      ],
+      "aiRule": "Unsafe values cannot be passed to database sinks. Validate first."
+    },
+    {
+      "id": "166-safe-network-send",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "protected value may be sent over network (policy dependent)",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow",
+        "protected"
+      ],
+      "aiRule": "Protected values are not automatically forbidden from network sends. Governance policy decides."
+    },
+    {
+      "id": "167-unsafe-network-send",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "unsafe value crossing a trust boundary via network",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-VALUESTATE-003"
+      ],
+      "features": [
+        "contract",
+        "effects",
+        "flow",
+        "unsafe"
+      ],
+      "aiRule": "Unsafe values cannot cross trust boundaries. Validate before sending externally."
+    },
+    {
+      "id": "168-redacted-network-send",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "redacted value is safe to send to audit endpoints",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "for",
+        "protected",
+        "redacted"
+      ],
+      "aiRule": "Redacted values are safe to transmit to audit or logging endpoints."
+    },
+    {
+      "id": "169-secret-comparison",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "direct equality comparison on secrets is forbidden",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-SECRET-002"
+      ],
+      "features": [
+        "flow"
+      ],
+      "aiRule": "Never compare secrets with ==. Use constantTimeEquals(...) to prevent timing attacks."
+    },
+    {
+      "id": "170-constant-time-comparison",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "constantTimeEquals for safe secret comparison",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "flow",
+        "for"
+      ],
+      "aiRule": "Use constantTimeEquals(a, b) for all secret value comparisons."
+    },
+    {
+      "id": "171-protected-console-log",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "secret value sent to console sink is forbidden",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-SECRET-001"
+      ],
+      "features": [
+        "flow"
+      ],
+      "aiRule": "SecureString values cannot be printed to the console. Redact first or omit."
+    },
+    {
+      "id": "172-secret-console-log",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "secret value sent to console sink is forbidden",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-SECRET-001"
+      ],
+      "features": [
+        "flow"
+      ],
+      "aiRule": "Never log secret values (API keys, passwords, tokens)."
+    },
+    {
+      "id": "173-validation-chain",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "complete canonical trust flow chain",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "for",
+        "or",
+        "protected",
+        "redacted",
+        "unsafe"
+      ],
+      "aiRule": "This is the canonical LogicN trust flow: unsafe -> validate -> protected -> redact -> audit."
+    },
+    {
+      "id": "174-multiple-protected-values",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "multiple protected values all validated and redacted in audit",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "or",
+        "protected",
+        "record",
+        "redacted",
+        "unsafe"
+      ],
+      "aiRule": "Each protected value must be individually validated and individually redacted for audit."
+    },
+    {
+      "id": "175-security-summary-example",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "comprehensive security example showing all patterns",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "redacted",
+        "unsafe"
+      ],
+      "aiRule": "Full security pattern: trust boundaries, validation gates, protected types, redaction, safe sinks."
+    },
+    {
+      "id": "176-sql-injection-concat",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "string taint propagation (SQL injection pattern)",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-VALUESTATE-004"
+      ],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow",
+        "unsafe"
+      ],
+      "aiRule": "String concatenation with unsafe input produces a tainted string \u2014 do not send to governed sinks."
+    },
+    {
+      "id": "177-secret-serialization",
+      "level": 4,
+      "levelName": "Security",
+      "concept": "SecureString serialization denied",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-SECRET-003"
+      ],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow",
+        "or"
+      ],
+      "aiRule": "SecureString must not be passed to json.encode or serialize functions."
+    },
+    {
+      "id": "201-intent-basic",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "intent declaration on a guarded flow",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "Use intent to describe what the flow is allowed to do."
+    },
+    {
+      "id": "202-secure-intent-boundary",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "secure flow with full intent declaration",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "record",
+        "redacted",
+        "unsafe"
+      ],
+      "aiRule": "Intent on a secure flow is the primary governance signal for patient data operations."
+    },
+    {
+      "id": "203-intent-mismatch-invalid",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "intent mismatch when flow behaviour contradicts declared intent",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-INTENT-001"
+      ],
+      "features": [
+        "Result",
+        "and",
+        "contract",
+        "effects",
+        "events",
+        "flow",
+        "protected"
+      ],
+      "aiRule": "Flow behaviour must be consistent with declared intent."
+    },
+    {
+      "id": "204-remote-execution-denied",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "compute target with remote.execution denied",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "for"
+      ],
+      "aiRule": "Use deny [remote.execution] to prevent a flow from being dispatched to a remote compute target."
+    },
+    {
+      "id": "205-remote-execution-violation",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "compute target remote violates governance policy",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-GOV-004"
+      ],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "for"
+      ],
+      "aiRule": "Specifying remote as the compute target when governance denies it is a policy violation."
+    },
+    {
+      "id": "206-protected-data-sharing-authority",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "authority block for sharing protected data externally",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "for",
+        "protected"
+      ],
+      "aiRule": "Use an authority block to declare permission to share protected data externally."
+    },
+    {
+      "id": "207-protected-data-sharing-missing-authority",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "sending protected data externally without authority block",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-GOV-003"
+      ],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "for",
+        "protected"
+      ],
+      "aiRule": "Protected data cannot be sent externally without an authority block granting permission."
+    },
+    {
+      "id": "208-audit-proof-required",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "delete flow with full audit evidence",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "record",
+        "redacted"
+      ],
+      "aiRule": "Destructive operations on sensitive data require audit evidence. Declare audit.write and call AuditLog.write."
+    },
+    {
+      "id": "209-audit-proof-missing",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "intent requires audit but no audit.write sink used",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-GOV-002"
+      ],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "record"
+      ],
+      "aiRule": "If intent or policy requires audit evidence, AuditLog.write must be called."
+    },
+    {
+      "id": "210-governed-execution-plan",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "full governed execution plan for a ML inference flow",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "for"
+      ],
+      "aiRule": "Combine intent, compute target, and audit for fully governed ML inference flows."
+    },
+    {
+      "id": "211-policy-block-allows-purpose",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "policy block declaring allowed purpose for data sharing",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "for",
+        "protected"
+      ],
+      "aiRule": "Use a policy block to declare allowed data-sharing purposes for patient communications."
+    },
+    {
+      "id": "212-policy-purpose-mismatch",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "declared purpose does not match observed template use",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-GOV-005"
+      ],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "match",
+        "protected"
+      ],
+      "aiRule": "The template used in a communication flow must match the declared purpose."
+    },
+    {
+      "id": "213-governance-summary-example",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "comprehensive governance example showing all patterns",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "for",
+        "protected",
+        "record",
+        "redacted",
+        "unsafe"
+      ],
+      "aiRule": "Governance = intent + effects + compute target + authority + policy + audit evidence."
+    },
+    {
+      "id": "214-contract-secure-flow",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "flow contract on secure flow with governance intent",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "events",
+        "flow",
+        "protected",
+        "record",
+        "unsafe"
+      ],
+      "aiRule": "secure flows should use contract.intent to declare their governance purpose explicitly."
+    },
+    {
+      "id": "215-contract-set",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "reusable contract set applied to a flow",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Set",
+        "audit",
+        "contract",
+        "effects",
+        "events",
+        "flow",
+        "protected",
+        "record",
+        "unsafe",
+        "while"
+      ],
+      "aiRule": "Use contract set to define reusable governance templates."
+    },
+    {
+      "id": "216-event-declaration",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "global event declaration + flow emission + LLN-EVENT-001",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-EVENT-001"
+      ],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "events",
+        "flow",
+        "record"
+      ],
+      "aiRule": "Declare events globally with 'event X' before emitting with 'emit X'."
+    },
+    {
+      "id": "217-contract-set-validation",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "contract set use resolution \u2014 LLN-GOV-011 and LLN-GOV-012",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-GOV-011"
+      ],
+      "features": [
+        "Result",
+        "Set",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "record",
+        "unsafe"
+      ],
+      "aiRule": "'use SetName' inside a flow contract must resolve to a declared 'contract set SetName'."
+    },
+    {
+      "id": "218-errors-contract",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "contract errors block \u2014 returns, map, expose, redact, audit",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Map",
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "errors",
+        "flow",
+        "record"
+      ],
+      "aiRule": "The errors {} block declares which errors a flow can return and how to map or redact them."
+    },
+    {
+      "id": "219-response-denies",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "contract response.denies \u2014 LLN-GOV-003",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-GOV-003"
+      ],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected"
+      ],
+      "aiRule": "When contract.response.denies lists a field, the flow body must not include it in the response."
+    },
+    {
+      "id": "220-context-required",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "contract context block \u2014 require actor, require trace_id, correct usage",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "for"
+      ],
+      "aiRule": "When contract.context declares require fields, the flow body must access them."
+    },
+    {
+      "id": "221-timeouts-retries",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "contract timeouts and retries blocks",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "errors",
+        "flow",
+        "record",
+        "retries",
+        "timeouts"
+      ],
+      "aiRule": "The timeouts block sets a hard deadline and per-effect timeouts."
+    },
+    {
+      "id": "222-limits-privacy",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "contract limits and privacy blocks",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "errors",
+        "flow",
+        "limits",
+        "privacy",
+        "protected",
+        "redacted"
+      ],
+      "aiRule": "The limits block caps resource consumption (request size, batch size, memory)."
+    },
+    {
+      "id": "223-observability",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "contract observability block \u2014 trace, measure, count, deny patterns",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "errors",
+        "flow",
+        "observability",
+        "protected",
+        "record"
+      ],
+      "aiRule": "The observability block declares what to trace, measure, count, and deny in logs."
+    },
+    {
+      "id": "224-contract-best-practices",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "gold standard contract \u2014 named result type, full contract, raw->protected->redact->audit",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "errors",
+        "events",
+        "flow",
+        "observability",
+        "privacy",
+        "protected",
+        "redacted",
+        "timeouts",
+        "unsafe"
+      ],
+      "aiRule": "This is the canonical gold standard pattern."
+    },
+    {
+      "id": "225-context-missing",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "LLN-CONTEXT-001 \u2014 context require actor declared but never accessed",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-CONTEXT-001"
+      ],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "for"
+      ],
+      "aiRule": "When contract.context declares require actor but the flow body never reads context.actor, LLN-CONTEXT-001 is raised."
+    },
+    {
+      "id": "226-full-16-section-minimal",
+      "level": 5,
+      "levelName": "Governance",
+      "concept": "all 16 contract sections in canonical order \u2014 minimal but complete template",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "errors",
+        "events",
+        "flow",
+        "limits",
+        "observability",
+        "privacy",
+        "protected",
+        "record",
+        "retries",
+        "timeouts",
+        "unsafe"
+      ],
+      "aiRule": "Canonical contract section order: types -> intent -> request -> response -> context -> model -> effects -> timeouts -> retries -> limits -> privacy -> errors -> rules -> observability -> events -> audit"
+    },
+    {
+      "id": "301-compute-target-best",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "compute target selection with ordered preference and fallback",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Tensor",
+        "and",
+        "flow"
+      ],
+      "aiRule": "Use prefer [...] to express hardware preference; always declare fallback cpu as the final safety net."
+    },
+    {
+      "id": "302-compute-deny-remote",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "denying remote execution in a secure credit-scoring flow",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "unsafe"
+      ],
+      "aiRule": "Use deny [remote.execution] for data that must not leave the device."
+    },
+    {
+      "id": "303-compute-gpu-explicit",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "explicit GPU targeting with CPU fallback",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Tensor",
+        "flow"
+      ],
+      "aiRule": "Explicitly target gpu when the workload is known to saturate the GPU; always add fallback cpu for portability."
+    },
+    {
+      "id": "304-tensor-basic",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "tensor shape encoded in the type signature",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Tensor",
+        "flow"
+      ],
+      "aiRule": "Encode tensor rank and dimensions as static type parameters so shape mismatches are caught at compile time."
+    },
+    {
+      "id": "305-tensor-dynamic-shape",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "dynamic shape tensor for variable-length inference",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "contract",
+        "effects",
+        "flow",
+        "for"
+      ],
+      "aiRule": "Use DynamicShape when batch size or sequence length varies at runtime."
+    },
+    {
+      "id": "306-tensor-arity-invalid",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "Tensor requires exactly two type parameters: element type and shape",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-TYPE-009"
+      ],
+      "features": [
+        "Tensor",
+        "and",
+        "flow"
+      ],
+      "aiRule": "Tensor<T, Shape> requires both an element type and a shape argument; omitting either is a type error."
+    },
+    {
+      "id": "307-vector-type",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "fixed-length vector type for embeddings",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "flow",
+        "for"
+      ],
+      "aiRule": "Use Vector<T, N> for fixed-length one-dimensional arrays, such as embedding outputs."
+    },
+    {
+      "id": "308-matrix-type",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "matrix type for weight tensors",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "flow",
+        "for"
+      ],
+      "aiRule": "Use Matrix<T, Rows, Cols> for two-dimensional numeric tables such as weight matrices."
+    },
+    {
+      "id": "309-compute-photonic",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "photonic compute target with classical fallback chain",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "and",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "Include photonic first in the preference list when optical hardware is available; always provide a classical fallback chain."
+    },
+    {
+      "id": "310-compute-fallback-required",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "mandatory fallback declaration when targeting npu or gpu",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "or"
+      ],
+      "aiRule": "Always declare fallback cpu when targeting npu or gpu."
+    },
+    {
+      "id": "311-money-vat-calculation",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "multiplying Money by a Decimal rate",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Money",
+        "flow"
+      ],
+      "aiRule": "Multiply Money<C> by Decimal to scale an amount; the result preserves the currency type."
+    },
+    {
+      "id": "312-money-invalid-cross-currency",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "adding Money values of different currencies is a type error",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-TYPE-004"
+      ],
+      "features": [
+        "Money",
+        "and",
+        "flow"
+      ],
+      "aiRule": "Never add or subtract Money<C1> and Money<C2> directly; convert to a common currency first."
+    },
+    {
+      "id": "313-decimal-precision",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "dividing Money by a Decimal value for precise splitting",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Money",
+        "flow",
+        "for"
+      ],
+      "aiRule": "Use Decimal arithmetic for all monetary division to avoid floating-point rounding errors."
+    },
+    {
+      "id": "314-compute-npu-ai-inference",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "full AI text classification flow with NPU targeting and governance",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "and",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "Combine compute target best with deny [remote.execution] to enforce on-device AI inference."
+    },
+    {
+      "id": "315-compute-summary",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "complete governed AI inference flow with audit, hardware targeting, and deny clause",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "The summary pattern combines secure flow, protected types, compute target, deny, audit, and Result propagation."
+    },
+    {
+      "id": "316-invalid-tensor-add",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "Tensor arithmetic requires shape compatibility",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-TYPE-004"
+      ],
+      "features": [
+        "Tensor",
+        "flow"
+      ]
+    },
+    {
+      "id": "317-money-cross-currency-compute",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "Cross-currency arithmetic is denied",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-TYPE-004"
+      ],
+      "features": [
+        "Money",
+        "flow"
+      ]
+    },
+    {
+      "id": "318-compute-hint-missing",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "ai.inference without compute target preference",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-HINT-COMPUTE-001"
+      ],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "Flows using ai.inference should declare a compute target preference for NPU or GPU."
+    },
+    {
+      "id": "319-money-times-decimal",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "Money<C> * Decimal is valid scaling",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Money",
+        "flow"
+      ],
+      "aiRule": "Money<C> * Decimal produces Money<C>. Decimal is the correct type for rates/percentages."
+    },
+    {
+      "id": "320-statistics-stdlib",
+      "level": 6,
+      "levelName": "Compute",
+      "concept": "pure statistical computation using Array.reduce and map",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Array",
+        "Map",
+        "and",
+        "flow",
+        "fn",
+        "for"
+      ],
+      "aiRule": "Use Array.reduce to fold a collection into a single value."
+    },
+    {
+      "id": "351-embedding-flow",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "basic AI embedding flow returning a typed tensor",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "Every flow that calls an embedding model must declare the ai.inference effect."
+    },
+    {
+      "id": "352-ai-inference-effect",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "calling an AI model without declaring the required ai.inference effect",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-EFFECT-001"
+      ],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "Declare effects [ai.inference] on every flow that calls a machine learning model."
+    },
+    {
+      "id": "353-protected-ai-input",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "protected PII validated and passed through an AI risk model with redacted audit",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "redacted",
+        "unsafe"
+      ],
+      "aiRule": "Always validate raw input into a protected type before passing it to an AI model."
+    },
+    {
+      "id": "354-ai-batch-inference",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "batch AI inference over an array of inputs",
+      "status": "draft",
+      "expectedDiagnostics": [],
+      "features": [
+        "Array",
+        "Result",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "Use Array.map with ? propagation to run batch inference and surface the first error."
+    },
+    {
+      "id": "355-ai-governance-denied-remote",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "AI inference with remote execution denied for patient data governance",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow",
+        "for"
+      ],
+      "aiRule": "Pair ai.inference with deny [remote.execution] for any flow that handles patient data."
+    },
+    {
+      "id": "356-ai-missing-audit",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "secure AI flow that declares audit.write but omits the AuditLog.write call",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-GOV-002"
+      ],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "If a secure flow declares audit.write, it must call AuditLog.write before returning."
+    },
+    {
+      "id": "357-tensor-model-input-output",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "shape-typed model input and output tensors using a batch dimension",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "and",
+        "contract",
+        "effects",
+        "flow",
+        "while"
+      ],
+      "aiRule": "Use a named Batch dimension to express that tensor rank is fixed but batch size is variable."
+    },
+    {
+      "id": "358-ai-secure-string-in-ai",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "passing a SecureString to an AI model is a secret-exposure error",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-SECRET-001"
+      ],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "Never pass a SecureString or secret-typed value to an AI model call."
+    },
+    {
+      "id": "359-embedding-with-fallback",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "embedding flow with NPU/GPU preference and CPU fallback",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "and",
+        "contract",
+        "effects",
+        "flow",
+        "for",
+        "or"
+      ],
+      "aiRule": "Declare compute fallback cpu on all embedding flows to allow CPU-only deployment."
+    },
+    {
+      "id": "360-ai-audit-redacted",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "protected patient data redacted in AI audit log entry",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "redacted",
+        "unsafe"
+      ],
+      "aiRule": "Always wrap protected values in redact() before passing them to AuditLog.write."
+    },
+    {
+      "id": "361-ai-any-tensor",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "AnyTensor for dynamically loaded models with unknown shape",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow",
+        "for"
+      ],
+      "aiRule": "Use AnyTensor only when the tensor shape cannot be known at compile time."
+    },
+    {
+      "id": "362-ai-invalid-tensor-arity",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "Tensor type with missing shape argument raises LLN-TYPE-009",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-TYPE-009"
+      ],
+      "features": [
+        "Result",
+        "Tensor",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "Tensor requires exactly two type parameters; omitting the shape is always a compile error."
+    },
+    {
+      "id": "363-local-model-only",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "local-only AI classification denying both remote execution and network outbound",
+      "status": "draft",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "contract",
+        "effects",
+        "flow",
+        "unsafe"
+      ],
+      "aiRule": "Use deny [remote.execution, network.outbound] for air-gapped or strict data-residency deployments."
+    },
+    {
+      "id": "364-ai-effect-propagation",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "a pure flow calling an ai.inference flow inherits that effect and must declare it",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-EFFECT-002"
+      ],
+      "features": [
+        "and",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "Effects propagate upward; a caller that does not declare an effect used by its callee receives LLN-EFFECT-002."
+    },
+    {
+      "id": "365-ai-summary-flow",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "complete AI governance pattern \u2014 healthcare risk scoring with PII, audit, and compute governance",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "unsafe"
+      ],
+      "aiRule": "The complete AI pattern is: secure flow + protected input + compute target + deny + ai.inference + audit.write + redact."
+    },
+    {
+      "id": "366-ai-unsafe-input-to-model",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "Unsafe input cannot flow directly to AI model",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-VALUESTATE-003"
+      ],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow",
+        "unsafe"
+      ]
+    },
+    {
+      "id": "367-ai-inference-without-effect",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "ai.inference effect must be declared",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-EFFECT-001"
+      ],
+      "features": [
+        "flow"
+      ]
+    },
+    {
+      "id": "368-contract-ai-flow",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "flow contract with AI intent for IGO optimisation",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-HINT-COMPUTE-001"
+      ],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "events",
+        "flow",
+        "for"
+      ],
+      "aiRule": "AI flows should use contract.intent to enable IGO."
+    },
+    {
+      "id": "368-signed-attestation",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "flow contract with audit requirement for signed attestation",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "events",
+        "flow",
+        "for"
+      ],
+      "aiRule": "'require signed attestation' in audit {} block triggers Ed25519 signing of the build artifact."
+    },
+    {
+      "id": "369-ai-classification-flow",
+      "level": 7,
+      "levelName": "AI",
+      "concept": "full AI classify flow \u2014 ClassifierModel, compute target, protected input, redacted audit",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "events",
+        "flow",
+        "observability",
+        "privacy",
+        "protected",
+        "record",
+        "redacted",
+        "unsafe"
+      ],
+      "aiRule": "AI classification flows should declare contract.model { uses ClassifierModel }, compute target prefer [npu, gpu, cpu], and always redact protected inputs in audit log entries."
+    },
+    {
+      "id": "401-target-cpu",
+      "level": 8,
+      "levelName": "Targets",
+      "concept": "explicit CPU compute target",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "contract",
+        "effects",
+        "flow",
+        "for"
+      ],
+      "aiRule": "Use compute target cpu for workloads that are latency-sensitive on small inputs or that require deterministic single-threaded execution."
+    },
+    {
+      "id": "402-target-gpu",
+      "level": 8,
+      "levelName": "Targets",
+      "concept": "explicit GPU compute target with CPU fallback",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "contract",
+        "effects",
+        "flow",
+        "for"
+      ],
+      "aiRule": "Use compute target gpu for large dense tensor workloads; always add fallback cpu."
+    },
+    {
+      "id": "403-target-npu",
+      "level": 8,
+      "levelName": "Targets",
+      "concept": "explicit NPU compute target with GPU fallback",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "contract",
+        "effects",
+        "flow",
+        "for"
+      ],
+      "aiRule": "Use compute target npu for on-device edge inference; fall back to gpu before cpu for performance."
+    },
+    {
+      "id": "404-target-wasm",
+      "level": 8,
+      "levelName": "Targets",
+      "concept": "WebAssembly compute target for browser or sandboxed execution",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Tensor",
+        "flow",
+        "for",
+        "or"
+      ],
+      "aiRule": "Use compute target wasm when the flow must run inside a browser or a WASM sandbox."
+    },
+    {
+      "id": "405-target-photonic",
+      "level": 8,
+      "levelName": "Targets",
+      "concept": "photonic (optical) compute target with GPU fallback",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "contract",
+        "effects",
+        "flow",
+        "for"
+      ],
+      "aiRule": "Use compute target photonic for extremely high-throughput linear algebra; always include a classical fallback."
+    },
+    {
+      "id": "406-target-quantum",
+      "level": 8,
+      "levelName": "Targets",
+      "concept": "quantum compute target with classical CPU fallback",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "Use compute target quantum for quantum-native algorithms; fallback cpu runs a classical simulation."
+    },
+    {
+      "id": "407-target-best-prefer",
+      "level": 8,
+      "levelName": "Targets",
+      "concept": "compute target best with ordered preference list and fallback",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "and",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "best selects the best available target at runtime from the preference list in order."
+    },
+    {
+      "id": "408-target-deny-remote",
+      "level": 8,
+      "levelName": "Targets",
+      "concept": "denying remote.execution placement category",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "deny [remote.execution] blocks any remote dispatch, regardless of what appears in the prefer list."
+    },
+    {
+      "id": "409-target-deny-list",
+      "level": 8,
+      "levelName": "Targets",
+      "concept": "multiple denied target categories in a single deny clause",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "and",
+        "contract",
+        "effects",
+        "flow",
+        "for"
+      ],
+      "aiRule": "List all denied categories in a single deny [...] clause to make the exclusions explicit and auditable."
+    },
+    {
+      "id": "410-adaptive-runtime",
+      "level": 8,
+      "levelName": "Targets",
+      "concept": "adaptive runtime block that learns from workload to optimise batching and warmup",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "and",
+        "contract",
+        "effects",
+        "flow",
+        "while"
+      ],
+      "aiRule": "runtime adaptive enables workload-learning optimisations within governance constraints."
+    },
+    {
+      "id": "411-deterministic-runtime",
+      "level": 8,
+      "levelName": "Targets",
+      "concept": "deterministic runtime for regulated environments requiring identical execution planning",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "for"
+      ],
+      "aiRule": "Use runtime deterministic for compliance environments requiring identical execution planning."
+    },
+    {
+      "id": "412-target-photonic-with-fallback",
+      "level": 8,
+      "levelName": "Targets",
+      "concept": "photonic preference with full classical fallback chain",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "contract",
+        "effects",
+        "flow",
+        "for"
+      ],
+      "aiRule": "When photonic is preferred, provide a full fallback chain npu > gpu > cpu to maximise portability."
+    },
+    {
+      "id": "413-target-quantum-simulation",
+      "level": 8,
+      "levelName": "Targets",
+      "concept": "quantum preference with GPU simulation and CPU fallback",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "and",
+        "contract",
+        "effects",
+        "flow",
+        "for"
+      ],
+      "aiRule": "List gpu before cpu in the quantum fallback chain to enable GPU-accelerated quantum simulation."
+    },
+    {
+      "id": "414-target-no-fallback-invalid",
+      "level": 8,
+      "levelName": "Targets",
+      "concept": "omitting the fallback clause from a non-cpu compute target is an error",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-TARGET-001"
+      ],
+      "features": [
+        "Result",
+        "Tensor",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "Every compute target other than cpu requires an explicit fallback clause."
+    },
+    {
+      "id": "415-target-summary",
+      "level": 8,
+      "levelName": "Targets",
+      "concept": "complete compute target governance \u2014 prefer, deny, fallback, adaptive runtime, and audit",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "unsafe"
+      ],
+      "aiRule": "The full target pattern combines prefer, deny, fallback, runtime mode, and governance effects."
+    },
+    {
+      "id": "416-target-fallback-missing",
+      "level": 8,
+      "levelName": "Targets",
+      "concept": "compute target without fallback",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-HINT-COMPUTE-001"
+      ],
+      "features": [
+        "Tensor",
+        "flow"
+      ]
+    },
+    {
+      "id": "451-healthcare-patient-create",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "healthcare PII governance pattern \u2014 create patient record with NHS number, protected types, and audit",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "record",
+        "unsafe"
+      ],
+      "aiRule": "All healthcare flows must validate raw PII into protected types, declare pii.write and audit.write effects, and redact in audit."
+    },
+    {
+      "id": "452-healthcare-invalid-pii-log",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "passing a protected PatientId directly to a log call without redaction",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-SECRET-001"
+      ],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "record",
+        "unsafe"
+      ],
+      "aiRule": "Never pass a protected value to a log or audit call without first applying redact()."
+    },
+    {
+      "id": "453-financial-payment-charge",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "payment governance flow with approved merchant, Money type, and audit",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Money",
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "for",
+        "protected"
+      ],
+      "aiRule": "All payment flows must declare payment.charge and audit.write effects and include an intent clause."
+    },
+    {
+      "id": "454-financial-cross-currency-invalid",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "adding Money<GBP> and Money<USD> without currency conversion is a type error",
+      "status": "stable",
+      "expectedDiagnostics": [
+        "LLN-TYPE-004"
+      ],
+      "features": [
+        "Money",
+        "and",
+        "flow"
+      ],
+      "aiRule": "Cross-currency addition is always a compile error; use an explicit FX conversion before adding."
+    },
+    {
+      "id": "455-financial-money-calculation",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "financial tax calculation using Money and Decimal",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Money",
+        "and",
+        "flow"
+      ],
+      "aiRule": "Use Decimal for all tax rate multiplication to avoid floating-point rounding in financial flows."
+    },
+    {
+      "id": "456-compliance-pii-effect",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "accessing PII without declaring the pii.read effect",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-PII-001"
+      ],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "record",
+        "unsafe"
+      ],
+      "aiRule": "Declare effects [pii.read] on every flow that reads personally identifiable information."
+    },
+    {
+      "id": "457-compliance-phi-effect",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "handling HIPAA PHI without declaring the phi.read effect",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-PHI-001"
+      ],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "record",
+        "unsafe"
+      ],
+      "aiRule": "Declare effects [phi.read] on every flow that accesses HIPAA Protected Health Information."
+    },
+    {
+      "id": "458-compliance-audit-required",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "secure flow that declares audit.write but never calls AuditLog.write",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-AUDIT-001"
+      ],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "record",
+        "unsafe"
+      ],
+      "aiRule": "AuditLog.write must be called on every return path in a flow that declares audit.write."
+    },
+    {
+      "id": "459-multi-protected-values",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "multiple PII types in one flow \u2014 all validated as protected and all redacted in audit",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "redacted",
+        "unsafe"
+      ],
+      "aiRule": "When a flow handles multiple PII types, validate each into its own protected type and redact each separately in the audit entry."
+    },
+    {
+      "id": "460-authority-data-sharing",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "authority block authorises sharing protected PatientData with an external service",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "unsafe"
+      ],
+      "aiRule": "Use an authority block to explicitly grant permission for protected data to cross a trust boundary."
+    },
+    {
+      "id": "461-authority-missing",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "sharing protected data across a trust boundary without an authority block",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-GOV-003"
+      ],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "unsafe"
+      ],
+      "aiRule": "Sharing a protected value with an external service without an authority block is a governance violation."
+    },
+    {
+      "id": "462-policy-purpose",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "policy block declares the permitted purpose for data use in a communication flow",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "for",
+        "protected",
+        "unsafe"
+      ],
+      "aiRule": "Use a policy block with a purpose declaration to document and enforce the lawful basis for processing patient contact data."
+    },
+    {
+      "id": "463-policy-mismatch",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "declared purpose does not match the template used in the flow body",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-GOV-005"
+      ],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "match",
+        "protected",
+        "unsafe"
+      ],
+      "aiRule": "The template or action used in the flow body must be consistent with the purpose declared in the policy block."
+    },
+    {
+      "id": "464-enterprise-supply-chain",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "flow requiring a module capability that has not been accepted in the supply-chain manifest",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-MODULE-005"
+      ],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "flow"
+      ],
+      "aiRule": "All external module capabilities must be listed and accepted in the supply-chain manifest before use."
+    },
+    {
+      "id": "465-enterprise-summary",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "complete enterprise-grade healthcare flow \u2014 patient create with PII, NHS number, AI risk scoring, audit, and governance proof",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "Tensor",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "protected",
+        "record",
+        "unsafe"
+      ],
+      "aiRule": "The enterprise summary combines every governance layer: secure flow, protected PII, AI inference, compute target, authority, policy, audit, and redact."
+    },
+    {
+      "id": "466-pii-without-pii-effect",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "PII access requires pii.read effect",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-PII-001"
+      ],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow"
+      ]
+    },
+    {
+      "id": "467-protected-response-body",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "Protected value in response body requires policy",
+      "status": "draft",
+      "expectedDiagnostics": [
+        "LLN-GOV-003"
+      ],
+      "features": [
+        "Result",
+        "contract",
+        "effects",
+        "flow",
+        "protected"
+      ]
+    },
+    {
+      "id": "468-full-contract-model",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "full contract model \u2014 all 16 sections in canonical order",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "errors",
+        "events",
+        "flow",
+        "limits",
+        "observability",
+        "privacy",
+        "protected",
+        "record",
+        "retries",
+        "timeouts",
+        "unless",
+        "unsafe"
+      ],
+      "aiRule": "The contract declares WHAT the flow is allowed, expected, and required to do. The body declares HOW."
+    },
+    {
+      "id": "469-contract-financial-payment",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "full 16-section contract on a financial payment flow \u2014 all sections in canonical order",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Money",
+        "Result",
+        "audit",
+        "contract",
+        "effects",
+        "errors",
+        "events",
+        "flow",
+        "limits",
+        "observability",
+        "or",
+        "privacy",
+        "protected",
+        "record",
+        "retries",
+        "timeouts",
+        "unsafe"
+      ],
+      "aiRule": "Financial flows must declare errors.redact for internal errors, privacy.contains PII, timeouts to prevent runaway execution, and require redaction before audit.write."
+    },
+    {
+      "id": "470-contract-healthcare-search",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "healthcare patient search with complete privacy, observability, errors, and context contract sections",
+      "status": "draft",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "errors",
+        "events",
+        "flow",
+        "for",
+        "limits",
+        "observability",
+        "privacy",
+        "protected",
+        "record",
+        "retries",
+        "timeouts",
+        "unsafe"
+      ],
+      "aiRule": "Healthcare flows must declare privacy.contains PII, privacy.retention, deny protected values from logs, and require signed attestation for GDPR/NHS compliance."
+    },
+    {
+      "id": "471-medical-medication-check",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "medical domain \u2014 record types Patient and Medication, interaction validation pattern",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "errors",
+        "events",
+        "flow",
+        "for",
+        "observability",
+        "privacy",
+        "protected",
+        "record",
+        "redacted",
+        "unsafe"
+      ],
+      "aiRule": "Medical flows must use protected types for all PII (PatientId, MedicationCode), declare pii.read and audit.write effects, and redact protected values in audit entries."
+    },
+    {
+      "id": "472-physics-simulation",
+      "level": 9,
+      "levelName": "Enterprise",
+      "concept": "scientific domain \u2014 Mass, Force, Energy domain record types, pure kinetic energy calculation",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "and",
+        "flow",
+        "record"
+      ],
+      "aiRule": "Scientific simulation flows are pure \u2014 no effects. Use Decimal for physical quantities to preserve precision."
+    },
+    {
+      "id": "010-readable-equality",
+      "level": 99,
+      "levelName": "Proposed",
+      "concept": "readable equality alias",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": []
+    },
+    {
+      "id": "011-readable-comparison",
+      "level": 99,
+      "levelName": "Proposed",
+      "concept": "readable numeric comparison alias",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": []
+    },
+    {
+      "id": "020-readable-boolean",
+      "level": 99,
+      "levelName": "Proposed",
+      "concept": "readable boolean operators",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "and",
+        "or"
+      ]
+    },
+    {
+      "id": "030-readable-unless",
+      "level": 99,
+      "levelName": "Proposed",
+      "concept": "unless as if-not alias",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "unless"
+      ]
+    },
+    {
+      "id": "040-governance-readable",
+      "level": 99,
+      "levelName": "Proposed",
+      "concept": "readable forms in governance conditions",
+      "status": "stable",
+      "expectedDiagnostics": [],
+      "features": [
+        "Money",
+        "Result",
+        "and",
+        "audit",
+        "contract",
+        "effects",
+        "flow",
+        "or"
+      ]
+    }
+  ]
+}

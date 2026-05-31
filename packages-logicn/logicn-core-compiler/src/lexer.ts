@@ -6,6 +6,11 @@
 //
 // Types declared locally mirror @logicn/core — structurally compatible.
 // Replace with workspace imports once package links are in place.
+//
+// Diagnostics emitted by this module:
+//   LLN-LEX-001  ExcessiveNesting      — generic type nesting depth > 8
+//   LLN-LEX-002  OversizedToken        — string literal or identifier > 10,000 chars
+//   LLN-LEX-003  InvalidUnicodeEscape  — invalid \u or \u{} in string literal
 // =============================================================================
 
 // ---------------------------------------------------------------------------
@@ -29,10 +34,14 @@ export type TokenKind =
 export interface Token {
   readonly kind: TokenKind;
   readonly value: string;
-  /** 1-based line number. */
+  /** 1-based start line number. */
   readonly line: number;
-  /** 1-based column number. */
+  /** 1-based start column number. */
   readonly column: number;
+  /** 1-based end line number (inclusive). */
+  readonly endLine: number;
+  /** 1-based end column number (exclusive — points after last char). */
+  readonly endColumn: number;
   /** Byte offset of token start (inclusive). */
   readonly start: number;
   /** Byte offset of token end (exclusive). */
@@ -150,6 +159,9 @@ export function lex(source: string, file: string): LexResult {
   let line = 1;
   let col = 1;
 
+  /** Current < nesting depth for generic types. */
+  let genericDepth = 0;
+
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   function peek(offset = 0): string {
@@ -169,7 +181,7 @@ export function lex(source: string, file: string): LexResult {
   }
 
   function tok(kind: TokenKind, value: string, startPos: number, startLine: number, startCol: number): Token {
-    return { kind, value, line: startLine, column: startCol, start: startPos, end: pos };
+    return { kind, value, line: startLine, column: startCol, endLine: line, endColumn: col, start: startPos, end: pos };
   }
 
   function diag(
@@ -272,12 +284,91 @@ export function lex(source: string, file: string): LexResult {
     if (ch === '"') {
       advance(); // consume opening quote
       let value = '"';
+      let oversized = false;
       while (pos < source.length && peek() !== '"' && peek() !== "\n") {
         if (peek() === "\\") {
-          value += advance(); // backslash
-          if (pos < source.length) value += advance(); // escaped char
+          const bslash = advance(); // backslash
+          if (peek() === "u" && pos < source.length) {
+            // Unicode escape: \u{XXXXXX} or \uXXXX
+            advance(); // consume 'u'
+            if (peek() === "{") {
+              // \u{...} form
+              advance(); // consume '{'
+              let hexStr = "";
+              while (pos < source.length && peek() !== "}" && peek() !== "\n") {
+                hexStr += advance();
+              }
+              if (peek() === "}") {
+                advance(); // consume '}'
+                const isValidHex = /^[0-9a-fA-F]{1,6}$/.test(hexStr);
+                const codePoint = parseInt(hexStr, 16);
+                if (!isValidHex || codePoint > 0x10FFFF) {
+                  diag(
+                    "LLN-LEX-003",
+                    "InvalidUnicodeEscape",
+                    "Invalid unicode escape sequence in string literal.",
+                    startLine,
+                    startCol,
+                    "Use \\u{XXXXXX} with 1-6 hex digits, or \\uXXXX with exactly 4.",
+                  );
+                  value += bslash + "u{" + hexStr + "}";
+                } else {
+                  value += String.fromCodePoint(codePoint);
+                }
+              } else {
+                diag(
+                  "LLN-LEX-003",
+                  "InvalidUnicodeEscape",
+                  "Invalid unicode escape sequence in string literal.",
+                  startLine,
+                  startCol,
+                  "Use \\u{XXXXXX} with 1-6 hex digits, or \\uXXXX with exactly 4.",
+                );
+                value += bslash + "u{" + hexStr;
+              }
+            } else {
+              // \uXXXX form — exactly 4 hex digits
+              let hexStr = "";
+              for (let i = 0; i < 4 && pos < source.length; i++) {
+                const hc = peek();
+                if ((hc >= "0" && hc <= "9") || (hc >= "a" && hc <= "f") || (hc >= "A" && hc <= "F")) {
+                  hexStr += advance();
+                } else {
+                  break;
+                }
+              }
+              if (hexStr.length === 4) {
+                value += String.fromCodePoint(parseInt(hexStr, 16));
+              } else {
+                diag(
+                  "LLN-LEX-003",
+                  "InvalidUnicodeEscape",
+                  "Invalid unicode escape sequence in string literal.",
+                  startLine,
+                  startCol,
+                  "Use \\u{XXXXXX} with 1-6 hex digits, or \\uXXXX with exactly 4.",
+                );
+                value += bslash + "u" + hexStr;
+              }
+            }
+          } else if (pos < source.length) {
+            value += bslash + advance(); // other escape: \n \t \r \" \\ etc.
+          } else {
+            value += bslash;
+          }
         } else {
           value += advance();
+        }
+        if (!oversized && value.length > 10_000) {
+          oversized = true;
+          diag(
+            "LLN-LEX-002",
+            "OversizedToken",
+            "String literal or identifier exceeds maximum length (10,000 characters).",
+            startLine,
+            startCol,
+            "Split large string literals or shorten identifier names.",
+          );
         }
       }
       if (peek() === '"') {
@@ -365,6 +456,22 @@ export function lex(source: string, file: string): LexResult {
     // ── Single-character operators ─────────────────────────────────────────
     if (ONE_CHAR_OPERATORS.has(ch)) {
       advance();
+      // Track generic nesting depth for < / >
+      if (ch === "<") {
+        genericDepth++;
+        if (genericDepth > 8) {
+          diag(
+            "LLN-LEX-001",
+            "ExcessiveNesting",
+            "Generic type nesting exceeds maximum depth (8 levels). Simplify the type.",
+            startLine,
+            startCol,
+            "Use a type alias to break up deeply nested generics.",
+          );
+        }
+      } else if (ch === ">") {
+        if (genericDepth > 0) genericDepth--;
+      }
       tokens.push(tok("operator", ch, startPos, startLine, startCol));
       continue;
     }
@@ -379,8 +486,20 @@ export function lex(source: string, file: string): LexResult {
     // ── Identifiers and keywords ───────────────────────────────────────────
     if (isIdentStart(ch)) {
       let value = "";
+      let oversized = false;
       while (pos < source.length && isIdentContinue(peek())) {
         value += advance();
+        if (!oversized && value.length > 10_000) {
+          oversized = true;
+          diag(
+            "LLN-LEX-002",
+            "OversizedToken",
+            "String literal or identifier exceeds maximum length (10,000 characters).",
+            startLine,
+            startCol,
+            "Split large string literals or shorten identifier names.",
+          );
+        }
       }
 
       if (V1_ACTIVE_KEYWORDS.has(value)) {
@@ -414,7 +533,7 @@ export function lex(source: string, file: string): LexResult {
   }
 
   // ── EOF sentinel ───────────────────────────────────────────────────────────
-  tokens.push({ kind: "eof", value: "", line, column: col, start: pos, end: pos });
+  tokens.push({ kind: "eof", value: "", line, column: col, endLine: line, endColumn: col, start: pos, end: pos });
 
   return { tokens, diagnostics };
 }

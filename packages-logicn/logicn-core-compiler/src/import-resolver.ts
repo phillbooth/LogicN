@@ -16,6 +16,7 @@
 // =============================================================================
 
 import { type AstNode } from "./parser.js";
+import { loadPackageManifest, resolvePackageTypes } from "./package-resolver.js";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -103,6 +104,31 @@ const LOGICN_MODULE_REGISTRY: ReadonlyMap<string, ModuleExports> = new Map([
     ],
     values: ["EmailService", "NotificationService"],
   }],
+
+  // ── Enterprise types ──────────────────────────────────────────────────
+  ["@logicn/enterprise-types", {
+    types: [
+      "Policy", "AuditRecord", "AuditProof", "ExecutionPlan", "RuntimeReport",
+    ],
+    values: [],
+  }],
+
+  // ── Compute types ─────────────────────────────────────────────────────
+  ["@logicn/compute-types", {
+    types: [
+      "ComputeTarget", "ExecutionPlan", "RuntimeReport",
+    ],
+    values: [],
+  }],
+
+  // ── Domain types ──────────────────────────────────────────────────────
+  ["@logicn/domain-types", {
+    types: [
+      "Email", "Url", "Path", "CurrencyCode", "Reference",
+      "UserId", "Actor", "TraceId", "TenantId", "Deadline",
+    ],
+    values: [],
+  }],
 ]);
 
 // ---------------------------------------------------------------------------
@@ -162,10 +188,46 @@ function parseImportValue(raw: string): readonly RawImportItem[] {
 }
 
 // ---------------------------------------------------------------------------
+// Package manifest cache
+//
+// Keyed by moduleSource (e.g. "@myorg/customer-types") → type names list.
+// Populated lazily on first import of a non-@logicn/* package.
+// ---------------------------------------------------------------------------
+
+const manifestTypeCache = new Map<string, readonly string[]>();
+
+/**
+ * Attempt to load a package.logicn.yaml for a non-@logicn/* module.
+ * Searches in `<nodeModulesRoot>/<moduleSource>/package.logicn.yaml`.
+ * Returns the exported type names, or an empty array if not found.
+ */
+function loadExternalManifestTypes(
+  moduleSource: string,
+  nodeModulesRoot: string,
+): readonly string[] {
+  if (manifestTypeCache.has(moduleSource)) {
+    return manifestTypeCache.get(moduleSource)!;
+  }
+
+  const packagePath = `${nodeModulesRoot}/${moduleSource}`;
+  const manifest = loadPackageManifest(packagePath);
+  const types: readonly string[] = manifest !== undefined
+    ? resolvePackageTypes(manifest)
+    : [];
+
+  manifestTypeCache.set(moduleSource, types);
+  return types;
+}
+
+// ---------------------------------------------------------------------------
 // Resolve a single imported name against the module registry
 // ---------------------------------------------------------------------------
 
-function resolveSymbol(localName: string, moduleSource: string): ImportedSymbol {
+function resolveSymbol(
+  localName: string,
+  moduleSource: string,
+  nodeModulesRoot?: string,
+): ImportedSymbol {
   const exports = LOGICN_MODULE_REGISTRY.get(moduleSource);
   if (exports !== undefined) {
     if (exports.types.includes(localName)) {
@@ -177,6 +239,18 @@ function resolveSymbol(localName: string, moduleSource: string): ImportedSymbol 
     // Imported from a known module but not in the registry — treat as type
     // (conservative: the user declared it; no point erroring here)
     return { name: localName, sourceModule: moduleSource, kind: "type" };
+  }
+
+  // Non-@logicn/* package — try package.logicn.yaml manifest
+  if (nodeModulesRoot !== undefined && !moduleSource.startsWith("@logicn/")) {
+    const manifestTypes = loadExternalManifestTypes(moduleSource, nodeModulesRoot);
+    if (manifestTypes.includes(localName)) {
+      return { name: localName, sourceModule: moduleSource, kind: "type" };
+    }
+    // Not in manifest types → treat as value (external service/DB)
+    if (manifestTypes.length > 0) {
+      return { name: localName, sourceModule: moduleSource, kind: "value" };
+    }
   }
 
   // Unknown / external module — silently accept as a value name
@@ -192,10 +266,15 @@ function resolveSymbol(localName: string, moduleSource: string): ImportedSymbol 
  * Walks the top-level AST for `importDecl` nodes and resolves all imported
  * names against the built-in LogicN module registry.
  *
- * @param ast  The root `program` node from `parseProgram()`.
- * @returns    All resolved symbols, with convenience `typeNames`/`valueNames` lists.
+ * For non-@logicn/* imports, if `nodeModulesRoot` is provided the resolver
+ * will look for a `package.logicn.yaml` manifest inside the package directory
+ * and use it to classify names as types vs values.
+ *
+ * @param ast             The root `program` node from `parseProgram()`.
+ * @param nodeModulesRoot Optional path to the project's node_modules directory.
+ * @returns               All resolved symbols, with convenience `typeNames`/`valueNames` lists.
  */
-export function resolveImports(ast: AstNode): ImportResolveResult {
+export function resolveImports(ast: AstNode, nodeModulesRoot?: string): ImportResolveResult {
   const symbols: ImportedSymbol[] = [];
 
   for (const node of ast.children ?? []) {
@@ -206,7 +285,7 @@ export function resolveImports(ast: AstNode): ImportResolveResult {
     const items = parseImportValue(raw);
     for (const { localName, moduleSource } of items) {
       if (localName === "") continue;
-      symbols.push(resolveSymbol(localName, moduleSource));
+      symbols.push(resolveSymbol(localName, moduleSource, nodeModulesRoot));
     }
   }
 

@@ -36,8 +36,16 @@ A flow can be `secure` (security-sensitive execution) while still holding
 `unsafe` values from an external API body. These are orthogonal properties.
 
 ```logicn
-secure flow createCustomer(request: Request) -> Result<Response, ApiError>
-effects [database.write] {
+secure flow createCustomer(request: Request) -> CreateCustomerResult
+contract {
+  types {
+    type CreateCustomerResult = Result<Response, ApiError>
+  }
+  effects {
+    database.write
+  }
+}
+{
   unsafe let body: Bytes      = boundary.api.body(request)
   safe   mut body             = validate.customer(body)?
   let input: CreateCustomerInput = body
@@ -352,8 +360,17 @@ All codes follow the `LLN-SERIES-NNN` format.
 ### API boundary — correct pattern
 
 ```logicn
-secure flow createCustomer(request: Request) -> Result<Response, ApiError>
-effects [database.write, audit.write] {
+secure flow createCustomer(request: Request) -> CreateCustomerResult
+contract {
+  types {
+    type CreateCustomerResult = Result<Response, ApiError>
+  }
+  effects {
+    database.write
+    audit.write
+  }
+}
+{
 
   unsafe let body: Bytes = request.rawBody
   safe   mut body = json.decode<CreateCustomerInput>(body)?
@@ -366,8 +383,16 @@ effects [database.write, audit.write] {
 ### API boundary — error (unsafe value reaches database)
 
 ```logicn
-secure flow unsafeSave(request: ContactFormRequest) -> Result<ContactForm, FormError>
-effects [database.write] {
+secure flow unsafeSave(request: ContactFormRequest) -> UnsafeSaveResult
+contract {
+  types {
+    type UnsafeSaveResult = Result<ContactForm, FormError>
+  }
+  effects {
+    database.write
+  }
+}
+{
   unsafe let rawMessage: String = request.message
 
   // LLN-VALUESTATE-001: unsafe binding cannot flow into database.write
@@ -380,8 +405,16 @@ effects [database.write] {
 ### Secret — correct pattern
 
 ```logicn
-secure flow loadApiKey() -> Result<SecureString, SecretError>
-effects [secret.read] {
+secure flow loadApiKey() -> LoadApiKeyResult
+contract {
+  types {
+    type LoadApiKeyResult = Result<SecureString, SecretError>
+  }
+  effects {
+    secret.read
+  }
+}
+{
   let apiKey: SecureString = env.secret("API_KEY")
 
   // LLN-SECRET-001 would fire here — do NOT uncomment:
@@ -396,8 +429,17 @@ effects [secret.read] {
 ### Constant-time comparison — correct pattern
 
 ```logicn
-secure flow verifyToken(provided: SecureString) -> Result<Decision, AuthError>
-effects [secret.read, audit.write] {
+secure flow verifyToken(provided: SecureString) -> VerifyTokenResult
+contract {
+  types {
+    type VerifyTokenResult = Result<Decision, AuthError>
+  }
+  effects {
+    secret.read
+    audit.write
+  }
+}
+{
   let expected: SecureString = env.secret("EXPECTED_TOKEN")
 
   // LLN-SECRET-002 would fire here — do NOT uncomment:

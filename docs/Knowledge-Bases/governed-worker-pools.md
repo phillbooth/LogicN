@@ -1,5 +1,10 @@
 # Governed Worker Pools
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Stage B
+
 ## Definition
 
 A **LogicN Governed Worker Pool** is a bounded, isolated execution group managed by the runtime for processing approved flows, events, streams, jobs, and compute operations under explicit governance control.

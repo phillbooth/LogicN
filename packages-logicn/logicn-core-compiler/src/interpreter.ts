@@ -8,6 +8,7 @@ import { type CapabilityHost } from "./runtime/capabilityHost.js";
 import { type RuntimeContext } from "./runtime/runtimeContext.js";
 import { type ContractEnforcer } from "./runtime/contractEnforcer.js";
 import { type ContractEnforcementRecord } from "./runtime/runtimeReport.js";
+import { type PassiveExecutionPlan, executePlan } from "./runtime/executionPlan.js";
 
 export type LogicNValue =
   | { readonly __tag: "int";       readonly value: number }
@@ -37,10 +38,29 @@ export type LogicNValue =
 export const LLN_VOID: LogicNValue = { __tag: "void" };
 export const LLN_NONE: LogicNValue = { __tag: "none" };
 
+/** LLN-RUNTIME-006: Flow execution deadline exceeded. */
+export const LLN_RUNTIME_006 = {
+  code: "LLN-RUNTIME-006",
+  name: "FlowDeadlineExceeded",
+  severity: "error" as const,
+  message: "Flow execution deadline exceeded.",
+} as const;
+
 interface BindingEntry {
   readonly value: LogicNValue;
   readonly unsafe: boolean;
   readonly typeName: string;
+}
+
+export interface InterpreterRuntimeOptions {
+  /** When true, use a PassiveExecutionPlan for execution if available. */
+  readonly useExecutionPlan?: boolean;
+  /** Actor identity for context propagation (accessible as context.actor). */
+  readonly actor?: string;
+  /** Trace ID for context propagation (accessible as context.trace_id). */
+  readonly traceId?: string;
+  /** Deadline as absolute ms timestamp (accessible as context.deadline). */
+  readonly deadlineMs?: number;
 }
 
 class EarlyReturn {
@@ -140,22 +160,32 @@ class Interpreter {
   private readonly fnIndex = new Map<string, AstNode>();
   capabilityHost: CapabilityHost | undefined;
   private readonly enforcer: ContractEnforcer | undefined;
+  private readonly runtimeOptions: InterpreterRuntimeOptions;
+  /** Optional map of flow name → PassiveExecutionPlan for plan-based execution. */
+  private readonly executionPlans: ReadonlyMap<string, PassiveExecutionPlan>;
 
   constructor(
     private readonly ast: AstNode,
     private readonly knownFlows: readonly FlowMeta[],
     enforcer?: ContractEnforcer,
     capabilityHost?: CapabilityHost,
+    runtimeOptions?: InterpreterRuntimeOptions,
+    executionPlans?: ReadonlyMap<string, PassiveExecutionPlan>,
   ) {
     this.flowIndex = buildFlowIndex(ast);
     this.enforcer = enforcer;
     this.capabilityHost = capabilityHost;
+    this.runtimeOptions = runtimeOptions ?? {};
+    this.executionPlans = executionPlans ?? new Map();
   }
 
-  private getContext(): RuntimeContext {
+  private getContext(flowName?: string): RuntimeContext {
     return {
-      flowName: "runtime",
+      flowName: flowName ?? "runtime",
       startedAt: Date.now(),
+      ...(this.runtimeOptions.traceId !== undefined ? { traceId: this.runtimeOptions.traceId } : {}),
+      ...(this.runtimeOptions.actor !== undefined ? { actor: this.runtimeOptions.actor } : {}),
+      ...(this.runtimeOptions.deadlineMs !== undefined ? { deadlineMs: this.runtimeOptions.deadlineMs } : {}),
     };
   }
 
@@ -164,7 +194,7 @@ class Interpreter {
       recordEffect: (effect: string) => this.effectsObserved.add(effect),
       resolveIdentifier: (name: string) => this.lookup(name)?.value,
       callFlow: async (name: string, fnArgs: ReadonlyMap<string, LogicNValue>) => {
-        const sub = new Interpreter(this.ast, this.knownFlows);
+        const sub = new Interpreter(this.ast, this.knownFlows, undefined, undefined, this.runtimeOptions, this.executionPlans);
         const result = await sub.runFlow(name, fnArgs);
         for (const effect of result.effectsObserved) this.effectsObserved.add(effect);
         this.auditEntries.push(...result.auditEntries);
@@ -173,7 +203,7 @@ class Interpreter {
       applyFn: async (fn: LogicNValue, arg: LogicNValue) => {
         if (fn.__tag === "unresolved" && this.flowIndex.has(fn.name)) {
           const callArgs = new Map<string, LogicNValue>([["arg", arg]]);
-          const sub = new Interpreter(this.ast, this.knownFlows);
+          const sub = new Interpreter(this.ast, this.knownFlows, undefined, undefined, this.runtimeOptions, this.executionPlans);
           const result = await sub.runFlow(fn.name, callArgs);
           for (const effect of result.effectsObserved) this.effectsObserved.add(effect);
           this.auditEntries.push(...result.auditEntries);
@@ -189,26 +219,73 @@ class Interpreter {
     const flowNode = this.flowIndex.get(flowName);
     const qualifier = flowNode === undefined ? "flow" : qualifierFromFlowKind(flowNode.kind);
 
-    // Step 2A: Check deadline before doing any work
+    // Step 2A: Check deadline before doing any work — emit LLN-RUNTIME-006
     if (this.enforcer !== undefined) {
       try {
         this.enforcer.checkDeadline();
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
-        const value: LogicNValue = { __tag: "err", error: { __tag: "string", value: message } };
-        this.diagnostics.push({ code: "LLN-RUNTIME-DEADLINE", message });
-        return this.buildResult(flowName, qualifier, startedAt, value, message);
+        const diagnosticMessage = `Flow '${flowName}' execution deadline exceeded: ${message}`;
+        const value: LogicNValue = { __tag: "err", error: { __tag: "string", value: diagnosticMessage } };
+        this.diagnostics.push({ code: LLN_RUNTIME_006.code, message: diagnosticMessage });
+        return this.buildResult(flowName, qualifier, startedAt, value, diagnosticMessage);
       }
     }
 
     if (flowNode === undefined) {
-      const value: LogicNValue = { __tag: "runtimeError", message: `Flow '${flowName}' not found` };
-      this.diagnostics.push({ code: "LLN-RUNTIME-002", message: `Flow '${flowName}' not found` });
-      return this.buildResult(flowName, qualifier, startedAt, value, value.message);
+      const msg = `Flow '${flowName}' not found`;
+      const value: LogicNValue = { __tag: "runtimeError", message: msg };
+      this.diagnostics.push({ code: "LLN-RUNTIME-002", message: msg });
+      return this.buildResult(flowName, qualifier, startedAt, value, msg);
+    }
+
+    // Task 1 / Phase 16: If a PassiveExecutionPlan is available and useExecutionPlan is set,
+    // use it for pure flows rather than AST-walking.
+    if (
+      this.runtimeOptions.useExecutionPlan === true &&
+      this.capabilityHost !== undefined
+    ) {
+      const plan = this.executionPlans.get(flowName);
+      if (plan !== undefined && plan.qualifier === "pure") {
+        const ctx = this.getContext(flowName);
+        try {
+          const planResult = await executePlan(plan, this.capabilityHost, ctx);
+          for (const entry of planResult.auditTrail) {
+            this.auditEntries.push({ event: entry, fields: {}, timestamp: new Date().toISOString() });
+          }
+          // Return a synthetic value using the plan's return type name
+          const value: LogicNValue = { __tag: "string", value: planResult.value };
+          return this.buildResult(flowName, qualifier, startedAt, value, undefined);
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          const errorMessage = `[Flow '${flowName}'] executePlan failed: ${message}`;
+          this.diagnostics.push({ code: "LLN-RUNTIME-003", message: errorMessage });
+          const value: LogicNValue = { __tag: "runtimeError", message: errorMessage };
+          return this.buildResult(flowName, qualifier, startedAt, value, errorMessage);
+        }
+      }
     }
 
     this.pushScope();
     this.seedPrelude();
+
+    // Task 3: Context propagation — seed context.actor, context.trace_id, context.deadline
+    // into the flow scope as a record accessible via `context.actor` etc.
+    {
+      const contextFields = new Map<string, LogicNValue>();
+      if (this.runtimeOptions.actor !== undefined) {
+        contextFields.set("actor", { __tag: "string", value: this.runtimeOptions.actor });
+      }
+      if (this.runtimeOptions.traceId !== undefined) {
+        contextFields.set("trace_id", { __tag: "string", value: this.runtimeOptions.traceId });
+      }
+      if (this.runtimeOptions.deadlineMs !== undefined) {
+        contextFields.set("deadline", { __tag: "int", value: this.runtimeOptions.deadlineMs });
+      }
+      if (contextFields.size > 0) {
+        this.declare("context", { __tag: "record", fields: contextFields });
+      }
+    }
 
     for (const child of flowNode.children ?? []) {
       if (child.kind === "paramDecl") {
@@ -231,9 +308,11 @@ class Interpreter {
       if (error instanceof EarlyReturn) {
         returnValue = error.value;
       } else {
-        const message = error instanceof Error ? error.message : String(error);
+        const causeMessage = error instanceof Error ? error.message : String(error);
+        // Task 2: Include flow name and original error in the message
+        const message = `[Flow '${flowName}'] ${causeMessage}`;
         runtimeError = message;
-        this.diagnostics.push({ code: "LLN-RUNTIME-003", message: `Runtime exception: ${message}` });
+        this.diagnostics.push({ code: "LLN-RUNTIME-003", message: `Runtime exception in flow '${flowName}': ${causeMessage}` });
         returnValue = { __tag: "runtimeError", message };
       }
     } finally {
@@ -934,7 +1013,7 @@ class Interpreter {
       callArgs.set(paramName, await this.evalExpr(arg));
     }
 
-    const nested = new Interpreter(this.ast, this.knownFlows);
+    const nested = new Interpreter(this.ast, this.knownFlows, undefined, undefined, this.runtimeOptions, this.executionPlans);
     const result = await nested.runFlow(name, callArgs);
     for (const effect of result.effectsObserved) this.effectsObserved.add(effect);
     this.auditEntries.push(...result.auditEntries);
@@ -1236,7 +1315,9 @@ export async function executeFlow(
   knownFlows?: readonly FlowMeta[],
   enforcer?: ContractEnforcer,
   capabilityHost?: CapabilityHost,
+  runtimeOptions?: InterpreterRuntimeOptions,
+  executionPlans?: ReadonlyMap<string, PassiveExecutionPlan>,
 ): Promise<FlowExecutionResult> {
-  const interpreter = new Interpreter(ast, knownFlows ?? [], enforcer, capabilityHost);
+  const interpreter = new Interpreter(ast, knownFlows ?? [], enforcer, capabilityHost, runtimeOptions, executionPlans);
   return interpreter.runFlow(flowName, args);
 }

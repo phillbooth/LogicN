@@ -1,5 +1,10 @@
 # Scoped Vaults
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Stage B
+
 LogicN does not allow global variables, but it still needs efficient state reuse
 during requests, flows, sessions and service lifetimes.
 
@@ -128,7 +133,13 @@ Flows may return a safe reference instead of passing a large object around:
 export action Customer.load(
   id: CustomerId,
   ctx: RequestContext
-) -> Result<VaultRef<Customer>, Error> {
+) -> CustomerLoadResult
+contract {
+  types {
+    type CustomerLoadResult = Result<VaultRef<Customer>, Error>
+  }
+}
+{
   let customer = try db.customers.findById(id)
 
   let ref = vault.request.put<Customer>(

@@ -1,5 +1,13 @@
 # Network Boundary Policy
 
+## Status
+
+```
+Status: Active — governing policy
+Scope:  TCP/UDP port policy, boot network declarations, named boundaries
+See also: logicn-core-network-governance.md, layered-rate-limits.md, deny-by-default-risk-features.md
+```
+
 ## Definition
 
 LogicN treats TCP/UDP network access as **runtime network policy** — not normal application logic. Ports are closed and protocols denied by default. Only declared listeners may open network boundaries.

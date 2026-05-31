@@ -835,10 +835,10 @@ flow test() -> Int {
   });
 });
 
-// ── LLN-TYPE-006: InvalidCallArgument (Phase 8A) ─────────────────────────────
+// ── LLN-TYPE-005: InvalidCallArgType (Phase 8A) ──────────────────────────────
 
-describe("Type checker — LLN-TYPE-006 call argument type", () => {
-  it("emits LLN-TYPE-006 when String literal passed where Int expected", () => {
+describe("Type checker — LLN-TYPE-005 call argument type", () => {
+  it("emits LLN-TYPE-005 when String literal passed where Int expected", () => {
     const result = parseAndCheck(`
 pure flow double(n: Int) -> Int {
   return n + n
@@ -848,10 +848,10 @@ flow test() -> Int {
   return double("hello")
 }
 `);
-    assert.ok(hasDiag(result, "LLN-TYPE-006"), "Expected LLN-TYPE-006 for String passed to Int param");
+    assert.ok(hasDiag(result, "LLN-TYPE-005"), "Expected LLN-TYPE-005 for String passed to Int param");
   });
 
-  it("does not emit LLN-TYPE-006 when correct type is passed", () => {
+  it("does not emit LLN-TYPE-005 when correct type is passed", () => {
     const result = parseAndCheck(`
 pure flow double(n: Int) -> Int {
   return n + n
@@ -861,7 +861,7 @@ flow test() -> Int {
   return double(5)
 }
 `);
-    assert.ok(!hasDiag(result, "LLN-TYPE-006"), "Unexpected LLN-TYPE-006 for correct argument type");
+    assert.ok(!hasDiag(result, "LLN-TYPE-005"), "Unexpected LLN-TYPE-005 for correct argument type");
   });
 });
 

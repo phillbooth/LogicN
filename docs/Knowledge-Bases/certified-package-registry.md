@@ -1,5 +1,10 @@
 # Certified Package Registry
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Phase 17+
+
 ## Purpose
 
 LogicN should not model package management as "Composer for LogicN".

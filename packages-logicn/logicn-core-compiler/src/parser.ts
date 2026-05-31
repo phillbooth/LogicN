@@ -69,6 +69,9 @@ export type AstNodeKind =
   // Flow Contract (Pilot Candidate)
   | "contractDecl"
   | "contractSetDecl"
+  // Governance blocks
+  | "authorityDecl"
+  | "policyDecl"
   // Literal expression nodes
   | "charLiteral"
   | "listLiteral";
@@ -215,6 +218,8 @@ class Parser {
         case "intent":   return this.parseIntentDecl();
         case "governance": return this.parseGenericBlock("governanceDecl");
         case "api":      return this.parseGenericBlock("apiDecl");
+        case "authority": return this.parseAuthorityBlock();
+        case "policy":   return this.parsePolicyBlock();
         case "compute":  return this.parseComputeTarget();
         case "route":    return this.parseRouteDecl();
         case "contract": {
@@ -323,7 +328,7 @@ class Parser {
         // Skip unknown keywords at top level
         default:
           this.emitUnexpected(`Unexpected keyword "${tok.value}" at top level.`);
-          this.advance();
+          this.skipToNextDeclaration();
           return undefined;
       }
     }
@@ -430,18 +435,14 @@ class Parser {
         flowClauses.push(this.parseComputeTarget());
         continue;
       }
-      // `authority { ... }` — governance authority block (post-v1); consume gracefully
+      // `authority { ... }` — governance authority block (post-v1); parse structurally
       if (this.currentIs("keyword", "authority")) {
-        this.advance(); // consume "authority"
-        this.skipNewlines();
-        if (this.currentIs("symbol", "{")) this.skipBalancedBraces();
+        flowClauses.push(this.parseAuthorityBlock());
         continue;
       }
-      // `policy { ... }` — data-sharing policy block (post-v1); consume gracefully
+      // `policy { ... }` — data-sharing policy block (post-v1); parse structurally
       if (this.currentIs("keyword", "policy")) {
-        this.advance(); // consume "policy"
-        this.skipNewlines();
-        if (this.currentIs("symbol", "{")) this.skipBalancedBraces();
+        flowClauses.push(this.parsePolicyBlock());
         continue;
       }
       // Bare `effects [...]` after contract block
@@ -1437,6 +1438,7 @@ class Parser {
     // Object/record literal or block statement.
     // Disambiguate by lookahead: if after { (skipping newlines) we see
     // `identifier :` or `keyword :`, it is a record literal { field: value, ... }.
+    // `... identifier` (spread) makes it a record-update { ...base, field: value }.
     // Otherwise it is a block statement { stmt; ... }.
     if (tok.kind === "symbol" && tok.value === "{") {
       // Look ahead past newlines to find the first real token after {
@@ -1450,9 +1452,21 @@ class Parser {
       const isRecord = !isEmpty &&
         (firstReal.kind === "identifier" || firstReal.kind === "keyword") &&
         secondReal.kind === "symbol" && secondReal.value === ":";
+      // { ...identifier ... } → record update / spread syntax
+      // The lexer produces ".." (operator) + "." (symbol) for "..."
+      const isSpread = !isEmpty && (
+        // lexer emits ".." then "." for "..."
+        ((firstReal.kind === "operator" && firstReal.value === "..") &&
+          (secondReal.kind === "symbol" && secondReal.value === ".")) ||
+        // fallback: single "..." operator token
+        (firstReal.kind === "operator" && firstReal.value === "...")
+      );
 
       if (isEmpty || isRecord) {
         return this.parseRecordLiteral(loc);
+      }
+      if (isSpread) {
+        return this.parseRecordUpdateLiteral(loc);
       }
       return this.parseBlock();
     }
@@ -1534,6 +1548,96 @@ class Parser {
     return { kind: "callExpr", value: "#record", location: loc, children: fields };
   }
 
+  /**
+   * Parses a record update / spread literal: `{ ...base, field: value, ... }`.
+   *
+   * Stored as a callExpr with value "#record-update".
+   * The first child is the spread expression (the base record).
+   * Subsequent children are field nodes, each an identifier whose value is
+   * the field name and whose first child is the field value expression.
+   *
+   * This mirrors the "#record" handling in parseRecordLiteral().
+   */
+  /** Returns true and advances if current position has a spread operator `...`. */
+  private consumeSpreadIfPresent(): boolean {
+    // The lexer emits ".." (operator) then "." (symbol) for "..."
+    if (this.currentIs("operator", "..") && this.peek(1).kind === "symbol" && this.peek(1).value === ".") {
+      this.advance(); // consume ".."
+      this.advance(); // consume "."
+      return true;
+    }
+    // Fallback: in case lexer ever emits "..." as a single token
+    if (this.currentIs("operator", "...")) {
+      this.advance();
+      return true;
+    }
+    return false;
+  }
+
+  private parseRecordUpdateLiteral(loc: SourceLocation): AstNode {
+    this.advance(); // consume {
+    this.skipNewlines();
+
+    const children: AstNode[] = [];
+
+    // Parse the leading spread: ...base
+    if (this.consumeSpreadIfPresent()) {
+      const spreadLoc = this.loc();
+      const spreadExpr = this.parsePrimary();
+      children.push({ kind: "identifier", value: "#spread", location: spreadLoc, children: [spreadExpr] });
+      this.skipNewlines();
+      if (this.currentIs("symbol", ",")) {
+        this.advance();
+        this.skipNewlines();
+      }
+    }
+
+    // Parse remaining field assignments: field: value
+    while (!this.currentIs("symbol", "}") && !this.isEof()) {
+      this.skipNewlines();
+      if (this.currentIs("symbol", "}")) break;
+
+      // Additional spreads are allowed: { ...a, ...b, field: v }
+      if (this.consumeSpreadIfPresent()) {
+        const spreadLoc = this.loc();
+        const spreadExpr = this.parsePrimary();
+        children.push({ kind: "identifier", value: "#spread", location: spreadLoc, children: [spreadExpr] });
+        this.skipNewlines();
+        if (this.currentIs("symbol", ",")) {
+          this.advance();
+          this.skipNewlines();
+        }
+        continue;
+      }
+
+      const fieldLoc = this.loc();
+      const fieldTok = this.current();
+      const fieldName = fieldTok.kind === "identifier" || fieldTok.kind === "keyword"
+        ? fieldTok.value : "<field>";
+      this.advance(); // consume field name
+
+      this.expect("symbol", ":");
+      this.skipNewlines();
+
+      const fieldValue = this.parseExpression();
+      children.push({
+        kind: "identifier",
+        value: fieldName,
+        location: fieldLoc,
+        children: [fieldValue],
+      });
+
+      this.skipNewlines();
+      if (this.currentIs("symbol", ",")) {
+        this.advance();
+        this.skipNewlines();
+      }
+    }
+
+    this.expect("symbol", "}");
+    return { kind: "callExpr", value: "#record-update", location: loc, children };
+  }
+
   private parseArgList(): AstNode[] {
     const args: AstNode[] = [];
 
@@ -1612,6 +1716,251 @@ class Parser {
     }
 
     return { kind: "intentDecl", value, location: loc };
+  }
+
+  /**
+   * Parses an `authority { kind target reason "..." audit required/optional require effect.name }` block.
+   *
+   * Syntax:
+   *   authority share Payments.processor {
+   *     reason "needed for processing"
+   *     audit required
+   *     require payment.write
+   *   }
+   *
+   * Stored as: { kind: "authorityDecl", value: "<authority-kind>", children: [...clauses] }
+   * where authority-kind is share | delegate | grant | <identifier>
+   */
+  private parseAuthorityBlock(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "authority"
+    this.skipNewlines();
+
+    // Authority kind: share | delegate | grant | identifier
+    let authorityKind = "";
+    if (this.current().kind === "keyword" || this.current().kind === "identifier") {
+      authorityKind = this.current().value;
+      this.advance();
+      this.skipNewlines();
+    }
+
+    // Optional authority target: qualified name (e.g. Payments.processor)
+    let target = "";
+    if (this.current().kind === "identifier") {
+      target = this.current().value;
+      this.advance();
+      // Consume dot-path continuations
+      while (this.currentIs("symbol", ".")) {
+        this.advance();
+        if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+          target += "." + this.current().value;
+          this.advance();
+        } else break;
+      }
+      this.skipNewlines();
+    }
+
+    const children: AstNode[] = [];
+    if (target !== "") {
+      children.push({ kind: "identifier", value: `target:${target}`, location: loc });
+    }
+
+    if (!this.currentIs("symbol", "{")) {
+      return { kind: "authorityDecl", value: authorityKind || "authority", location: loc, children };
+    }
+
+    this.advance(); // consume {
+    this.skipNewlines();
+
+    while (!this.currentIs("symbol", "}") && !this.isEof()) {
+      const tok = this.current();
+      const clauseLoc = this.loc();
+
+      // reason "string"
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "reason") {
+        this.advance();
+        this.skipNewlines();
+        let reasonText = "";
+        if (this.current().kind === "string") {
+          const raw = this.current().value;
+          reasonText = raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw;
+          this.advance();
+        }
+        children.push({ kind: "stringLiteral", value: reasonText, location: clauseLoc });
+        this.skipNewlines();
+        continue;
+      }
+
+      // audit required | optional
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "audit") {
+        this.advance();
+        this.skipNewlines();
+        let auditLevel = "required";
+        if (this.current().kind === "keyword" || this.current().kind === "identifier") {
+          auditLevel = this.current().value;
+          this.advance();
+        }
+        children.push({ kind: "identifier", value: `audit:${auditLevel}`, location: clauseLoc });
+        this.skipNewlines();
+        continue;
+      }
+
+      // require effect.name
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "require") {
+        this.advance();
+        this.skipNewlines();
+        let req = "";
+        // Consume a dot-path identifier (e.g. payment.write → "payment" "." "write")
+        if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+          req = this.current().value;
+          this.advance();
+          while (this.currentIs("symbol", ".")) {
+            this.advance(); // consume "."
+            if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+              req += "." + this.current().value;
+              this.advance();
+            } else break;
+          }
+        }
+        children.push({ kind: "effectRef", value: req.trim(), location: clauseLoc });
+        this.skipNewlines();
+        continue;
+      }
+
+      // Skip unrecognised content
+      if (this.currentIs("symbol", "{")) {
+        this.skipBalancedBraces();
+      } else {
+        this.advance();
+      }
+      this.skipNewlines();
+    }
+
+    this.expect("symbol", "}");
+    return { kind: "authorityDecl", value: authorityKind || "authority", location: loc, children };
+  }
+
+  /**
+   * Parses a `policy { purpose "tag" allow TypeRef to "action" deny TypeRef require effectName }` block.
+   *
+   * Syntax:
+   *   policy {
+   *     purpose "data-processing"
+   *     allow Payment to "process"
+   *     deny RawCard
+   *     require payment.write
+   *   }
+   *
+   * Stored as: { kind: "policyDecl", value: "policy", children: [...clauses] }
+   */
+  private parsePolicyBlock(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "policy"
+    this.skipNewlines();
+
+    const children: AstNode[] = [];
+
+    // Optional name after keyword
+    let policyName = "policy";
+    if (this.current().kind === "identifier") {
+      policyName = this.current().value;
+      this.advance();
+      this.skipNewlines();
+    }
+
+    if (!this.currentIs("symbol", "{")) {
+      return { kind: "policyDecl", value: policyName, location: loc, children };
+    }
+
+    this.advance(); // consume {
+    this.skipNewlines();
+
+    while (!this.currentIs("symbol", "}") && !this.isEof()) {
+      const tok = this.current();
+      const clauseLoc = this.loc();
+
+      // purpose "machine-readable-tag"
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "purpose") {
+        this.advance();
+        this.skipNewlines();
+        let purposeText = "";
+        if (this.current().kind === "string") {
+          const raw = this.current().value;
+          purposeText = raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw;
+          this.advance();
+        } else if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+          purposeText = this.current().value;
+          this.advance();
+        }
+        children.push({ kind: "identifier", value: `purpose:${purposeText}`, location: clauseLoc });
+        this.skipNewlines();
+        continue;
+      }
+
+      // allow TypeRef [to "action"]
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "allow") {
+        this.advance();
+        this.skipNewlines();
+        const typeRef = this.parseTypeRef();
+        let action = "";
+        this.skipNewlines();
+        if ((this.current().kind === "keyword" || this.current().kind === "identifier") && this.current().value === "to") {
+          this.advance();
+          this.skipNewlines();
+          if (this.current().kind === "string") {
+            const raw = this.current().value;
+            action = raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw;
+            this.advance();
+          }
+        }
+        children.push({ kind: "typeRef", value: `allow:${typeRef.value ?? ""}${action !== "" ? ` to ${action}` : ""}`, location: clauseLoc });
+        this.skipNewlines();
+        continue;
+      }
+
+      // deny TypeRef
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "deny") {
+        this.advance();
+        this.skipNewlines();
+        const typeRef = this.parseTypeRef();
+        children.push({ kind: "typeRef", value: `deny:${typeRef.value ?? ""}`, location: clauseLoc });
+        this.skipNewlines();
+        continue;
+      }
+
+      // require effectName
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "require") {
+        this.advance();
+        this.skipNewlines();
+        let req = "";
+        // Consume a dot-path identifier (e.g. payment.write → "payment" "." "write")
+        if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+          req = this.current().value;
+          this.advance();
+          while (this.currentIs("symbol", ".")) {
+            this.advance(); // consume "."
+            if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+              req += "." + this.current().value;
+              this.advance();
+            } else break;
+          }
+        }
+        children.push({ kind: "effectRef", value: req.trim(), location: clauseLoc });
+        this.skipNewlines();
+        continue;
+      }
+
+      // Skip unrecognised content
+      if (this.currentIs("symbol", "{")) {
+        this.skipBalancedBraces();
+      } else {
+        this.advance();
+      }
+      this.skipNewlines();
+    }
+
+    this.expect("symbol", "}");
+    return { kind: "policyDecl", value: policyName, location: loc, children };
   }
 
   /** Skips a balanced `{ ... }` block without parsing the interior. */
@@ -2621,11 +2970,11 @@ class Parser {
   // ── Token stream helpers ───────────────────────────────────────────────────
 
   private current(): Token {
-    return this.tokens[this.pos] ?? { kind: "eof", value: "", line: 0, column: 0, start: 0, end: 0 };
+    return this.tokens[this.pos] ?? { kind: "eof", value: "", line: 0, column: 0, endLine: 0, endColumn: 0, start: 0, end: 0 };
   }
 
   private peek(offset: number): Token {
-    return this.tokens[this.pos + offset] ?? { kind: "eof", value: "", line: 0, column: 0, start: 0, end: 0 };
+    return this.tokens[this.pos + offset] ?? { kind: "eof", value: "", line: 0, column: 0, endLine: 0, endColumn: 0, start: 0, end: 0 };
   }
 
   private advance(): Token {
@@ -2651,6 +3000,43 @@ class Parser {
   private skipNewlines(): void {
     while (this.current().kind === "newline" || this.current().kind === "comment" || this.current().kind === "docComment") {
       this.pos++;
+    }
+  }
+
+  /**
+   * Advances the token stream forward until a top-level declaration keyword is
+   * found (or EOF), preventing cascading LLN-PARSE-001 errors from one bad
+   * declaration.
+   *
+   * Top-level boundary keywords: flow, secure, pure, guarded, type, record,
+   * enum, import, route, contract, event, authority, policy, intent,
+   * governance, api, compute.
+   */
+  private skipToNextDeclaration(): void {
+    const TOP_LEVEL_BOUNDARIES = new Set([
+      "flow", "secure", "pure", "guarded",
+      "type", "record", "enum", "import",
+      "route", "contract", "event",
+      "authority", "policy",
+      "intent", "governance", "api", "compute",
+    ]);
+
+    while (!this.isEof()) {
+      const tok = this.current();
+      // Stop when we reach a top-level keyword at column 1 (not indented)
+      if (tok.kind === "keyword" && TOP_LEVEL_BOUNDARIES.has(tok.value) && tok.column <= 1) {
+        break;
+      }
+      // Also stop if we're at a top-level keyword regardless of column (robustness)
+      if (tok.kind === "keyword" && TOP_LEVEL_BOUNDARIES.has(tok.value)) {
+        break;
+      }
+      // Skip balanced braces so we don't mistake inner keywords for boundaries
+      if (tok.kind === "symbol" && tok.value === "{") {
+        this.skipBalancedBraces();
+        continue;
+      }
+      this.advance();
     }
   }
 

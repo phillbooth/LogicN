@@ -1,5 +1,10 @@
 # Native Photonic Compute Future
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Stage C
+
 ## Definition
 
 This document captures the long-term research directions for native photonic computing that LogicN's architecture should remain compatible with. These are future possibilities, not current capabilities.

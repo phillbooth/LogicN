@@ -1,5 +1,10 @@
 # Generative Runtime Mapper
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Phase 17+
+
 ## Purpose
 
 The Generative Runtime Mapper is a future LogicN concept for turning code,

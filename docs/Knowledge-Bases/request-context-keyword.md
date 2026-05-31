@@ -1,5 +1,13 @@
 # Request Context Keyword
 
+## Status
+
+```
+Status: Active — canonical syntax decision
+Scope:  Flow signatures, RequestContext parameter naming
+See also: core-syntax-keywords.md, runtime-context-not-superglobals.md, hello-world-api-pattern.md
+```
+
 ## Definition
 
 LogicN uses `contex` (not `ctx`) as the standard parameter name for

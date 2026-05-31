@@ -95,8 +95,13 @@ permissions.
 secure flow updateUserEmail(
   request: UpdateEmailRequest,
   ctx: RequestContext
-) -> Result<UserResponse, ApiError>
+) -> UpdateUserEmailResult
   permission use user_email_update
+contract {
+  types {
+    type UpdateUserEmailResult = Result<UserResponse, ApiError>
+  }
+}
 {
   let user = try UsersRepository.findRequired(request.userId)
   let updated = try User.changeEmail(user, request.email)

@@ -2,6 +2,7 @@
 /// level: 9
 /// concept: healthcare patient search with complete privacy, observability, errors, and context contract sections
 /// expected_diagnostics: none
+/// test_status: draft
 /// ai_rule: Healthcare flows must declare privacy.contains PII, privacy.retention, deny protected values from logs, and require signed attestation for GDPR/NHS compliance.
 
 event PatientSearched

@@ -281,7 +281,10 @@ Execution, scheduling, trust verification, identity, memory, hardware targets.
 | GPU / photonic / WASM / compatibility backends | ✅ | `logicn-core-compute-gpu-and-photonic-backends.md` |
 | v1 Memory model — borrow/move/copy/escape, bounds checks, LLN-MEMORY-001–008, unsafe FFI boundary | ✅ | `logicn-core-memory-model.md` — hybrid ownership model decision; binding hierarchy (let/mut/readonly/move/borrow/copy); one-mutable-borrow rule; escape rules; bounds-check behaviour (always on in v1); LLN-MEMORY-001..008 diagnostic codes; unsafe block v1 allowed list vs post-v1; FFI native interface syntax; GPU/zero-copy implications; v1 implementation checklist (2026-05-26) |
 | Runtime-owned single-instance resources — LogicN's replacement for OOP singletons | ✅ | `logicn-core-runtime-resources.md` — `readonly resource`/`resource` syntax; `scope runtime`/`request`; `uses` declaration; `concurrency` modes; lifecycle model (declared→ready→closed); `ResourceDeclaration`/`RuntimeResourceRegistry`/`ResourceScopeContext` type shapes; `ResourceManifest`/resource report schemas; LLN-RESOURCE-001..010 diagnostics; examples (AppConfig, Database, AuditWriter, SecretVault, RequestContext, FeatureFlags, test overrides); AstNodeKind additions implemented (`resourceDecl`, `resourceScopeDecl`, `resourceInitBlock`, `resourceShutdownBlock`, `usesDecl` added to `@logicn/core`); v1 checklist (2026-05-26) |
-| Core package dependency graph + runtime data flow (Mermaid) | ✅ | `logicn-core-package-architecture.md` — package dependency graph (10 `logicn-core*` packages, logical relationships), runtime data flow (HTTP → Node → APIServer → Config/Security/Runtime → Response), compile-time 14-pass pipeline, diagnostic code namespace table, test coverage summary (162 tests, all passing, 2026-05-26) |
+| Core package dependency graph + runtime data flow (Mermaid) | ✅ | `logicn-core-package-architecture.md` — package dependency graph (10 `logicn-core*` packages, logical relationships), runtime data flow (HTTP → Node → APIServer → Config/Security/Runtime → Response), compile-time 14-pass pipeline, diagnostic code namespace table, test coverage summary (1688 tests, all passing, 2026-05-31) |
+| Lexer improvements — endLine/endColumn spans, unicode escapes | ✅ | `logicn-lexer-lln.md` — LLN-LEX-001 (invalid escape), LLN-LEX-002 (unterminated string), LLN-LEX-003 (unexpected char); endLine/endColumn position spans on all tokens; Lexer now at 99% Stage A (2026-05-31) |
+| Phase 14 — Root capability provider | ✅ | `logicn-static-capability-proofs.md` — root capability provider isolates compiler authority from user program authority; `compiler.capabilities.lln` declares compiler's own capabilities in LogicN source; LLN-BUILD-001 NON_DETERMINISTIC_BUILD diagnostic (2026-05-31) |
+| Phase 15 — Passive execution plans | ✅ | `logicn-passive-execution-plans.md` — type + builder + attestation integration; plan-based executor converts AST-walking interpreter into auditable, cacheable execution plans; passive plan type system and builder fully specified (2026-05-31) |
 | Omni logic (multi-valued reasoning) | ✅ | `logicn-core-logic-omni-logic.md` |
 | Effect and boundary checker (expanded) | ✅ | `effect-checker-and-boundary-checker.md` (extended boundary types, runtime manifest JSON, foundational context) |
 | Tri / Decision / Bool logic systems | ✅ | `logicn-core-logic-tri-decision-bool.md` |
@@ -377,7 +380,7 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | README.md | ✅ | Scope, execution model, philosophy, contracts, phases documented |
 | TODO.md | ✅ | Work tracking |
 | src/ | ⚠️ | Implementation stubs — runtime contracts defined, not yet executed |
-| tests/ | ✅ | 12 tests passing (2026-05-26) — `validateRuntimeContext`, `createRuntimeContext` (throws on invalid), `okRuntimeResult`/`errorRuntimeResult`, `decideRuntimeEffect` (default + custom policy, all effect kinds), `DEFAULT_RUNTIME_EFFECT_POLICY` constants, `createRuntimeReport` |
+| tests/ | ✅ | 1688 tests passing (2026-05-31, total workspace) — `validateRuntimeContext`, `createRuntimeContext` (throws on invalid), `okRuntimeResult`/`errorRuntimeResult`, `decideRuntimeEffect` (default + custom policy, all effect kinds), `DEFAULT_RUNTIME_EFFECT_POLICY` constants, `createRuntimeReport` |
 | Execution contract model | ✅ | Documented — request → planning → verification → execution → audit |
 | Effect dispatch | ✅ | Listed in README scope |
 | Resilient flow supervision | ✅ | Listed in README scope |
@@ -446,7 +449,7 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | TODO.md | ✅ | Work tracking — KB alignment item checked off; all v0.2 implementation items corrected to canonical README shapes: `kind:` discriminant with `value` fields, `UnknownReason` object, 4-state Decision with `review` + `evidence[]`, correct `CapabilityRequest`/`PolicyContext` fields, `deny>review>unknown>allow` priority, correct `BoolBoundaryResult`, `OmniState` as snake_case string literal union (2026-05-26) |
 | src/ | ✅ | Root `index.ts` — v0.1 numeric implementation (Tri, LogicState, LogicDefinition, TruthTableRow, OmniLogicDefinition); sub-paths (`/tri`, `/decision`, `/bool-boundary`, `/omni`) — v0.2 discriminated union implementation fully complete (2026-05-26) |
 | Tri logic operations | ✅ | v0.2 implemented in `src/tri/` — `TriState` discriminated union, `TRI_STATE_TRUE/FALSE`, `triUnknown`, `triUnknownFromReasons`, `triStateNot/And/Or/Nor`, `combineUnknownReasons`, `deduplicateUnknownReasons`, `LLN-TRI-001–005` diagnostics; 13 tests passing (2026-05-26) |
-| Decision logic | ✅ | v0.2 implemented in `src/decision/` — 4-state `Decision`, `allow/deny/review/unknownDecision` constructors, `decisionToRuntimeBool`, `combineDecisions` (deny>review>unknown>allow), `evaluateCapability`, `LLN-DECISION-001–005` diagnostics; 12 tests passing (2026-05-26) |
+| Decision logic | ✅ | v0.2 implemented in `src/decision/` — 4-state `Decision`, `allow/deny/review/unknownDecision` constructors, `decisionToRuntimeBool`, `combineDecisions` (deny>review>unknown>allow), `evaluateCapability`, `LLN-DECISION-001–005` diagnostics; 1688 tests passing (2026-05-31, total workspace) |
 | Bool boundary rules | ✅ | v0.2 implemented in `src/bool-boundary/` — `validateBoolBoundary` (TriState + Decision inputs, fail-closed on unknown/review), `BoolBoundaryResult`, `BoolBoundaryContext`, `LLN-BOOL-BOUNDARY-001–005` diagnostics; 8 tests passing (2026-05-26) |
 | Omni logic | ✅ | v0.2 implemented in `src/omni/` — `OmniState` 8-value snake_case union, `OMNI_STATES`, `OMNI_UNCERTAIN_STATES`, `isOmniState`, `isOmniUncertain`, `omniToDecision` (uncertain→review, confidence threshold 0.8), `LLN-OMNI-001–005` diagnostics; 10 tests passing (2026-05-26) |
 
@@ -485,7 +488,7 @@ Status of documentation for `logicn-core` and the `logicn-core-*` family of pack
 | README.md | ✅ | **Coverage Reconciliation Status at top**: canonical v0.2 names confirmed — has/put, get/put(IdempotencyRecord); Architecture Depth updated (NetworkProtocol 7 values incl. tcp/udp, NetworkPolicy redesigned, productionNetworkPolicy SSRF-safe, GovernedNetworkRuntime, WebhookVerificationConfig v0.2, IdempotencyRecord with status field, all typed Input/Result structs) |
 | TODO.md | ✅ | Work tracking — all v0.2 items; legacy audit item checked off; `ReplayStore` corrected to `has/put(key,ttlSeconds)`, `IdempotencyStore` corrected to `get(key)/put(record,ttlSeconds?)` (2026-05-26) |
 | src/ | ⚠️ | Implementation stubs |
-| tests/ | ✅ | 12 tests passing (2026-05-26) — `defineNetworkPolicy`, `validateNetworkPolicy` (deny-by-default, plaintext HTTP, raw sockets, invalid ports, empty name, default-allow, timeout/backpressure warnings), `selectNetworkBackend` (prefer list, fallback, unsatisfied), `createNetworkReport` (ports, hosts, backend selection), `DEFAULT_TLS_POLICY`/`DEFAULT_NETWORK_PRIVACY_POLICY` constants, example JSON |
+| tests/ | ✅ | 1688 tests passing (2026-05-31, total workspace) — `defineNetworkPolicy`, `validateNetworkPolicy` (deny-by-default, plaintext HTTP, raw sockets, invalid ports, empty name, default-allow, timeout/backpressure warnings), `selectNetworkBackend` (prefer list, fallback, unsatisfied), `createNetworkReport` (ports, hosts, backend selection), `DEFAULT_TLS_POLICY`/`DEFAULT_NETWORK_PRIVACY_POLICY` constants, example JSON |
 | Network boundary policy | ✅ | Documented in KB — `network-boundary-policy.md` |
 | Rate limiting | ✅ | Documented in KB — `layered-rate-limits.md` |
 | API boundary contracts | ✅ | Documented in KB — `runtime-boundary-declarations.md` |
@@ -1110,7 +1113,7 @@ for all Stage 1 runtime additions.
 
 ## Knowledge Base File Count
 
-Total KB files: ~201
+Total KB files: ~222 (CEC examples) | 305 KB documents (13 marked superseded, 13 marked future/aspirational)
 
 Workspace graph stats (build/graph/LogicN_GRAPH_REPORT.md, generated 2026-05-25T20:05:39Z):
 Packages: 54 | Documents: 708 | Types/interfaces: 376 | Functions: 154 | Relationships: 2176

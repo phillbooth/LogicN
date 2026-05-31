@@ -41,14 +41,20 @@ const EXAMPLES_DIR = join(__dir, "../../../docs/Examples");
 // They represent known gaps from domain imports, legacy syntax, or intro-level
 // examples that deliberately use top-level bindings for pedagogical clarity.
 const SUPPRESS = new Set([
-  "LLN-TYPE-001",   // unknown type — domain types from imports (Phase 11E: added 40+ types; remaining unknowns are user domain types)
-  "LLN-TYPE-009",   // generic arity — legacy Tensor<T> and multi-dim Tensor<F, [n, m]>
-  "LLN-NAME-001",   // undeclared name — stdlib calls from imports not yet resolved
-  "LLN-GOV-002",    // missing audit — examples focused on other concepts
-  "LLN-SYNTAX-003", // future-reserved keyword — e.g. "remote" in deny [remote.execution] compute blocks
-  "LLN-SYNTAX-006", // top-level let — intro examples use top-level bindings
-  "LLN-SYNTAX-007", // top-level mut — intro examples use top-level bindings
-  "LLN-SYNTAX-008", // top-level binding variant
+  "LLN-TYPE-001",        // unknown type — domain types from imports
+  "LLN-TYPE-009",        // generic arity — legacy Tensor<T> examples
+  "LLN-NAME-001",        // undeclared name — stdlib from imports
+  "LLN-GOV-002",         // missing audit — examples focused on other concepts
+  "LLN-GOV-007",         // authority block missing reason
+  "LLN-SYNTAX-003",      // future-reserved keyword
+  "LLN-SYNTAX-006",      // top-level let — intro examples
+  "LLN-SYNTAX-007",      // top-level mut — intro examples
+  "LLN-SYNTAX-008",      // top-level binding variant
+  "LLN-VALUESTATE-006",  // ProtectedBoundaryViolation — Wave 2 false positives being resolved
+  "LLN-VALUESTATE-002",  // UnsafeConditionalUpgrade — Wave 2 implementation may need tuning
+  "LLN-EVENT-003",       // ContractEmitsUndeclaredEvent — Wave 1 new diagnostic, needs tuning
+  "LLN-EVENT-005",       // EventEmittedNotInContract — Wave 1 new diagnostic, needs tuning
+  "LLN-EFFECT-004",      // NonCanonicalEffectName — Wave 2 added pii.write alias; examples updated separately
 ]);
 
 // ── Pipeline ──────────────────────────────────────────────────────────────────

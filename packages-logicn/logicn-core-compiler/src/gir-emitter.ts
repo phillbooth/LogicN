@@ -2,6 +2,7 @@
 // LogicN Pass 8 - Governed Intermediate Representation emitter
 // =============================================================================
 
+import { createHash } from "node:crypto";
 import { type AstNode, type AstNodeKind, type FlowMeta, type SourceLocation } from "./parser.js";
 import { type EffectCheckResult } from "./effect-checker.js";
 import { SemanticGraphBuilder, type SemanticGraph } from "@logicn/devtools-graph-algorithms";
@@ -78,12 +79,24 @@ export interface GIRFlow {
   readonly target_affinity?: GIRTargetAffinity;
   /** Phase 15: pre-verified execution plan. Present when built via buildExecutionPlan. */
   readonly executionPlan?: PassiveExecutionPlan;
+  /** Effect → capability ID mapping for all declared effects. */
+  readonly capabilities: ReadonlyMap<string, string>;
+  /** Contract metadata summary derived from contractDecl children. */
+  readonly contract?: {
+    readonly hasIntent: boolean;
+    readonly hasPrivacy: boolean;
+    readonly hasAuditRequirements: boolean;
+    readonly hasSensitivityQualifiers: boolean;
+    readonly effectCount: number;
+  };
 }
 
 export interface GIRProgram {
   readonly schemaVersion: "lln.gir.v1";
   readonly generatedAt: string;
   readonly flows: readonly GIRFlow[];
+  /** SHA-256 of canonical GIR (set after emission). */
+  readonly girHash?: string;
 }
 
 export interface GIREmitResult {
@@ -98,6 +111,7 @@ export interface GIREmitResult {
 export interface GIRRecordField {
   readonly name: string;
   readonly value: GIRExpr;
+  readonly location?: SourceLocation;
 }
 
 export type GIRExpr =
@@ -123,6 +137,7 @@ export function emitExpr(node: AstNode): GIRExpr {
       fields: (node.children ?? []).map((child) => ({
         name: child.value ?? "<field>",
         value: child.children?.[0] !== undefined ? emitExpr(child.children[0]) : { kind: "void" },
+        ...(child.location !== undefined ? { location: child.location } : {}),
       })),
       ...(node.location !== undefined ? { location: node.location } : {}),
     };
@@ -205,6 +220,11 @@ export function emitGIR(
     const tensors = flowNode === undefined ? [] : extractTensors(flowNode);
     const targetAffinity = inferTargetAffinity(flow.declaredEffects, tensors);
 
+    const declaredEffects = [...flow.declaredEffects];
+    const capabilities = new Map(declaredEffects.map((e) => [e, EFFECT_TO_CAPABILITY.get(e) ?? `host.${e}`]));
+
+    const contractMeta = flowNode === undefined ? undefined : extractContractMeta(flowNode);
+
     const flowGIR: GIRFlow = {
       name: flow.name,
       qualifier: flow.qualifier,
@@ -216,6 +236,8 @@ export function emitGIR(
       proofs: buildProofs(effects, intent, audit, protectedValues),
       tensors,
       ...(targetAffinity !== undefined ? { target_affinity: targetAffinity } : {}),
+      capabilities,
+      ...(contractMeta !== undefined ? { contract: contractMeta } : {}),
     };
     return flowGIR;
   });
@@ -484,6 +506,94 @@ function stripStringQuotes(value: string): string {
     return value.slice(1, -1);
   }
   return value;
+}
+
+// ---------------------------------------------------------------------------
+// Contract metadata extraction (Task 4)
+// ---------------------------------------------------------------------------
+
+/**
+ * Extracts a summary of contract metadata from a flow node's contractDecl child.
+ * Only returns a summary object when a contractDecl node is present.
+ */
+function extractContractMeta(flowNode: AstNode): GIRFlow["contract"] | undefined {
+  const contractNode = (flowNode.children ?? []).find((c) => c.kind === "contractDecl");
+  if (contractNode === undefined) return undefined;
+
+  const children = contractNode.children ?? [];
+
+  const hasIntent = children.some(
+    (c) => c.kind === "intentDecl" || (c.kind === "contractSetDecl" && c.value === "intent"),
+  );
+  const hasPrivacy = children.some(
+    (c) => c.kind === "contractSetDecl" && c.value === "privacy",
+  );
+  const hasAuditRequirements = children.some(
+    (c) => c.kind === "contractSetDecl" && c.value === "audit",
+  );
+  const hasSensitivityQualifiers = children.some(
+    (c) => c.kind === "contractSetDecl" && (c.value === "sensitivity" || c.value === "limits"),
+  );
+  const effectsSection = children.find(
+    (c) => c.kind === "contractSetDecl" && c.value === "effects",
+  );
+  const effectCount = effectsSection !== undefined ? (effectsSection.children ?? []).length : 0;
+
+  return { hasIntent, hasPrivacy, hasAuditRequirements, hasSensitivityQualifiers, effectCount };
+}
+
+// ---------------------------------------------------------------------------
+// Task 1 — Canonical GIR hash
+// ---------------------------------------------------------------------------
+
+/**
+ * Serialises a GIRProgram to canonical JSON (sorted keys, no undefined/timestamp fields),
+ * computes SHA-256, and returns "sha256:<hexdigest>".
+ */
+export function computeGIRHash(gir: GIRProgram): string {
+  const canonical = canonicaliseGIR(gir);
+  const json = JSON.stringify(canonical);
+  return "sha256:" + createHash("sha256").update(json, "utf8").digest("hex");
+}
+
+/**
+ * Produces a canonical (timestamp-stripped, sorted-keys) plain object for hashing.
+ * Removes `generatedAt`, `girHash`, and any undefined values.
+ */
+function canonicaliseGIR(gir: GIRProgram): unknown {
+  // Deep-clone to plain object, stripping timestamps and generated IDs
+  const obj = JSON.parse(JSON.stringify(gir, replacer)) as Record<string, unknown>;
+
+  // Strip non-deterministic fields
+  delete obj["generatedAt"];
+  delete obj["girHash"];
+
+  return sortKeys(obj);
+}
+
+function replacer(_key: string, value: unknown): unknown {
+  if (value === undefined) return undefined;
+  // ReadonlyMap → plain object
+  if (value instanceof Map) {
+    const plain: Record<string, unknown> = {};
+    for (const [k, v] of value) {
+      plain[String(k)] = v;
+    }
+    return plain;
+  }
+  return value;
+}
+
+function sortKeys(value: unknown): unknown {
+  if (value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map(sortKeys);
+  const obj = value as Record<string, unknown>;
+  return Object.fromEntries(
+    Object.keys(obj)
+      .filter((k) => obj[k] !== undefined)
+      .sort()
+      .map((k) => [k, sortKeys(obj[k])]),
+  );
 }
 
 // ---------------------------------------------------------------------------

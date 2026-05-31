@@ -1,5 +1,10 @@
 # Secure Channels and Portals
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Stage B
+
 ## Definition
 
 LogicN channels, portals and routes are **runtime-managed trust boundaries**,

@@ -273,6 +273,7 @@ describe("Parser — error recovery", () => {
 
 describe("Parser — guarded flow", () => {
   it("parses guarded flow to guardedFlowDecl", () => {
+    // intentional: testing with effects [...] parser support for guarded flow declarations
     const result = parseOk(`
 guarded flow fetchRate(currency: String) -> Result<Decimal, NetworkError>
 with effects [network.outbound] {

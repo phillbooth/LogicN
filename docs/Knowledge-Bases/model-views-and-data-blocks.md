@@ -1,5 +1,13 @@
 # Model Views And Data Blocks
 
+## Status
+
+```
+Status: Active — data modelling and output safety pattern
+Scope:  data block, model, request, view; view-level field exposure; PII protection
+See also: data-visibility-view-terminology.md, builtin-view-levels.md, field-read-rules.md, model-security-contracts.md
+```
+
 ## Purpose
 
 LogicN can simplify the developer surface by grouping models, requests and

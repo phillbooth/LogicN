@@ -728,3 +728,219 @@ flow test() -> String {
     );
   });
 });
+
+// ── LLN-VALUESTATE-002: UnsafeConditionalUpgrade ─────────────────────────────
+
+describe("Value-state checker — LLN-VALUESTATE-002 UnsafeConditionalUpgrade", () => {
+  it("emits LLN-VALUESTATE-002 when then-branch uses gate but else-branch does not", () => {
+    const result = parseAndCheck(`
+secure flow test(raw: String, cond: Bool) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawEmail: String = raw
+  if cond {
+    safe mut rawEmail = validate.email(rawEmail)?
+  } else {
+    safe mut rawEmail = rawEmail
+  }
+  return Ok(rawEmail)
+}
+`);
+    assert.ok(
+      hasDiag(result, "LLN-VALUESTATE-002"),
+      `Expected LLN-VALUESTATE-002 for asymmetric gate usage, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+
+  it("emits LLN-VALUESTATE-002 when else-branch uses gate but then-branch does not", () => {
+    const result = parseAndCheck(`
+secure flow test(raw: String, cond: Bool) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawEmail: String = raw
+  if cond {
+    safe mut rawEmail = rawEmail
+  } else {
+    safe mut rawEmail = validate.email(rawEmail)?
+  }
+  return Ok(rawEmail)
+}
+`);
+    assert.ok(
+      hasDiag(result, "LLN-VALUESTATE-002"),
+      `Expected LLN-VALUESTATE-002 when only else-branch has gate, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+
+  it("does not emit LLN-VALUESTATE-002 when both branches use a gate", () => {
+    const result = parseAndCheck(`
+secure flow test(raw: String, cond: Bool) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawEmail: String = raw
+  if cond {
+    safe mut rawEmail = validate.email(rawEmail)?
+  } else {
+    safe mut rawEmail = sanitize.text(rawEmail)?
+  }
+  return Ok(rawEmail)
+}
+`);
+    assert.ok(
+      !hasDiag(result, "LLN-VALUESTATE-002"),
+      `Unexpected LLN-VALUESTATE-002 when both branches use a gate`,
+    );
+  });
+
+  it("does not emit LLN-VALUESTATE-002 when only one branch has a safe mut (no asymmetry)", () => {
+    const result = parseAndCheck(`
+secure flow test(raw: String, cond: Bool) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawEmail: String = raw
+  if cond {
+    safe mut rawEmail = validate.email(rawEmail)?
+  }
+  return Ok(rawEmail)
+}
+`);
+    assert.ok(
+      !hasDiag(result, "LLN-VALUESTATE-002"),
+      `Unexpected LLN-VALUESTATE-002 when only then-branch has safe mut`,
+    );
+  });
+});
+
+// ── Cross-conditional taint tracking ─────────────────────────────────────────
+
+describe("Value-state checker — cross-conditional taint tracking", () => {
+  it("emits VALUESTATE-003 for unsafe value used at sink inside if body (non-gate condition)", () => {
+    const result = parseAndCheck(`
+secure flow test(rawEmail: String) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawEmail: String = rawEmail
+  if rawEmail.contains("@") {
+    DatabaseDB.write(rawEmail)
+  }
+  return Ok("ok")
+}
+`);
+    assert.ok(
+      hasDiag(result, "LLN-VALUESTATE-003"),
+      `Expected VALUESTATE-003 inside if body — non-gate condition does not clear taint, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+
+  it("emits VALUESTATE-003 in both branches when unsafe value reaches sink", () => {
+    const result = parseAndCheck(`
+secure flow test(raw: String, cond: Bool) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawInput: String = raw
+  if cond {
+    DatabaseDB.write(rawInput)
+  } else {
+    DatabaseDB.write(rawInput)
+  }
+  return Ok("ok")
+}
+`);
+    const diags = diagsWithCode(result, "LLN-VALUESTATE-003");
+    assert.ok(diags.length >= 1, `Expected at least one VALUESTATE-003 inside if/else with unsafe at sink, got: ${result.diagnostics.map((d) => d.code).join(", ")}`);
+  });
+});
+
+// ── SECRET-003 extended: AuditLog.write with SecureString ────────────────────
+
+describe("Value-state checker — LLN-SECRET-003 extended detection", () => {
+  it("emits LLN-SECRET-003 when SecureString is passed to AuditLog.write", () => {
+    const result = parseAndCheck(`
+secure flow test() -> Result<String, Error>
+contract { effects { audit.write, secret.read } }
+{
+  let apiKey: SecureString = env.secret("API_KEY")
+  AuditLog.write(apiKey)
+  return Ok("done")
+}
+`);
+    assert.ok(
+      hasDiag(result, "LLN-SECRET-003"),
+      `Expected LLN-SECRET-003 for SecureString in AuditLog.write, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+
+  it("does not emit LLN-SECRET-003 when SecureString is redacted before AuditLog.write", () => {
+    const result = parseAndCheck(`
+secure flow test() -> Result<String, Error>
+contract { effects { audit.write, secret.read } }
+{
+  let apiKey: SecureString = env.secret("API_KEY")
+  AuditLog.write(redact(apiKey))
+  return Ok("done")
+}
+`);
+    assert.ok(
+      !hasDiag(result, "LLN-SECRET-003"),
+      `Unexpected LLN-SECRET-003 when SecureString is redacted before AuditLog.write`,
+    );
+  });
+});
+
+// ── Task 4: protected value at AuditLog.write → VALUESTATE-006 ──────────────
+
+describe("Value-state checker — protected value at AuditLog.write (VALUESTATE-006)", () => {
+  it("emits LLN-VALUESTATE-006 for protected Email binding at AuditLog.write without redact", () => {
+    const result = parseAndCheck(`
+secure flow test(raw: String) -> Result<String, Error>
+contract { effects { audit.write, database.write } }
+{
+  unsafe let rawEmail: String = raw
+  let email: protected Email = validate.email(rawEmail)?
+  AuditLog.write(email)
+  return Ok("ok")
+}
+`);
+    assert.ok(
+      hasDiag(result, "LLN-VALUESTATE-006"),
+      `Expected LLN-VALUESTATE-006 for protected Email at AuditLog.write, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+
+  it("does not emit LLN-VALUESTATE-006 for protected Email wrapped in redact() at AuditLog.write", () => {
+    const result = parseAndCheck(`
+secure flow test(raw: String) -> Result<String, Error>
+contract { effects { audit.write, database.write } }
+{
+  unsafe let rawEmail: String = raw
+  let email: protected Email = validate.email(rawEmail)?
+  AuditLog.write(redact(email))
+  return Ok("ok")
+}
+`);
+    assert.ok(
+      !hasDiag(result, "LLN-VALUESTATE-006"),
+      `Unexpected LLN-VALUESTATE-006 when protected value is redacted before AuditLog.write`,
+    );
+  });
+
+  it("emits LLN-VALUESTATE-003 (not VALUESTATE-006) for raw unsafe value at DatabaseDB.write", () => {
+    const result = parseAndCheck(`
+secure flow test(raw: String) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawEmail: String = raw
+  DatabaseDB.write(rawEmail)
+  return Ok("ok")
+}
+`);
+    assert.ok(
+      hasDiag(result, "LLN-VALUESTATE-003"),
+      `Expected LLN-VALUESTATE-003 for raw unsafe at DatabaseDB.write, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+    assert.ok(
+      !hasDiag(result, "LLN-VALUESTATE-006"),
+      `Unexpected LLN-VALUESTATE-006 for raw unsafe at DatabaseDB.write (should be VALUESTATE-003)`,
+    );
+  });
+});

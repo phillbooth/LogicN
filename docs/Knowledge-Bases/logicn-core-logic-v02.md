@@ -1,3 +1,5 @@
+> ⚠️ **SUPERSEDED** — This is a v0.2 historical document. Current spec: see See Also links.
+
 # LogicN Core Logic v0.2
 
 > **Canonical name:** `Tri` — LogicN's three-valued truth type.
@@ -6,6 +8,10 @@
 > For the current authoritative spec, see `docs/Knowledge-Bases/logicn-core-logic-tri-decision-bool.md`.
 
 ## Formal Specification — Tri Logic, Decision Logic, Bool Boundary, Omni Logic
+
+**Status: SUPERSEDED — This is a v0.2 design document. The current canonical specification
+is in the corresponding Phase 9-15 implementation docs. See logicn-roadmap.md for
+the up-to-date architecture. This file is retained for historical context only.**
 
 This document is the v0.2 canonical specification for `logicn-core-logic`.
 

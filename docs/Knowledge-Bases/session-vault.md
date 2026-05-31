@@ -1,5 +1,10 @@
 # Session Vault
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Stage B
+
 ## Definition
 
 **SessionVault** is the governed vault for storing active session records in LogicN, replacing PHP-style global session bags.

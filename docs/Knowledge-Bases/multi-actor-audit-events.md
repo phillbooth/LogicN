@@ -62,8 +62,13 @@ Application code may identify non-primary actor roles:
 flow approveRefund(
   request: Refund.approve,
   context: Runtime.AuthContext
-) -> Result<Refund.response, ApiError>
+) -> ApproveRefundResult
   permission use refund_approve
+contract {
+  types {
+    type ApproveRefundResult = Result<Refund.response, ApiError>
+  }
+}
 {
   let customer_actor = request.customer_actor
   let support_actor = context.actor

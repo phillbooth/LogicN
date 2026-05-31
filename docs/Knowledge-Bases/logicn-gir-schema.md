@@ -48,7 +48,7 @@ flow:
 |---|---|
 | `flow.name` | Source flow name. |
 | `flow.qualifier` | One of `pure`, `guarded`, or `secure`. |
-| `effects.declared` | Effects listed in the source `with effects [...]` or `effects [...]` clause. |
+| `effects.declared` | Effects listed in the source `contract.effects {}` block. |
 | `effects.observed` | Effects inferred from the checked body, including local `fn` helpers and transitive calls. |
 | `effects.status` | `compliant` when observed effects are covered by declarations; `violation` only appears in failed/check reports, not successful GIR emission. |
 | `intent.declared` | Source `intent "..."` string, or `null`. |

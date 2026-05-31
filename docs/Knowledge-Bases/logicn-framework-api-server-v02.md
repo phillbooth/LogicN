@@ -1,6 +1,12 @@
+> ⚠️ **SUPERSEDED** — This is a v0.2 historical document. Current spec: see See Also links.
+
 # LogicN Framework API Server v0.2
 
 ## Formal Specification — Full API Server Implementation
+
+**Status: SUPERSEDED — This is a v0.2 design document. The current canonical specification
+is in the corresponding Phase 9-15 implementation docs. See logicn-roadmap.md for
+the up-to-date architecture. This file is retained for historical context only.**
 
 This document is the v0.2 canonical specification for
 `logicn-framework-api-server`.

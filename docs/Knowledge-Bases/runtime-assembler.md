@@ -1,5 +1,10 @@
 # Runtime Assembler
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Stage B
+
 ## Definition
 
 The **LogicN Runtime Assembler** (also called Result Assembler) collects, orders, validates, and finalises results from asynchronous or parallel execution, restoring them to the correct governed output order.

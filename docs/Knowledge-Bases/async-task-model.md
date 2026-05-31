@@ -1,5 +1,10 @@
 # Async Task Model
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Stage B
+
 ## Definition
 
 LogicN uses `task` and `wait` for governed asynchronous work. These keywords replace `async`/`await` from other languages.

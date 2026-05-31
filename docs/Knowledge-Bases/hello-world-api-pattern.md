@@ -1,5 +1,14 @@
 # Hello World API Pattern
 
+## Status
+
+```
+Status: Active — canonical beginner example
+Scope:  data / flow / permission / route / report pattern; v1 prefers explicit form
+Note:   Uses ctx: RequestContext — see request-context-keyword.md for naming convention
+See also: logicn-code-examples-full-flow.md, model-views-and-data-blocks.md, request-context-keyword.md
+```
+
 ## Purpose
 
 The Hello World API pattern shows the beginner-facing LogicN model using:

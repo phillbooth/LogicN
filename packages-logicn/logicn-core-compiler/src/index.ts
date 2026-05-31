@@ -21,6 +21,33 @@ export {
   type LexerDiagnostic,
 } from "./lexer.js";
 
+/** LLN-LEX-001: Generic type nesting exceeds maximum depth (8 levels). */
+export const LLN_LEX_001 = {
+  code: "LLN-LEX-001",
+  name: "ExcessiveNesting",
+  severity: "error" as const,
+  message: "Generic type nesting exceeds maximum depth (8 levels). Simplify the type.",
+  suggestedFix: "Use a type alias to break up deeply nested generics.",
+} as const;
+
+/** LLN-LEX-002: String literal or identifier exceeds maximum length (10,000 characters). */
+export const LLN_LEX_002 = {
+  code: "LLN-LEX-002",
+  name: "OversizedToken",
+  severity: "error" as const,
+  message: "String literal or identifier exceeds maximum length (10,000 characters).",
+  suggestedFix: "Split large string literals or shorten identifier names.",
+} as const;
+
+/** LLN-LEX-003: Invalid unicode escape sequence in string literal. */
+export const LLN_LEX_003 = {
+  code: "LLN-LEX-003",
+  name: "InvalidUnicodeEscape",
+  severity: "error" as const,
+  message: "Invalid unicode escape sequence in string literal.",
+  suggestedFix: "Use \\u{XXXXXX} with 1-6 hex digits, or \\uXXXX with exactly 4.",
+} as const;
+
 // Phase 4 — Parser
 export {
   parseProgram,
@@ -37,8 +64,13 @@ export {
   checkEffects,
   checkFlowEffects,
   effectResultsToDiagnostics,
+  EFFECT_REGISTRY,
+  inferEffectsForOperation,
+  inferDirectEffectsForFlow,
+  buildFlowEffectSummary,
   type EffectCheckResult,
   type EffectDiagnostic,
+  type FlowEffectSummary,
 } from "./effect-checker.js";
 
 // Phase 6 — Value-State Checker
@@ -105,9 +137,21 @@ export const LLN_VALUESTATE_007 = {
 
 export {
   resolveSymbols,
+  ModuleExportRegistry,
   type SymbolDiagnostic,
   type SymbolResolveResult,
+  type SymbolTable,
+  type ExportedSymbol,
+  type ExportKind,
 } from "./symbol-resolver.js";
+
+/** LLN-NAME-003: Local binding shadows a built-in domain type. */
+export const LLN_NAME_003 = {
+  code: "LLN-NAME-003",
+  name: "CrossModuleShadow",
+  severity: "warning",
+  message: "Local binding shadows a built-in domain type. Rename to avoid confusion.",
+} as const;
 
 // Phase 11E — Import Resolver
 export {
@@ -115,6 +159,24 @@ export {
   type ImportedSymbol,
   type ImportResolveResult,
 } from "./import-resolver.js";
+
+// Phase 17A — Package Manifest Resolver
+export {
+  loadPackageManifest,
+  resolvePackageTypes,
+  type PackageManifest,
+} from "./package-resolver.js";
+
+// Phase 17A — Naming Policy Checker
+export {
+  checkNamingPolicy,
+  LLN_STYLE_001,
+  LLN_STYLE_002,
+  LLN_STYLE_SEC_001,
+  type NamingPolicyDiagnostic,
+  type NamingPolicyResult,
+  type NamingPolicyConfig,
+} from "./naming-policy-checker.js";
 
 // Pass 8 - GIR Emitter
 export {
@@ -236,6 +298,9 @@ export {
   checkEvents,
   LLN_EVENT_001,
   LLN_EVENT_002,
+  LLN_EVENT_003,
+  LLN_EVENT_004,
+  LLN_EVENT_005,
   type EventDiagnostic,
   type EventCheckResult,
 } from "./event-checker.js";
@@ -287,6 +352,15 @@ export {
   type UserRuntimeCapabilities,
   type CapabilityDomain,
 } from "./runtime/rootCapabilityProvider.js";
+
+// Phase 16A — Canonical Hashing
+export {
+  canonicalHash,
+  stripNonDeterministic,
+  hashSource,
+  hashGIR,
+  hashPassivePlan,
+} from "./runtime/canonicalHash.js";
 
 export interface CompilerInput {
   readonly projectRoot: string;

@@ -1,5 +1,10 @@
 # Triggers
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Stage B
+
 ## Definition
 
 A **trigger** tells the runtime: when this condition happens, run this flow.

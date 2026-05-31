@@ -1,5 +1,10 @@
 # Formal Proof System
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Stage B
+
 ## Definition
 
 LogicN supports formal mathematical reasoning through a structured proof system

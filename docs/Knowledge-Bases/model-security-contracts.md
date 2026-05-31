@@ -203,7 +203,13 @@ Example:
 secure flow summariseOrders(
   orders: ReadOnly<List<Order>>,
   ctx: RequestContext
-) -> Result<OrderSummary, ApiError> {
+) -> SummariseOrdersResult
+contract {
+  types {
+    type SummariseOrdersResult = Result<OrderSummary, ApiError>
+  }
+}
+{
   let summary = Orders.summarise(orders)
   return Ok(summary)
 }

@@ -11,9 +11,17 @@
 //              (LLN-VALUESTATE-003: UnsafeValueReachedGovernedSink)
 //   Rule 2   — safe mut requires a recognised gate function
 //              (LLN-VALUESTATE-001: UnsafeToSafeTransitionDenied)
+//   Rule 2B  — safe mut inside if/else where one branch has a gate and
+//              the other doesn't
+//              (LLN-VALUESTATE-002: UnsafeConditionalUpgrade)
 //   Rule 4   — SecureString cannot use == or be passed to log functions
 //              (LLN-SECRET-001: SecretValueLogged)
 //              (LLN-SECRET-002: SecretComparisonDenied)
+//              (LLN-SECRET-003: SecretSerializationDenied)
+//              Extended: SecureString in AuditLog.write or record literal at sink
+//   Rule 5   — protected value passed to AuditLog.write without redact()
+//              (LLN-VALUESTATE-006: ProtectedValueAtAuditLog)
+//              (distinct from LLN-VALUESTATE-003 for unsafe-at-sink)
 //   Phase 8B — String taint propagation
 //              (LLN-VALUESTATE-004: TaintedValuePropagation)
 //   Phase 11B.1 — Two-hop taint propagation
@@ -22,10 +30,8 @@
 //              Functions whose names start with recognised gate prefixes
 //              (validate*, sanitize*, check*, verify*, parse*, decode*)
 //              automatically break the taint chain, just like stdlib gates.
-//
-// Phase 6 defers:
-//   - LLN-VALUESTATE-002
-//   - LLN-SECRET-003 (SecretSerializationDenied)
+//   Cross-conditional taint — unsafe bindings used as if-condition values
+//              do NOT clear taint; taint propagates into both branches.
 // =============================================================================
 
 import { type AstNode, type SourceLocation } from "./parser.js";
@@ -580,10 +586,93 @@ class ValueStateChecker {
         this.walkChildren(node);
         break;
 
+      case "ifStmt":
+        this.handleIfStmt(node);
+        break;
+
       default:
         this.walkChildren(node);
         break;
     }
+  }
+
+  /**
+   * Handle if/else statements:
+   *
+   * 1. Task 1 (VALUESTATE-002): detect when one branch uses `safe mut` with a
+   *    gate and the other uses `safe mut` without a gate — UnsafeConditionalUpgrade.
+   *
+   * 2. Task 2 (cross-conditional taint): if the condition references an unsafe
+   *    binding via a non-gate expression, taint propagates into both branches
+   *    regardless (only gate calls in the RHS of a binding clear taint).
+   */
+  private handleIfStmt(node: AstNode): void {
+    const [_condition, thenBlock, elseBlock] = node.children ?? [];
+
+    // Walk the condition expression first (does NOT clear taint).
+    if (_condition !== undefined) this.walkNode(_condition);
+
+    // Walk then/else branches and collect safe-mut declarations from each.
+    if (thenBlock !== undefined && elseBlock !== undefined) {
+      // Collect safe-mut declarations in then-branch
+      const thenSafeMuts = this.collectSafeMutDecls(thenBlock);
+      // Collect safe-mut declarations in else-branch
+      const elseSafeMuts = this.collectSafeMutDecls(elseBlock);
+
+      // Check for asymmetric gate usage (VALUESTATE-002).
+      for (const [name, thenHasGate] of thenSafeMuts) {
+        const elseHasGate = elseSafeMuts.get(name);
+        if (elseHasGate !== undefined) {
+          // Same name appears in both branches as safe mut.
+          if (thenHasGate && !elseHasGate) {
+            // then-branch has gate, else doesn't
+            this.diagnostics.push(makeVSDiag(
+              "LLN-VALUESTATE-002",
+              "UnsafeConditionalUpgrade",
+              `'safe mut ${name}' is used in both branches of an if/else, but only the 'if' branch uses a recognised gate. Both branches must validate before upgrading to safe.`,
+              elseBlock.location,
+              `Add a gate in the else branch: safe mut ${name} = validate.${name}(${name})?`,
+              `safe mut ${name} = validate.${name}(${name})?`,
+            ));
+          } else if (!thenHasGate && elseHasGate) {
+            // else-branch has gate, then doesn't
+            this.diagnostics.push(makeVSDiag(
+              "LLN-VALUESTATE-002",
+              "UnsafeConditionalUpgrade",
+              `'safe mut ${name}' is used in both branches of an if/else, but only the 'else' branch uses a recognised gate. Both branches must validate before upgrading to safe.`,
+              thenBlock.location,
+              `Add a gate in the if branch: safe mut ${name} = validate.${name}(${name})?`,
+              `safe mut ${name} = validate.${name}(${name})?`,
+            ));
+          }
+        }
+      }
+    }
+
+    // Walk both branches normally to apply all other checks.
+    if (thenBlock !== undefined) this.walkNode(thenBlock);
+    if (elseBlock !== undefined) this.walkNode(elseBlock);
+  }
+
+  /**
+   * Shallowly scan a block or node for `mutDecl` nodes with `safe` prefix,
+   * returning a map of binding name → whether the RHS is a gate expression.
+   * Only looks one level deep (direct children of the block).
+   */
+  private collectSafeMutDecls(block: AstNode): Map<string, boolean> {
+    const result = new Map<string, boolean>();
+    const stmts = block.kind === "block" ? (block.children ?? []) : [block];
+    for (const stmt of stmts) {
+      if (stmt.kind === "mutDecl") {
+        const info = parseBindingValue(stmt.value ?? "");
+        if (info.safetyPrefix === "safe") {
+          const init = stmt.children?.[0];
+          const hasGate = init !== undefined && this.isGateExpression(init);
+          result.set(info.name, hasGate);
+        }
+      }
+    }
+    return result;
   }
 
   private walkChildren(node: AstNode): void {
@@ -727,10 +816,20 @@ class ValueStateChecker {
   // ── Call expression rules ────────────────────────────────────────────────
 
   private handleCallExpr(node: AstNode): void {
-    // Rule 1/3: governed sink — check all argument children for unsafe bindings
+    const sinkName = buildFullCallName(node);
+    const isAuditLog = sinkName === "AuditLog.write";
+
+    // Rule 1/3: governed sink — check all argument children for unsafe bindings.
+    // Task 4: distinguish protected-without-redact at AuditLog (VALUESTATE-006)
+    // from plain unsafe-at-sink (VALUESTATE-003).
     if (isGovernedSink(node)) {
-      const sinkName = buildFullCallName(node);
       for (const child of node.children ?? []) {
+        if (isAuditLog) {
+          // For AuditLog.write, check for protected values without redact first.
+          this.checkArgForProtectedAtAuditLog(child, sinkName, node.location);
+        }
+        // Then check for unsafe bindings (VALUESTATE-003) — but not for
+        // protected values at AuditLog, which already get VALUESTATE-006.
         this.checkArgForUnsafeBinding(child, sinkName, node.location);
       }
     }
@@ -748,6 +847,13 @@ class ValueStateChecker {
       const callName = buildFullCallName(node);
       for (const child of node.children ?? []) {
         this.checkArgForSecretSerialization(child, callName, node.location);
+      }
+    }
+
+    // Task 3 extended: SECRET-003 for AuditLog.write with SecureString fields
+    if (isAuditLog) {
+      for (const child of node.children ?? []) {
+        this.checkArgForSecretSerialization(child, sinkName, node.location);
       }
     }
   }
@@ -859,27 +965,82 @@ class ValueStateChecker {
   /**
    * LLN-SECRET-003: SecureString must not be passed to serialization functions.
    * Serializing a secret value would expose it in the output stream.
+   * Extended (Task 3): also fires for SecureString in AuditLog.write and
+   * SecureString field values in record literals passed to governed sinks.
    */
   private checkArgForSecretSerialization(
     node: AstNode,
     callName: string,
     location: SourceLocation | undefined,
   ): void {
+    // A redact() call wrapping the value is safe — do not recurse into it.
+    if (node.kind === "callExpr" && isRedactCall(node)) return;
+
     if (node.kind === "identifier") {
       const binding = this.lookupBinding(node.value ?? "");
       if (binding?.typeName === "SecureString") {
         this.diagnostics.push(makeVSDiag(
           "LLN-SECRET-003",
           "SecretSerializationDenied",
-          `SecureString binding '${binding.name}' must not be serialized via '${callName}'. Secrets must not appear in serialized output.`,
+          `SecureString binding '${binding.name}' must not be passed to '${callName}'. Secrets must not appear in serialized or audit output.`,
           location,
-          `Use redact(${binding.name}) to produce a safe placeholder before serialization.`,
+          `Use redact(${binding.name}) to produce a safe placeholder before passing to '${callName}'.`,
           `redact(${binding.name})`,
         ));
       }
+      return;
     }
+    // Task 3: check record literals — fire SECRET-003 for any SecureString field value
+    // Record literals appear as children of call arguments in some AST shapes.
     for (const child of node.children ?? []) {
       this.checkArgForSecretSerialization(child, callName, location);
+    }
+  }
+
+  /**
+   * Task 4: LLN-VALUESTATE-006 (distinct from VALUESTATE-003) — fires when a
+   * protected value (e.g. protected Email) is passed to AuditLog.write without
+   * going through redact(). This is more specific than VALUESTATE-003 (unsafe-at-sink).
+   *
+   * A value is considered "protected" if:
+   *   - Its type annotation contains "protected" (e.g. protected Email, protected String)
+   *
+   * Only fires for AuditLog.write, not other governed sinks.
+   */
+  private checkArgForProtectedAtAuditLog(
+    node: AstNode,
+    sinkName: string,
+    location: SourceLocation | undefined,
+  ): void {
+    // A redact() call wrapping the value is the correct pattern — do not recurse into it.
+    if (node.kind === "callExpr" && isRedactCall(node)) return;
+
+    if (node.kind === "identifier") {
+      const binding = this.lookupBinding(node.value ?? "");
+      if (binding !== undefined) {
+        // Check if this is a protected value (typeName is "protected" — the first token
+        // of an annotation like "protected Email" when parsed via parseBindingValue).
+        const isProtected = binding.typeName === "protected" ||
+          binding.typeName.startsWith("protected ");
+        if (isProtected) {
+          this.diagnostics.push(makeVSDiag(
+            "LLN-VALUESTATE-006",
+            "ProtectedValueAtAuditLog",
+            `Protected binding '${binding.name}' passed to '${sinkName}' without redaction. Protected values must be redacted before appearing in audit logs.`,
+            location,
+            `Wrap with redact: AuditLog.write({ ..., ${binding.name}: redact(${binding.name}) })`,
+            `redact(${binding.name})`,
+            {
+              why: `'${binding.name}' is a protected value. Audit logs are often accessible to operators and must not contain raw protected data.`,
+              risk: `Unredacted protected values in audit logs can leak sensitive data such as email addresses, user IDs, or PII.`,
+            },
+          ));
+        }
+      }
+      return;
+    }
+    for (const child of node.children ?? []) {
+      this.checkArgForProtectedAtAuditLog(child, sinkName, location);
     }
   }
 

@@ -166,6 +166,7 @@ effects [database.read] {
   });
 });
 
+// intentional: guarded flow uses "with effects [...]" as its canonical inline declaration syntax
 describe("Effect checker - guarded flow", () => {
   it("accepts guarded flow with declared effects", () => {
     const { effectResults } = parseAndCheck(`
@@ -203,6 +204,7 @@ guarded flow noOp(order: Order) -> Result<OrderId, OrderError>
   });
 });
 
+// intentional: guarded flows in source strings use "with effects [...]" canonical syntax
 describe("Effect checker - pure flow calls effectful flow", () => {
   it("emits LLN-EFFECT-003 when pure flow calls a guarded flow", () => {
     const { effectResults } = parseAndCheck(`
@@ -251,6 +253,7 @@ guarded flow processOrder(order: Order) -> Result<OrderId, ProcessError>
   });
 });
 
+// intentional: guarded flows in source strings use "with effects [...]" canonical syntax
 describe("Effect checker - canonical effect names", () => {
   it("effects [network] emits LLN-EFFECT-004 with suggestion network.outbound", () => {
     const { effectResults } = parseAndCheck(`
@@ -290,6 +293,7 @@ guarded flow fetchRate(currency: String) -> Result<Decimal, RateError>
   });
 });
 
+// intentional: guarded flows in source strings use "with effects [...]" canonical syntax
 describe("Effect checker - inter-flow propagation", () => {
   it("flow A calls flow B and declares B's effect: no diagnostics", () => {
     const { effectResults } = parseAndCheck(`
@@ -351,6 +355,7 @@ guarded flow processOrder(order: Order) -> Result<OrderId, ProcessError>
   });
 });
 
+// intentional: guarded flows in source strings use "with effects [...]" canonical syntax
 describe("Effect checker - extended call patterns", () => {
   it("http.get in pure flow body emits LLN-EFFECT-003", () => {
     const { effectResults } = parseAndCheck(`
@@ -396,6 +401,7 @@ guarded flow loadSecret(name: String) -> Result<String, Error>
 });
 
 // ── Effect checker — devtools-graph buildCallGraph integration ─────────────────
+// intentional: guarded flows in source strings use "with effects [...]" canonical syntax
 
 describe("Effect checker — devtools-graph buildCallGraph integration", () => {
   it("still propagates transitive effects correctly after graph refactor", () => {
@@ -465,5 +471,176 @@ guarded flow flowB(x: Int) -> Result<Int, Error>
     // Just verify the checker completes without throwing
     assert.ok(Array.isArray(effectResults), "Checker must not throw on circular flow calls");
     assert.equal(effectResults.length, 2, "Expected results for both flows");
+  });
+});
+
+// ── Task 1: EFFECT-001 suggestedCode — complete contract.effects block ─────────
+describe("Effect checker — EFFECT-001 suggestedCode is a complete contract block", () => {
+  it("suggestedCode contains a complete contract.effects block for missing effects", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow saveRecord(record: Record) -> Result<Unit, Error>
+  with effects []
+{
+  let _ = OrdersDB.insert(record)?
+  AuditLog.write("saved")
+  return Ok(unit)
+}
+`);
+    const diag = effectResults.flatMap((r) => r.diagnostics).find((d) => d.code === "LLN-EFFECT-001");
+    assert.ok(diag !== undefined, "Expected LLN-EFFECT-001 diagnostic");
+    assert.ok(diag.suggestedCode !== undefined, "Expected suggestedCode on EFFECT-001");
+    assert.ok(diag.suggestedCode.includes("contract {"), "suggestedCode must contain 'contract {'");
+    assert.ok(diag.suggestedCode.includes("effects {"), "suggestedCode must contain 'effects {'");
+  });
+
+  it("suggestedCode lists all missing effect names inside the contract block", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow writeAndAudit(data: Data) -> Result<Unit, Error>
+  with effects []
+{
+  let _ = OrdersDB.insert(data)?
+  return Ok(unit)
+}
+`);
+    const diag = effectResults.flatMap((r) => r.diagnostics).find(
+      (d) => d.code === "LLN-EFFECT-001" && d.suggestedCode?.includes("contract {")
+    );
+    assert.ok(diag !== undefined, "Expected EFFECT-001 with contract suggestedCode");
+    assert.ok(diag.suggestedCode.includes("database.write"), "suggestedCode must list database.write");
+  });
+});
+
+// ── Task 2: EFFECT-004 with canonical alias suggestions ───────────────────────
+describe("Effect checker — EFFECT-004 canonical effect alias suggestions", () => {
+  it("pii.write emits EFFECT-004 suggesting database.write", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow storePersonal(data: PII) -> Result<Unit, Error>
+  with effects [pii.write]
+{
+  return Ok(unit)
+}
+`);
+    const diag = effectResults.flatMap((r) => r.diagnostics).find((d) => d.code === "LLN-EFFECT-004");
+    assert.ok(diag !== undefined, "Expected LLN-EFFECT-004 for pii.write");
+    assert.equal(diag.suggestedCode, "database.write",
+      "pii.write should suggest database.write");
+  });
+
+  it("http.post emits EFFECT-004 suggesting network.outbound", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow sendRequest(payload: Payload) -> Result<Unit, Error>
+  with effects [http.post]
+{
+  return Ok(unit)
+}
+`);
+    const diag = effectResults.flatMap((r) => r.diagnostics).find((d) => d.code === "LLN-EFFECT-004");
+    assert.ok(diag !== undefined, "Expected LLN-EFFECT-004 for http.post");
+    assert.equal(diag.suggestedCode, "network.outbound",
+      "http.post should suggest network.outbound");
+  });
+
+  it("http.get emits EFFECT-004 suggesting network.outbound", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow fetchData(url: String) -> Result<String, Error>
+  with effects [http.get]
+{
+  return Ok(unit)
+}
+`);
+    const diag = effectResults.flatMap((r) => r.diagnostics).find((d) => d.code === "LLN-EFFECT-004");
+    assert.ok(diag !== undefined, "Expected LLN-EFFECT-004 for http.get");
+    assert.equal(diag.suggestedCode, "network.outbound",
+      "http.get should suggest network.outbound");
+  });
+
+  it("file.read emits EFFECT-004 suggesting filesystem.read", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow loadFile(path: String) -> Result<String, Error>
+  with effects [file.read]
+{
+  return Ok(unit)
+}
+`);
+    const diag = effectResults.flatMap((r) => r.diagnostics).find((d) => d.code === "LLN-EFFECT-004");
+    assert.ok(diag !== undefined, "Expected LLN-EFFECT-004 for file.read");
+    assert.equal(diag.suggestedCode, "filesystem.read",
+      "file.read should suggest filesystem.read");
+  });
+
+  it("email.send is canonical and does NOT emit EFFECT-004", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow sendEmail(msg: EmailMessage) -> Result<Unit, Error>
+  with effects [email.send]
+{
+  return Ok(unit)
+}
+`);
+    assert.ok(
+      !effectResults.flatMap((r) => r.diagnostics).some((d) => d.code === "LLN-EFFECT-004"),
+      "email.send is canonical — should not emit EFFECT-004"
+    );
+  });
+});
+
+// ── Task 3: fn helper effect propagation → EFFECT-002 on parent flow ──────────
+describe("Effect checker — fn helper effect propagation", () => {
+  it("emits EFFECT-002 when fn helper inside guarded flow makes a database call not declared", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow processOrder(order: Order) -> Result<Unit, Error>
+  with effects []
+{
+  fn save(o: Order) -> Result<Unit, Error> {
+    let _ = OrdersDB.insert(o)?
+    return Ok(unit)
+  }
+  return save(order)
+}
+`);
+    assert.ok(
+      hasEffectDiag(effectResults, "LLN-EFFECT-002"),
+      "Expected LLN-EFFECT-002: fn helper uses database.write not declared on parent"
+    );
+  });
+
+  it("no EFFECT-002 when fn helper effect is declared on the parent flow", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow processOrder(order: Order) -> Result<Unit, Error>
+  with effects [database.write]
+{
+  fn save(o: Order) -> Result<Unit, Error> {
+    let _ = OrdersDB.insert(o)?
+    return Ok(unit)
+  }
+  return save(order)
+}
+`);
+    const errors = effectErrors(effectResults);
+    assert.ok(
+      !errors.some((d) => d.code === "LLN-EFFECT-002"),
+      "No EFFECT-002 expected when parent declares the fn helper's effect"
+    );
+  });
+});
+
+// ── Task 4: EFFECT-001 location points to the specific call, not the flow decl ─
+describe("Effect checker — EFFECT-001 location points to specific call", () => {
+  it("EFFECT-001 location is on the call expression, not the flow declaration line", () => {
+    const { effectResults } = parseAndCheck(`
+guarded flow storeOrder(order: Order) -> Result<Unit, Error>
+  with effects []
+{
+  let _ = OrdersDB.insert(order)?
+  return Ok(unit)
+}
+`);
+    const diag = effectResults.flatMap((r) => r.diagnostics).find((d) => d.code === "LLN-EFFECT-001");
+    assert.ok(diag !== undefined, "Expected LLN-EFFECT-001");
+    // The flow declaration is on line 2, OrdersDB.insert is on a later line.
+    // Location line should be greater than 2 if pointing at the call.
+    if (diag.location !== undefined) {
+      assert.ok(diag.location.line > 2,
+        `EFFECT-001 location.line (${diag.location.line}) should point past the flow declaration header (line 2)`);
+    }
   });
 });

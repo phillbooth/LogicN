@@ -25,8 +25,13 @@ Every fallible flow must declare its success and error types in the signature:
 ```logicn
 flow login(
   request: Login.post
-) -> Result<Login.response, AuthError>
+) -> LoginResult
   permission use auth_login
+contract {
+  types {
+    type LoginResult = Result<Login.response, AuthError>
+  }
+}
 {
   // Flow body returns Ok(Login.response) or Err(AuthError.variant)
 }

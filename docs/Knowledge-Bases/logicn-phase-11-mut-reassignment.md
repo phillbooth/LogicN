@@ -3,9 +3,13 @@
 ## Status
 
 ```
-Phase 11A.2 — Implemented
+Phase:     11A.2 — Implemented
+Scope:     mut reassignment enforcement in flow bodies
 Diagnostic: LLN-BINDING-005 (IMMUTABLE_BINDING_REASSIGNED)
-Checker: type-checker.ts
+Checker:   packages-logicn/logicn-core-compiler/src/type-checker.ts
+See also:  logicn-phase-11-decisions.md (Decision 2), value-state-annotations.md,
+           logicn-naming-conventions.md (let vs mut guidance),
+           controlled-mutation-model.md
 ```
 
 ## TL;DR

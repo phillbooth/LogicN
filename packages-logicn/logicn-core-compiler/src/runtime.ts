@@ -24,6 +24,7 @@ import { createContractEnforcer, type ContractEnforcer } from "./runtime/contrac
 import { createCapabilityHost, type CapabilityHost } from "./runtime/capabilityHost.js";
 import type { ContractEnforcementRecord } from "./runtime/runtimeReport.js";
 import { checkSourceEscapes, type EscapeDiagnostic } from "./source-escape-checker.js";
+import { canonicalHash } from "./runtime/canonicalHash.js";
 
 export type RuntimeMode = "check-only" | "dev" | "production" | "deterministic";
 
@@ -63,6 +64,8 @@ export interface RuntimeResult {
   readonly aiGraphJson?: string;
   /** Phase 15: pre-verified passive execution plan. Present when emitExecutionPlan option is set. */
   readonly executionPlan?: PassiveExecutionPlan;
+  /** Phase 16A: canonical hash of the semantic graph. Present when emitSemanticGraph or emitAiGraph is set. */
+  readonly semanticGraphHash?: string;
 }
 
 export async function run(
@@ -167,8 +170,11 @@ export async function run(
   // Phase 13A: Semantic graph emission
   let semanticGraph: SemanticGraph | undefined;
   let aiGraphJson: string | undefined;
+  let semanticGraphHash: string | undefined;
   if (options.emitSemanticGraph === true || options.emitAiGraph === true) {
     semanticGraph = buildSemanticGraph(parseResult.ast, parseResult.flows);
+    // Phase 16A: compute canonical hash of the semantic graph
+    semanticGraphHash = canonicalHash(semanticGraph);
     if (options.emitAiGraph === true) {
       const aiGraph: LogicNAiGraph = buildAiGraph(parseResult.ast, parseResult.flows, file);
       aiGraphJson = JSON.stringify(aiGraph, null, 2);
@@ -297,6 +303,7 @@ export async function run(
     ...(semanticGraph !== undefined ? { semanticGraph } : {}),
     ...(aiGraphJson !== undefined ? { aiGraphJson } : {}),
     ...(executionPlanResult !== undefined ? { executionPlan: executionPlanResult } : {}),
+    ...(semanticGraphHash !== undefined ? { semanticGraphHash } : {}),
   };
 }
 

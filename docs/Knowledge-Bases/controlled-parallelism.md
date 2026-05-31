@@ -1,5 +1,10 @@
 # Controlled Parallelism
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Stage B
+
 ## Definition
 
 LogicN supports parallelism through governed, explicit mechanisms: `task`/`wait`

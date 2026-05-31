@@ -134,7 +134,12 @@ type LoginRequest {
 
 ```logicn
 secure flow login(email: String unsafe, password: String secure)
-  -> Result<Session, LoginError>
+  -> LoginResult
+contract {
+  types {
+    type LoginResult = Result<Session, LoginError>
+  }
+}
 {
   let safeEmail: Email safe validated = validate.email(email)
   ...
@@ -253,8 +258,15 @@ secure, or untrusted source.
 ## Example: Full Boundary Pipeline
 
 ```logicn
-secure flow submitForm(request: Request) -> Result<Response, ApiError>
-effects [network.inbound]
+secure flow submitForm(request: Request) -> SubmitFormResult
+contract {
+  types {
+    type SubmitFormResult = Result<Response, ApiError>
+  }
+  effects {
+    network.inbound
+  }
+}
 {
   let myFormData: Json   unsafe unvalidated = boundary.api.body(request)
   let rawEmail:   String unsafe unvalidated = myFormData.email

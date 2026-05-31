@@ -1,5 +1,10 @@
 # Trusted Boot Preload Graph
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Phase 17+
+
 ## Definition
 
 The **Trusted Boot / Preload Graph** is a verified startup map of modules, policies, vaults, routes, events, profiles, and cached execution plans that are allowed to be loaded before normal request execution begins.

@@ -1,6 +1,12 @@
+> ⚠️ **SUPERSEDED** — This is a v0.2 historical document. Current spec: see See Also links.
+
 # LogicN Core Compute v0.2
 
 ## Formal Specification — GPU, Photonic, WASM, Compatibility
+
+**Status: SUPERSEDED — This is a v0.2 design document. The current canonical specification
+is in the corresponding Phase 9-15 implementation docs. See logicn-roadmap.md for
+the up-to-date architecture. This file is retained for historical context only.**
 
 This document is the v0.2 canonical specification for `logicn-core-compute`.
 

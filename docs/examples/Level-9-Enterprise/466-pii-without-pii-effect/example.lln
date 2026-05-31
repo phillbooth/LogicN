@@ -1,4 +1,4 @@
-/// example: 466-pii-without-pii-effect
+﻿/// example: 466-pii-without-pii-effect
 /// test_status: draft
 /// level: 9
 /// concept: PII access requires pii.read effect
@@ -7,13 +7,13 @@
 guarded flow getPatientEmail(patientId: PatientId) -> GetPatientEmailResult
 
 contract {
-  // Result alias — pii.read missing on PII access triggers LLN-PII-001
+  // Result alias â€” pii.read missing on PII access triggers LLN-PII-001
   types {
     type GetPatientEmailResult = Result<Email, DbError>
   }
 
   intent {
-    "Retrieve patient email — demonstrates missing pii.read effect on PII access."
+    "Retrieve patient email â€” demonstrates missing pii.read effect on PII access."
   }
 
   effects {

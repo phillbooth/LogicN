@@ -193,7 +193,13 @@ Custom gate functions use the `@gate` annotation:
 
 ```logicn
 @gate
-pure flow parseOrderId(raw: String) -> Result<OrderId, ValidationError> {
+pure flow parseOrderId(raw: String) -> ParseOrderIdResult
+contract {
+  types {
+    type ParseOrderIdResult = Result<OrderId, ValidationError>
+  }
+}
+{
   ...
 }
 ```
@@ -211,8 +217,17 @@ safe   mut rawId = parseOrderId(rawId)?
 
 ```logicn
 secure flow createCustomer(request: CreateCustomerRequest)
-  -> Result<ApiResponse<Customer>, ApiError>
-effects [database.write, audit.write] {
+  -> CreateCustomerResult
+contract {
+  types {
+    type CreateCustomerResult = Result<ApiResponse<Customer>, ApiError>
+  }
+  effects {
+    database.write
+    audit.write
+  }
+}
+{
 
   // Boundary data — declared unsafe at entry point
   unsafe let rawEmail: String = request.email

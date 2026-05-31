@@ -386,8 +386,14 @@ class TypeChecker {
   private readonly flowReturnTypes = new Map<string, string>();
   /** Flow parameter type list, built during collectDeclarations. */
   private readonly flowParamTypes = new Map<string, readonly string[]>();
+  /** Flow declared effects registry, built during collectDeclarations. */
+  private readonly flowDeclaredEffects = new Map<string, readonly string[]>();
   /** Declared return type of the flow currently being walked. */
   private currentReturnType = "";
+  /** Effects declared on the flow currently being walked (for TYPE-014). */
+  private currentFlowEffects: readonly string[] = [];
+  /** Name of the flow currently being walked (for TYPE-014 messages). */
+  private currentFlowName = "";
 
   check(ast: AstNode): void {
     // Pass 1: Collect all user-defined type, enum, and flow signature names
@@ -453,6 +459,18 @@ class TypeChecker {
           return typeRef?.value ? parseTypeString(typeRef.value).base : "";
         });
       this.flowParamTypes.set(node.value, paramTypes);
+
+      // Extract declared effects for LLN-TYPE-014
+      // effectsDecl child: { kind: "effectsDecl", value: "eff1, eff2", children: [effectRef...] }
+      const effectsDeclNode = children.find((c) => c.kind === "effectsDecl");
+      if (effectsDeclNode !== undefined) {
+        const effectNames = (effectsDeclNode.children ?? [])
+          .filter((c) => c.kind === "effectRef" && c.value)
+          .map((c) => c.value!.trim());
+        this.flowDeclaredEffects.set(node.value, effectNames);
+      } else {
+        this.flowDeclaredEffects.set(node.value, []);
+      }
     }
 
     for (const child of node.children ?? []) {
@@ -745,6 +763,28 @@ class TypeChecker {
         return operand ? this.inferType(operand) : undefined;
       }
 
+      case "matchExpr": {
+        // Task 3: infer match expression type from arm bodies.
+        // Arms are children after the scrutinee (index 0).
+        // Each matchArm's body is its last child.
+        const arms = (node.children ?? []).slice(1);
+        if (arms.length === 0) return undefined;
+        const armTypes: string[] = [];
+        for (const arm of arms) {
+          // The body expression of an arm is typically its last child
+          const body = arm.children?.[arm.children.length - 1];
+          if (body === undefined) return undefined;
+          const bodyType = this.inferType(body);
+          if (bodyType === undefined) return undefined;
+          armTypes.push(bodyType);
+        }
+        // If all arms agree on one type, return it; otherwise undefined
+        if (armTypes.length === 0) return undefined;
+        const firstType = armTypes[0]!;
+        const allSame = armTypes.every((t) => t === firstType);
+        return allSame ? firstType : undefined;
+      }
+
       default:
         return undefined;
     }
@@ -760,7 +800,12 @@ class TypeChecker {
       case "guardedFlowDecl": {
         // Save + set the current flow's return type for return statement checking
         const prevReturnType = this.currentReturnType;
-        this.currentReturnType = this.flowReturnTypes.get(node.value ?? "") ?? "";
+        const prevFlowEffects = this.currentFlowEffects;
+        const prevFlowName = this.currentFlowName;
+        const flowName = node.value ?? "";
+        this.currentReturnType = this.flowReturnTypes.get(flowName) ?? "";
+        this.currentFlowEffects = this.flowDeclaredEffects.get(flowName) ?? [];
+        this.currentFlowName = flowName;
         this.pushBindingScope();
         this.pushTypeScope();
         // Register params first so they're in scope throughout the body
@@ -796,6 +841,8 @@ class TypeChecker {
         this.popTypeScope();
         this.popBindingScope();
         this.currentReturnType = prevReturnType;
+        this.currentFlowEffects = prevFlowEffects;
+        this.currentFlowName = prevFlowName;
         return;
       }
 
@@ -921,7 +968,7 @@ class TypeChecker {
               `Provide exactly ${paramTypes.length} argument${paramTypes.length === 1 ? "" : "s"} to '${flowName}'.`,
             ));
           } else {
-            // LLN-TYPE-006: argument type mismatch (for inferrable types only)
+            // LLN-TYPE-005: argument type mismatch (for inferrable types only)
             for (let i = 0; i < argNodes.length; i++) {
               const argNode = argNodes[i];
               const expectedType = paramTypes[i];
@@ -929,11 +976,31 @@ class TypeChecker {
               const inferredArgType = this.inferType(argNode);
               if (inferredArgType !== undefined && !isAssignmentCompatible(expectedType, inferredArgType)) {
                 this.diagnostics.push(makeTCDiag(
-                  "LLN-TYPE-006",
-                  "InvalidCallArgument",
+                  "LLN-TYPE-005",
+                  "InvalidCallArgType",
                   `Argument ${i + 1} to '${flowName}' expects '${expectedType}' but received '${inferredArgType}'.`,
                   argNode.location,
                   `Pass a value of type '${expectedType}' as argument ${i + 1}.`,
+                ));
+              }
+            }
+          }
+
+          // LLN-TYPE-014: MissingRequiredEffect
+          // When the called flow declares effects that the current flow doesn't declare,
+          // emit an error for each missing effect.
+          const calledEffects = this.flowDeclaredEffects.get(flowName);
+          if (calledEffects !== undefined && calledEffects.length > 0 && this.currentFlowName !== "") {
+            const currentEffectSet = new Set(this.currentFlowEffects);
+            for (const requiredEffect of calledEffects) {
+              if (!currentEffectSet.has(requiredEffect)) {
+                this.diagnostics.push(makeTCDiag(
+                  "LLN-TYPE-014",
+                  "MissingRequiredEffect",
+                  `Calling '${flowName}' requires effect '${requiredEffect}' but current flow '${this.currentFlowName}' does not declare it.`,
+                  node.location,
+                  `Add '${requiredEffect}' to the effects declaration of '${this.currentFlowName}'.`,
+                  `effects [${[...this.currentFlowEffects, requiredEffect].join(", ")}]`,
                 ));
               }
             }

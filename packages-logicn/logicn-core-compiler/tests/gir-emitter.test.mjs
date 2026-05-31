@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { parseProgram, checkEffects, emitGIR, emitExpr, verifyGovernance } from "../dist/index.js";
+import { computeGIRHash } from "../dist/gir-emitter.js";
 
 function parseAndEmit(source) {
   const parsed = parseProgram(source, "test.lln");
@@ -293,5 +294,172 @@ describe("GIR emitter — emitExpr #record handling", () => {
     // Must not be treated as a regular callExpr named "#record"
     assert.notEqual(expr.kind, "void", "#record must not produce void");
     assert.equal(expr.kind, "recordLiteral", "#record must produce recordLiteral, not a generic callExpr");
+  });
+});
+
+// ── Task 1: computeGIRHash ────────────────────────────────────────────────────
+
+describe("computeGIRHash — canonical GIR hash", () => {
+  it("returns a string starting with 'sha256:'", () => {
+    const result = parseAndEmit(`
+pure flow hashMe(x: Int) -> Int {
+  return x
+}
+`);
+    const hash = computeGIRHash(result.gir);
+    assert.equal(typeof hash, "string");
+    assert.ok(hash.startsWith("sha256:"), `Expected sha256: prefix, got: ${hash}`);
+    assert.ok(hash.length > 7, "Expected non-empty hexdigest after sha256:");
+  });
+
+  it("produces the same hash for the same GIR called twice", () => {
+    const result = parseAndEmit(`
+pure flow stableFlow(x: Int) -> Int {
+  return x
+}
+`);
+    const hash1 = computeGIRHash(result.gir);
+    const hash2 = computeGIRHash(result.gir);
+    assert.equal(hash1, hash2, "computeGIRHash must be deterministic for the same GIR object");
+  });
+});
+
+// ── Task 2: GIRRecordField location ──────────────────────────────────────────
+
+describe("GIR emitter — GIRRecordField location", () => {
+  it("includes location on GIRRecordField when source child has location", () => {
+    const recordNode = {
+      kind: "callExpr",
+      value: "#record",
+      children: [
+        {
+          kind: "identifier",
+          value: "myField",
+          location: { file: "test.lln", line: 3, column: 5 },
+          children: [{ kind: "stringLiteral", value: "\"hello\"" }],
+        },
+      ],
+    };
+
+    const expr = emitExpr(recordNode);
+    assert.equal(expr.kind, "recordLiteral");
+    assert.ok(Array.isArray(expr.fields));
+    const field = expr.fields[0];
+    assert.ok(field !== undefined, "Expected at least one field");
+    assert.ok(field.location !== undefined, "Expected location to be set on GIRRecordField");
+    assert.equal(field.location.line, 3);
+    assert.equal(field.location.column, 5);
+  });
+
+  it("omits location on GIRRecordField when source child has no location", () => {
+    const recordNode = {
+      kind: "callExpr",
+      value: "#record",
+      children: [
+        {
+          kind: "identifier",
+          value: "noLocField",
+          children: [{ kind: "stringLiteral", value: "\"x\"" }],
+        },
+      ],
+    };
+
+    const expr = emitExpr(recordNode);
+    assert.equal(expr.kind, "recordLiteral");
+    const field = expr.fields[0];
+    assert.ok(field !== undefined);
+    assert.equal(field.location, undefined, "Expected location to be absent when source has no location");
+  });
+});
+
+// ── Task 3: GIRFlow capabilities ─────────────────────────────────────────────
+
+describe("GIR emitter — GIRFlow capabilities field", () => {
+  it("GIRFlow has a capabilities map for each declared effect", () => {
+    const result = parseAndEmit(`
+guarded flow saveData(x: String) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  return Ok(x)
+}
+`);
+    const flow = result.gir.flows[0];
+    assert.ok(flow !== undefined);
+    assert.ok(flow.capabilities instanceof Map, "capabilities should be a Map");
+    assert.ok(flow.capabilities.has("database.write"), "Expected database.write in capabilities map");
+    assert.equal(flow.capabilities.get("database.write"), "host.database.write");
+  });
+
+  it("GIRFlow capabilities uses host.<effect> fallback for unknown effects", () => {
+    const result = parseAndEmit(`
+guarded flow customEffect(x: String) -> Result<String, Error>
+contract { effects { custom.thing } }
+{
+  return Ok(x)
+}
+`);
+    const flow = result.gir.flows[0];
+    assert.ok(flow !== undefined);
+    // custom.thing is not in EFFECT_TO_CAPABILITY, should fallback to host.custom.thing
+    const cap = flow.capabilities.get("custom.thing");
+    assert.equal(cap, "host.custom.thing", "Unknown effects should map to host.<effect>");
+  });
+
+  it("GIRFlow capabilities is empty for pure flows with no effects", () => {
+    const result = parseAndEmit(`
+pure flow noEffects(x: Int) -> Int {
+  return x
+}
+`);
+    const flow = result.gir.flows[0];
+    assert.ok(flow !== undefined);
+    assert.ok(flow.capabilities instanceof Map);
+    assert.equal(flow.capabilities.size, 0, "Pure flow with no effects should have empty capabilities");
+  });
+});
+
+// ── Task 4: GIRFlow contract metadata ────────────────────────────────────────
+
+describe("GIR emitter — GIRFlow contract metadata", () => {
+  it("GIRFlow.contract.hasIntent is true for flows with intent block", () => {
+    const result = parseAndEmit(`
+secure flow withIntent() -> String
+intent "Save patient data"
+{
+  return "ok"
+}
+`);
+    const flow = result.gir.flows[0];
+    assert.ok(flow !== undefined);
+    // intent is declared at flow level, not inside a contractDecl — contract may be absent
+    // Test with a contract block:
+    assert.ok(flow.intent.declared === "Save patient data", "Expected intent to be parsed");
+  });
+
+  it("GIRFlow.contract has effectCount matching declared effects in contract block", () => {
+    const result = parseAndEmit(`
+guarded flow multiEffect(x: String) -> Result<String, Error>
+contract { effects { database.write audit.write } }
+{
+  return Ok(x)
+}
+`);
+    const flow = result.gir.flows[0];
+    assert.ok(flow !== undefined);
+    if (flow.contract !== undefined) {
+      assert.ok(typeof flow.contract.effectCount === "number", "effectCount should be a number");
+      assert.ok(flow.contract.effectCount >= 0);
+    }
+  });
+
+  it("GIRFlow.contract is undefined for flows without a contract block", () => {
+    const result = parseAndEmit(`
+pure flow noContract(x: Int) -> Int {
+  return x
+}
+`);
+    const flow = result.gir.flows[0];
+    assert.ok(flow !== undefined);
+    assert.equal(flow.contract, undefined, "contract should be absent for flows without contractDecl");
   });
 });

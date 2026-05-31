@@ -342,7 +342,16 @@ whether an instance is issued.
 flow get_profile(
     db: Database,
     id: UserId
-) -> Result<UserProfile, UserError> effects [storage] {
+) -> GetProfileResult
+contract {
+  types {
+    type GetProfileResult = Result<UserProfile, UserError>
+  }
+  effects {
+    storage
+  }
+}
+{
     find_user(db, id)
 }
 ```
@@ -352,7 +361,13 @@ flow get_profile(
 ```logicn
 import * as Users from "app/users/service"
 
-flow run(id: Users.UserId) -> Result<Users.UserProfile, Users.UserError> {
+flow run(id: Users.UserId) -> RunResult
+contract {
+  types {
+    type RunResult = Result<Users.UserProfile, Users.UserError>
+  }
+}
+{
     Users.get_profile(id)
 }
 ```
@@ -596,7 +611,13 @@ Importing a module makes its symbols visible. It does not grant authority.
 ```logicn
 import { read_config } from "app/config/reader"
 
-flow boot() -> Result<AppConfig, ConfigError> {
+flow boot() -> BootResult
+contract {
+  types {
+    type BootResult = Result<AppConfig, ConfigError>
+  }
+}
+{
     read_config()
 }
 ```

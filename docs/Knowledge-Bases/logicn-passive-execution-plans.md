@@ -118,8 +118,11 @@ intent GetPatient {
 }
 
 secure flow getPatient(id: PatientId)
-  -> Result<PatientRecord, PatientError>
+  -> GetPatientResult
 contract {
+  types {
+    type GetPatientResult = Result<PatientRecord, PatientError>
+  }
   effects {
     database.read
     audit.write

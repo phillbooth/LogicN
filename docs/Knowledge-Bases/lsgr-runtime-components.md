@@ -1,5 +1,10 @@
 # LSGR Runtime Components
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Phase 17+
+
 ## Definition
 
 The **LogicN Securely Governed Runtime (LSGR)** execution pipeline consists of ordered components, each with a defined role in the governed execution chain.

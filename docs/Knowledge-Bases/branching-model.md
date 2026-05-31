@@ -1,5 +1,13 @@
 # Branching Model
 
+## Status
+
+```
+Status: Active — language specification
+Scope:  if, match, pattern matching, no elseif/switch/case
+See also: logicn-syntax-if-match-optional.md, match-catch-all-branch.md, flat-flow-style.md
+```
+
 ## Core Rule
 
 ```text

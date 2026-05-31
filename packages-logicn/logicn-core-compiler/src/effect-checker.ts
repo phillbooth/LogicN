@@ -11,6 +11,131 @@ import { type AstNode, type AstNodeKind, type ParseDiagnostic, type FlowMeta, ty
 import { buildCallGraph, topoSort, detectCycle } from "@logicn/devtools-graph-algorithms";
 
 // ---------------------------------------------------------------------------
+// FlowEffectSummary — per-flow effect inference summary
+// ---------------------------------------------------------------------------
+
+export interface FlowEffectSummary {
+  readonly flowName: string;
+  readonly declaredEffects: readonly string[];
+  readonly inferredEffects: readonly string[];
+  readonly missingEffects: readonly string[];
+  readonly extraEffects?: readonly string[];  // future: declared but not inferred
+}
+
+// ---------------------------------------------------------------------------
+// EFFECT_REGISTRY — centralized operation → canonical-effect mapping
+// ---------------------------------------------------------------------------
+
+export const EFFECT_REGISTRY: Readonly<Record<string, readonly string[]>> = {
+  // Database
+  "database.find": ["database.read"],
+  "database.get": ["database.read"],
+  "database.select": ["database.read"],
+  "database.query": ["database.read"],
+  "database.insert": ["database.write"],
+  "database.update": ["database.write"],
+  "database.delete": ["database.write"],
+  "database.upsert": ["database.write"],
+
+  // Cache
+  "cache.get": ["cache.read"],
+  "cache.set": ["cache.write"],
+  "cache.delete": ["cache.write"],
+
+  // Network
+  "http.get": ["network.outbound"],
+  "http.post": ["network.outbound"],
+  "http.put": ["network.outbound"],
+  "http.patch": ["network.outbound"],
+  "http.delete": ["network.outbound"],
+  "https.get": ["network.outbound"],
+  "https.post": ["network.outbound"],
+
+  // Audit
+  "AuditLog.write": ["audit.write"],
+  "audit.write": ["audit.write"],
+  "audit.log": ["audit.write"],
+
+  // Filesystem
+  "fs.read": ["filesystem.read"],
+  "fs.readText": ["filesystem.read"],
+  "fs.readBytes": ["filesystem.read"],
+  "fs.write": ["filesystem.write"],
+  "fs.writeText": ["filesystem.write"],
+  "fs.writeBytes": ["filesystem.write"],
+  "File.readText": ["filesystem.read"],
+  "File.readBytes": ["filesystem.read"],
+
+  // AI
+  "ai.inference": ["ai.inference"],
+  "Model.run": ["ai.inference"],
+  "Classifier.classify": ["ai.inference"],
+
+  // Email
+  "email.send": ["network.outbound", "email.send"],
+  "EmailService.send": ["network.outbound", "email.send"],
+};
+
+/**
+ * Returns the canonical effects for a named operation, or [] if unknown.
+ */
+export function inferEffectsForOperation(name: string): readonly string[] {
+  return EFFECT_REGISTRY[name] ?? [];
+}
+
+/**
+ * Infers effects directly used in a flow's body by matching call names
+ * against the EFFECT_REGISTRY.
+ */
+export function inferDirectEffectsForFlow(
+  flowNode: AstNode,
+): readonly string[] {
+  const effects = new Set<string>();
+
+  function walk(node: AstNode): void {
+    if (node.kind === "callExpr") {
+      // Build full call name: receiver.method or just method
+      const methodName = node.value ?? "";
+      const receiver = node.children?.[0];
+      const receiverName = receiver?.kind === "identifier" ? (receiver.value ?? "") : "";
+      const fullName = receiverName !== "" ? `${receiverName}.${methodName}` : methodName;
+
+      for (const effect of inferEffectsForOperation(fullName)) {
+        effects.add(effect);
+      }
+      // Also try just the method name
+      for (const effect of inferEffectsForOperation(methodName)) {
+        effects.add(effect);
+      }
+    }
+    for (const child of node.children ?? []) walk(child);
+  }
+
+  walk(flowNode);
+  return [...effects].sort();  // sorted for determinism
+}
+
+/**
+ * Builds a FlowEffectSummary for a flow, comparing declared vs inferred effects.
+ */
+export function buildFlowEffectSummary(
+  flowNode: AstNode,
+  meta: FlowMeta,
+): FlowEffectSummary {
+  const declaredEffects = [...meta.declaredEffects].sort();
+  const inferredEffects = inferDirectEffectsForFlow(flowNode);
+  const declaredSet = new Set(declaredEffects);
+  const missingEffects = inferredEffects.filter(e => !declaredSet.has(e));
+
+  return {
+    flowName: meta.name,
+    declaredEffects,
+    inferredEffects,
+    missingEffects,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Effect checker diagnostics
 // ---------------------------------------------------------------------------
 
@@ -50,11 +175,13 @@ const CANONICAL_EFFECTS = new Set([
   "desktop.user.read",
   "unsafe.native",
   "payment.charge",
-  "pii.read", "pii.write",
+  "pii.read",
   "phi.read", "phi.write",
+  "email.send",
 ]);
 
 const EFFECT_NAME_ALIASES: ReadonlyMap<string, string> = new Map([
+  // Short aliases (no dot)
   ["network", "network.outbound"],
   ["database", "database.read"],
   ["filesystem", "filesystem.read"],
@@ -63,6 +190,15 @@ const EFFECT_NAME_ALIASES: ReadonlyMap<string, string> = new Map([
   ["audit", "audit.write"],
   ["pii", "pii.read"],
   ["phi", "phi.read"],
+  // Task 2: canonical effect alias map (CANONICAL_EFFECT_ALIASES)
+  ["pii.write", "database.write"],
+  ["http.get", "network.outbound"],
+  ["http.post", "network.outbound"],
+  ["http.put", "network.outbound"],
+  ["http.delete", "network.outbound"],
+  ["http.patch", "network.outbound"],
+  ["file.read", "filesystem.read"],
+  ["file.write", "filesystem.write"],
 ]);
 
 // ---------------------------------------------------------------------------
@@ -133,6 +269,20 @@ const PLAIN_FLOW_PRIVILEGED_EFFECTS = new Set([
 ]);
 
 // ---------------------------------------------------------------------------
+// Helpers for suggestedCode generation
+// ---------------------------------------------------------------------------
+
+/** Build the complete `contract { effects { ... } }` block for EFFECT-001 in dev mode. */
+function buildContractEffectsBlock(effects: readonly string[]): string {
+  const lines = ["contract {", "  effects {"];
+  for (const eff of effects) {
+    lines.push(`    ${eff}`);
+  }
+  lines.push("  }", "}");
+  return lines.join("\n");
+}
+
+// ---------------------------------------------------------------------------
 // Public checker entry points
 // ---------------------------------------------------------------------------
 
@@ -163,7 +313,9 @@ export function checkFlowEffects(
 ): EffectCheckResult {
   const diagnostics: EffectDiagnostic[] = [];
   const flowNode = findFlowNode(ast, flow.name);
+  // Task 4: infer effects together with call locations so we can point to specific calls
   const observedEffects = flowNode === undefined ? new Set<string>() : inferEffectsFromNode(flowNode);
+  const effectCallLocations = flowNode === undefined ? new Map<string, SourceLocation>() : inferEffectCallLocations(flowNode);
 
   validateDeclaredEffectNames(flow, diagnostics);
 
@@ -209,17 +361,26 @@ export function checkFlowEffects(
 
   if ((flow.qualifier === "secure" || flow.qualifier === "guarded") && flowNode !== undefined) {
     const declared = new Set(flow.declaredEffects);
+    // Pre-compute all missing effects for complete suggestedCode generation
+    const missingEffects = [...observedEffects].filter(e => !declared.has(e));
+    const mergedEffects = [...new Set([...flow.declaredEffects, ...missingEffects])].sort();
 
     for (const effect of observedEffects) {
       if (!declared.has(effect)) {
+        // Task 4: point to the specific call expression that requires the effect
+        const callLocation = effectCallLocations.get(effect) ?? flow.location;
+        // Task 5: suggestedCode is the complete contract.effects block with all merged effects
+        const suggestedContractBlock = mergedEffects.length > 0
+          ? buildContractEffectsBlock(mergedEffects)
+          : "";
         diagnostics.push({
           code: "LLN-EFFECT-001",
           name: "UNDECLARED_EFFECT",
           severity: "error",
           message: `${flow.qualifier} flow "${flow.name}" uses effect "${effect}" which is not declared.`,
-          location: flow.location,
-          suggestedFix: `Add "${effect}" to the effects declaration: effects [${[...declared, effect].join(", ")}]`,
-          suggestedCode: `effects [${[...declared, effect].join(", ")}]`,
+          location: callLocation,
+          suggestedFix: `Add "${effect}" to the effects declaration: effects [${mergedEffects.join(", ")}]`,
+          suggestedCode: suggestedContractBlock,
         });
       }
     }
@@ -238,7 +399,7 @@ export function checkFlowEffects(
     }
   }
 
-  validateInterFlowPropagation(flow, allFlows, callGraph, diagnostics);
+  validateInterFlowPropagation(flow, allFlows, callGraph, ast, diagnostics);
 
   if (flow.qualifier === "flow") {
     for (const effect of flow.declaredEffects) {
@@ -299,6 +460,7 @@ function validateInterFlowPropagation(
   flow: FlowMeta,
   allFlows: readonly FlowMeta[],
   callGraph: ReadonlyMap<string, ReadonlySet<string>>,
+  ast: AstNode,
   diagnostics: EffectDiagnostic[],
 ): void {
   const declared = new Set(flow.declaredEffects);
@@ -315,6 +477,25 @@ function validateInterFlowPropagation(
         suggestedFix: `Add "${effect}" to effects: effects [${[...declared, effect].join(", ")}]`,
         suggestedCode: `effects [${[...declared, effect].join(", ")}]`,
       });
+    }
+  }
+
+  // Task 3: check fn helpers declared within this flow for effect-producing calls
+  const flowNode = findFlowNode(ast, flow.name);
+  if (flowNode !== undefined && (flow.qualifier === "secure" || flow.qualifier === "guarded")) {
+    const fnHelperEffects = collectFnHelperEffects(flowNode);
+    for (const [effect, fnCallLoc] of fnHelperEffects) {
+      if (!declared.has(effect)) {
+        diagnostics.push({
+          code: "LLN-EFFECT-002",
+          name: "TRANSITIVE_EFFECT_NOT_DECLARED",
+          severity: "error",
+          message: `Flow "${flow.name}" has a fn helper that uses effect "${effect}" which is not declared on the parent flow.`,
+          location: fnCallLoc ?? flow.location,
+          suggestedFix: `Add "${effect}" to effects: effects [${[...declared, effect].join(", ")}]`,
+          suggestedCode: `effects [${[...declared, effect].join(", ")}]`,
+        });
+      }
     }
   }
 }
@@ -479,6 +660,9 @@ function inferEffectsFromNode(node: AstNode): Set<string> {
   const effects = new Set<string>();
 
   function walk(n: AstNode): void {
+    // Task 3: skip fnDecl bodies — their effects are handled separately via
+    // collectFnHelperEffects / validateInterFlowPropagation to emit EFFECT-002
+    if (n.kind === "fnDecl") return;
     if (n.kind === "callExpr" || n.kind === "memberExpr") {
       const callText = buildCallText(n);
       for (const [pattern, effect] of EFFECT_CALL_PATTERNS) {
@@ -494,6 +678,81 @@ function inferEffectsFromNode(node: AstNode): Set<string> {
   }
 
   walk(node);
+  return effects;
+}
+
+/**
+ * Task 4: Walk the flow node and record the source location of the FIRST call
+ * expression that requires each effect. Used to point EFFECT-001 at the specific
+ * call rather than the flow declaration header.
+ */
+function inferEffectCallLocations(node: AstNode): Map<string, SourceLocation> {
+  const locations = new Map<string, SourceLocation>();
+
+  function walk(n: AstNode): void {
+    // Skip fnDecl bodies — consistent with inferEffectsFromNode
+    if (n.kind === "fnDecl") return;
+    if (n.kind === "callExpr" || n.kind === "memberExpr") {
+      const callText = buildCallText(n);
+      for (const [pattern, effect] of EFFECT_CALL_PATTERNS) {
+        if (pattern.test(callText)) {
+          if (!locations.has(effect) && n.location !== undefined) {
+            locations.set(effect, n.location);
+          }
+          break;
+        }
+      }
+    }
+    for (const child of n.children ?? []) {
+      walk(child);
+    }
+  }
+
+  walk(node);
+  return locations;
+}
+
+/**
+ * Task 3: Find fn helpers declared within a flow node and collect the effects
+ * their bodies produce, together with the call site location.
+ *
+ * A fn helper is a `fnDecl` node that appears as a child of the flow body.
+ * Its body is walked for effect-producing call expressions.
+ */
+function collectFnHelperEffects(flowNode: AstNode): Map<string, SourceLocation | undefined> {
+  const effects = new Map<string, SourceLocation | undefined>();
+
+  function walkForFns(n: AstNode): void {
+    if (n.kind === "fnDecl") {
+      // Walk the fn body for effect calls
+      for (const child of n.children ?? []) {
+        walkForEffects(child);
+      }
+      return; // don't recurse further into nested fnDecls here
+    }
+    for (const child of n.children ?? []) {
+      walkForFns(child);
+    }
+  }
+
+  function walkForEffects(n: AstNode): void {
+    if (n.kind === "callExpr" || n.kind === "memberExpr") {
+      const callText = buildCallText(n);
+      for (const [pattern, effect] of EFFECT_CALL_PATTERNS) {
+        if (pattern.test(callText)) {
+          if (!effects.has(effect)) {
+            effects.set(effect, n.location);
+          }
+          break;
+        }
+      }
+    }
+    for (const child of n.children ?? []) {
+      walkForEffects(child);
+    }
+  }
+
+  walkForFns(flowNode);
   return effects;
 }
 

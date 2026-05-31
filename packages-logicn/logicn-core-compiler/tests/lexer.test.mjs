@@ -5,6 +5,9 @@ import {
   lex,
   V1_ACTIVE_KEYWORDS,
   V1_FUTURE_RESERVED,
+  LLN_LEX_001,
+  LLN_LEX_002,
+  LLN_LEX_003,
 } from "../dist/index.js";
 
 describe("Lexer — keyword table", () => {
@@ -238,5 +241,148 @@ describe("Lexer — token production", () => {
     const eof = result.tokens[result.tokens.length - 1];
     assert.equal(eof?.kind, "eof");
     assert.equal(eof?.start, source.length);
+  });
+});
+
+describe("Lexer — endLine / endColumn source ranges", () => {
+  it("single-line token: endLine === line, endColumn === column + value.length", () => {
+    const result = lex("let", "test.lln");
+    const tok = result.tokens.find((t) => t.value === "let");
+    assert.ok(tok !== undefined);
+    assert.equal(tok.line, 1);
+    assert.equal(tok.column, 1);
+    assert.equal(tok.endLine, 1);
+    assert.equal(tok.endColumn, 4); // 1 + 3 chars
+  });
+
+  it("eof token has endLine and endColumn equal to its position", () => {
+    const result = lex("x", "test.lln");
+    const eof = result.tokens[result.tokens.length - 1];
+    assert.equal(eof?.kind, "eof");
+    assert.equal(typeof eof?.endLine, "number");
+    assert.equal(typeof eof?.endColumn, "number");
+  });
+
+  it("multi-word source: second token has correct start position", () => {
+    const result = lex("let x", "test.lln");
+    const xTok = result.tokens.find((t) => t.value === "x");
+    assert.ok(xTok !== undefined);
+    assert.equal(xTok.line, 1);
+    assert.equal(xTok.column, 5);
+    assert.equal(xTok.endLine, 1);
+    assert.equal(xTok.endColumn, 6);
+  });
+
+  it("token on second line has correct line/endLine", () => {
+    const result = lex("flow\norder", "test.lln");
+    const orderTok = result.tokens.find((t) => t.value === "order");
+    assert.ok(orderTok !== undefined);
+    assert.equal(orderTok.line, 2);
+    assert.equal(orderTok.endLine, 2);
+    assert.equal(orderTok.column, 1);
+    assert.equal(orderTok.endColumn, 6); // "order" = 5 chars
+  });
+});
+
+describe("Lexer — LLN-LEX-001 excessive generic nesting", () => {
+  it("exports LLN_LEX_001 with correct code", () => {
+    assert.equal(LLN_LEX_001.code, "LLN-LEX-001");
+    assert.equal(LLN_LEX_001.name, "ExcessiveNesting");
+  });
+
+  it("does not emit LLN-LEX-001 for 8 levels of nesting", () => {
+    // 8 < chars: no error
+    const source = "A<B<C<D<E<F<G<H>>>>>>>>"; // 8 < depth at most
+    const result = lex(source, "test.lln");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-LEX-001");
+    assert.ok(diag === undefined, "Should not emit LLN-LEX-001 for exactly 8 levels");
+  });
+
+  it("emits LLN-LEX-001 when nesting exceeds 8 levels", () => {
+    // 9 < in a row — depth reaches 9 on the last <
+    const source = "<".repeat(9);
+    const result = lex(source, "test.lln");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-LEX-001");
+    assert.ok(diag !== undefined, "Expected LLN-LEX-001 for depth > 8");
+    assert.equal(diag.code, "LLN-LEX-001");
+  });
+});
+
+describe("Lexer — LLN-LEX-002 oversized token", () => {
+  it("exports LLN_LEX_002 with correct code", () => {
+    assert.equal(LLN_LEX_002.code, "LLN-LEX-002");
+    assert.equal(LLN_LEX_002.name, "OversizedToken");
+  });
+
+  it("emits LLN-LEX-002 for an identifier exceeding 10,000 chars", () => {
+    const longName = "a" + "b".repeat(10_001);
+    const result = lex(longName, "test.lln");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-LEX-002");
+    assert.ok(diag !== undefined, "Expected LLN-LEX-002 for identifier > 10,000 chars");
+  });
+
+  it("does not emit LLN-LEX-002 for an identifier of exactly 10,000 chars", () => {
+    const normalName = "a".repeat(10_000);
+    const result = lex(normalName, "test.lln");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-LEX-002");
+    assert.ok(diag === undefined, "Should not emit LLN-LEX-002 for exactly 10,000 chars");
+  });
+
+  it("emits LLN-LEX-002 for a string literal body exceeding 10,000 chars", () => {
+    const longStr = '"' + "x".repeat(10_001) + '"';
+    const result = lex(longStr, "test.lln");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-LEX-002");
+    assert.ok(diag !== undefined, "Expected LLN-LEX-002 for string > 10,000 chars");
+  });
+});
+
+describe("Lexer — LLN-LEX-003 unicode escape sequences", () => {
+  it("exports LLN_LEX_003 with correct code", () => {
+    assert.equal(LLN_LEX_003.code, "LLN-LEX-003");
+    assert.equal(LLN_LEX_003.name, "InvalidUnicodeEscape");
+  });
+
+  it("correctly lexes \\u{1F600} (emoji code point)", () => {
+    const result = lex('"\\u{1F600}"', "test.lln");
+    assert.equal(result.diagnostics.length, 0, "Expected no diagnostics for valid \\u{1F600}");
+    const str = result.tokens.find((t) => t.kind === "string");
+    assert.ok(str !== undefined);
+    // The value should contain the decoded emoji character
+    assert.ok(str.value.includes("\u{1F600}"), `Expected emoji in value, got: ${JSON.stringify(str.value)}`);
+  });
+
+  it("correctly lexes \\u0041 (BMP 4-digit form, letter A)", () => {
+    const result = lex('"\\u0041"', "test.lln");
+    assert.equal(result.diagnostics.length, 0, "Expected no diagnostics for valid \\u0041");
+    const str = result.tokens.find((t) => t.kind === "string");
+    assert.ok(str !== undefined);
+    assert.ok(str.value.includes("A"), `Expected 'A' in value, got: ${JSON.stringify(str.value)}`);
+  });
+
+  it("emits LLN-LEX-003 for \\u{} with no hex digits", () => {
+    const result = lex('"\\u{}"', "test.lln");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-LEX-003");
+    assert.ok(diag !== undefined, "Expected LLN-LEX-003 for \\u{}");
+  });
+
+  it("emits LLN-LEX-003 for \\u{FFFFFF1} — code point out of range", () => {
+    const result = lex('"\\u{FFFFFF1}"', "test.lln");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-LEX-003");
+    assert.ok(diag !== undefined, "Expected LLN-LEX-003 for out-of-range code point");
+  });
+
+  it("emits LLN-LEX-003 for \\u with only 2 hex digits (invalid 4-digit form)", () => {
+    const result = lex('"\\u004"', "test.lln");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-LEX-003");
+    assert.ok(diag !== undefined, "Expected LLN-LEX-003 for \\u with < 4 hex digits");
+  });
+
+  it("correctly lexes multiple unicode escapes in one string", () => {
+    const result = lex('"\\u0048\\u0065\\u006C\\u006C\\u006F"', "test.lln");
+    assert.equal(result.diagnostics.length, 0, "Expected no diagnostics for valid \\uXXXX sequence");
+    const str = result.tokens.find((t) => t.kind === "string");
+    assert.ok(str !== undefined);
+    // "Hello" in BMP escapes
+    assert.ok(str.value.includes("Hello"), `Expected 'Hello' in value, got: ${JSON.stringify(str.value)}`);
   });
 });

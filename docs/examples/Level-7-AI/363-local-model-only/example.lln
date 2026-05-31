@@ -2,6 +2,7 @@
 /// level: 7
 /// concept: local-only AI classification denying both remote execution and network outbound
 /// expected_diagnostics: none
+/// test_status: draft
 /// ai_rule: Use deny [remote.execution, network.outbound] for air-gapped or strict data-residency deployments.
 
 secure flow classify(readonly request: Request) -> ClassifyResult

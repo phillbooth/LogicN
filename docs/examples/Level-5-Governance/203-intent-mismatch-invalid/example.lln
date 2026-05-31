@@ -1,4 +1,4 @@
-/// example: 203-intent-mismatch-invalid
+﻿/// example: 203-intent-mismatch-invalid
 /// test_status: draft
 /// level: 5
 /// concept: intent mismatch when flow behaviour contradicts declared intent
@@ -12,7 +12,7 @@ contract {
     type GeneratePatientReportResult = Result<Report, ReportError>
   }
 
-  // Security intent: BUG — intent claims "local" but the body makes an external HTTP call.
+  // Security intent: BUG â€” intent claims "local" but the body makes an external HTTP call.
   // The governance verifier detects this contradiction and fires LLN-INTENT-001.
   intent {
     "Generate local patient report"

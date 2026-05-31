@@ -71,3 +71,12 @@ export {
   type CapabilityDomain,
   type AuditLogEntry,
 } from "./rootCapabilityProvider.js";
+
+// Phase 16A — Canonical Hashing
+export {
+  canonicalHash,
+  stripNonDeterministic,
+  hashSource,
+  hashGIR,
+  hashPassivePlan,
+} from "./canonicalHash.js";

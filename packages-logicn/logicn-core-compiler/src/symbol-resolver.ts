@@ -6,6 +6,7 @@
 // Implemented diagnostics:
 //   LLN-NAME-001  UndeclaredName
 //   LLN-NAME-002  DuplicateName
+//   LLN-NAME-003  CrossModuleShadow  — local binding shadows a built-in domain type
 // =============================================================================
 
 import { type AstNode, type SourceLocation } from "./parser.js";
@@ -20,9 +21,74 @@ export interface SymbolDiagnostic {
   readonly suggestedCode?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Task 4 — SymbolTable for tooling
+// ---------------------------------------------------------------------------
+
+export interface SymbolTable {
+  readonly flows: Map<string, SourceLocation>;
+  readonly types: Map<string, { kind: "type" | "record" | "enum"; location: SourceLocation }>;
+  readonly events: Map<string, SourceLocation>;
+}
+
 export interface SymbolResolveResult {
   readonly diagnostics: readonly SymbolDiagnostic[];
+  readonly symbolTable?: SymbolTable;
 }
+
+// ---------------------------------------------------------------------------
+// Task 1 — Module Export Registry
+// ---------------------------------------------------------------------------
+
+export type ExportKind =
+  | "flow"
+  | "type"
+  | "record"
+  | "enum"
+  | "brand"
+  | "event"
+  | "contractSet";
+
+export interface ExportedSymbol {
+  readonly name: string;
+  readonly kind: ExportKind;
+  readonly sourceFile: string;
+  readonly location: SourceLocation;
+}
+
+/**
+ * Maps exported names from a module to their declarations.
+ * Supports:
+ *   - flow names     → FlowMeta
+ *   - type names     → kind (type | record | enum | brand)
+ *   - event names    → declaration location
+ *   - contractSet    → definition location
+ */
+export class ModuleExportRegistry {
+  private readonly registry: Map<string, ExportedSymbol> = new Map();
+
+  register(
+    symbol: string,
+    kind: ExportKind,
+    sourceFile: string,
+    location: SourceLocation,
+  ): void {
+    this.registry.set(symbol, { name: symbol, kind, sourceFile, location });
+  }
+
+  lookup(symbol: string): ExportedSymbol | undefined {
+    return this.registry.get(symbol);
+  }
+
+  /** Return all registered exports (useful for cross-module tooling). */
+  all(): readonly ExportedSymbol[] {
+    return [...this.registry.values()];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Internal constants
+// ---------------------------------------------------------------------------
 
 const FLOW_DECL_KINDS = new Set<AstNode["kind"]>([
   "flowDecl",
@@ -91,10 +157,55 @@ const STANDARD_PRELUDE = new Set([
   "Classification", "Embedding", "Prompt",
 ]);
 
+// ---------------------------------------------------------------------------
+// Task 2 — Built-in domain types for cross-module shadow detection (LLN-NAME-003)
+//
+// Mirrors a subset of BUILT_IN_TYPES from type-checker.ts that are domain-specific
+// named types (not primitives/generics). A local binding sharing one of these
+// names is a probable mistake and should receive a warning.
+// ---------------------------------------------------------------------------
+
+const BUILT_IN_DOMAIN_TYPES = new Set([
+  // Domain / identity types
+  "Email", "Url", "Path", "Hostname", "Port", "CurrencyCode", "Reference",
+  // Healthcare domain
+  "PatientId", "NhsNumber", "PatientName", "DateOfBirth",
+  // Financial domain
+  "AccountId", "CardNumber", "SortCode", "TransactionId", "CustomerId",
+  "OrderId",
+  // Identity / access domain
+  "UserId", "Actor", "TraceId", "TenantId", "Deadline",
+  // Error types
+  "Error", "ApiError", "EmailError", "PaymentError", "ValidationError", "WebhookError",
+  "DecodeError", "ParseError",
+  // Security types
+  "Secret",
+  // AI / ML types
+  "Prompt", "Embedding", "Classification", "ModelOutput", "Token",
+  // Enterprise / governance types
+  "Policy", "AuditRecord", "AuditProof", "ExecutionPlan", "RuntimeReport",
+  // AI / ML result types
+  "Label", "ClassificationResult", "EmbeddingResult", "RiskScore", "Score",
+  // Record / request / response types
+  "PatientRecord", "HealthRecord", "ClinicalActor", "FinancialActor",
+]);
+
+// ---------------------------------------------------------------------------
+// Resolver implementation
+// ---------------------------------------------------------------------------
+
 class SymbolResolver {
   private readonly diagnostics: SymbolDiagnostic[] = [];
   private readonly scopes: Array<Map<string, AstNode>> = [];
   private readonly importedNames: ReadonlySet<string>;
+
+  // Task 4 — accumulate symbol table entries
+  private readonly flowTable: Map<string, SourceLocation> = new Map();
+  private readonly typeTable: Map<string, { kind: "type" | "record" | "enum"; location: SourceLocation }> = new Map();
+  private readonly eventTable: Map<string, SourceLocation> = new Map();
+
+  // Track whether we are currently inside a flow body (not a param) for NAME-003
+  private insideFlowScope = false;
 
   constructor(importedNames: readonly string[] = []) {
     this.importedNames = new Set(importedNames);
@@ -109,7 +220,12 @@ class SymbolResolver {
   }
 
   getResult(): SymbolResolveResult {
-    return { diagnostics: [...this.diagnostics] };
+    const symbolTable: SymbolTable = {
+      flows: new Map(this.flowTable),
+      types: new Map(this.typeTable),
+      events: new Map(this.eventTable),
+    };
+    return { diagnostics: [...this.diagnostics], symbolTable };
   }
 
   private pushScope(): void {
@@ -137,8 +253,34 @@ class SymbolResolver {
   }
 
   private collectTopLevelDeclarations(node: AstNode): void {
-    if ((FLOW_DECL_KINDS.has(node.kind) || TYPE_DECL_KINDS.has(node.kind)) && node.value !== undefined) {
-      this.currentScope().set(node.value.trim(), node);
+    if (FLOW_DECL_KINDS.has(node.kind) && node.value !== undefined) {
+      const flowName = node.value.trim();
+      this.currentScope().set(flowName, node);
+      // Task 4 — populate flow table
+      if (node.location !== undefined) {
+        this.flowTable.set(flowName, node.location);
+      }
+    } else if (TYPE_DECL_KINDS.has(node.kind) && node.value !== undefined) {
+      const typeName = node.value.trim();
+      this.currentScope().set(typeName, node);
+      // Task 4 — populate type table
+      if (node.location !== undefined) {
+        const kind =
+          node.kind === "recordDecl"
+            ? "record"
+            : node.kind === "enumDecl"
+            ? "enum"
+            : "type";
+        this.typeTable.set(typeName, { kind, location: node.location });
+      }
+    } else if (node.kind === "intentDecl" && node.value !== undefined && node.value.startsWith("event:")) {
+      // Events are stored as intentDecl with value "event:<name>" by the parser
+      const eventName = node.value.slice("event:".length).trim();
+      this.currentScope().set(eventName, node);
+      // Task 4 — populate event table
+      if (node.location !== undefined) {
+        this.eventTable.set(eventName, node.location);
+      }
     }
 
     for (const child of node.children ?? []) {
@@ -171,6 +313,27 @@ class SymbolResolver {
     }
 
     current.set(name, node);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Task 2 — LLN-NAME-003: CrossModuleShadow
+  //
+  // Emit a warning when a letDecl/mutDecl in flow scope has the same name as a
+  // built-in domain type. Param shadowing is expected and NOT warned.
+  // ---------------------------------------------------------------------------
+
+  private checkCrossModuleShadow(name: string, node: AstNode): void {
+    if (!this.insideFlowScope) return;
+    if (!BUILT_IN_DOMAIN_TYPES.has(name)) return;
+
+    this.diagnostics.push({
+      code: "LLN-NAME-003",
+      name: "CrossModuleShadow",
+      severity: "warning",
+      message: `Binding '${name}' shadows the built-in domain type '${name}'. Consider renaming to avoid confusion.`,
+      ...(node.location !== undefined ? { location: node.location } : {}),
+      suggestedFix: `Rename the binding to avoid shadowing the built-in '${name}' type.`,
+    });
   }
 
   private checkIdentifierUse(node: AstNode): void {
@@ -216,16 +379,20 @@ class SymbolResolver {
       case "flowDecl":
       case "secureFlowDecl":
       case "pureFlowDecl":
-      case "guardedFlowDecl":
+      case "guardedFlowDecl": {
         this.pushScope();
         for (const child of node.children ?? []) {
           if (child.kind === "paramDecl") this.walkNode(child, "normal");
         }
+        const wasInsideFlow = this.insideFlowScope;
+        this.insideFlowScope = true;
         for (const child of node.children ?? []) {
           if (child.kind !== "paramDecl") this.walkNode(child, "normal");
         }
+        this.insideFlowScope = wasInsideFlow;
         this.popScope();
         return;
+      }
 
       case "block":
         this.pushScope();
@@ -246,7 +413,12 @@ class SymbolResolver {
         // Walk the initializer BEFORE declaring the name to catch use-before-declaration
         const initNode = node.children?.[0];
         if (initNode !== undefined) this.walkNode(initNode, "normal");
-        this.declareInCurrentScope(parseBindingName(node.value ?? ""), node);
+        const bindingName = parseBindingName(node.value ?? "");
+        // Task 2 — check for cross-module shadow before declaring
+        if (node.kind === "letDecl" || node.kind === "mutDecl") {
+          this.checkCrossModuleShadow(bindingName, node);
+        }
+        this.declareInCurrentScope(bindingName, node);
         // Walk remaining children (type refs etc.) after declaration
         for (const child of (node.children ?? []).slice(1)) {
           this.walkNode(child, "normal");
@@ -281,7 +453,7 @@ class SymbolResolver {
         return;
 
       case "recordDecl":
-        // Record fields are scoped to the record — push a fresh scope so that
+        // Task 3 — Record fields are scoped to the record — push a fresh scope so that
         // field names from different records don't conflict with each other.
         this.pushScope();
         this.walkChildren(node, "type");

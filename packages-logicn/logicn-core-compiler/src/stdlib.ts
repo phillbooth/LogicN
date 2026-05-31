@@ -329,6 +329,39 @@ function stringMethod(receiver: LogicNValue, method: string, args: readonly Logi
       return isNaN(n) ? err("ParseError: not a valid decimal") : ok({ __tag: "decimal", value: s });
     }
 
+    case "matchesPattern": {
+      const pattern = strVal(args[0] ?? { __tag: "string", value: "" });
+      try {
+        return { __tag: "bool", value: new RegExp(pattern).test(s) };
+      } catch {
+        return err(`RegexError: invalid pattern: ${pattern}`);
+      }
+    }
+
+    case "extractGroups": {
+      const pattern = strVal(args[0] ?? { __tag: "string", value: "" });
+      try {
+        const match = new RegExp(pattern).exec(s);
+        if (!match) return { __tag: "list", items: [] };
+        const groups = match.slice(1).map((g): LogicNValue =>
+          g === undefined ? LLN_NONE : { __tag: "string", value: g }
+        );
+        return { __tag: "list", items: groups };
+      } catch {
+        return err(`RegexError: invalid pattern: ${pattern}`);
+      }
+    }
+
+    case "replacePattern": {
+      const pattern = strVal(args[0] ?? { __tag: "string", value: "" });
+      const replacement = strVal(args[1] ?? { __tag: "string", value: "" });
+      try {
+        return { __tag: "string", value: s.replace(new RegExp(pattern, "g"), replacement) };
+      } catch {
+        return err(`RegexError: invalid pattern: ${pattern}`);
+      }
+    }
+
     // Phase 9A-3: named interpolation — "Hello {name}".format({ name: "World" })
     // Also supports positional "Hello {}".format("World", ...) as fallback.
     case "format": {
@@ -567,13 +600,94 @@ async function listMethod(
       return { __tag: "record", fields };
     }
 
+    case "chunk": {
+      const size = Math.max(1, numVal(args[0] ?? { __tag: "int", value: 1 }));
+      const chunks: LogicNValue[] = [];
+      for (let i = 0; i < items.length; i += size) {
+        chunks.push({ __tag: "list", items: items.slice(i, i + size) });
+      }
+      return { __tag: "list", items: chunks };
+    }
+
+    case "flatten": {
+      const flat: LogicNValue[] = [];
+      for (const item of items) {
+        if (item.__tag === "list") flat.push(...item.items);
+        else flat.push(item);
+      }
+      return { __tag: "list", items: flat };
+    }
+
+    case "partition": {
+      const fn = args[0];
+      if (fn === undefined) return { __tag: "list", items: [receiver, { __tag: "list", items: [] }] };
+      const passing: LogicNValue[] = [];
+      const failing: LogicNValue[] = [];
+      for (const item of items) {
+        const result = await ctx.applyFn(fn, item);
+        if (result.__tag === "bool" && result.value) passing.push(item);
+        else failing.push(item);
+      }
+      return { __tag: "list", items: [{ __tag: "list", items: passing }, { __tag: "list", items: failing }] };
+    }
+
+    case "tally": {
+      const counts = new Map<string, number>();
+      const originals = new Map<string, LogicNValue>();
+      for (const item of items) {
+        const k = JSON.stringify(item);
+        counts.set(k, (counts.get(k) ?? 0) + 1);
+        originals.set(k, item);
+      }
+      const fields = new Map<string, LogicNValue>();
+      for (const [k, count] of counts) {
+        const orig = originals.get(k)!;
+        const displayKey = strVal(orig);
+        fields.set(displayKey, { __tag: "int", value: count });
+      }
+      return { __tag: "record", fields };
+    }
+
+    case "average": {
+      if (items.length === 0) return err("average: empty list");
+      const total = items.reduce((acc, item) => acc + numVal(item), 0);
+      return { __tag: "float", value: total / items.length };
+    }
+
+    case "median": {
+      if (items.length === 0) return err("median: empty list");
+      const sorted = [...items].sort((a, b) => numVal(a) - numVal(b));
+      const mid = Math.floor(sorted.length / 2);
+      if (sorted.length % 2 === 1) {
+        return sorted[mid]!;
+      }
+      const lo = numVal(sorted[mid - 1]!);
+      const hi = numVal(sorted[mid]!);
+      return { __tag: "float", value: (lo + hi) / 2 };
+    }
+
     default:
       return undefined;
   }
 }
 
-function mapMethod(receiver: LogicNValue, method: string, args: readonly LogicNValue[]): LogicNValue | undefined {
+function isSpecialRecord(v: LogicNValue): boolean {
+  if (v.__tag !== "record") return false;
+  const f = v.fields;
+  return (f.get("__isSet") as { __tag: string; value: boolean } | undefined)?.value === true
+    || (f.get("__isTimestamp") as { __tag: string; value: boolean } | undefined)?.value === true
+    || (f.get("__isDuration") as { __tag: string; value: boolean } | undefined)?.value === true
+    || (f.get("__isMoney") as { __tag: string; value: boolean } | undefined)?.value === true;
+}
+
+async function mapMethod(
+  receiver: LogicNValue,
+  method: string,
+  args: readonly LogicNValue[],
+  ctx: StdlibContext,
+): Promise<LogicNValue | undefined> {
   if (receiver.__tag !== "record") return undefined;
+  if (isSpecialRecord(receiver)) return undefined;
   const fields = receiver.fields;
   switch (method) {
     case "get": {
@@ -622,14 +736,34 @@ function mapMethod(receiver: LogicNValue, method: string, args: readonly LogicNV
       if (fn === undefined) return receiver;
       const filtered = new Map<string, LogicNValue>();
       for (const [k, v] of fields) {
-        const ef = new Map<string, LogicNValue>([["key", { __tag: "string", value: k }], ["value", v]]);
-        const keep = fn ? (() => { const r = (fn as { __tag: string; name?: string }); return false; })() : false;
-        void keep; void ef;
-        // Simplified: filter by value
-        const result = v.__tag !== "none" && v.__tag !== "void";
-        if (result) filtered.set(k, v);
+        if (k.startsWith("__")) { filtered.set(k, v); continue; }
+        const entryRecord: LogicNValue = {
+          __tag: "record",
+          fields: new Map<string, LogicNValue>([["key", { __tag: "string", value: k }], ["value", v]]),
+        };
+        const result = await ctx.applyFn(fn, entryRecord);
+        if (result.__tag === "bool" && result.value) filtered.set(k, v);
       }
       return { __tag: "record", fields: filtered };
+    }
+    case "mapValues": {
+      const fn = args[0];
+      if (fn === undefined) return receiver;
+      const transformed = new Map<string, LogicNValue>();
+      for (const [k, v] of fields) {
+        if (k.startsWith("__")) { transformed.set(k, v); continue; }
+        transformed.set(k, await ctx.applyFn(fn, v));
+      }
+      return { __tag: "record", fields: transformed };
+    }
+    case "toList": {
+      const entries = [...fields.entries()]
+        .filter(([k]) => !k.startsWith("__"))
+        .map(([k, v]): LogicNValue => {
+          const ef = new Map<string, LogicNValue>([["key", { __tag: "string", value: k }], ["value", v]]);
+          return { __tag: "record", fields: ef };
+        });
+      return { __tag: "list", items: entries };
     }
     default:
       return undefined;
@@ -1071,6 +1205,53 @@ export function logicNValuesEqual(a: LogicNValue, b: LogicNValue): boolean {
   return false;
 }
 
+// ---------------------------------------------------------------------------
+// Statistics module
+// ---------------------------------------------------------------------------
+
+function statisticsModule(method: string, args: readonly LogicNValue[]): LogicNValue | undefined {
+  const items = asList(args[0] ?? LLN_VOID);
+  if (items.length === 0) {
+    if (method === "sum") return { __tag: "int", value: 0 };
+    return err(`Statistics.${method}: empty list`);
+  }
+  switch (method) {
+    case "mean": {
+      const total = items.reduce((acc, item) => acc + numVal(item), 0);
+      return { __tag: "float", value: total / items.length };
+    }
+    case "median": {
+      const sorted = [...items].sort((a, b) => numVal(a) - numVal(b));
+      const mid = Math.floor(sorted.length / 2);
+      if (sorted.length % 2 === 1) return sorted[mid]!;
+      const lo = numVal(sorted[mid - 1]!);
+      const hi = numVal(sorted[mid]!);
+      return { __tag: "float", value: (lo + hi) / 2 };
+    }
+    case "stddev": {
+      const n = items.length;
+      const mean = items.reduce((acc, item) => acc + numVal(item), 0) / n;
+      const variance = items.reduce((acc, item) => acc + Math.pow(numVal(item) - mean, 2), 0) / n;
+      return { __tag: "float", value: Math.sqrt(variance) };
+    }
+    case "min": {
+      const m = items.reduce((a, b) => numVal(a) < numVal(b) ? a : b);
+      return mkSome(m);
+    }
+    case "max": {
+      const m = items.reduce((a, b) => numVal(a) > numVal(b) ? a : b);
+      return mkSome(m);
+    }
+    case "sum": {
+      const isFloat = items.some((i) => i.__tag === "float");
+      const total = items.reduce((acc, item) => acc + numVal(item), 0);
+      return isFloat ? { __tag: "float", value: total } : { __tag: "int", value: total };
+    }
+    default:
+      return undefined;
+  }
+}
+
 export async function callStdlib(
   fullName: string,
   receiver: LogicNValue | undefined,
@@ -1131,7 +1312,7 @@ export async function callStdlib(
 
     // Map static constructors
     if (fullName === "Map.empty")  return { __tag: "record", fields: new Map() };
-    if (fullName === "Map.from") {
+    if (fullName === "Map.from" || fullName === "Map.fromList") {
       const entries = asList(args[0] ?? LLN_VOID);
       const fields = new Map<string, LogicNValue>();
       for (const entry of entries) {
@@ -1193,6 +1374,13 @@ export async function callStdlib(
       return { __tag: "int", value: n > 0 ? 1 : n < 0 ? -1 : 0 };
     }
 
+    // Statistics module
+    if (fullName.startsWith("Statistics.")) {
+      const statMethod = fullName.slice("Statistics.".length);
+      const statResult = statisticsModule(statMethod, args);
+      if (statResult !== undefined) return statResult;
+    }
+
     const gateResult = gateFunction(fullName, args);
     if (gateResult !== undefined) return gateResult;
 
@@ -1243,7 +1431,7 @@ export async function callStdlib(
   const list = await listMethod(receiver, method, args, ctx);
   if (list !== undefined) return list;
 
-  const map = mapMethod(receiver, method, args);
+  const map = await mapMethod(receiver, method, args, ctx);
   if (map !== undefined) return map;
 
   const money = moneyMethod(receiver, method, args);

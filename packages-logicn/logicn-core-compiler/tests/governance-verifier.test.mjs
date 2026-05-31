@@ -9,6 +9,11 @@ import {
   LLN_GOV_011,
   LLN_GOV_012,
 } from "../dist/index.js";
+import {
+  LLN_GOV_005,
+  LLN_GOV_007,
+  LLN_GOV_009,
+} from "../dist/governance-verifier.js";
 
 function parseAndVerify(source, profile = "dev") {
   const parsed = parseProgram(source, "test.lln");
@@ -506,5 +511,183 @@ contract {
     assert.equal(LLN_CONTEXT_001.code, "LLN-CONTEXT-001");
     assert.equal(LLN_CONTEXT_001.name, "REQUIRED_CONTEXT_NOT_ACCESSED");
     assert.equal(LLN_CONTEXT_001.severity, "warning");
+  });
+});
+
+// =============================================================================
+// LLN-GOV-005: policy purpose mismatch
+// =============================================================================
+
+describe("Governance verifier — LLN-GOV-005 policy purpose mismatch", () => {
+  it("emits LLN-GOV-005 warning when purpose 'read-only' but database.write is declared", () => {
+    const result = parseAndVerify(`
+flow getPatient(readonly request: Request) -> GetPatientResult
+contract { effects { database.write } }
+policy {
+  purpose "read-only"
+}
+{
+  return Ok(Response.ok({}))
+}
+`);
+    assert.ok(hasDiag(result, "LLN-GOV-005"), "Expected LLN-GOV-005 when read-only purpose contradicts database.write");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-GOV-005");
+    assert.equal(diag.severity, "warning");
+  });
+
+  it("does not emit LLN-GOV-005 when purpose 'read-only' and no database.write", () => {
+    const result = parseAndVerify(`
+flow getPatient(readonly request: Request) -> GetPatientResult
+contract { effects { database.read } }
+policy {
+  purpose "read-only"
+}
+{
+  return Ok(Response.ok({}))
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-GOV-005"), "Unexpected LLN-GOV-005 when effects are compatible with purpose");
+  });
+
+  it("emits LLN-GOV-005 warning when purpose 'internal' but network.outbound is declared", () => {
+    const result = parseAndVerify(`
+flow syncData(request: Request) -> SyncResult
+contract { effects { network.outbound } }
+policy {
+  purpose "internal"
+}
+{
+  return Ok(Response.ok({}))
+}
+`);
+    assert.ok(hasDiag(result, "LLN-GOV-005"), "Expected LLN-GOV-005 when internal purpose contradicts network.outbound");
+  });
+
+  it("LLN-GOV-005 constant has correct code and name", () => {
+    assert.equal(LLN_GOV_005.code, "LLN-GOV-005");
+    assert.equal(LLN_GOV_005.name, "PolicyPurposeMismatch");
+    assert.equal(LLN_GOV_005.severity, "warning");
+  });
+});
+
+// =============================================================================
+// LLN-GOV-007: authority block missing reason
+// =============================================================================
+
+describe("Governance verifier — LLN-GOV-007 authority block missing reason", () => {
+  it("emits LLN-GOV-007 error when authority block has no reason clause", () => {
+    // The authority block is a flow clause (between signature and body).
+    const result = parseAndVerify(`
+flow sharePayments(request: Request) -> Result<Response, ApiError>
+contract { effects { database.read } }
+authority share Payments.processor {
+  audit required
+  require payment.read
+}
+{
+  return Ok(Response.ok({}))
+}
+`);
+    assert.ok(hasDiag(result, "LLN-GOV-007"), "Expected LLN-GOV-007 when authority block has no reason");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-GOV-007");
+    assert.equal(diag.severity, "error");
+  });
+
+  it("does not emit LLN-GOV-007 when authority block has a reason clause", () => {
+    const result = parseAndVerify(`
+flow sharePayments(request: Request) -> Result<Response, ApiError>
+contract { effects { database.read } }
+authority share Payments.processor {
+  reason "Needed to process payment transactions"
+  audit required
+  require payment.read
+}
+{
+  return Ok(Response.ok({}))
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-GOV-007"), "Unexpected LLN-GOV-007 when authority block has a reason");
+  });
+
+  it("LLN-GOV-007 constant has correct code and name", () => {
+    assert.equal(LLN_GOV_007.code, "LLN-GOV-007");
+    assert.equal(LLN_GOV_007.name, "AuthorityBlockMissingReason");
+    assert.equal(LLN_GOV_007.severity, "error");
+  });
+});
+
+// =============================================================================
+// LLN-GOV-009: privileged flow missing capability
+// =============================================================================
+
+describe("Governance verifier — LLN-GOV-009 privileged flow missing capability", () => {
+  it("emits LLN-GOV-009 warning when privileged flow has no effects or contract", () => {
+    // Privileged flows are detected via identifier child with value "qualifier:privileged".
+    // Since the parser does not yet emit a dedicated privilegedFlowDecl kind,
+    // we build a minimal AST directly using the verifyGovernance function.
+    const ast = {
+      kind: "program",
+      children: [
+        {
+          kind: "flowDecl",
+          value: "createAdmin",
+          children: [
+            { kind: "identifier", value: "qualifier:privileged" },
+            { kind: "typeRef", value: "Void" },
+            { kind: "block", children: [] },
+          ],
+        },
+      ],
+    };
+    const flows = [
+      {
+        name: "createAdmin",
+        qualifier: "flow",
+        params: [],
+        returnType: "Void",
+        declaredEffects: [],
+        location: { file: "test.lln", line: 1, column: 1 },
+      },
+    ];
+    const result = verifyGovernance(ast, flows, [], "dev");
+    assert.ok(
+      result.diagnostics.some((d) => d.code === "LLN-GOV-009"),
+      "Expected LLN-GOV-009 for privileged flow with no effects or contract",
+    );
+    const diag = result.diagnostics.find((d) => d.code === "LLN-GOV-009");
+    assert.equal(diag.severity, "warning");
+  });
+
+  it("LLN-GOV-009 constant has correct code and name", () => {
+    assert.equal(LLN_GOV_009.code, "LLN-GOV-009");
+    assert.equal(LLN_GOV_009.name, "PrivilegedFlowMissingCapability");
+    assert.equal(LLN_GOV_009.severity, "warning");
+  });
+});
+
+// =============================================================================
+// GOV-003 accuracy — no false positive when field is in redact() call
+// =============================================================================
+
+describe("Governance verifier — GOV-003 accuracy with redact()", () => {
+  it("does not emit LLN-GOV-003 when denied field is wrapped in redact() call", () => {
+    const result = parseAndVerify(`
+flow getPatient(readonly request: Request) -> GetPatientResult
+contract {
+  types {
+    type GetPatientResult = Result<Response, ApiError>
+  }
+  response {
+    returns PatientResponse
+    denies { email }
+  }
+  effects { database.read }
+}
+{
+  let patient = PatientsDB.find(request.params.id)?
+  return Ok(Response.ok({ patientId: patient.id, email: redact(patient.email) }))
+}
+`);
+    assert.ok(!hasDiag(result, "LLN-GOV-003"), "Unexpected LLN-GOV-003 when email is wrapped in redact()");
   });
 });

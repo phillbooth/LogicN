@@ -2,6 +2,7 @@
 /// level: 9
 /// concept: handling HIPAA PHI without declaring the phi.read effect
 /// expected_diagnostics: LLN-PHI-001
+/// test_status: draft
 /// ai_rule: Declare effects [phi.read] on every flow that accesses HIPAA Protected Health Information.
 
 // Missing: with effects [phi.read, ...]

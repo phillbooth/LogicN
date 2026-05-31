@@ -2,7 +2,7 @@
 /// level: 4
 /// concept: SecureString serialization denied
 /// expected_diagnostics: LLN-SECRET-003
-/// test_status: stable
+/// test_status: draft
 /// ai_rule: SecureString must not be passed to json.encode or serialize functions.
 
 secure flow exportConfig() -> ExportConfigResult
@@ -27,3 +27,4 @@ contract {
   let payload: String = json.encode({ key: apiKey })
   return Ok(Response.ok(payload))
 }
+

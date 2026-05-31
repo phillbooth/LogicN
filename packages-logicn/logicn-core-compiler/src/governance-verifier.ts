@@ -10,7 +10,10 @@
 //   LLN-GOV-002      MISSING_AUDIT_FOR_GOVERNED_SINK
 //   LLN-GOV-003      PROTECTED_DATA_IN_RESPONSE          (Phase 10C)
 //   LLN-GOV-004      DENIED_TARGET_SELECTED
+//   LLN-GOV-005      POLICY_PURPOSE_MISMATCH
+//   LLN-GOV-007      AUTHORITY_BLOCK_MISSING_REASON
 //   LLN-GOV-008      EXPERIMENTAL_CODE_IN_PRODUCTION_PROFILE
+//   LLN-GOV-009      PRIVILEGED_FLOW_MISSING_CAPABILITY
 //   LLN-GOV-010      INTENT_MISSING_ON_SECURE_FLOW
 //   LLN-GOV-011      UnknownContractSet
 //   LLN-GOV-012      ContractSetRequirementNotMet
@@ -19,10 +22,7 @@
 //
 // Deferred (require expression type inference or runtime evidence):
 //   LLN-GOV-001  INTENT_BEHAVIOR_MISMATCH
-//   LLN-GOV-005  POLICY_PURPOSE_MISMATCH
 //   LLN-GOV-006  GOVERNANCE_PROOF_REQUIRED_BUT_MISSING
-//   LLN-GOV-007  AUTHORITY_BLOCK_MISSING_REASON
-//   LLN-GOV-009  PRIVILEGED_FLOW_MISSING_CAPABILITY
 // =============================================================================
 
 import { type AstNode, type AstNodeKind, type FlowMeta, type SourceLocation } from "./parser.js";
@@ -172,6 +172,106 @@ export const LLN_GOV_012 = {
   severity: "warning" as const,
   message: "Contract set requires audit.write but the flow does not declare it.",
 } as const;
+
+/** LLN-GOV-005: policy { purpose "read-only" } but flow also uses database.write (or similar). */
+export const LLN_GOV_005 = {
+  code: "LLN-GOV-005",
+  name: "PolicyPurposeMismatch",
+  severity: "warning" as const,
+  message: "Policy purpose contradicts declared effects.",
+} as const;
+
+/** LLN-GOV-007: authority block exists but has no reason clause. */
+export const LLN_GOV_007 = {
+  code: "LLN-GOV-007",
+  name: "AuthorityBlockMissingReason",
+  severity: "error" as const,
+  message: `Authority block must include a reason declaration. Add: reason "Explain why this authority is needed"`,
+} as const;
+
+/** LLN-GOV-009: privileged flow declares no effects or capabilities. */
+export const LLN_GOV_009 = {
+  code: "LLN-GOV-009",
+  name: "PrivilegedFlowMissingCapability",
+  severity: "warning" as const,
+  message: "Privileged flow declares no effects or capabilities. Privileged flows should explicitly declare what authority they require.",
+} as const;
+
+// ---------------------------------------------------------------------------
+// LLN-GOV-005 helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Purpose-to-denied-effects mapping.
+ * "read-only" declares only read access, so database.write is contradictory.
+ * "internal" declares no external traffic, so network.outbound is contradictory.
+ */
+const PURPOSE_DENIED_EFFECTS: ReadonlyMap<string, readonly string[]> = new Map([
+  ["read-only", ["database.write"]],
+  ["internal",  ["network.outbound"]],
+]);
+
+/**
+ * Extracts all policy block purpose values from a flow node.
+ * policy { purpose "read-only" } is stored as policyDecl with an
+ * identifier child { value: "purpose:read-only" }.
+ */
+function extractPolicyPurposes(flowNode: AstNode): string[] {
+  const purposes: string[] = [];
+  for (const child of flowNode.children ?? []) {
+    if (child.kind === "policyDecl") {
+      for (const clause of child.children ?? []) {
+        if (clause.kind === "identifier" && clause.value?.startsWith("purpose:")) {
+          purposes.push(clause.value.slice("purpose:".length));
+        }
+      }
+    }
+  }
+  return purposes;
+}
+
+// ---------------------------------------------------------------------------
+// LLN-GOV-007 helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns all authorityDecl nodes in the flow (or anywhere under the root).
+ * The parser stores a reason clause as a stringLiteral child of authorityDecl.
+ * If no stringLiteral child exists the reason is missing.
+ */
+function hasAuthorityReason(authorityNode: AstNode): boolean {
+  // The parser stores: children.push({ kind: "stringLiteral", value: reasonText })
+  // An identifier child with value starting "reason:" would also indicate reason.
+  return (authorityNode.children ?? []).some(
+    (c) =>
+      c.kind === "stringLiteral" ||
+      (c.kind === "identifier" && c.value?.startsWith("reason:")),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// LLN-GOV-009 helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true when a flow node has qualifier "privileged".
+ * Because the parser does not yet emit a dedicated privilegedFlowDecl kind,
+ * we detect it by looking for an identifier child with value "qualifier:privileged"
+ * (injected by the flow body parser when it encounters the privileged keyword)
+ * OR by checking if the flow node's value starts with "privileged:".
+ */
+function isPrivilegedFlow(flowNode: AstNode, flow: FlowMeta): boolean {
+  // Primary signal: flow qualifier encoded in the value field
+  if ((flowNode.value ?? "").startsWith("privileged:")) return true;
+  // Secondary: any identifier child that encodes the qualifier
+  if ((flowNode.children ?? []).some(
+    (c) => c.kind === "identifier" && c.value === "qualifier:privileged",
+  )) return true;
+  // Tertiary: flow meta qualifier (parser currently uses "flow" for privileged flows,
+  // but we also accept a future FlowMeta extension)
+  if ((flow as { qualifier: string }).qualifier === "privileged") return true;
+  return false;
+}
 
 // ---------------------------------------------------------------------------
 // LLN-GOV-003 helpers
@@ -329,6 +429,21 @@ class GovernanceVerifier {
     for (const child of ast.children ?? []) {
       if (child.kind === "contractSetDecl" && child.value !== undefined) {
         this.knownContractSets.set(child.value, child);
+      }
+    }
+
+    // ── LLN-GOV-007: check top-level authority blocks for missing reason ──
+    for (const child of ast.children ?? []) {
+      if (child.kind === "authorityDecl" && !hasAuthorityReason(child)) {
+        this.diagnostics.push(makeGovDiag(
+          LLN_GOV_007.code,
+          LLN_GOV_007.name,
+          "error",
+          `Top-level authority block must include a reason declaration. ` +
+          `Add: reason "Explain why this authority is needed"`,
+          child.location,
+          `Add inside the authority block: reason "Explain why this authority is needed"`,
+        ));
       }
     }
 
@@ -517,6 +632,68 @@ class GovernanceVerifier {
             `Add: let ${field} = context.${field}`,
           ));
         }
+      }
+    }
+
+    // ── LLN-GOV-005: policy purpose mismatch ─────────────────────────────
+    // If a flow declares a policy block with purpose "read-only" but also
+    // declares database.write in its effects, emit a warning.
+    if (flowNode !== undefined) {
+      const purposes = extractPolicyPurposes(flowNode);
+      for (const purpose of purposes) {
+        const deniedEffects = PURPOSE_DENIED_EFFECTS.get(purpose) ?? [];
+        for (const deniedEffect of deniedEffects) {
+          const hasDeniedEffect = flow.declaredEffects.includes(deniedEffect);
+          if (hasDeniedEffect) {
+            this.diagnostics.push(makeGovDiag(
+              LLN_GOV_005.code,
+              LLN_GOV_005.name,
+              "warning",
+              `Flow '${flow.name}' declares purpose '${purpose}' but also uses ${deniedEffect} effect. ` +
+              `Verify the policy purpose matches actual behaviour.`,
+              loc,
+              `Remove ${deniedEffect} from effects, or update the policy purpose.`,
+            ));
+          }
+        }
+      }
+    }
+
+    // ── LLN-GOV-007: authority block missing reason ───────────────────────
+    // If an authority block exists but has no reason clause, emit an error.
+    if (flowNode !== undefined) {
+      const authorityNodes = findNodes(flowNode, "authorityDecl");
+      for (const authNode of authorityNodes) {
+        if (!hasAuthorityReason(authNode)) {
+          this.diagnostics.push(makeGovDiag(
+            LLN_GOV_007.code,
+            LLN_GOV_007.name,
+            "error",
+            `Authority block in flow '${flow.name}' must include a reason declaration. ` +
+            `Add: reason "Explain why this authority is needed"`,
+            authNode.location ?? loc,
+            `Add inside the authority block: reason "Explain why this authority is needed"`,
+          ));
+        }
+      }
+    }
+
+    // ── LLN-GOV-009: privileged flow without capability ───────────────────
+    // If a flow has qualifier "privileged" but declares no effects or contract,
+    // emit a warning.
+    if (flowNode !== undefined && isPrivilegedFlow(flowNode, flow)) {
+      const hasEffects = flow.declaredEffects.length > 0;
+      const hasContract = (flowNode.children ?? []).some((c) => c.kind === "contractDecl");
+      if (!hasEffects && !hasContract) {
+        this.diagnostics.push(makeGovDiag(
+          LLN_GOV_009.code,
+          LLN_GOV_009.name,
+          "warning",
+          `Privileged flow '${flow.name}' declares no effects or capabilities. ` +
+          `Privileged flows should explicitly declare what authority they require.`,
+          loc,
+          `Add a contract or effects declaration: contract { effects { privileged.action } }`,
+        ));
       }
     }
 

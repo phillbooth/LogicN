@@ -2,6 +2,7 @@
 /// level: 1
 /// concept: guarded flow
 /// expected_diagnostics: none
+/// test_status: draft
 /// ai_rule: Use guarded flow when the flow performs declared effects.
 
 guarded flow fetchRate(currency: CurrencyCode) -> FetchRateResult

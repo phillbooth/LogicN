@@ -1,5 +1,10 @@
 # Governed Streams
 
+## Status
+
+Status: Future — This feature is not yet implemented in Stage A (Phase 1-15).
+Planned for: Stage B
+
 ## Definition
 
 A **LogicN governed stream** is a typed, permission-controlled, budgeted, and auditable flow of data over time.

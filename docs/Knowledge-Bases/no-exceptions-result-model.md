@@ -1,5 +1,13 @@
 # No Exceptions — Result Model
 
+## Status
+
+```
+Status: Active — language invariant
+Scope:  Result<T, Error> return type, no throw/catch/panic
+See also: typed-error-model.md, error-propagation-chains.md, logicn-contract-errors.md
+```
+
 ## Definition
 
 LogicN does not use a hidden exception system. Every fallible operation is expressed as a `Result<T, Error>` return type. Failures are explicit, typed, and governed.
@@ -18,8 +26,13 @@ A flow that can fail must declare what it can return on success and on failure:
 ```logicn
 flow login(
   request: Login.post
-) -> Result<Login.response, AuthError>
+) -> LoginResult
   permission use auth_login
+contract {
+  types {
+    type LoginResult = Result<Login.response, AuthError>
+  }
+}
 {
   // body returns Ok(Login.response) or Err(AuthError.variant)
 }

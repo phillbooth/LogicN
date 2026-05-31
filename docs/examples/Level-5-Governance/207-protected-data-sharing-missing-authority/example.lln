@@ -1,4 +1,4 @@
-/// example: 207-protected-data-sharing-missing-authority
+﻿/// example: 207-protected-data-sharing-missing-authority
 /// test_status: draft
 /// level: 5
 /// concept: sending protected data externally without authority block
@@ -12,10 +12,10 @@ contract {
     type SendReferralResult = Result<ReferralId, ReferralError>
   }
 
-  // Security intent: BUG — protected patient data is sent externally without an authority block.
+  // Security intent: BUG â€” protected patient data is sent externally without an authority block.
   // LLN-GOV-003 fires because no authority block grants permission for external protected data sharing.
   intent {
-    "Send a patient referral — BUG: missing authority block for external protected data sharing."
+    "Send a patient referral â€” BUG: missing authority block for external protected data sharing."
   }
 
   effects {
