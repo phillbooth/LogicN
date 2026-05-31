@@ -2,11 +2,28 @@
 /// level: 3
 /// concept: comprehensive effects example showing all patterns
 /// expected_diagnostics: none
-/// ai_rule: Declare every effect used. pure = no effects. guarded/secure = explicit effect list.
+/// ai_rule: Declare every effect used. pure = no effects. guarded/secure = explicit effect list in contract.
 /// test_status: stable
 
-secure flow processOrder(request: Request) -> Result<OrderId, ProcessError>
-  with effects [database.write, network.outbound, audit.write]
+secure flow processOrder(request: Request) -> ProcessOrderResult
+
+contract {
+  types {
+    type ProcessOrderResult = Result<OrderId, ProcessError>
+  }
+
+  intent {
+    // Security intent: validate all PII from the HTTP boundary before any write.
+    // Rate is fetched externally (network.outbound). Full audit trail is mandatory.
+    "Process an order from a validated HTTP request, fetch the GBP rate, persist, and audit."
+  }
+
+  effects {
+    database.write
+    network.outbound
+    audit.write
+  }
+}
 {
   unsafe let rawEmail: String = request.body.email
   unsafe let rawOrderId: String = request.body.orderId

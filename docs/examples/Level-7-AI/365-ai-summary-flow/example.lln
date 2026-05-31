@@ -8,12 +8,20 @@
 secure flow scoreHealthRisk(readonly request: Request) -> ScoreHealthRiskResult
 
 contract {
+  // Result alias — full AI governance: protected PII, compute target, deny, audit, redact
   types {
     type ScoreHealthRiskResult = Result<Response, AiError>
   }
+
+  intent {
+    "Score patient health risk on local hardware without remote execution"
+  }
+
+  effects {
+    ai.inference
+    audit.write
+  }
 }
-  with effects [ai.inference, audit.write]
-  intent "Score patient health risk on local hardware without remote execution"
 {
   compute target best { prefer [npu, gpu, cpu] fallback cpu deny [remote.execution] }
 

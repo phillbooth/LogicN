@@ -1,0 +1,139 @@
+/// @milestone: Stage-B-Root-Capability
+/// @description: The LogicN compiler declares its own capabilities in LogicN source.
+/// This is the governance-first principle applied to the compiler itself.
+/// The compiler is the first LogicN program to govern itself.
+
+// =============================================================================
+// Compiler Capability Contract
+//
+// The LogicN compiler must declare every capability it uses — exactly as user
+// programs must. No special exemptions. No hidden authority.
+//
+// COMPILER capabilities:
+//   filesystem.read        — read source files and manifests
+//   filesystem.write       — write compiled artefacts to disk
+//   package.read           — resolve package manifests
+//   manifest.read          — read project configuration
+//   report.write           — emit compiler diagnostics
+//   compiler.graph.read    — read the compiler's own semantic graph
+//   compiler.graph.write   — write to the compiler's semantic graph
+//
+// DENIED capabilities (compiler must never touch these):
+//   network.read           — no fetching during compilation
+//   network.write          — no outbound network calls
+//   database.read          — no database access
+//   database.write         — no database mutations
+//   secret.read            — no secret material access
+//   email.send             — no messaging
+//   payment.process        — no financial operations
+// =============================================================================
+
+contract set CompilerCapabilities {
+  rules {
+    require filesystem.read before source.parse
+    require filesystem.write before artefact.emit
+    require report.write before diagnostics.emit
+    require compiler.graph.read before graph.query
+    require compiler.graph.write before graph.update
+    deny network.read
+    deny network.write
+    deny database.read
+    deny database.write
+    deny secret.read
+    deny email.send
+    deny payment.process
+  }
+
+  audit {
+    require audit.write
+  }
+}
+
+// =============================================================================
+// Compiler Phase Flows
+// =============================================================================
+
+pure flow lexSource(source: String) -> LexResult
+contract {
+  intent { "Tokenise LogicN source text. No external capabilities required." }
+  effects {}
+  use CompilerCapabilities
+}
+{
+  // Pure tokenisation — reads only the source string passed in.
+  // No filesystem access needed; source was already loaded by the pipeline.
+}
+
+guarded flow loadSource(path: String) -> SourceText
+contract {
+  intent { "Load a LogicN source file from the filesystem for compilation." }
+  effects { filesystem.read }
+  use CompilerCapabilities
+}
+{
+  // Reads one source file per pipeline invocation.
+}
+
+guarded flow parseTokens(tokens: Array<Token>) -> ParseResult
+contract {
+  intent { "Build AST from token stream. Reads source spans only." }
+  effects {}
+  use CompilerCapabilities
+}
+{
+  // Pure transformation from token stream to AST.
+  // All necessary data was passed in via the token array.
+}
+
+guarded flow resolvePackage(manifest: ManifestPath) -> PackageGraph
+contract {
+  intent { "Resolve the package dependency graph from the project manifest." }
+  effects { package.read, manifest.read }
+  use CompilerCapabilities
+}
+{
+  // Reads manifests to build the dependency graph.
+  // Network access is denied — only local package cache is available.
+}
+
+guarded flow typeCheck(ast: AST) -> TypeCheckResult
+contract {
+  intent { "Type-check the AST. Reads compiler graph for type information." }
+  effects { compiler.graph.read }
+  use CompilerCapabilities
+}
+{
+  // Consults the compiler's type graph.
+  // No side effects beyond reading the in-memory graph.
+}
+
+guarded flow emitDiagnostics(results: Array<DiagnosticResult>) -> Unit
+contract {
+  intent { "Emit compiler diagnostics to the report sink." }
+  effects { report.write }
+  use CompilerCapabilities
+}
+{
+  // Writes diagnostic output to the configured report sink.
+}
+
+guarded flow emitArtefacts(gir: GIRProgram) -> EmitResult
+contract {
+  intent { "Write compiled output to filesystem." }
+  effects { filesystem.write }
+  use CompilerCapabilities
+}
+{
+  // Writes compiled artefacts to disk.
+  // Only the output directory declared in the project manifest may be written.
+}
+
+guarded flow updateCompilerGraph(gir: GIRProgram) -> Unit
+contract {
+  intent { "Update the compiler's semantic graph after a successful compilation." }
+  effects { compiler.graph.write }
+  use CompilerCapabilities
+}
+{
+  // Persists updated semantic graph entries from the current compilation unit.
+}

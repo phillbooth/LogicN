@@ -952,7 +952,8 @@ describe("Type checker — LLN-TYPE-003 branded type enforcement (Phase 9A-2)", 
 type CustomerId = Brand<String, "CustomerId">
 
 secure flow createOrder(readonly request: Request) -> String
-with effects [database.write] {
+contract { effects { database.write } }
+{
   unsafe let id: CustomerId = request.body.id
   return "ok"
 }
@@ -1013,7 +1014,8 @@ type CustomerId = Brand<String, "CustomerId">
 type Email = Brand<String, "Email">
 
 secure flow test(readonly request: Request) -> String
-with effects [database.write] {
+contract { effects { database.write } }
+{
   unsafe let id: CustomerId = request.body.id
   unsafe let email: Email = request.body.email
   return "ok"
@@ -1028,7 +1030,8 @@ with effects [database.write] {
 type CustomerId = Brand<String, "CustomerId">
 
 secure flow test(readonly request: Request) -> String
-with effects [database.write] {
+contract { effects { database.write } }
+{
   unsafe let id: CustomerId = request.body.id
   return "ok"
 }
@@ -1077,7 +1080,8 @@ describe("Type checker — Phase 11A.3 member access inference", () => {
 type Email = Brand<String, "Email">
 
 secure flow test(readonly request: Request) -> String
-with effects [database.write] {
+contract { effects { database.write } }
+{
   unsafe let rawEmail: String = request.body.email
   let email: Email = rawEmail
   return "ok"

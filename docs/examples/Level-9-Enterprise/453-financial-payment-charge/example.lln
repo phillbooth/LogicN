@@ -8,12 +8,20 @@
 guarded flow chargePayment(request: PaymentRequest) -> ChargePaymentResult
 
 contract {
+  // Result alias — payment.charge and audit.write required on all payment flows
   types {
     type ChargePaymentResult = Result<Receipt, PaymentError>
   }
+
+  intent {
+    "Process card payment for approved merchant"
+  }
+
+  effects {
+    payment.charge
+    audit.write
+  }
 }
-  with effects [payment.charge, audit.write]
-  intent "Process card payment for approved merchant"
 {
   let amount: Money<GBP> = validate.money(request.amount)?
   let merchantId: protected MerchantId = validate.merchantId(request.merchantId)?

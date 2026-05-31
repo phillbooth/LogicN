@@ -122,10 +122,17 @@ Audit:          sign runtime report                  (at flow completion)
 At the source level, the developer writes:
 
 ```logicn
-secure flow createPatient(readonly request: Request)
--> Result<Response, ApiError>
-with effects [database.write, audit.write] {
-
+secure flow createPatient(readonly request: Request) -> CreatePatientResult
+contract {
+  types {
+    type CreatePatientResult = Result<Response, ApiError>
+  }
+  effects {
+    database.write
+    audit.write
+  }
+}
+{
   unsafe let rawEmail: String = request.body.email
   let email: protected Email = validate.email(rawEmail)?
 

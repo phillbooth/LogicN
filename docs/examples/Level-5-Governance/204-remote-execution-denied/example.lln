@@ -11,9 +11,16 @@ contract {
   types {
     type RunFraudModelResult = Result<FraudScore, FraudError>
   }
+
+  intent {
+    "Score a transaction for fraud risk — execution is restricted to local hardware only."
+  }
+
+  effects {
+    database.write
+    audit.write
+  }
 }
-  with effects [database.write, audit.write]
-  intent "Score a transaction for fraud risk"
   compute target best {
     prefer [npu, gpu, cpu]
     deny [remote.execution]

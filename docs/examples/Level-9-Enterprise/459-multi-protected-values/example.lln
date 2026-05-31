@@ -8,12 +8,22 @@
 secure flow updateContactDetails(readonly request: Request) -> UpdateContactDetailsResult
 
 contract {
+  // Result alias — each PII type validated and redacted independently in audit
   types {
     type UpdateContactDetailsResult = Result<Response, PatientError>
   }
+
+  intent {
+    "Update patient contact details"
+  }
+
+  effects {
+    pii.read
+    pii.write
+    database.write
+    audit.write
+  }
 }
-  with effects [pii.read, pii.write, database.write, audit.write]
-  intent "Update patient contact details"
 {
   unsafe let rawEmail: String = request.body.email
   unsafe let rawNhs: String = request.body.nhsNumber

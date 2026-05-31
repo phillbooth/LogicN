@@ -8,11 +8,20 @@
 secure flow runRegulated(input: Tensor<Float32, [1, 128]>) -> RunRegulatedResult
 
 contract {
+  // Result alias — deterministic runtime guarantees identical execution planning for compliance
   types {
     type RunRegulatedResult = Result<Tensor<Float32, [1, 64]>, AiError>
   }
+
+  intent {
+    "Run regulated inference with deterministic execution planning for compliance environments."
+  }
+
+  effects {
+    ai.inference
+    audit.write
+  }
 }
-  with effects [ai.inference, audit.write]
 {
   runtime deterministic
 

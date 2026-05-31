@@ -5,6 +5,13 @@
 /// test_status: stable
 /// ai_rule: readonly parameters cannot be reassigned inside the flow.
 
-pure flow greet(readonly name: String) -> String {
+pure flow greet(readonly name: String) -> String
+
+contract {
+  intent {
+    "Return a greeting string for the given name, without modifying the input."
+  }
+}
+{
   return "Hello " + name
 }

@@ -28,3 +28,20 @@ export type {
   CallGraph,
   CallNodeData,
 } from "./graphs/call-graph.js";
+
+// Phase 13 — Semantic Graph System
+export {
+  SemanticGraphBuilder,
+  reachable,
+  callers,
+  effectsOf,
+  graphToJSON,
+  graphFromJSON,
+} from "./semantic/SemanticGraph.js";
+export type {
+  SemanticGraph,
+  SemanticNode,
+  SemanticEdge,
+  SemanticNodeKind,
+  SemanticEdgeKind,
+} from "./semantic/SemanticGraph.js";

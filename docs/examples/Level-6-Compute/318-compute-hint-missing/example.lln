@@ -8,11 +8,20 @@
 guarded flow classifyText(text: String) -> ClassifyTextResult
 
 contract {
+  // Result alias — missing compute target triggers LLN-HINT-COMPUTE-001
   types {
     type ClassifyTextResult = Result<String, AiError>
   }
+
+  intent {
+    "Classify text using AI inference — BUG: no compute target declared, triggering LLN-HINT-COMPUTE-001."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-with effects [ai.inference] {
+{
   let label = ClassifierModel.classify(text)?
   return Ok(label)
 }

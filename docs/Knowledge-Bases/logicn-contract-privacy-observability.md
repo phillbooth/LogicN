@@ -200,9 +200,13 @@ observability {
 
 ```logicn
 secure flow getPatient(readonly request: Request)
--> Result<PatientProfileResponse, ApiError>
+-> GetPatientResult
 
 contract {
+
+  types {
+    type GetPatientResult = Result<PatientProfileResponse, ApiError>
+  }
 
   intent {
     "Retrieve a patient profile by ID for an authenticated clinical actor."

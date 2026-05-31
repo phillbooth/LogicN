@@ -458,6 +458,28 @@ class Parser {
     this.skipNewlines();
     const body = this.parseBlock();
 
+    // If no inline effects were declared, check the contract block's effects sub-section.
+    // (canonical contract style: `contract { effects { database.write audit.write } }`)
+    // parseContractSubBlock("effects") returns:
+    //   { kind: "identifier", value: "effects:block", children: [{ value: "effect:<name>" }...] }
+    // when braces are present, or "effects:" (no-brace) when absent.
+    if (effectNames.length === 0) {
+      for (const clause of flowClauses) {
+        if (clause.kind !== "contractDecl") continue;
+        const effectsSubBlock = (clause.children ?? []).find(
+          (c) => c.kind === "identifier" && typeof c.value === "string" &&
+            (c.value === "effects:block" || c.value === "effects:"),
+        );
+        if (effectsSubBlock !== undefined) {
+          for (const effectChild of effectsSubBlock.children ?? []) {
+            if (effectChild.kind === "identifier" && typeof effectChild.value === "string" && effectChild.value.startsWith("effect:")) {
+              effectNames.push(effectChild.value.slice("effect:".length));
+            }
+          }
+        }
+      }
+    }
+
     // Extract metadata
     const meta: FlowMeta = {
       name,

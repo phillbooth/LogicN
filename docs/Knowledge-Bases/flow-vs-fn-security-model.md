@@ -175,8 +175,16 @@ pure flow calculateTotal(prices: List<Money<GBP>>) -> Money<GBP> {
 Correct effect use through containing flow, from CEC example 110:
 
 ```logicn
-guarded flow syncOrders(orders: List<Order>) -> Result<Unit, SyncError>
-  with effects [network.outbound, database.write]
+guarded flow syncOrders(orders: List<Order>) -> SyncOrdersResult
+contract {
+  types {
+    type SyncOrdersResult = Result<Unit, SyncError>
+  }
+  effects {
+    network.outbound
+    database.write
+  }
+}
 {
   fn fetchRate(currency: String) -> Result<Decimal, RateError> {
     unsafe let rawResponse = http.get("https://rates.example.com/" + currency)?
@@ -192,8 +200,15 @@ Invalid: local `fn` observes an effect not declared by the parent flow, from CEC
 example 111:
 
 ```logicn
-guarded flow saveOrderOnly(order: Order) -> Result<Unit, SaveError>
-  with effects [database.write]
+guarded flow saveOrderOnly(order: Order) -> SaveOrderOnlyResult
+contract {
+  types {
+    type SaveOrderOnlyResult = Result<Unit, SaveError>
+  }
+  effects {
+    database.write
+  }
+}
 {
   fn fetchRate(currency: String) -> Result<Decimal, RateError> {
     unsafe let rawResponse = http.get("https://rates.example.com/" + currency)?
@@ -207,8 +222,15 @@ guarded flow saveOrderOnly(order: Order) -> Result<Unit, SaveError>
 Invalid: local `fn` declares its own effects, from CEC example 112:
 
 ```logicn
-guarded flow processOrder(order: Order) -> Result<Unit, ProcessError>
-  with effects [database.write]
+guarded flow processOrder(order: Order) -> ProcessOrderResult
+contract {
+  types {
+    type ProcessOrderResult = Result<Unit, ProcessError>
+  }
+  effects {
+    database.write
+  }
+}
 {
   fn save(o: Order) -> Result<Unit, SaveError>
     with effects [database.write]

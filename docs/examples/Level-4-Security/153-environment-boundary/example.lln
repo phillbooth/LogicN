@@ -5,8 +5,24 @@
 /// ai_rule: Environment values are unsafe. Treat them as untrusted external input.
 /// test_status: stable
 
-guarded flow connectToApi() -> Result<ApiClient, ConfigError>
-  with effects [network.outbound, secret.read]
+guarded flow connectToApi() -> ConnectToApiResult
+
+contract {
+  // Security intent: environment variables are an external trust boundary.
+  // Declare secret.read when reading sensitive env vars like API keys.
+  types {
+    type ConnectToApiResult = Result<ApiClient, ConfigError>
+  }
+
+  intent {
+    "Connect to an external API using a secret key read from the environment."
+  }
+
+  effects {
+    network.outbound
+    secret.read
+  }
+}
 {
   unsafe let apiKey: String = Env.get("API_KEY")?
   return Ok(ApiClient.connect(apiKey)?)

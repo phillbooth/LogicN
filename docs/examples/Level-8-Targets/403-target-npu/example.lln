@@ -8,11 +8,19 @@
 guarded flow runOnNpu(input: Tensor<Float32, [1, 768]>) -> RunOnNpuResult
 
 contract {
+  // Result alias — npu target with gpu fallback for edge inference performance
   types {
     type RunOnNpuResult = Result<Tensor<Float32, [1, 256]>, AiError>
   }
+
+  intent {
+    "Run edge inference on NPU with GPU fallback for on-device performance."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
 {
   compute target npu { fallback gpu }
   return ProjectionModel.forward(input)?

@@ -6,7 +6,19 @@
 /// ai_rule: Use DynamicShape when batch size or sequence length varies at runtime.
 
 guarded flow runModel(input: Tensor<Float32, DynamicShape>) -> Tensor<Float32, DynamicShape>
-  with effects [ai.inference]
+
+contract {
+  // No result alias needed — return type is a concrete tensor, not a Result
+  // Effects declared here so the contract is self-describing
+
+  intent {
+    "Run forward inference on a dynamically shaped input tensor."
+  }
+
+  effects {
+    ai.inference
+  }
+}
 {
   return InferenceModel.forward(input)?
 }

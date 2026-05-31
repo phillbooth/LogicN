@@ -8,11 +8,19 @@
 guarded flow runOnCpu(input: Tensor<Float32, [1, 128]>) -> RunOnCpuResult
 
 contract {
+  // Result alias — explicit cpu target for deterministic single-threaded execution
   types {
     type RunOnCpuResult = Result<Tensor<Float32, [1, 64]>, AiError>
   }
+
+  intent {
+    "Run model inference on CPU for deterministic single-threaded execution."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
 {
   compute target cpu { fallback cpu }
   return SmallModel.forward(input)?

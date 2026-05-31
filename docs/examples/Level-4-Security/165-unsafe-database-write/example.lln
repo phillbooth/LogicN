@@ -6,7 +6,18 @@
 /// test_status: stable
 
 secure flow example(readonly request: Request) -> Void
-  with effects [database.write]
+
+contract {
+  // Security intent: database sinks are governed — unsafe values cannot reach them.
+  // This example deliberately violates that to demonstrate LLN-VALUESTATE-003.
+  intent {
+    "BUG: demonstrates passing an unsafe value directly to a database sink without validation."
+  }
+
+  effects {
+    database.write
+  }
+}
 {
   unsafe let rawEmail: String = request.body.email
   PatientsDB.insert({ email: rawEmail })

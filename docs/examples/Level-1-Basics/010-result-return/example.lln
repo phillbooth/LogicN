@@ -5,6 +5,17 @@
 /// test_status: stable
 /// ai_rule: Use Result<T, E> for fallible operations instead of exceptions.
 
-pure flow parseAge(value: String) -> Result<Int, ParseError> {
+pure flow parseAge(value: String) -> ParseAgeResult
+
+contract {
+  types {
+    type ParseAgeResult = Result<Int, ParseError>
+  }
+
+  intent {
+    "Parse a raw string into an integer age, returning a typed error on failure."
+  }
+}
+{
   return Int.parse(value)
 }

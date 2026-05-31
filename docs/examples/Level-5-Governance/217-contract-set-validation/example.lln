@@ -28,9 +28,13 @@ contract {
   }
   use ValidPatientSet
   intent { "Create a patient record protecting PII." }
-}
 
-with effects [database.write, audit.write] {
+  effects {
+    database.write
+    audit.write
+  }
+}
+{
   unsafe let raw: String = request.body.email
   let email: protected Email = validate.email(raw)?
   let saved = PatientsDB.insert({ email: email })?
@@ -48,8 +52,11 @@ contract {
   }
   use NonExistentSet
   intent { "Buggy flow — contract set does not exist." }
-}
 
-with effects [database.write] {
+  effects {
+    database.write
+  }
+}
+{
   return Ok(Response.ok("{}"))
 }

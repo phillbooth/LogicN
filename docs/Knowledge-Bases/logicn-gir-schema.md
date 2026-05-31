@@ -65,13 +65,23 @@ flow:
 Source:
 
 ```logicn
-secure flow runFraudModel(input: FraudInput) -> Result<FraudScore, FraudError>
-  with effects [database.write, audit.write]
-  intent "Score a payment transaction for fraud risk on approved hardware"
-  compute target best {
-    prefer [npu, gpu, cpu]
-    deny [remote.execution]
+secure flow runFraudModel(input: FraudInput) -> RunFraudModelResult
+contract {
+  types {
+    type RunFraudModelResult = Result<FraudScore, FraudError>
   }
+  intent {
+    "Score a payment transaction for fraud risk on approved hardware"
+  }
+  effects {
+    database.write
+    audit.write
+  }
+}
+compute target best {
+  prefer [npu, gpu, cpu]
+  deny [remote.execution]
+}
 {
   let score = FraudModel.score(input)
   let id = FraudScoreDB.insert({ input: input, score: score })?

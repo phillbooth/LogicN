@@ -11,9 +11,18 @@ contract {
   types {
     type DeletePatientResult = Result<Unit, DeleteError>
   }
+
+  // Security intent: BUG — intent claims "full audit trail" but audit.write is not declared,
+  // and AuditLog.write is never called. LLN-GOV-002 fires.
+  intent {
+    "Delete a patient record with full audit trail — BUG: audit.write is missing from effects."
+  }
+
+  effects {
+    database.write
+    // BUG: audit.write is missing — LLN-GOV-002 fires because intent requires audit evidence
+  }
 }
-  with effects [database.write]
-  intent "Delete a patient record with full audit trail"
 {
   PatientDB.delete(patientId)?
   return Ok(unit)

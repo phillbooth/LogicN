@@ -5,8 +5,36 @@
 /// ai_rule: Full security pattern: trust boundaries, validation gates, protected types, redaction, safe sinks.
 /// test_status: stable
 
-secure flow createPatient(request: Request) -> Result<PatientId, PatientError>
-  with effects [database.write, network.outbound, audit.write, secret.read]
+secure flow createPatient(request: Request) -> CreatePatientResult
+
+contract {
+  // Security intent: comprehensive pattern combining all security primitives —
+  // trust boundary (unsafe let), validation gates, protected types, redaction,
+  // network notification of protected data, and mandatory audit trail.
+  types {
+    type CreatePatientResult = Result<PatientId, PatientError>
+  }
+
+  intent {
+    "Full security pattern: validate PII at the trust boundary, write to DB, notify externally, audit with redacted values."
+  }
+
+  request {
+    body {
+      email: unsafe String
+      nhsNumber: unsafe String
+      patientId: unsafe String
+      // Parser note: body sub-block parsed generically, enforcement pending
+    }
+  }
+
+  effects {
+    database.write
+    network.outbound
+    audit.write
+    secret.read
+  }
+}
 {
   unsafe let rawEmail: String = request.body.email
   unsafe let rawNhsNumber: String = request.body.nhsNumber

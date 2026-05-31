@@ -541,7 +541,8 @@ contract {
     }
   }
 }
-with effects [database.write] {
+contract { effects { database.write } }
+{
   return Ok(Response.ok("done"))
 }
 `);
@@ -567,7 +568,8 @@ contract {
     }
   }
 }
-with effects [database.write] {
+contract { effects { database.write } }
+{
   return Ok(Response.ok("done"))
 }
 `);
@@ -586,7 +588,8 @@ contract {
     deadline 5 seconds
   }
 }
-with effects [database.write] {
+contract { effects { database.write } }
+{
   return Ok(Response.ok("done"))
 }
 `);
@@ -605,7 +608,8 @@ contract {
     read 10 seconds
   }
 }
-with effects [network.outbound] {
+contract { effects { network.outbound } }
+{
   return Ok(Response.ok("done"))
 }
 `);
@@ -626,7 +630,8 @@ contract {
     }
   }
 }
-with effects [network.outbound] {
+contract { effects { network.outbound } }
+{
   return Ok(Response.ok("done"))
 }
 `);
@@ -645,7 +650,8 @@ contract {
     on network.outbound
   }
 }
-with effects [network.outbound] {
+contract { effects { network.outbound } }
+{
   return Ok(Response.ok("done"))
 }
 `);
@@ -664,7 +670,8 @@ contract {
     max request size 5 MB
   }
 }
-with effects [database.write] {
+contract { effects { database.write } }
+{
   return Ok(Response.ok("done"))
 }
 `);
@@ -683,7 +690,8 @@ contract {
     rate 100 per minute
   }
 }
-with effects [database.write] {
+contract { effects { database.write } }
+{
   return Ok(Response.ok("done"))
 }
 `);
@@ -702,7 +710,8 @@ contract {
     contains PII
   }
 }
-with effects [pii.write, audit.write] {
+contract { effects { pii.write, audit.write } }
+{
   return Ok(Response.ok("done"))
 }
 `);
@@ -721,7 +730,8 @@ contract {
     retain 30 days
   }
 }
-with effects [pii.write, audit.write] {
+contract { effects { pii.write, audit.write } }
+{
   return Ok(Response.ok("done"))
 }
 `);
@@ -740,7 +750,8 @@ contract {
     trace flow
   }
 }
-with effects [database.write] {
+contract { effects { database.write } }
+{
   return Ok(Response.ok("done"))
 }
 `);
@@ -759,7 +770,8 @@ contract {
     log on error
   }
 }
-with effects [database.write] {
+contract { effects { database.write } }
+{
   return Ok(Response.ok("done"))
 }
 `);
@@ -816,7 +828,8 @@ contract {
   }
 }
 
-with effects [database.write, audit.write] {
+contract { effects { database.write, audit.write } }
+{
   return Ok(Response.created("order-id"))
 }
 `);
@@ -838,7 +851,8 @@ contract {
   }
 }
 
-with effects [database.write, audit.write] {
+contract { effects { database.write, audit.write } }
+{
   return Ok(Response.created("order-id"))
 }
 `);
@@ -854,7 +868,8 @@ contract {
   }
 }
 
-with effects [network.outbound, audit.write] {
+contract { effects { network.outbound, audit.write } }
+{
   return Ok(receipt)
 }
 `);

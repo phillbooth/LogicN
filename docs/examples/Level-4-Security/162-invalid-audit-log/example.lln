@@ -6,7 +6,18 @@
 /// test_status: stable
 
 secure flow example(readonly request: Request) -> Void
-  with effects [audit.write]
+
+contract {
+  // Security intent: unsafe values must never reach governed sinks.
+  // AuditLog is a governed sink — passing rawEmail triggers LLN-VALUESTATE-003.
+  intent {
+    "BUG: demonstrates passing an unsafe value directly to AuditLog without validation."
+  }
+
+  effects {
+    audit.write
+  }
+}
 {
   unsafe let rawEmail: String = request.body.email
   AuditLog.write({ email: rawEmail })

@@ -2,16 +2,25 @@
 /// level: 7
 /// concept: batch AI inference over an array of inputs
 /// expected_diagnostics: none
+/// test_status: draft
 /// ai_rule: Use Array.map with ? propagation to run batch inference and surface the first error.
 
 guarded flow batchClassify(texts: Array<String>) -> BatchClassifyResult
 
 contract {
+  // Result alias — Array.map with ? surfaces the first classification error
   types {
     type BatchClassifyResult = Result<Array<Label>, AiError>
   }
+
+  intent {
+    "Run batch AI classification over an array of text inputs."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
 {
   let labels = texts.map(t => ClassifierModel.classify(t))?
   return Ok(labels)

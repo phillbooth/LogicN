@@ -8,11 +8,20 @@
 secure flow scorePatientRisk(readonly request: Request) -> ScorePatientRiskResult
 
 contract {
+  // Result alias — protected values must be redacted before audit.write
   types {
     type ScorePatientRiskResult = Result<Response, AiError>
   }
+
+  intent {
+    "Score patient risk using an AI model and write a redacted audit entry."
+  }
+
+  effects {
+    ai.inference
+    audit.write
+  }
 }
-  with effects [ai.inference, audit.write]
 {
   unsafe let rawId: String = request.body.patientId
   let patientId: protected PatientId = validate.patientId(rawId)?

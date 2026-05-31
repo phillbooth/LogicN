@@ -8,12 +8,20 @@
 secure flow scoreCredit(readonly request: Request) -> ScoreCreditResult
 
 contract {
+  // Result alias — deny [remote.execution] keeps inference on-device
   types {
     type ScoreCreditResult = Result<Response, ApiError>
   }
+
+  intent {
+    "Score credit risk without remote execution"
+  }
+
+  effects {
+    ai.inference
+    audit.write
+  }
 }
-  with effects [ai.inference, audit.write]
-  intent "Score credit risk without remote execution"
 {
   compute target best { prefer [npu, gpu, cpu] deny [remote.execution] fallback cpu }
 

@@ -37,9 +37,12 @@ contract {
   intent {
     "Create a patient record while protecting NHS PII."
   }
-}
 
-with effects [database.write, audit.write]
+  effects {
+    database.write
+    audit.write
+  }
+}
 {
   unsafe let rawEmail: String = request.body.email
   let email: protected Email = validate.email(rawEmail)?

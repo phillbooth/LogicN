@@ -8,11 +8,19 @@
 guarded flow runQuantumSim(params: Tensor<Float32, [128]>) -> RunQuantumSimResult
 
 contract {
+  // Result alias — quantum → gpu enables GPU-accelerated quantum simulation
   types {
     type RunQuantumSimResult = Result<Tensor<Float32, [128]>, AiError>
   }
+
+  intent {
+    "Run quantum simulation with GPU-accelerated fallback for portability."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
 {
   compute target best { prefer [quantum, gpu, cpu] fallback cpu }
   return QuantumSimulator.run(params)?

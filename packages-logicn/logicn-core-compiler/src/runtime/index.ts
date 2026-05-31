@@ -60,3 +60,14 @@ export {
   type GovernedMemory,
   type GovernedValueTag,
 } from "./governedMemory.js";
+
+// Stage B — Root Capability Provider (Phase 14)
+export {
+  createRootCapabilityProvider,
+  COMPILER_MINIMUM_CAPABILITIES,
+  type RootCapabilityProvider,
+  type CompilerCapabilityHost,
+  type UserRuntimeCapabilities,
+  type CapabilityDomain,
+  type AuditLogEntry,
+} from "./rootCapabilityProvider.js";

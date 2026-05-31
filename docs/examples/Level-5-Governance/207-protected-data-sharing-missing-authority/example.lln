@@ -11,9 +11,18 @@ contract {
   types {
     type SendReferralResult = Result<ReferralId, ReferralError>
   }
+
+  // Security intent: BUG — protected patient data is sent externally without an authority block.
+  // LLN-GOV-003 fires because no authority block grants permission for external protected data sharing.
+  intent {
+    "Send a patient referral — BUG: missing authority block for external protected data sharing."
+  }
+
+  effects {
+    network.outbound
+    audit.write
+  }
 }
-  with effects [network.outbound, audit.write]
-  intent "Send a patient referral"
 {
   let referralId = http.post("https://specialist.example.nhs.uk/referrals", patient.referralPacket)?
   AuditLog.write({ action: "sendReferral", referralId: referralId })

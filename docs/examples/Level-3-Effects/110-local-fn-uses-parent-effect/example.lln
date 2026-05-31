@@ -5,8 +5,22 @@
 /// ai_rule: Local fn may use effects only when the containing flow declares them.
 /// test_status: stable
 
-guarded flow syncOrders(orders: List<Order>) -> Result<Unit, SyncError>
-  with effects [network.outbound, database.write]
+guarded flow syncOrders(orders: List<Order>) -> SyncOrdersResult
+
+contract {
+  types {
+    type SyncOrdersResult = Result<Unit, SyncError>
+  }
+
+  intent {
+    "Sync a batch of orders by fetching the rate externally and inserting into the database."
+  }
+
+  effects {
+    network.outbound
+    database.write
+  }
+}
 {
   fn fetchRate(currency: String) -> Result<Decimal, RateError> {
     unsafe let rawResponse = http.get("https://rates.example.com/" + currency)?

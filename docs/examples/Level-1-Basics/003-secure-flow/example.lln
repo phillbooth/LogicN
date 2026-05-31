@@ -7,8 +7,32 @@
 
 type Email = Brand<String, EmailAddress>
 
-secure flow createPatient(readonly request: Request) -> Result<Response, ApiError>
-effects [database.write, audit.write] {
+secure flow createPatient(readonly request: Request) -> CreatePatientResult
+
+contract {
+  types {
+    type CreatePatientResult = Result<Response, ApiError>
+  }
+
+  intent {
+    // Security intent: validate PII from the trust boundary before any database write.
+    // Redact protected email before audit logging to prevent sensitive data exposure.
+    "Create a patient record from a validated HTTP request, protecting all PII at the trust boundary."
+  }
+
+  request {
+    body {
+      email: unsafe String
+      // Parser note: body sub-block parsed generically, enforcement pending
+    }
+  }
+
+  effects {
+    database.write
+    audit.write
+  }
+}
+{
 
   unsafe let rawEmail: String =
     request.body.email

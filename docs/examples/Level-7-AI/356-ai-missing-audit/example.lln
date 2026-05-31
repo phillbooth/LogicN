@@ -8,12 +8,20 @@
 secure flow scorePatient(readonly patient: Patient) -> ScorePatientResult
 
 contract {
+  // Result alias — audit.write declared but AuditLog.write call is missing (triggers LLN-GOV-002)
   types {
     type ScorePatientResult = Result<RiskScore, AiError>
   }
+
+  intent {
+    "Score patient risk with audit"
+  }
+
+  effects {
+    ai.inference
+    audit.write
+  }
 }
-  with effects [ai.inference, audit.write]
-  intent "Score patient risk with audit"
 {
   let score = RiskModel.run(patient)?
   // LLN-GOV-XXX: audit.write declared but AuditLog.write never called

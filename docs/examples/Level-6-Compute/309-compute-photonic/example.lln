@@ -10,11 +10,19 @@ secure flow runOpticalModel(
 ) -> RunOpticalModelResult
 
 contract {
+  // Result alias — optical → npu → gpu → cpu fallback chain
   types {
     type RunOpticalModelResult = Result<Tensor<Float32, [Batch, 256]>, AiError>
   }
+
+  intent {
+    "Run optical model inference with photonic hardware preference and classical fallback."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
 {
   compute target best { prefer [photonic, npu, gpu, cpu] fallback cpu }
   return OpticalModel.forward(input)?

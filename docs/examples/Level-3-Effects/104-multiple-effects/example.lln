@@ -2,11 +2,26 @@
 /// level: 3
 /// concept: flow declaring multiple effects
 /// expected_diagnostics: none
-/// ai_rule: List all required effects in the with effects [...] declaration.
+/// ai_rule: List all required effects in the contract effects block.
 /// test_status: stable
 
-guarded flow syncOrder(order: Order) -> Result<Unit, SyncError>
-  with effects [database.write, network.outbound, audit.write]
+guarded flow syncOrder(order: Order) -> SyncOrderResult
+
+contract {
+  types {
+    type SyncOrderResult = Result<Unit, SyncError>
+  }
+
+  intent {
+    "Insert an order into the local database, sync it to an external service, and write an audit record."
+  }
+
+  effects {
+    database.write
+    network.outbound
+    audit.write
+  }
+}
 {
   let orderId = OrdersDB.insert(order)?
   let _ = http.post("https://sync.example.com/orders", order)?

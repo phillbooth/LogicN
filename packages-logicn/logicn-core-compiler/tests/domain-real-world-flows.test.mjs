@@ -55,7 +55,8 @@ contract {
     require redaction before audit.write
   }
 }
-with effects [database.write, audit.write] {
+contract { effects { database.write, audit.write } }
+{
   unsafe let rawEmail: String = "patient@nhs.uk"
   let email: protected Email = validate.email(rawEmail)?
   let patientId: String = "PAT-001"
@@ -286,7 +287,8 @@ contract {
     "Authenticate a user with constant-time credential comparison."
   }
 }
-with effects [audit.write] {
+contract { effects { audit.write } }
+{
   if username.isEmpty() {
     return Err("username required")
   }
@@ -423,7 +425,8 @@ contract {
     map ValidationError to ApiError.BadRequest
   }
 }
-with effects [database.read, audit.write] {
+contract { effects { database.read, audit.write } }
+{
   unsafe let rawId: String = "user-42"
   let userId: protected String = validate.userId(rawId)?
   AuditLog.write(event: "user.read", userId: rawId)
@@ -600,7 +603,8 @@ contract {
     require runtime report
   }
 }
-with effects [database.write, audit.write] {
+contract { effects { database.write, audit.write } }
+{
   unsafe let rawCustomerId: String = "cust-999"
   let customerId: protected String = validate.customerId(rawCustomerId)?
   let orderId: String = "ORD-20240101-001"
@@ -900,7 +904,8 @@ contract {
     require redaction before audit.write
   }
 }
-with effects [audit.write] {
+contract { effects { audit.write } }
+{
   unsafe let rawEmail: String = "audit-test@example.com"
   let protectedEmail: protected Email = validate.email(rawEmail)?
   let redactedEmail = redact(protectedEmail)

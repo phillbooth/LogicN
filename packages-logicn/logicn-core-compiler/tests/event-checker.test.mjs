@@ -15,7 +15,8 @@ describe("Event checker — LLN-EVENT-001 event not declared", () => {
   it("emits LLN-EVENT-001 when emit used without top-level event declaration", () => {
     const result = parseAndCheckEvents(`
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write] {
+contract { effects { database.write } }
+{
   emit OrderCreated
   return Ok(Response.ok({}))
 }
@@ -26,7 +27,8 @@ with effects [database.write] {
   it("LLN-EVENT-001 message names the missing event", () => {
     const result = parseAndCheckEvents(`
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write] {
+contract { effects { database.write } }
+{
   emit OrderCreated
   return Ok(Response.ok({}))
 }
@@ -41,7 +43,8 @@ with effects [database.write] {
 event OrderCreated
 
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write] {
+contract { effects { database.write } }
+{
   emit OrderCreated
   return Ok(Response.ok({}))
 }
@@ -98,7 +101,8 @@ event OrderCreated
 event OrderCreated
 
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write] {
+contract { effects { database.write } }
+{
   emit OrderCreated
   return Ok(Response.ok({}))
 }
@@ -123,13 +127,15 @@ event OrderCreated
 event OrderCancelled
 
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write] {
+contract { effects { database.write } }
+{
   emit OrderCreated
   return Ok(Response.ok({}))
 }
 
 flow cancelOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write] {
+contract { effects { database.write } }
+{
   emit OrderCancelled
   return Ok(Response.ok({}))
 }
@@ -143,7 +149,8 @@ with effects [database.write] {
 event OrderCreated
 
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write] {
+contract { effects { database.write } }
+{
   emit OrderCreated
   emit OrderShipped
   return Ok(Response.ok({}))

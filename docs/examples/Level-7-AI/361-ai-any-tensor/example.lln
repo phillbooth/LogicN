@@ -8,11 +8,19 @@
 guarded flow loadDynamic() -> LoadDynamicResult
 
 contract {
+  // Result alias — AnyTensor escapes static shape checking for dynamically loaded models
   types {
     type LoadDynamicResult = Result<AnyTensor, AiError>
   }
+
+  intent {
+    "Load a dynamically registered model returning an AnyTensor with no static shape."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
 {
   let handle: AnyTensor = DynamicModelRegistry.load("latest")?
   return Ok(handle)

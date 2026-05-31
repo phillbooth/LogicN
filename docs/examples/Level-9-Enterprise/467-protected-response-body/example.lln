@@ -7,11 +7,20 @@
 secure flow getProfile(readonly request: Request) -> GetProfileResult
 
 contract {
+  // Result alias — protected value in response body without policy triggers LLN-GOV-003
   types {
     type GetProfileResult = Result<Response, ApiError>
   }
+
+  intent {
+    "Return patient profile — demonstrates protected value in response body without policy."
+  }
+
+  effects {
+    database.read
+  }
 }
-effects [database.read] {
+{
   let patient = PatientsDB.findById(request.patientId)?
   return Ok(Response.ok({
     email: patient.email

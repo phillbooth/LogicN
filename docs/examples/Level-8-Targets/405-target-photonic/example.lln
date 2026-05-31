@@ -8,11 +8,19 @@
 guarded flow runPhotonic(input: Tensor<Float32, [Batch, 512]>) -> RunPhotonicResult
 
 contract {
+  // Result alias — photonic target for high-throughput linear algebra with gpu fallback
   types {
     type RunPhotonicResult = Result<Tensor<Float32, [Batch, 256]>, AiError>
   }
+
+  intent {
+    "Run high-throughput linear algebra on photonic hardware with GPU fallback."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
 {
   compute target photonic { fallback gpu }
   return OpticalModel.forward(input)?

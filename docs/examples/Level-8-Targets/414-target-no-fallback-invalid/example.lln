@@ -8,11 +8,19 @@
 guarded flow runNoFallback(input: Tensor<Float32, [1, 512]>) -> RunNoFallbackResult
 
 contract {
+  // Result alias — missing fallback on npu target triggers LLN-TARGET-001
   types {
     type RunNoFallbackResult = Result<Tensor<Float32, [1, 128]>, AiError>
   }
+
+  intent {
+    "Demonstrate missing fallback clause on non-cpu compute target — compile error LLN-TARGET-001."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
 {
   // LLN-TARGET-001: compute target npu requires a fallback clause
   compute target npu { }

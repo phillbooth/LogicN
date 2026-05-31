@@ -50,7 +50,7 @@ describe("AI domain — basic ai.inference flow with intent", () => {
   it("parses an AI flow with intent and ai.inference effect without errors", () => {
     const result = parse(`
 secure flow runClassifier(request: Request) -> Result<Response, AiError>
-with effects [ai.inference, audit.write]
+contract { effects { ai.inference, audit.write } }
 intent "Run text classification using the on-device classifier model" {
   return Ok(Response.ok({}))
 }
@@ -61,7 +61,8 @@ intent "Run text classification using the on-device classifier model" {
   it("recognises ai.inference as a canonical effect — no LLN-EFFECT-004", () => {
     const { effectResults } = parseAndCheckEffects(`
 guarded flow classify(request: Request) -> Result<Response, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return Ok(Response.ok({}))
 }
 `);
@@ -74,7 +75,8 @@ with effects [ai.inference] {
   it("effect result records ai.inference in declaredEffects", () => {
     const { effectResults } = parseAndCheckEffects(`
 guarded flow runModel(request: Request) -> Result<Response, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return Ok(Response.ok({}))
 }
 `);
@@ -96,7 +98,8 @@ contract {
     "Classify sentiment for a given text prompt."
   }
 }
-with effects [ai.inference, audit.write] {
+contract { effects { ai.inference, audit.write } }
+{
   return Ok(Response.ok({}))
 }
 `);
@@ -120,7 +123,8 @@ contract {
     uses ClassifierModel
   }
 }
-with effects [ai.inference, audit.write] {
+contract { effects { ai.inference, audit.write } }
+{
   return Ok(Response.ok({}))
 }
 `);
@@ -136,7 +140,8 @@ contract {
     reads EmbeddingInput
   }
 }
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return Ok(Response.ok({}))
 }
 `);
@@ -155,7 +160,8 @@ contract {
     }
   }
 }
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return Ok(Response.ok({}))
 }
 `);
@@ -171,7 +177,8 @@ describe("AI domain — Tensor<Float32, [768]> embedding tensor type", () => {
   it("parses a binding with type Tensor<Float32, [768]> without errors", () => {
     const result = parse(`
 guarded flow embed(request: Request) -> Result<Response, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   let embedding: Tensor<Float32, [768]> = EmbeddingModel.run(request)
   return Ok(Response.ok({}))
 }
@@ -182,7 +189,8 @@ with effects [ai.inference] {
   it("parses Tensor<Float32, [768]> as a return type annotation without errors", () => {
     const result = parse(`
 guarded flow getEmbedding(text: String) -> Tensor<Float32, [768]>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return EmbeddingModel.run(text)
 }
 `);
@@ -192,7 +200,8 @@ with effects [ai.inference] {
   it("recognises EmbeddingModel.run as producing ai.inference effect", () => {
     const { effectResults } = parseAndCheckEffects(`
 guarded flow embed(text: String) -> Result<Response, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   let result = EmbeddingModel.run(text)
   return Ok(Response.ok({}))
 }
@@ -209,7 +218,8 @@ describe("AI domain — Tensor<Int8, [512]> quantized model input", () => {
   it("parses Tensor<Int8, [512]> as a binding type without errors", () => {
     const result = parse(`
 guarded flow quantizedInfer(request: Request) -> Result<Response, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   let input: Tensor<Int8, [512]> = request.body
   return Ok(Response.ok({}))
 }
@@ -229,7 +239,8 @@ pure flow validateShape(tensor: Tensor<Int8, [512]>) -> Bool {
   it("parses multi-dimensional quantized tensor Tensor<Int8, [4, 512]> without errors", () => {
     const result = parse(`
 guarded flow batchInfer(request: Request) -> Result<Response, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   let batchInput: Tensor<Int8, [4, 512]> = request.body
   return Ok(Response.ok({}))
 }
@@ -246,7 +257,8 @@ describe("AI domain — AnyTensor usage for generic AI ops", () => {
   it("parses AnyTensor as a binding type without errors", () => {
     const result = parse(`
 guarded flow genericInfer(request: Request) -> Result<Response, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   let tensor: AnyTensor = request.body
   return Ok(Response.ok({}))
 }
@@ -266,7 +278,8 @@ pure flow tensorSize(input: AnyTensor) -> Int {
   it("parses AnyTensor as a return type without errors", () => {
     const result = parse(`
 guarded flow getTensor(request: Request) -> AnyTensor
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return ClassifierModel.run(request)
 }
 `);
@@ -282,7 +295,8 @@ describe("AI domain — LLN-HINT-COMPUTE-001: ai.inference without compute targe
   it("emits LLN-HINT-COMPUTE-001 when ai.inference declared but no compute target block", () => {
     const { gov } = parseAndVerify(`
 guarded flow runClassifier(request: Request) -> Result<Response, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return Ok(Response.ok({}))
 }
 `);
@@ -295,7 +309,8 @@ with effects [ai.inference] {
   it("LLN-HINT-COMPUTE-001 is info severity", () => {
     const { gov } = parseAndVerify(`
 guarded flow infer(request: Request) -> Result<Response, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return Ok(Response.ok({}))
 }
 `);
@@ -307,7 +322,8 @@ with effects [ai.inference] {
   it("LLN-HINT-COMPUTE-001 includes a suggestedFix mentioning compute target", () => {
     const { gov } = parseAndVerify(`
 guarded flow infer(request: Request) -> Result<Response, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return Ok(Response.ok({}))
 }
 `);
@@ -322,7 +338,8 @@ with effects [ai.inference] {
   it("does NOT emit LLN-HINT-COMPUTE-001 when compute target block is present", () => {
     const { gov } = parseAndVerify(`
 guarded flow runClassifier(request: Request) -> Result<Response, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   compute target best {
     return ClassifierModel.run(request)
   }
@@ -338,7 +355,8 @@ with effects [ai.inference] {
   it("does NOT emit LLN-HINT-COMPUTE-001 for flows without ai.inference", () => {
     const { gov } = parseAndVerify(`
 guarded flow saveRecord(request: Request) -> Result<Response, Error>
-with effects [database.write, audit.write] {
+contract { effects { database.write, audit.write } }
+{
   return Ok(Response.ok({}))
 }
 `);
@@ -357,7 +375,8 @@ describe("AI domain — compute target with prefer [npu, gpu, cpu]", () => {
   it("parses compute target best { prefer [npu, gpu, cpu] fallback cpu } without errors", () => {
     const result = parse(`
 guarded flow runModel(request: Request) -> Result<Response, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   compute target best {
     let result = ClassifierModel.run(request)
     return Ok(Response.ok({}))
@@ -371,7 +390,8 @@ with effects [ai.inference] {
   it("parses compute target npu { ... } without errors", () => {
     const result = parse(`
 guarded flow npuInfer(request: Request) -> Result<Response, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   compute target npu {
     return ClassifierModel.run(request)
   }
@@ -384,7 +404,8 @@ with effects [ai.inference] {
   it("parses compute target gpu { ... } without errors", () => {
     const result = parse(`
 guarded flow gpuInfer(request: Request) -> Result<Response, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   compute target gpu {
     let output: Tensor<Float32, [768]> = EmbeddingModel.run(request)
     return Ok(Response.ok({}))
@@ -398,7 +419,8 @@ with effects [ai.inference] {
   it("parses compute target cpu { ... } without errors", () => {
     const result = parse(`
 guarded flow cpuInfer(request: Request) -> Result<Response, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   compute target cpu {
     return ClassifierModel.run(request)
   }
@@ -417,7 +439,8 @@ describe("AI domain — protected input to AI model", () => {
   it("parses a protected binding passed to an AI model without errors", () => {
     const result = parse(`
 guarded flow classifyPrivate(request: Request) -> Result<Response, AiError>
-with effects [ai.inference, audit.write] {
+contract { effects { ai.inference, audit.write } }
+{
   let input: protected String = protect(request.body)
   return Ok(Response.ok({}))
 }
@@ -428,7 +451,8 @@ with effects [ai.inference, audit.write] {
   it("parses protected Tensor binding without errors", () => {
     const result = parse(`
 guarded flow classifyProtected(request: Request) -> Result<Response, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   let modelInput: protected String = protect(request.body)
   let output = ClassifierModel.run(modelInput)
   return Ok(Response.ok({}))
@@ -440,7 +464,8 @@ with effects [ai.inference] {
   it("ai.inference with protected input and audit.write produces no effect errors", () => {
     const { effectResults } = parseAndCheckEffects(`
 guarded flow classifyProtected(request: Request) -> Result<Response, AiError>
-with effects [ai.inference, audit.write] {
+contract { effects { ai.inference, audit.write } }
+{
   let input: protected String = protect(request.body)
   AuditLog.write("ai.classify called")
   return Ok(Response.ok({}))
@@ -458,7 +483,8 @@ describe("AI domain — AI flow with classification result", () => {
   it("parses a flow returning ClassificationResult without errors", () => {
     const result = parse(`
 guarded flow classify(text: String) -> Result<ClassificationResult, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return ClassifierModel.infer(text)
 }
 `);
@@ -468,7 +494,8 @@ with effects [ai.inference] {
   it("ClassifierModel.infer is recognised as ai.inference effect producer", () => {
     const { effectResults } = parseAndCheckEffects(`
 guarded flow classify(text: String) -> Result<ClassificationResult, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return ClassifierModel.infer(text)
 }
 `);
@@ -478,7 +505,8 @@ with effects [ai.inference] {
   it("parses a flow with Label classification binding without errors", () => {
     const result = parse(`
 guarded flow labelText(text: String) -> Result<Label, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   let label: Label = ClassifierModel.run(text)
   return Ok(label)
 }
@@ -495,7 +523,8 @@ describe("AI domain — Embedding<768> type (Phase 11E)", () => {
   it("parses Embedding<768> as a binding type without errors", () => {
     const result = parse(`
 guarded flow getEmbedding(text: String) -> Result<Response, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   let embedding: Embedding<768> = EmbeddingModel.run(text)
   return Ok(Response.ok({}))
 }
@@ -506,7 +535,8 @@ with effects [ai.inference] {
   it("parses Embedding<768> as a return type without errors", () => {
     const result = parse(`
 guarded flow embed(text: String) -> Embedding<768>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return EmbeddingModel.run(text)
 }
 `);
@@ -516,7 +546,8 @@ with effects [ai.inference] {
   it("parses Embedding<1536> as a higher-dimensional embedding type without errors", () => {
     const result = parse(`
 guarded flow embed1536(text: String) -> Embedding<1536>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return EmbeddingModel.run(text)
 }
 `);
@@ -541,7 +572,8 @@ describe("AI domain — Classification result type", () => {
   it("parses Classification as a type without errors", () => {
     const result = parse(`
 guarded flow classify(text: String) -> Classification
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return ClassifierModel.run(text)
 }
 `);
@@ -551,7 +583,8 @@ with effects [ai.inference] {
   it("parses EmbeddingResult type in a binding without errors", () => {
     const result = parse(`
 guarded flow embed(text: String) -> Result<EmbeddingResult, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   let result: EmbeddingResult = EmbeddingModel.run(text)
   return Ok(result)
 }
@@ -562,7 +595,8 @@ with effects [ai.inference] {
   it("parses RiskScore as a named AI output type without errors", () => {
     const result = parse(`
 guarded flow scoreRisk(request: Request) -> Result<RiskScore, AiError>
-with effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return RiskModel.infer(request)
 }
 `);
@@ -586,7 +620,7 @@ contract {
     deny { localOnly }
   }
 }
-with effects [ai.inference, audit.write]
+contract { effects { ai.inference, audit.write } }
 intent "Run AI classification on-device only" {
   return Ok(Response.ok({}))
 }
@@ -602,7 +636,7 @@ contract {
     deny { remote }
   }
 }
-with effects [ai.inference, audit.write]
+contract { effects { ai.inference, audit.write } }
 intent "Run model on-device without remote" {
   return Ok(Response.ok({}))
 }
@@ -633,7 +667,7 @@ contract {
     "Classify user-submitted text using the on-device classifier."
   }
 }
-with effects [ai.inference, audit.write]
+contract { effects { ai.inference, audit.write } }
 intent "Classify user text using local model" {
   compute target best {
     let result: ClassificationResult = ClassifierModel.run(request)
@@ -649,7 +683,7 @@ intent "Classify user text using local model" {
   it("full classify flow has no effect errors", () => {
     const { effectResults } = parseAndCheckEffects(`
 secure flow classifyText(request: Request) -> Result<Response, AiError>
-with effects [ai.inference, audit.write]
+contract { effects { ai.inference, audit.write } }
 intent "Classify user text using local model" {
   let result = ClassifierModel.run(request)
   AuditLog.write("classify called")
@@ -662,7 +696,7 @@ intent "Classify user text using local model" {
   it("full classify flow with compute target suppresses LLN-HINT-COMPUTE-001", () => {
     const { gov } = parseAndVerify(`
 secure flow classifyText(request: Request) -> Result<Response, AiError>
-with effects [ai.inference, audit.write]
+contract { effects { ai.inference, audit.write } }
 intent "Classify text on-device" {
   compute target best {
     return ClassifierModel.run(request)
@@ -685,7 +719,8 @@ describe("AI domain — AI flow audit with AuditLog.write", () => {
   it("AuditLog.write in AI flow with audit.write effect produces no errors", () => {
     const { effectResults } = parseAndCheckEffects(`
 guarded flow auditedClassify(request: Request) -> Result<Response, AiError>
-with effects [ai.inference, audit.write] {
+contract { effects { ai.inference, audit.write } }
+{
   let result = ClassifierModel.run(request)
   AuditLog.write("ai.inference executed")
   return Ok(Response.ok({}))
@@ -697,7 +732,8 @@ with effects [ai.inference, audit.write] {
   it("parses AuditLog.write with redacted model input binding without errors", () => {
     const result = parse(`
 guarded flow auditedClassify(request: Request) -> Result<Response, AiError>
-with effects [ai.inference, audit.write] {
+contract { effects { ai.inference, audit.write } }
+{
   let modelInput: redacted String = redact(request.body)
   AuditLog.write("ai.classify: model input redacted")
   return Ok(Response.ok({}))
@@ -709,7 +745,8 @@ with effects [ai.inference, audit.write] {
   it("governance verifier records audit_required proof obligation for AI flow with audit.write", () => {
     const { gov } = parseAndVerify(`
 guarded flow auditedAi(request: Request) -> Result<Response, AiError>
-with effects [ai.inference, audit.write] {
+contract { effects { ai.inference, audit.write } }
+{
   AuditLog.write("ai flow executed")
   return Ok(Response.ok({}))
 }
@@ -723,7 +760,8 @@ with effects [ai.inference, audit.write] {
   it("AI flow missing audit.write triggers LLN-GOV-002 when database.write also declared", () => {
     const { gov } = parseAndVerify(`
 guarded flow classifyAndSave(request: Request) -> Result<Response, AiError>
-with effects [ai.inference, database.write] {
+contract { effects { ai.inference, database.write } }
+{
   OrdersDB.insert(request)
   return Ok(Response.ok({}))
 }
@@ -743,7 +781,7 @@ describe("AI domain — LLN-GOV-004: denied target selected", () => {
   it("governance verifier result has diagnostics array for AI flow", () => {
     const { gov } = parseAndVerify(`
 secure flow runModel(request: Request) -> Result<Response, AiError>
-with effects [ai.inference, network.outbound]
+contract { effects { ai.inference, network.outbound } }
 intent "Run model remotely" {
   return Ok(Response.ok({}))
 }
@@ -758,7 +796,7 @@ intent "Run model remotely" {
     // we verify the governance verifier runs correctly and returns a result.
     const { gov } = parseAndVerify(`
 secure flow runModel(request: Request) -> Result<Response, AiError>
-with effects [ai.inference, network.outbound]
+contract { effects { ai.inference, network.outbound } }
 intent "Run model locally" {
   return Ok(Response.ok({}))
 }
@@ -772,7 +810,8 @@ intent "Run model locally" {
   it("pure flow with ai.inference emits LLN-EFFECT-003", () => {
     const { effectResults } = parseAndCheckEffects(`
 pure flow badClassify(text: String) -> String
-effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return text
 }
 `);
@@ -782,7 +821,8 @@ effects [ai.inference] {
   it("effectResultsToDiagnostics includes ai.inference effect error from pure flow", () => {
     const { effectResults } = parseAndCheckEffects(`
 pure flow badClassify(text: String) -> String
-effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return text
 }
 `);
@@ -793,7 +833,8 @@ effects [ai.inference] {
   it("'ai' as an effect alias triggers LLN-EFFECT-004 with suggestion ai.inference", () => {
     const { effectResults } = parseAndCheckEffects(`
 guarded flow classify(text: String) -> Result<Response, AiError>
-with effects [ai] {
+contract { effects { ai } }
+{
   return Ok(Response.ok({}))
 }
 `);
@@ -816,7 +857,8 @@ describe("AI domain — integration: mixed AI types in one flow", () => {
   it("parses a flow using Tensor, Embedding and Classification types together without errors", () => {
     const result = parse(`
 guarded flow fullAiPipeline(request: Request) -> Result<Response, AiError>
-with effects [ai.inference, audit.write] {
+contract { effects { ai.inference, audit.write } }
+{
   let input: Tensor<Int8, [512]> = request.body
   let embedding: Embedding<768> = EmbeddingModel.run(input)
   let classification: Classification = ClassifierModel.run(embedding)
@@ -830,7 +872,8 @@ with effects [ai.inference, audit.write] {
   it("full AI pipeline with compute target + audit has no effect errors and no compute hint", () => {
     const { effectResults } = parseAndCheckEffects(`
 guarded flow fullAiPipeline(request: Request) -> Result<Response, AiError>
-with effects [ai.inference, audit.write] {
+contract { effects { ai.inference, audit.write } }
+{
   let embedding: Embedding<768> = EmbeddingModel.run(request)
   let label: ClassificationResult = ClassifierModel.run(embedding)
   AuditLog.write("pipeline complete")
@@ -843,7 +886,8 @@ with effects [ai.inference, audit.write] {
   it("governance verifier does not emit LLN-GOV-002 when ai flow declares audit.write", () => {
     const { gov } = parseAndVerify(`
 guarded flow auditedAi(request: Request) -> Result<Response, AiError>
-with effects [ai.inference, database.write, audit.write] {
+contract { effects { ai.inference, database.write, audit.write } }
+{
   OrdersDB.insert(request)
   AuditLog.write("ai model run")
   return Ok(Response.ok({}))

@@ -11,9 +11,18 @@ contract {
   types {
     type SendReferralResult = Result<ReferralId, ReferralError>
   }
+
+  // Security intent: sharing protected patient data externally requires explicit authority.
+  // The authority block names the receiving party and the approving governance body.
+  intent {
+    "Send a patient referral to an approved specialist service with governance authority."
+  }
+
+  effects {
+    network.outbound
+    audit.write
+  }
 }
-  with effects [network.outbound, audit.write]
-  intent "Send a patient referral to an approved specialist service"
   authority {
     sharing protected PatientData to "specialist-service"
     approved_by "data-governance-board"

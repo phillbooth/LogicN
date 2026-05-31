@@ -5,8 +5,24 @@
 /// ai_rule: External files are unsafe. Use unsafe let for data read from the filesystem.
 /// test_status: stable
 
-guarded flow importUsers(filePath: String) -> Result<List<UserId>, ImportError>
-  with effects [filesystem.read, database.write]
+guarded flow importUsers(filePath: String) -> ImportUsersResult
+
+contract {
+  // Security intent: file content is an external trust boundary — treat as unsafe.
+  // Parse and validate before any database write.
+  types {
+    type ImportUsersResult = Result<List<UserId>, ImportError>
+  }
+
+  intent {
+    "Import users from a CSV file, treating file content as unsafe until parsed."
+  }
+
+  effects {
+    filesystem.read
+    database.write
+  }
+}
 {
   unsafe let rawCsv: String = File.read(filePath)?
   return Ok(parseCsv(rawCsv)?)

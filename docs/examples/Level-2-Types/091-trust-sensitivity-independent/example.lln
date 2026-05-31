@@ -5,8 +5,25 @@
 /// ai_rule: unsafe let = trust state (not yet validated). protected = sensitivity state (access restricted). These are orthogonal.
 /// test_status: stable
 
-secure flow handlePatients(readonly request: Request) -> Result<Response, ApiError>
-with effects [database.write, audit.write] {
+secure flow handlePatients(readonly request: Request) -> HandlePatientsResult
+
+contract {
+  types {
+    type HandlePatientsResult = Result<Response, ApiError>
+  }
+
+  intent {
+    // Security intent: demonstrates that trust (unsafe/validated) and sensitivity (protected) are
+    // independent axes. A value can be both untrusted and sensitive, or trusted and non-sensitive.
+    "Handle a patient list request, demonstrating orthogonal trust and sensitivity qualifiers."
+  }
+
+  effects {
+    database.write
+    audit.write
+  }
+}
+{
 
   // Untrusted AND sensitive — both together is valid
   unsafe let rawEmails: protected Array<String> = request.body.emails

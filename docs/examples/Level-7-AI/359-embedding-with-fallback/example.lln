@@ -8,11 +8,19 @@
 guarded flow embed(text: String) -> EmbedResult
 
 contract {
+  // Result alias — NPU/GPU preference with cpu fallback for portability
   types {
     type EmbedResult = Result<Tensor<Float32, [1, 768]>, AiError>
   }
+
+  intent {
+    "Embed text using NPU or GPU with CPU fallback for portable deployment."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
 {
   compute target best { prefer [npu, gpu] fallback cpu }
   let embedding = EmbeddingModel.embed(text)?

@@ -22,14 +22,17 @@ contract {
     "Create a patient record from a validated request, protecting all PII."
   }
 
+  effects {
+    database.write
+    audit.write
+  }
+
   events {
     emits PatientCreated
     emits PatientCreationRejected
   }
 
 }
-
-with effects [database.write, audit.write]
 {
   unsafe let rawEmail: String = request.body.email
   let email: protected Email = validate.email(rawEmail)?

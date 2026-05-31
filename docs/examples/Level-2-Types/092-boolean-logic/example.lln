@@ -5,7 +5,14 @@
 /// test_status: stable
 /// ai_rule: Bool holds true or false. Use && and || for and/or. Use ! for not. Comparisons return Bool.
 
-pure flow describeAccess(age: Int, isVerified: Bool) -> String {
+pure flow describeAccess(age: Int, isVerified: Bool) -> String
+
+contract {
+  intent {
+    "Return an access decision string based on age eligibility and verification status."
+  }
+}
+{
   let isAdult: Bool = age >= 18
   let isEligible: Bool = isAdult && isVerified
 
@@ -16,18 +23,39 @@ pure flow describeAccess(age: Int, isVerified: Bool) -> String {
   }
 }
 
-pure flow checkAnyAdmin(isAdmin: Bool, isOwner: Bool) -> Bool {
+pure flow checkAnyAdmin(isAdmin: Bool, isOwner: Bool) -> Bool
+
+contract {
+  intent {
+    "Return true if the caller is either an admin or an owner."
+  }
+}
+{
   return isAdmin || isOwner
 }
 
-pure flow requiresApproval(isApproved: Bool) -> String {
+pure flow requiresApproval(isApproved: Bool) -> String
+
+contract {
+  intent {
+    "Return an approval status string, using boolean negation to detect the unapproved case."
+  }
+}
+{
   if !isApproved {
     return "approval required"
   }
   return "approved"
 }
 
-pure flow compareValues(a: Int, b: Int) -> Bool {
+pure flow compareValues(a: Int, b: Int) -> Bool
+
+contract {
+  intent {
+    "Return true if a equals, is greater than, or is less than or equal to b."
+  }
+}
+{
   let equal: Bool = a == b
   let greater: Bool = a > b
   let lte: Bool = a <= b

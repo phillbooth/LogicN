@@ -5,7 +5,14 @@
 /// test_status: stable
 /// ai_rule: Duration is a time span — use Duration.ofMs, ofSeconds, ofMinutes, ofHours.
 
-pure flow describeDeadline(ms: Int) -> String {
+pure flow describeDeadline(ms: Int) -> String
+
+contract {
+  intent {
+    "Convert a millisecond value to a Duration and return its string representation."
+  }
+}
+{
   let d = Duration.ofMs(ms)
   return d.toString()
 }

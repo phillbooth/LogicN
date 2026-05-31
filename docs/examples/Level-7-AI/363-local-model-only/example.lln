@@ -7,12 +7,19 @@
 secure flow classify(readonly request: Request) -> ClassifyResult
 
 contract {
+  // Result alias — air-gapped deployment denies both remote.execution and network.outbound
   types {
     type ClassifyResult = Result<Response, AiError>
   }
+
+  intent {
+    "Classify locally only — no network access permitted"
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
-  intent "Classify locally only — no network access permitted"
 {
   compute target best { prefer [cpu] deny [remote.execution, network.outbound] }
 

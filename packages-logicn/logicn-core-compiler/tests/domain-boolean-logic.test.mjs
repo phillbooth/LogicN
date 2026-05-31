@@ -134,7 +134,8 @@ describe("Bool — basic literals and type annotation", () => {
   it("Bool as mut binding parses without errors in guarded flow", () => {
     assertNoParseErrors(
       `guarded flow toggle(initial: Bool) -> Bool
-effects [state.write] {
+contract { effects { state.write } }
+{
   mut current: Bool = initial
   current = false
   return current
@@ -847,8 +848,9 @@ describe("Bool — Bool in flow signatures (params and returns)", () => {
 
   it("secure flow with Bool param parses without errors", () => {
     assertNoParseErrors(
-      `secure flow authorise(isAdmin: Bool, readonly req: Request) -> Result<Bool, Error>
-effects [audit.write] {
+      `secure flow authorise(isAdmin: Bool, readonly request: Request) -> Result<Bool, Error>
+contract { effects { audit.write } }
+{
   return Ok(isAdmin)
 }`,
       "secure flow with Bool param",
@@ -858,7 +860,8 @@ effects [audit.write] {
   it("guarded flow returning Bool parses without errors", () => {
     assertNoParseErrors(
       `guarded flow toggleFeature(enabled: Bool) -> Bool
-effects [state.write] {
+contract { effects { state.write } }
+{
   return !enabled
 }`,
       "guarded flow returning Bool",

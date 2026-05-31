@@ -8,17 +8,29 @@
 secure flow createAndScorePatient(readonly request: Request) -> CreateAndScorePatientResult
 
 contract {
+  // Result alias — all governance layers: PII, AI, compute, policy, audit, redact
   types {
     type CreateAndScorePatientResult = Result<Response, PatientError>
   }
-}
-  with effects [pii.write, phi.read, ai.inference, database.write, audit.write]
-  intent "Create patient record and compute initial risk score on local hardware"
+
+  intent {
+    "Create patient record and compute initial risk score on local hardware"
+  }
+
+  effects {
+    pii.write
+    phi.read
+    ai.inference
+    database.write
+    audit.write
+  }
+
   policy {
     purpose "clinical_intake"
     lawfulBasis "vital_interests"
     retentionDays 3650
   }
+}
 {
   compute target best { prefer [npu, gpu, cpu] fallback cpu deny [remote.execution] }
 

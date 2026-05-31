@@ -10,11 +10,19 @@ guarded flow project(
 ) -> ProjectResult
 
 contract {
+  // Result alias — named Batch dimension keeps rank fixed while size varies
   types {
     type ProjectResult = Result<Tensor<Float32, [Batch, 256]>, AiError>
   }
+
+  intent {
+    "Project batched input embeddings to a lower-dimensional output tensor."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
 {
   return ProjectionModel.forward(input)?
 }

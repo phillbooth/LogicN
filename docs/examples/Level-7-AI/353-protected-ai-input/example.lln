@@ -8,11 +8,16 @@
 secure flow analyseRecord(readonly request: Request) -> AnalyseRecordResult
 
 contract {
+  // Result alias — PII validated to protected type before AI model call
   types {
     type AnalyseRecordResult = Result<Response, AiError>
   }
+
+  effects {
+    ai.inference
+    audit.write
+  }
 }
-  with effects [ai.inference, audit.write]
 {
   unsafe let rawId: String = request.body.patientId
   let patientId: protected PatientId = validate.patientId(rawId)?

@@ -8,12 +8,20 @@
 secure flow runGovernedInference(readonly request: Request) -> RunGovernedInferenceResult
 
 contract {
+  // Result alias — full target governance: prefer, deny, fallback, adaptive runtime, audit
   types {
     type RunGovernedInferenceResult = Result<Response, AiError>
   }
+
+  intent {
+    "Run inference on approved local hardware with adaptive optimisation"
+  }
+
+  effects {
+    ai.inference
+    audit.write
+  }
 }
-  with effects [ai.inference, audit.write]
-  intent "Run inference on approved local hardware with adaptive optimisation"
 {
   compute target best {
     prefer [photonic, npu, gpu, cpu]

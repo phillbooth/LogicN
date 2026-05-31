@@ -27,7 +27,8 @@ describe("GIR emitter - guarded flow with effects", () => {
   it("copies declared effects from FlowMeta", () => {
     const result = parseAndEmit(`
 guarded flow saveOrder(order: Order) -> Result<Order, Error>
-with effects [database.write] {
+contract { effects { database.write } }
+{
   OrdersDB.insert(order)
   return Ok(order)
 }
@@ -98,7 +99,8 @@ describe("GIR emitter — tensor metadata", () => {
   it("extracts tensor binding from flow body", () => {
     const result = parseAndEmit(`
 guarded flow embedText(text: String) -> Result<String, Error>
-effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   let embedding: Tensor<Float32, [1, 768]> = EmbeddingModel.embed(text)?
   return Ok("ok")
 }
@@ -115,7 +117,8 @@ effects [ai.inference] {
   it("marks Int8 tensor as NOT photonic compatible", () => {
     const result = parseAndEmit(`
 guarded flow quantizedInfer(input: String) -> Result<String, Error>
-effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   let weights: Tensor<Int8, [OutFeatures, InFeatures]> = QuantizedModel.weights()
   return Ok("ok")
 }
@@ -130,7 +133,8 @@ effects [ai.inference] {
   it("produces target_affinity for ai.inference flows", () => {
     const result = parseAndEmit(`
 guarded flow classify(text: String) -> Result<String, Error>
-effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return Ok("label")
 }
 `);
@@ -143,7 +147,8 @@ effects [ai.inference] {
   it("does not produce target_affinity for database-only flows", () => {
     const result = parseAndEmit(`
 guarded flow saveOrder(order: String) -> Result<String, Error>
-effects [database.write] {
+contract { effects { database.write } }
+{
   return Ok("saved")
 }
 `);
@@ -161,7 +166,8 @@ describe("Governance verifier — LLN-HINT-COMPUTE-001", () => {
   it("emits LLN-HINT-COMPUTE-001 when ai.inference has no compute target", () => {
     const source = `
 guarded flow classify(text: String) -> Result<String, Error>
-effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   return Ok("label")
 }
 `;
@@ -177,7 +183,8 @@ effects [ai.inference] {
   it("does NOT emit LLN-HINT-COMPUTE-001 when compute target is declared", () => {
     const source = `
 guarded flow classify(text: String) -> Result<String, Error>
-effects [ai.inference] {
+contract { effects { ai.inference } }
+{
   compute target best { prefer [npu, gpu, cpu] fallback cpu }
   return Ok("label")
 }

@@ -10,9 +10,18 @@ contract {
   types {
     type EmailPatientResult = Result<Unit, EmailError>
   }
+
+  // Security intent: BUG — declared purpose is "appointment_reminder" but the body uses
+  // Template.marketingOffer. The governance verifier detects this mismatch and fires LLN-GOV-005.
+  intent {
+    "Send an appointment reminder — BUG: body uses a marketing template instead of the declared purpose."
+  }
+
+  effects {
+    network.outbound
+    audit.write
+  }
 }
-  with effects [network.outbound, audit.write]
-  intent "Send an appointment reminder to a patient"
   policy {
     purpose "appointment_reminder"
     allow protected Email to "patient"

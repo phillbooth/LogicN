@@ -1,4 +1,4 @@
-﻿/// example: 470-contract-healthcare-search
+/// example: 470-contract-healthcare-search
 /// level: 9
 /// concept: healthcare patient search with complete privacy, observability, errors, and context contract sections
 /// expected_diagnostics: none
@@ -22,6 +22,7 @@ secure flow searchPatients(
 ) -> SearchPatientsResult
 
 contract {
+  // Result alias — full NHS/GDPR compliance: privacy, observability, errors, signed attestation
   types {
     type SearchPatientsResult = Result<Response, ApiError>
   }
@@ -167,7 +168,7 @@ contract {
   }
 }
 
-with effects [database.read, audit.write] {
+{
   let actor: Actor = context.actor
   let traceId: TraceId = context.trace_id
 

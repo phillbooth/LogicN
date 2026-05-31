@@ -5,8 +5,21 @@
 /// ai_rule: Declare network.outbound when making outbound HTTP or network calls.
 /// test_status: stable
 
-guarded flow fetchRate(baseCurrency: String) -> Result<Decimal, RateError>
-  with effects [network.outbound]
+guarded flow fetchRate(baseCurrency: String) -> FetchRateResult
+
+contract {
+  types {
+    type FetchRateResult = Result<Decimal, RateError>
+  }
+
+  intent {
+    "Fetch the current exchange rate for a base currency via an outbound HTTP call."
+  }
+
+  effects {
+    network.outbound
+  }
+}
 {
   unsafe let rawResponse = http.get("https://rates.example.com/" + baseCurrency)?
   let rate: Decimal = json.decode(rawResponse)?

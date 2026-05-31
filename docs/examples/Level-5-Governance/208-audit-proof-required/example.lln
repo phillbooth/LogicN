@@ -11,9 +11,18 @@ contract {
   types {
     type DeletePatientResult = Result<Unit, DeleteError>
   }
+
+  // Security intent: destructive operations on PHI require mandatory audit evidence.
+  // Both audit.write must be declared AND AuditLog.write must be called in the body.
+  intent {
+    "Delete a patient record with a mandatory full audit trail including timestamp."
+  }
+
+  effects {
+    database.write
+    audit.write
+  }
 }
-  with effects [database.write, audit.write]
-  intent "Delete a patient record with full audit trail"
 {
   PatientDB.delete(patientId)?
   let auditId: redacted PatientId = redact(patientId)

@@ -4,8 +4,22 @@
 /// expected_diagnostics: none
 /// ai_rule: Use guarded flow when the flow performs declared effects.
 
-guarded flow fetchRate(currency: CurrencyCode) -> Result<Decimal, NetworkError>
-effects [network.outbound] {
+guarded flow fetchRate(currency: CurrencyCode) -> FetchRateResult
+
+contract {
+  types {
+    type FetchRateResult = Result<Decimal, NetworkError>
+  }
+
+  intent {
+    "Fetch the exchange rate for a given currency via an outbound network call."
+  }
+
+  effects {
+    network.outbound
+  }
+}
+{
 
   unsafe let rawResponse: String =
     http.get("/rates/" + currency)?

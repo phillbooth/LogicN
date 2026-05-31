@@ -5,7 +5,14 @@
 /// test_status: stable
 /// ai_rule: Use Array.range(from, to) to generate a sequence of integers.
 
-pure flow generateRange() -> Int {
+pure flow generateRange() -> Int
+
+contract {
+  intent {
+    "Generate a range of integers from 0 to 10 and return the count."
+  }
+}
+{
   let nums = Array.range(0, 10)
   return nums.length()
 }

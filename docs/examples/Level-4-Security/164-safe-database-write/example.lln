@@ -5,8 +5,23 @@
 /// test_status: stable
 /// ai_rule: Validated protected values can be stored in a database sink with database.write declared.
 
-guarded flow savePatient(request: Request) -> Result<PatientId, PatientError>
-  with effects [database.write]
+guarded flow savePatient(request: Request) -> SavePatientResult
+
+contract {
+  // Security intent: only validated (protected) values may be written to the database.
+  // Unsafe raw values from the request boundary must pass validate.email() first.
+  types {
+    type SavePatientResult = Result<PatientId, PatientError>
+  }
+
+  intent {
+    "Validate raw email from the request boundary and persist the patient record safely."
+  }
+
+  effects {
+    database.write
+  }
+}
 {
   unsafe let rawEmail: String = request.body.email
   let email: protected Email = validate.email(rawEmail)?

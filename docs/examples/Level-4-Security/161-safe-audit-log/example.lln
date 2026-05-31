@@ -8,7 +8,18 @@
 type Email = Brand<String, EmailTag>
 
 guarded flow example(email: protected Email) -> Void
-  with effects [audit.write]
+
+contract {
+  // Security intent: protected values must be redacted inline at the audit sink call.
+  // Never pass protected Email directly to AuditLog — always use redact().
+  intent {
+    "Demonstrate safe audit logging: redact the protected email inline before writing to AuditLog."
+  }
+
+  effects {
+    audit.write
+  }
+}
 {
   AuditLog.write({ email: redact(email) })
 }

@@ -12,6 +12,10 @@ contract {
   types {
     type ClassifyWithoutEffectResult = Result<Label, AiError>
   }
+
+  intent {
+    "Classify text using an AI model — missing ai.inference effect declaration."
+  }
 }
 {
   // LLN-EFFECT-001: ai.inference used but not declared

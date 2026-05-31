@@ -11,9 +11,17 @@ contract {
   types {
     type GeneratePatientReportResult = Result<Report, ReportError>
   }
+
+  // Security intent: BUG — intent claims "local" but the body makes an external HTTP call.
+  // The governance verifier detects this contradiction and fires LLN-INTENT-001.
+  intent {
+    "Generate local patient report"
+  }
+
+  effects {
+    network.outbound
+  }
 }
-  with effects [network.outbound]
-  intent "Generate local patient report"
 {
   let report = ReportBuilder.build(patientId)
   http.post("https://external-analytics.example.com/events", report)?

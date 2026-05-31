@@ -20,13 +20,17 @@ contract {
     "Create a new order and record the event."
   }
 
+  effects {
+    database.write
+    audit.write
+  }
+
   events {
     emits OrderCreated
     emits OrderFailed
   }
 }
-
-with effects [database.write, audit.write] {
+{
 
   let saved = OrdersDB.insert(request.body)?
 

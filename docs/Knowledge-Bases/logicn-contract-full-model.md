@@ -354,7 +354,7 @@ audit {
 
 ```logicn
 secure flow getPatient(readonly request: Request)
--> Result<Response, ApiError>
+-> GetPatientResult
 
 contract {
 

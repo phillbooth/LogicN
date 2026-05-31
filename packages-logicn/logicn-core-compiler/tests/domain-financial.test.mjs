@@ -444,7 +444,8 @@ contract {
     require runtime report
   }
 }
-with effects [database.write, network.outbound, audit.write] {
+contract { effects { database.write, network.outbound, audit.write } }
+{
   return Ok(Response.created("{}"))
 }
 `);
@@ -490,7 +491,8 @@ contract {
     require runtime report
   }
 }
-with effects [database.write, network.outbound, audit.write] {
+contract { effects { database.write, network.outbound, audit.write } }
+{
   return Ok(Response.created("{}"))
 }
 `);
@@ -536,7 +538,8 @@ contract {
     require runtime report
   }
 }
-with effects [database.write, network.outbound, audit.write] {
+contract { effects { database.write, network.outbound, audit.write } }
+{
   return Ok(Response.created("{}"))
 }
 `);
@@ -741,7 +744,8 @@ flow test() -> String {
 type CardNumber = Brand<String, "CardNumber">
 
 secure flow test(readonly request: Request) -> String
-with effects [database.write] {
+contract { effects { database.write } }
+{
   unsafe let card: CardNumber = request.body.cardNumber
   return "ok"
 }
@@ -865,7 +869,8 @@ describe("Financial — full secure payment flow execution", () => {
   it("executes a payment flow and records an audit entry", async () => {
     const result = await parseAndRun(`
 guarded flow processPayment(amount: Money<GBP>) -> Result<String, String>
-effects [audit.write] {
+contract { effects { audit.write } }
+{
   AuditLog.write(event: "payment.processed")
   return Ok("success")
 }
@@ -888,7 +893,8 @@ effects [audit.write] {
   it("payment flow audit record has correct schema version", async () => {
     const result = await parseAndRun(`
 guarded flow processPayment() -> String
-effects [audit.write] {
+contract { effects { audit.write } }
+{
   AuditLog.write(event: "payment.initiated")
   return "ok"
 }
@@ -1016,7 +1022,8 @@ contract {
     require runtime report
   }
 }
-with effects [database.write, network.outbound, audit.write] {
+contract { effects { database.write, network.outbound, audit.write } }
+{
   return Ok(Response.created("{}"))
 }
 `);

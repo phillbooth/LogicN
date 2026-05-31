@@ -43,13 +43,22 @@ contract set PatientDataWrite {
 
 ```logicn
 // Applied to a flow
-secure flow createPatient(readonly request: Request) -> Result<Response, ApiError>
+secure flow createPatient(readonly request: Request) -> CreatePatientResult
+
 contract {
+  types {
+    type CreatePatientResult = Result<Response, ApiError>
+  }
+
   use PatientDataWrite
 
   intent { "Create a patient record while protecting PII." }
+
+  effects {
+    database.write
+    audit.write
+  }
 }
-effects [database.write, audit.write]
 { ... }
 ```
 
@@ -84,14 +93,18 @@ contract set PatientDataWrite {
 }
 ```
 
-The flow must still declare effects explicitly:
+The flow must still declare effects explicitly inside `contract.effects {}`:
 ```logicn
 // The flow must declare its own effects — 'use PatientDataWrite' does NOT add them automatically
 secure flow createPatient(...)
 contract {
   use PatientDataWrite           // may require audit.write
+
+  effects {
+    database.write
+    audit.write                  // flow still declares explicitly
+  }
 }
-effects [database.write, audit.write]   // flow still declares explicitly
 ```
 
 ### Reason: this keeps LogicN's authority model intact
@@ -144,15 +157,24 @@ contract set ComplianceAudit {
 ## Using Multiple Sets
 
 ```logicn
-secure flow updatePatient(readonly request: Request) -> Result<Response, ApiError>
+secure flow updatePatient(readonly request: Request) -> UpdatePatientResult
+
 contract {
+  types {
+    type UpdatePatientResult = Result<Response, ApiError>
+  }
+
   use PatientDataWrite
   use ComplianceAudit
 
   intent { "Update a patient record." }
   events { emits PatientUpdated }
+
+  effects {
+    database.write
+    audit.write
+  }
 }
-effects [database.write, audit.write]
 { ... }
 ```
 
@@ -182,22 +204,40 @@ contract set NhsPatientData {
 }
 
 // Applied to multiple flows
-secure flow createPatient(readonly request: Request) -> Result<Response, ApiError>
+secure flow createPatient(readonly request: Request) -> CreatePatientResult
+
 contract {
+  types {
+    type CreatePatientResult = Result<Response, ApiError>
+  }
+
   use NhsPatientData
   intent { "Create NHS patient record." }
   events { emits PatientCreated }
+
+  effects {
+    database.write
+    audit.write
+  }
 }
-effects [database.write, audit.write]
 { ... }
 
-secure flow updatePatient(readonly request: Request) -> Result<Response, ApiError>
+secure flow updatePatient(readonly request: Request) -> UpdatePatientResult
+
 contract {
+  types {
+    type UpdatePatientResult = Result<Response, ApiError>
+  }
+
   use NhsPatientData
   intent { "Update NHS patient record." }
   events { emits PatientUpdated }
+
+  effects {
+    database.write
+    audit.write
+  }
 }
-effects [database.write, audit.write]
 { ... }
 ```
 

@@ -11,9 +11,15 @@ contract {
   types {
     type SaveOrderResult = Result<OrderId, OrderError>
   }
+
+  intent {
+    "Save a customer order."
+  }
+
+  effects {
+    database.write
+  }
 }
-  with effects [database.write]
-  intent "Save a customer order"
 {
   let orderId = OrdersDB.insert(order)?
   return Ok(orderId)

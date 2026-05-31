@@ -8,11 +8,19 @@
 guarded flow runAdaptive(input: Tensor<Float32, [Batch, 512]>) -> RunAdaptiveResult
 
 contract {
+  // Result alias — adaptive runtime learns from workload while preserving security and governance
   types {
     type RunAdaptiveResult = Result<Tensor<Float32, [Batch, 128]>, AiError>
   }
+
+  intent {
+    "Run inference with adaptive runtime that learns workload patterns within governance constraints."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
 {
   compute target best { prefer [npu, gpu, cpu] fallback cpu }
 

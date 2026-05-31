@@ -8,7 +8,18 @@
 type Email = Brand<String, EmailTag>
 
 guarded flow example(email: protected Email) -> Void
-  with effects [audit.write]
+
+contract {
+  // Security intent: protected Email must be redacted before reaching the audit sink.
+  // This pattern prevents PII leaking into audit logs in plain form.
+  intent {
+    "Write a redacted email to the audit log, demonstrating the protected -> redacted -> audit pattern."
+  }
+
+  effects {
+    audit.write
+  }
+}
 {
   let auditEmail: redacted Email = redact(email)
   AuditLog.write({ email: auditEmail })

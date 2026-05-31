@@ -9,12 +9,21 @@
 secure flow exportAnalytics(readonly request: Request) -> ExportAnalyticsResult
 
 contract {
+  // Result alias — AnalyticsSDK.export triggers LLN-MODULE-005 without manifest acceptance
   types {
     type ExportAnalyticsResult = Result<Response, ExportError>
   }
+
+  intent {
+    "Export anonymised analytics to approved partner"
+  }
+
+  effects {
+    database.read
+    network.outbound
+    audit.write
+  }
 }
-  with effects [database.read, network.outbound, audit.write]
-  intent "Export anonymised analytics to approved partner"
 {
   let data = AnalyticsDB.query(request.filters)?
 

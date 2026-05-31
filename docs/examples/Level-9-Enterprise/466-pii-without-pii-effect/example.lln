@@ -7,11 +7,20 @@
 guarded flow getPatientEmail(patientId: PatientId) -> GetPatientEmailResult
 
 contract {
+  // Result alias — pii.read missing on PII access triggers LLN-PII-001
   types {
     type GetPatientEmailResult = Result<Email, DbError>
   }
+
+  intent {
+    "Retrieve patient email — demonstrates missing pii.read effect on PII access."
+  }
+
+  effects {
+    database.read
+  }
 }
-effects [database.read] {
+{
   let patient = PatientsDB.findById(patientId)?
   return Ok(patient.email)
 }

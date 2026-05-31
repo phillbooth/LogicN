@@ -128,9 +128,14 @@ contract {
 
 // ── Main lexer flow ─────────────────────────────────────────
 
-guarded flow tokenize(source: String) -> Result<Array<Token>, LexError>
+guarded flow tokenize(source: String) -> TokenizeResult
 
 contract {
+  // Result alias — single-pass lexer; bounded by source length; errors carry line/col position
+  types {
+    type TokenizeResult = Result<Array<Token>, LexError>
+  }
+
   intent { "Tokenise LogicN source text into a stream of tokens. Single-pass, bounded by source length." }
 }
 {

@@ -6,29 +6,35 @@
 // Spec: docs/Knowledge-Bases/formal-type-system-spec.md
 //
 // Implemented diagnostics:
-//   LLN-TYPE-001  UnknownType              — type name not in scope
-//   LLN-TYPE-008  SilentNullDenied         — null / undefined used as value
+//   LLN-TYPE-001  UnknownType                — type name not in scope
+//   LLN-TYPE-008  SilentNullDenied           — null / undefined used as value
 //   LLN-TYPE-009  InvalidGenericInstantiation — wrong generic arity
-//   LLN-TYPE-010  CollectionElementTypeMismatch — Array<T> element type mismatch
-//   LLN-TYPE-017  NumericPrecisionLoss     — implicit numeric narrowing (warning)
-//   LLN-TYPE-018  ProtectedBoundaryViolation — protected value assigned to plain type
-//   LLN-TYPE-019  RedactedBoundaryViolation  — redacted value cannot revert to plain type
-//   LLN-TYPE-020  ShadowedBinding          — binding shadows outer-scope name (warning)
-//   LLN-TYPE-021  NonExhaustiveMatch       — match missing arm(s)
-//   LLN-TYPE-022  UnreachablePattern       — arm after wildcard or exhausted set
-//   LLN-NAME-002  DuplicateName            — same name declared twice in same scope
+//   LLN-TYPE-011  InvalidCollectionElement   — Array<T> element type mismatch
+//   LLN-TYPE-017  QuantizedPrecisionMismatch — stub; fires when quantized/float tensors
+//                                              mix without dequantize() (Phase 13, tensor scope)
+//   LLN-TYPE-020  ShadowedBinding            — binding shadows outer-scope name (warning)
+//   LLN-TYPE-021  NonExhaustiveMatch         — match missing arm(s)
+//   LLN-TYPE-022  UnreachablePattern         — arm after wildcard or exhausted set
+//   LLN-NAME-002  DuplicateName              — same name declared twice in same scope
 //
 // Implemented (continued):
-//   LLN-TYPE-003  InvalidNominalConversion — String → BrandedType requires gate (Phase 9A-2)
-//   LLN-TYPE-004  InvalidBinaryOperation   — extended with String+non-String, Bool arithmetic,
-//                                            String ordering comparisons
+//   LLN-TYPE-003  InvalidNominalConversion   — String → BrandedType requires gate (Phase 9A-2)
+//   LLN-TYPE-004  InvalidBinaryOperation     — extended with String+non-String, Bool arithmetic,
+//                                              String ordering comparisons
 //   LLN-BINDING-005  ImmutableBindingReassigned — let/param reassignment rejected (Phase 11A.2)
 //
 // Deferred (require full expression type inference or call graph):
-//   LLN-TYPE-002  TypeMismatch             — assignment compatibility (partial Phase 8A)
+//   LLN-TYPE-002  TypeMismatch               — assignment compatibility (partial Phase 8A)
 //   LLN-TYPE-005..007  Operator / call / return type checking
-//   LLN-TYPE-011..016  MapKey, Tensor, Channel, Enum, Generic, constraint checks
+//   LLN-TYPE-010  UnsatisfiedGenericConstraint — generic constraint checks
+//   LLN-TYPE-012..016  ResultType, SecretOp, MissingEffect, GovernedSink, TensorShape
+//   LLN-TYPE-018  InvalidRuntimeTargetType
+//   LLN-TYPE-019  UnknownSymbol
 //   Module-level import resolution
+//
+// Protected/redacted boundary violations now live in value-state-checker.ts:
+//   LLN-VALUESTATE-006  ProtectedBoundaryViolation
+//   LLN-VALUESTATE-007  RedactedBoundaryViolation
 //
 // Symbol resolver (LLN-NAME-001, LLN-NAME-003) lives in symbol-resolver.ts
 // =============================================================================
@@ -321,7 +327,7 @@ function isAssignmentCompatible(declared: string, inferred: string): boolean {
 
   // Strip governance qualifiers (protected/redacted) from inferred before comparing.
   // "protected Email" is assignment-compatible with "Email" because the qualifier
-  // is additive. LLN-TYPE-018/019 handle the reverse case (plain X ← protected X).
+  // is additive. LLN-VALUESTATE-006/007 handle the reverse case (plain X ← protected X).
   let nInferred = inferred;
   if (nInferred.startsWith("protected ")) nInferred = nInferred.slice(10).trim();
   else if (nInferred.startsWith("redacted ")) nInferred = nInferred.slice(9).trim();
@@ -1054,7 +1060,7 @@ class TypeChecker {
         // Phase 8A: check assignment compatibility with init expression
         // Skip LLN-TYPE-002 when the declared type has a governance qualifier (protected/redacted)
         // — those bindings accept inferred protected/redacted types and the boundary checks
-        // (LLN-TYPE-018/019) cover the reverse direction.
+        // (LLN-VALUESTATE-006/007 in value-state-checker.ts) cover the reverse direction.
         const hasGovernanceQualifier = typeSection.startsWith("protected ") || typeSection.startsWith("redacted ");
         const initNode = node.children?.[0];
         if (!hasGovernanceQualifier && initNode !== undefined) {
@@ -1102,43 +1108,11 @@ class TypeChecker {
           }
         }
 
-        // LLN-TYPE-018 / LLN-TYPE-019: protected/redacted boundary violations
-        // Only check when the declared type is plain (no protection qualifier)
-        if (declaredBase !== "" && !typeSection.startsWith("protected ") && !typeSection.startsWith("redacted ")) {
-          const initNode2 = node.children?.[0];
-          if (initNode2 !== undefined) {
-            const inferredRhsType = this.inferType(initNode2);
-            if (inferredRhsType?.startsWith("protected ")) {
-              const protectedBase = inferredRhsType.slice("protected ".length).trim();
-              // Only flag if the base types match (it's clearly the same domain type)
-              if (protectedBase === declaredBase || protectedBase.endsWith(declaredBase)) {
-                this.diagnostics.push(makeTCDiag(
-                  "LLN-TYPE-018",
-                  "ProtectedBoundaryViolation",
-                  `Cannot assign 'protected ${protectedBase}' to '${declaredBase}'. The 'protected' qualifier is part of the type — either the binding should be 'protected ${declaredBase}', or the value must go through an authorised access gate.`,
-                  node.location,
-                  `Change the type annotation to: protected ${protectedBase}`,
-                  `protected ${protectedBase}`,
-                ));
-              }
-            }
-            // LLN-TYPE-019: redacted X assigned where plain X is required
-            if (inferredRhsType?.startsWith("redacted ")) {
-              const redactedBase = inferredRhsType.slice("redacted ".length).trim();
-              if (redactedBase === declaredBase || redactedBase.endsWith(declaredBase)) {
-                this.diagnostics.push(makeTCDiag(
-                  "LLN-TYPE-019",
-                  "RedactedBoundaryViolation",
-                  `Cannot convert 'redacted ${redactedBase}' back to '${declaredBase}'. Redaction is irreversible — a redacted value cannot be de-redacted.`,
-                  node.location,
-                  `Use the redacted value as-is, or do not redact it before this point.`,
-                ));
-              }
-            }
-          }
-        }
+        // Note: protected/redacted boundary violations are enforced in value-state-checker.ts
+        // as LLN-VALUESTATE-006 (ProtectedBoundaryViolation) and
+        // LLN-VALUESTATE-007 (RedactedBoundaryViolation).
 
-        // LLN-TYPE-010: Array<T> element type mismatch
+        // LLN-TYPE-011: Array<T> element type mismatch
         if (declaredBase === "Array") {
           const parsed = parseTypeString(typeSection);
           const elementType = parsed.args[0];
@@ -1149,8 +1123,8 @@ class TypeChecker {
                 if (elemInferred !== undefined && elemInferred !== elementType &&
                     !isAssignmentCompatible(elementType, elemInferred)) {
                   this.diagnostics.push(makeTCDiag(
-                    "LLN-TYPE-010",
-                    "CollectionElementTypeMismatch",
+                    "LLN-TYPE-011",
+                    "InvalidCollectionElement",
                     `Array<${elementType}> contains a '${elemInferred}' element. All elements must be '${elementType}'.`,
                     element.location,
                     `Change the element to a '${elementType}' value, or change the array type to Array<${elemInferred}>.`,
@@ -1161,25 +1135,12 @@ class TypeChecker {
           }
         }
 
-        // LLN-TYPE-017: numeric precision loss (warning)
-        const PRECISION_ORDER: ReadonlyMap<string, number> = new Map([
-          ["Float16", 1], ["Float32", 2], ["Float", 3], ["Float64", 4],
-          ["Int8", 1], ["Int16", 2], ["Int32", 3], ["Int", 4], ["Int64", 5],
-        ]);
-        const declaredPrecision = PRECISION_ORDER.get(declaredBase);
-        const inferredPrecision = initNode !== undefined ? PRECISION_ORDER.get(this.inferType(initNode) ?? "") : undefined;
-        if (declaredPrecision !== undefined && inferredPrecision !== undefined &&
-            inferredPrecision > declaredPrecision) {
-          const inferred = this.inferType(initNode!) ?? "higher-precision type";
-          this.diagnostics.push({
-            code: "LLN-TYPE-017",
-            name: "NumericPrecisionLoss",
-            severity: "warning",
-            message: `Assigning '${inferred}' to '${declaredBase}' may lose precision. Use explicit conversion if narrowing is intended.`,
-            ...(node.location !== undefined ? { location: node.location } : {}),
-            suggestedFix: `Use an explicit cast or change the type to '${inferred}'.`,
-          });
-        }
+        // LLN-TYPE-017: QuantizedPrecisionMismatch — per formal spec, this fires when
+        // mixing quantized (Int8/UInt8) tensors with floating-point (Float32) without
+        // an explicit dequantize() call. General numeric narrowing (Float64 → Float16)
+        // falls under ordinary LLN-TYPE-002 TypeMismatch / assignment incompatibility.
+        // Stub: enforcement deferred until tensor types are fully in scope (Phase 13).
+        // Do NOT fire for general float-to-float narrowing — that is TYPE-002 territory.
 
       } else if (declaredBase === "Auto") {
         // Auto inference: register the inferred type

@@ -5,7 +5,18 @@
 /// test_status: stable
 /// ai_rule: Pure flows cannot perform any I/O, including filesystem reads.
 
-pure flow loadConfig(path: String) -> Result<Config, ConfigError> {
+pure flow loadConfig(path: String) -> LoadConfigResult
+
+contract {
+  types {
+    type LoadConfigResult = Result<Config, ConfigError>
+  }
+
+  intent {
+    "Load config — BUG: pure flow cannot call fs.readText which requires filesystem.read effect."
+  }
+}
+{
   unsafe let rawFile = fs.readText(path)?
   let config: Config = toml.decode(rawFile)?
   return Ok(config)

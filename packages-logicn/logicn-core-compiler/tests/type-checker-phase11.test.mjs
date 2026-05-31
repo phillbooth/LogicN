@@ -1,13 +1,18 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { parseProgram, checkTypes } from "../dist/index.js";
+import { parseProgram, checkTypes, checkValueStates } from "../dist/index.js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function parseAndCheck(source) {
   const parsed = parseProgram(source, "test.lln");
   return checkTypes(parsed.ast);
+}
+
+function parseAndCheckValueStates(source) {
+  const parsed = parseProgram(source, "test.lln");
+  return checkValueStates(parsed.ast);
 }
 
 function hasDiag(result, code) {
@@ -21,7 +26,7 @@ function diagsWithCode(result, code) {
 // ── Part 1: inferType completeness ───────────────────────────────────────────
 
 describe("inferType — listLiteral", () => {
-  it("infers Array<Int> for a list of Int literals and no LLN-TYPE-010", () => {
+  it("infers Array<Int> for a list of Int literals and no LLN-TYPE-011", () => {
     const result = parseAndCheck(`
 flow test() -> Void {
   let xs: Array<Int> = [1, 2, 3]
@@ -29,8 +34,8 @@ flow test() -> Void {
 }
 `);
     assert.ok(
-      !hasDiag(result, "LLN-TYPE-010"),
-      `Unexpected LLN-TYPE-010 for valid Array<Int> = [1,2,3]`,
+      !hasDiag(result, "LLN-TYPE-011"),
+      `Unexpected LLN-TYPE-011 for valid Array<Int> = [1,2,3]`,
     );
     assert.ok(
       !hasDiag(result, "LLN-TYPE-002"),
@@ -46,8 +51,8 @@ flow test() -> Void {
 }
 `);
     assert.ok(
-      !hasDiag(result, "LLN-TYPE-010"),
-      `Unexpected LLN-TYPE-010 for valid Array<String>`,
+      !hasDiag(result, "LLN-TYPE-011"),
+      `Unexpected LLN-TYPE-011 for valid Array<String>`,
     );
   });
 
@@ -59,14 +64,14 @@ flow test() -> Void {
   return
 }
 `);
-    assert.ok(!hasDiag(result, "LLN-TYPE-010"), "No element mismatch for matching Array");
+    assert.ok(!hasDiag(result, "LLN-TYPE-011"), "No element mismatch for matching Array");
   });
 });
 
-// ── LLN-TYPE-010: Collection element type mismatch ───────────────────────────
+// ── LLN-TYPE-011: Collection element type mismatch ───────────────────────────
 
-describe("Type checker — LLN-TYPE-010 CollectionElementTypeMismatch", () => {
-  it("emits LLN-TYPE-010 when Array<Int> contains a String element", () => {
+describe("Type checker — LLN-TYPE-011 InvalidCollectionElement", () => {
+  it("emits LLN-TYPE-011 when Array<Int> contains a String element", () => {
     const result = parseAndCheck(`
 flow test() -> Void {
   let xs: Array<Int> = [1, "two"]
@@ -74,8 +79,8 @@ flow test() -> Void {
 }
 `);
     assert.ok(
-      hasDiag(result, "LLN-TYPE-010"),
-      `Expected LLN-TYPE-010 for Array<Int> = [1, "two"], got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+      hasDiag(result, "LLN-TYPE-011"),
+      `Expected LLN-TYPE-011 for Array<Int> = [1, "two"], got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
     );
   });
 
@@ -86,15 +91,15 @@ flow test() -> Void {
   return
 }
 `);
-    const diags = diagsWithCode(result, "LLN-TYPE-010");
-    assert.ok(diags.length > 0, "Expected LLN-TYPE-010");
+    const diags = diagsWithCode(result, "LLN-TYPE-011");
+    assert.ok(diags.length > 0, "Expected LLN-TYPE-011");
     assert.ok(
       diags.some((d) => d.message.includes("String")),
       `Expected message to mention 'String', got: ${diags.map((d) => d.message).join("; ")}`,
     );
   });
 
-  it("emits LLN-TYPE-010 when Array<Bool> contains an Int element", () => {
+  it("emits LLN-TYPE-011 when Array<Bool> contains an Int element", () => {
     const result = parseAndCheck(`
 flow test() -> Void {
   let flags: Array<Bool> = [true, 42]
@@ -102,12 +107,12 @@ flow test() -> Void {
 }
 `);
     assert.ok(
-      hasDiag(result, "LLN-TYPE-010"),
-      `Expected LLN-TYPE-010 for Array<Bool> = [true, 42]`,
+      hasDiag(result, "LLN-TYPE-011"),
+      `Expected LLN-TYPE-011 for Array<Bool> = [true, 42]`,
     );
   });
 
-  it("does not emit LLN-TYPE-010 for all-matching elements", () => {
+  it("does not emit LLN-TYPE-011 for all-matching elements", () => {
     const result = parseAndCheck(`
 flow test() -> Void {
   let flags: Array<Bool> = [true, false, true]
@@ -115,12 +120,12 @@ flow test() -> Void {
 }
 `);
     assert.ok(
-      !hasDiag(result, "LLN-TYPE-010"),
-      `Unexpected LLN-TYPE-010 for valid Array<Bool>`,
+      !hasDiag(result, "LLN-TYPE-011"),
+      `Unexpected LLN-TYPE-011 for valid Array<Bool>`,
     );
   });
 
-  it("does not emit LLN-TYPE-010 when Array has no type parameter", () => {
+  it("does not emit LLN-TYPE-011 when Array has no type parameter", () => {
     // Without a type parameter there's nothing to check against
     const result = parseAndCheck(`
 flow test() -> Void {
@@ -129,16 +134,19 @@ flow test() -> Void {
 }
 `);
     assert.ok(
-      !hasDiag(result, "LLN-TYPE-010"),
-      `Unexpected LLN-TYPE-010 for Array<String> with all String elements`,
+      !hasDiag(result, "LLN-TYPE-011"),
+      `Unexpected LLN-TYPE-011 for Array<String> with all String elements`,
     );
   });
 });
 
-// ── LLN-TYPE-017: Numeric precision loss ─────────────────────────────────────
+// ── LLN-TYPE-017: QuantizedPrecisionMismatch (spec-aligned) ─────────────────
+// Per formal spec and Phase 11 decision: TYPE-017 is for quantized/float tensor
+// mixing without dequantize(). General numeric narrowing falls under TYPE-002.
+// The check is a stub until tensor types are fully in scope (Phase 13).
 
-describe("Type checker — LLN-TYPE-017 NumericPrecisionLoss", () => {
-  it("emits LLN-TYPE-017 warning when Float literal assigned to Float16", () => {
+describe("Type checker — LLN-TYPE-017 QuantizedPrecisionMismatch (spec stub)", () => {
+  it("does NOT emit LLN-TYPE-017 for Float → Float16 (narrowing is TYPE-002 territory)", () => {
     const result = parseAndCheck(`
 flow test() -> Void {
   let x: Float16 = 3.14
@@ -146,14 +154,12 @@ flow test() -> Void {
 }
 `);
     assert.ok(
-      hasDiag(result, "LLN-TYPE-017"),
-      `Expected LLN-TYPE-017 for Float16 = 3.14 (Float), got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+      !hasDiag(result, "LLN-TYPE-017"),
+      `LLN-TYPE-017 must not fire for general float narrowing (use TYPE-002)`,
     );
-    const diag = diagsWithCode(result, "LLN-TYPE-017")[0];
-    assert.equal(diag?.severity, "warning", "LLN-TYPE-017 should be a warning");
   });
 
-  it("emits LLN-TYPE-017 when Int literal assigned to Int8", () => {
+  it("does NOT emit LLN-TYPE-017 for Int → Int8 (narrowing is TYPE-002 territory)", () => {
     const result = parseAndCheck(`
 flow test() -> Void {
   let x: Int8 = 42
@@ -161,8 +167,8 @@ flow test() -> Void {
 }
 `);
     assert.ok(
-      hasDiag(result, "LLN-TYPE-017"),
-      `Expected LLN-TYPE-017 for Int8 = 42 (Int)`,
+      !hasDiag(result, "LLN-TYPE-017"),
+      `LLN-TYPE-017 must not fire for plain Int narrowing`,
     );
   });
 
@@ -175,7 +181,7 @@ flow test() -> Void {
 `);
     assert.ok(
       !hasDiag(result, "LLN-TYPE-017"),
-      `Unexpected LLN-TYPE-017 for Float64 = 3.14 (no precision loss)`,
+      `Unexpected LLN-TYPE-017 for Float64 = 3.14 (widening is always safe)`,
     );
   });
 
@@ -193,114 +199,103 @@ flow test() -> Void {
   });
 });
 
-// ── LLN-TYPE-018: ProtectedBoundaryViolation ─────────────────────────────────
+// ── LLN-VALUESTATE-006: ProtectedBoundaryViolation ───────────────────────────
 
-describe("Type checker — LLN-TYPE-018 ProtectedBoundaryViolation", () => {
-  it("emits LLN-TYPE-018 when protect(String) assigned to plain String binding", () => {
-    // protect('raw') infers as 'protected String'; declared is 'String' → violation
-    const result = parseAndCheck(
+describe("Value-state checker — LLN-VALUESTATE-006 ProtectedBoundaryViolation", () => {
+  it("emits LLN-VALUESTATE-006 when protect(String) assigned to plain String binding", () => {
+    // protect('raw') produces a protected value; declared is 'String' → violation
+    const result = parseAndCheckValueStates(
       'flow test() -> String { let x: String = protect("raw")\nreturn "ok" }',
     );
     assert.ok(
-      hasDiag(result, "LLN-TYPE-018"),
-      `Expected LLN-TYPE-018 for String = protect("raw"), got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+      hasDiag(result, "LLN-VALUESTATE-006"),
+      `Expected LLN-VALUESTATE-006 for String = protect("raw"), got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
     );
   });
 
-  it("LLN-TYPE-018 message mentions the protected qualifier and the type", () => {
-    const result = parseAndCheck(
+  it("LLN-VALUESTATE-006 message mentions the protected qualifier", () => {
+    const result = parseAndCheckValueStates(
       'flow test() -> String { let x: String = protect("raw")\nreturn "ok" }',
     );
-    const diag = diagsWithCode(result, "LLN-TYPE-018")[0];
-    assert.ok(diag !== undefined, "Expected at least one LLN-TYPE-018 diagnostic");
+    const diag = diagsWithCode(result, "LLN-VALUESTATE-006")[0];
+    assert.ok(diag !== undefined, "Expected at least one LLN-VALUESTATE-006 diagnostic");
     assert.ok(
       diag.message.includes("protected"),
       `Expected 'protected' in message: ${diag.message}`,
     );
   });
 
-  it("does not emit LLN-TYPE-018 when declared type is also protected", () => {
+  it("does not emit LLN-VALUESTATE-006 when declared type is also protected", () => {
     // let x: protected String = protect("raw") — binding qualifier matches → no violation
-    const result = parseAndCheck(
+    const result = parseAndCheckValueStates(
       'flow test() -> String { let x: protected String = protect("raw")\nreturn "ok" }',
     );
     assert.ok(
-      !hasDiag(result, "LLN-TYPE-018"),
-      `Unexpected LLN-TYPE-018 when declared type is already 'protected String'`,
+      !hasDiag(result, "LLN-VALUESTATE-006"),
+      `Unexpected LLN-VALUESTATE-006 when declared type is already 'protected String'`,
     );
   });
 
-  it("does not emit LLN-TYPE-018 for plain string literal assigned to String", () => {
-    const result = parseAndCheck(`
+  it("does not emit LLN-VALUESTATE-006 for plain string literal assigned to String", () => {
+    const result = parseAndCheckValueStates(`
 flow test() -> String {
   let safe: String = "hello"
   return safe
 }
 `);
     assert.ok(
-      !hasDiag(result, "LLN-TYPE-018"),
-      `Unexpected LLN-TYPE-018 for a plain String literal`,
-    );
-  });
-
-  it("does not emit LLN-TYPE-018 when declared type does not match inferred protected base", () => {
-    // protect() returns 'protected String', declared is 'Int' — bases differ, no 018
-    const result = parseAndCheck(
-      'flow test() -> String { let x: Int = protect("raw")\nreturn "ok" }',
-    );
-    assert.ok(
-      !hasDiag(result, "LLN-TYPE-018"),
-      `Unexpected LLN-TYPE-018 when base types do not match`,
+      !hasDiag(result, "LLN-VALUESTATE-006"),
+      `Unexpected LLN-VALUESTATE-006 for a plain String literal`,
     );
   });
 });
 
-// ── LLN-TYPE-019: RedactedBoundaryViolation ──────────────────────────────────
+// ── LLN-VALUESTATE-007: RedactedBoundaryViolation ────────────────────────────
 
-describe("Type checker — LLN-TYPE-019 RedactedBoundaryViolation", () => {
-  it("emits LLN-TYPE-019 when redact(String) assigned to plain String binding", () => {
-    // redact('raw') infers as 'redacted String'; declared is 'String' → violation
-    const result = parseAndCheck(
+describe("Value-state checker — LLN-VALUESTATE-007 RedactedBoundaryViolation", () => {
+  it("emits LLN-VALUESTATE-007 when redact(String) assigned to plain String binding", () => {
+    // redact('raw') produces a redacted value; declared is 'String' → violation
+    const result = parseAndCheckValueStates(
       'flow test() -> String { let x: String = redact("raw")\nreturn "ok" }',
     );
     assert.ok(
-      hasDiag(result, "LLN-TYPE-019"),
-      `Expected LLN-TYPE-019 for String = redact("raw"), got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+      hasDiag(result, "LLN-VALUESTATE-007"),
+      `Expected LLN-VALUESTATE-007 for String = redact("raw"), got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
     );
   });
 
-  it("LLN-TYPE-019 message mentions irreversibility", () => {
-    const result = parseAndCheck(
+  it("LLN-VALUESTATE-007 message mentions irreversibility", () => {
+    const result = parseAndCheckValueStates(
       'flow test() -> String { let x: String = redact("raw")\nreturn "ok" }',
     );
-    const diag = diagsWithCode(result, "LLN-TYPE-019")[0];
-    assert.ok(diag !== undefined, "Expected at least one LLN-TYPE-019 diagnostic");
+    const diag = diagsWithCode(result, "LLN-VALUESTATE-007")[0];
+    assert.ok(diag !== undefined, "Expected at least one LLN-VALUESTATE-007 diagnostic");
     assert.ok(
       diag.message.includes("irreversible") || diag.message.includes("redact"),
       `Expected 'irreversible'/'redact' in message: ${diag.message}`,
     );
   });
 
-  it("does not emit LLN-TYPE-019 when declared type is redacted", () => {
-    const result = parseAndCheck(
+  it("does not emit LLN-VALUESTATE-007 when declared type is redacted", () => {
+    const result = parseAndCheckValueStates(
       'flow test() -> String { let x: redacted String = redact("raw")\nreturn "ok" }',
     );
     assert.ok(
-      !hasDiag(result, "LLN-TYPE-019"),
-      `Unexpected LLN-TYPE-019 when declared type is already 'redacted String'`,
+      !hasDiag(result, "LLN-VALUESTATE-007"),
+      `Unexpected LLN-VALUESTATE-007 when declared type is already 'redacted String'`,
     );
   });
 
-  it("does not emit LLN-TYPE-019 for a plain String literal assigned to String", () => {
-    const result = parseAndCheck(`
+  it("does not emit LLN-VALUESTATE-007 for a plain String literal assigned to String", () => {
+    const result = parseAndCheckValueStates(`
 flow test() -> String {
   let safe: String = "public"
   return safe
 }
 `);
     assert.ok(
-      !hasDiag(result, "LLN-TYPE-019"),
-      `Unexpected LLN-TYPE-019 for a plain String literal`,
+      !hasDiag(result, "LLN-VALUESTATE-007"),
+      `Unexpected LLN-VALUESTATE-007 for a plain String literal`,
     );
   });
 });
@@ -485,23 +480,52 @@ describe("LLN_TYPE_010..019 exported constants", () => {
     }
   });
 
-  it("LLN_TYPE_017 has severity warning", async () => {
+  it("LLN_TYPE_017 has severity warning (QuantizedPrecisionMismatch)", async () => {
     const { LLN_TYPE_017 } = await import("../dist/index.js");
     assert.equal(LLN_TYPE_017.severity, "warning");
+    assert.equal(LLN_TYPE_017.name, "QuantizedPrecisionMismatch");
   });
 
-  it("LLN_TYPE_018 has severity error", async () => {
+  it("LLN_TYPE_018 has severity error (InvalidRuntimeTargetType)", async () => {
     const { LLN_TYPE_018 } = await import("../dist/index.js");
     assert.equal(LLN_TYPE_018.severity, "error");
+    assert.equal(LLN_TYPE_018.name, "InvalidRuntimeTargetType");
   });
 
-  it("LLN_TYPE_019 has severity error", async () => {
+  it("LLN_TYPE_019 has severity error (UnknownSymbol)", async () => {
     const { LLN_TYPE_019 } = await import("../dist/index.js");
     assert.equal(LLN_TYPE_019.severity, "error");
+    assert.equal(LLN_TYPE_019.name, "UnknownSymbol");
   });
 
-  it("LLN_TYPE_010 has severity error", async () => {
+  it("LLN_TYPE_010 has severity error (UnsatisfiedGenericConstraint)", async () => {
     const { LLN_TYPE_010 } = await import("../dist/index.js");
     assert.equal(LLN_TYPE_010.severity, "error");
+    assert.equal(LLN_TYPE_010.name, "UnsatisfiedGenericConstraint");
+  });
+
+  it("LLN_TYPE_011 has name InvalidCollectionElement", async () => {
+    const { LLN_TYPE_011 } = await import("../dist/index.js");
+    assert.equal(LLN_TYPE_011.name, "InvalidCollectionElement");
+  });
+});
+
+// ── Exports: LLN_VALUESTATE_006 and LLN_VALUESTATE_007 constants ─────────────
+
+describe("LLN_VALUESTATE_006 and LLN_VALUESTATE_007 exported constants", () => {
+  it("exports LLN_VALUESTATE_006 with correct code and name", async () => {
+    const { LLN_VALUESTATE_006 } = await import("../dist/index.js");
+    assert.ok(LLN_VALUESTATE_006 !== undefined, "Expected LLN_VALUESTATE_006 to be exported");
+    assert.equal(LLN_VALUESTATE_006.code, "LLN-VALUESTATE-006");
+    assert.equal(LLN_VALUESTATE_006.name, "ProtectedBoundaryViolation");
+    assert.equal(LLN_VALUESTATE_006.severity, "error");
+  });
+
+  it("exports LLN_VALUESTATE_007 with correct code and name", async () => {
+    const { LLN_VALUESTATE_007 } = await import("../dist/index.js");
+    assert.ok(LLN_VALUESTATE_007 !== undefined, "Expected LLN_VALUESTATE_007 to be exported");
+    assert.equal(LLN_VALUESTATE_007.code, "LLN-VALUESTATE-007");
+    assert.equal(LLN_VALUESTATE_007.name, "RedactedBoundaryViolation");
+    assert.equal(LLN_VALUESTATE_007.severity, "error");
   });
 });

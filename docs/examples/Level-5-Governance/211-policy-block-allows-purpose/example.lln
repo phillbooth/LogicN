@@ -11,9 +11,16 @@ contract {
   types {
     type EmailPatientResult = Result<Unit, EmailError>
   }
+
+  intent {
+    "Send an appointment reminder to a patient — policy restricts purpose to appointment communications only."
+  }
+
+  effects {
+    network.outbound
+    audit.write
+  }
 }
-  with effects [network.outbound, audit.write]
-  intent "Send an appointment reminder to a patient"
   policy {
     purpose "appointment_reminder"
     allow protected Email to "patient"

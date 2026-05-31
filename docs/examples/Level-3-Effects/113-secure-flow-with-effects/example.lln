@@ -5,8 +5,32 @@
 /// test_status: stable
 /// ai_rule: Secure flows require audit.write alongside operational effects.
 
-secure flow createPatient(request: Request) -> Result<PatientId, PatientError>
-  with effects [database.write, audit.write]
+secure flow createPatient(request: Request) -> CreatePatientResult
+
+contract {
+  types {
+    type CreatePatientResult = Result<PatientId, PatientError>
+  }
+
+  intent {
+    // Security intent: all PII must be validated at the trust boundary before database writes.
+    // Audit evidence is mandatory — audit.write must be declared and called.
+    "Create a patient record from a validated request with mandatory audit trail."
+  }
+
+  request {
+    body {
+      email: unsafe String
+      patientId: unsafe String
+      // Parser note: body sub-block parsed generically, enforcement pending
+    }
+  }
+
+  effects {
+    database.write
+    audit.write
+  }
+}
 {
   unsafe let rawEmail: String = request.body.email
   unsafe let rawPatientId: String = request.body.patientId

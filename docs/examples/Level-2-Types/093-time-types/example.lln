@@ -5,26 +5,54 @@
 /// test_status: stable
 /// ai_rule: Duration is a time span. Timestamp is a point in time. Use Duration.ofSeconds, ofMinutes, ofHours, ofMs for construction.
 
-pure flow sessionTimeout() -> String {
+pure flow sessionTimeout() -> String
+
+contract {
+  intent {
+    "Return a string representation of a 30-second session timeout duration."
+  }
+}
+{
   let d: Duration = Duration.ofSeconds(30)
   return d.toString()
 }
 
-pure flow buildDeadline(baseMs: Int, extraSeconds: Int) -> String {
+pure flow buildDeadline(baseMs: Int, extraSeconds: Int) -> String
+
+contract {
+  intent {
+    "Combine a base millisecond duration with extra seconds and return the total as a string."
+  }
+}
+{
   let base: Duration = Duration.ofMs(baseMs)
   let extra: Duration = Duration.ofSeconds(extraSeconds)
   let total: Duration = base.add(extra)
   return total.toString()
 }
 
-pure flow describeWindow(hours: Int, minutes: Int) -> String {
+pure flow describeWindow(hours: Int, minutes: Int) -> String
+
+contract {
+  intent {
+    "Combine hours and minutes into a single Duration window and return its string form."
+  }
+}
+{
   let h: Duration = Duration.ofHours(hours)
   let m: Duration = Duration.ofMinutes(minutes)
   let window: Duration = h.add(m)
   return window.toString()
 }
 
-pure flow remainingTime(totalMs: Int, elapsedMs: Int) -> String {
+pure flow remainingTime(totalMs: Int, elapsedMs: Int) -> String
+
+contract {
+  intent {
+    "Calculate the remaining time by subtracting elapsed milliseconds from the total and return as a string."
+  }
+}
+{
   let total: Duration = Duration.ofMs(totalMs)
   let elapsed: Duration = Duration.ofMs(elapsedMs)
   let remaining: Duration = total.subtract(elapsed)

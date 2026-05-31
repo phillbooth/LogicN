@@ -6,8 +6,15 @@
 perform governed side effects but is not itself the external trust boundary.
 
 ```logicn
-guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-  with effects [database.write]
+guarded flow saveOrder(order: Order) -> SaveOrderResult
+contract {
+  types {
+    type SaveOrderResult = Result<OrderId, OrderError>
+  }
+  effects {
+    database.write
+  }
+}
 {
   let orderId = OrdersDB.insert(order)?
   return Ok(orderId)
@@ -18,14 +25,16 @@ Canonical syntax:
 
 ```text
 guarded flow name(params) -> ReturnType
-  with effects [effect.name, other.effect]
+contract {
+  effects { effect.name, other.effect }
+}
 {
   body
 }
 ```
 
 During migration, the grammar may also accept `effects [...]` without `with`,
-but corpus examples use `with effects [...]` for guarded flows.
+but the preferred form uses `contract { effects { ... } }` for guarded flows.
 
 ## Role
 
@@ -60,8 +69,16 @@ Local `fn` helpers cannot declare their own `effects [...]` clause, but their
 body is checked in the containing flow's effect context.
 
 ```logicn
-guarded flow syncOrders(orders: List<Order>) -> Result<Unit, SyncError>
-  with effects [network.outbound, database.write]
+guarded flow syncOrders(orders: List<Order>) -> SyncOrdersResult
+contract {
+  types {
+    type SyncOrdersResult = Result<Unit, SyncError>
+  }
+  effects {
+    network.outbound
+    database.write
+  }
+}
 {
   fn fetchRate(currency: String) -> Result<Decimal, RateError> {
     unsafe let rawResponse = http.get("https://rates.example.com/" + currency)?
@@ -81,8 +98,15 @@ reject the program even though the network call is inside a local `fn`.
 
 ```logicn
 // 102-guarded-database-write
-guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-  with effects [database.write]
+guarded flow saveOrder(order: Order) -> SaveOrderResult
+contract {
+  types {
+    type SaveOrderResult = Result<OrderId, OrderError>
+  }
+  effects {
+    database.write
+  }
+}
 {
   let orderId = OrdersDB.insert(order)?
   return Ok(orderId)
@@ -91,8 +115,15 @@ guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
 
 ```logicn
 // 103-guarded-network-outbound
-guarded flow fetchRate(baseCurrency: String) -> Result<Decimal, RateError>
-  with effects [network.outbound]
+guarded flow fetchRate(baseCurrency: String) -> FetchRateResult
+contract {
+  types {
+    type FetchRateResult = Result<Decimal, RateError>
+  }
+  effects {
+    network.outbound
+  }
+}
 {
   unsafe let rawResponse = http.get("https://rates.example.com/" + baseCurrency)?
   let rate: Decimal = json.decode(rawResponse)?
@@ -102,8 +133,17 @@ guarded flow fetchRate(baseCurrency: String) -> Result<Decimal, RateError>
 
 ```logicn
 // 104-multiple-effects
-guarded flow syncOrder(order: Order) -> Result<Unit, SyncError>
-  with effects [database.write, network.outbound, audit.write]
+guarded flow syncOrder(order: Order) -> SyncOrderResult
+contract {
+  types {
+    type SyncOrderResult = Result<Unit, SyncError>
+  }
+  effects {
+    database.write
+    network.outbound
+    audit.write
+  }
+}
 {
   let orderId = OrdersDB.insert(order)?
   let _ = http.post("https://sync.example.com/orders", order)?
@@ -114,8 +154,15 @@ guarded flow syncOrder(order: Order) -> Result<Unit, SyncError>
 
 ```logicn
 // 108-guarded-flow-calls-effectful-flow
-guarded flow buildPriceQuote(orderId: OrderId) -> Result<Money<GBP>, RateError>
-  with effects [network.outbound]
+guarded flow buildPriceQuote(orderId: OrderId) -> BuildPriceQuoteResult
+contract {
+  types {
+    type BuildPriceQuoteResult = Result<Money<GBP>, RateError>
+  }
+  effects {
+    network.outbound
+  }
+}
 {
   let rate = fetchRate("GBP")?
   return Ok(Money.gbp("100.00") * rate)

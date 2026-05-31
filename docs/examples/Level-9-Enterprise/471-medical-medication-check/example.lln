@@ -36,6 +36,7 @@ secure flow checkMedicationInteraction(
 ) -> MedicationCheckResult
 
 contract {
+  // Result alias — PII and PHI for two medication codes; all redacted in audit
   types {
     type MedicationCheckResult = Result<Response, MedicalError>
   }
@@ -138,7 +139,7 @@ contract {
   }
 }
 
-with effects [pii.read, database.read, audit.write] {
+{
   let actor = context.actor
   let traceId = context.trace_id
 

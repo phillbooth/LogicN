@@ -5,8 +5,31 @@
 /// test_status: stable
 /// ai_rule: NhsNumber values come from validate.nhsNumber().
 
-secure flow registerPatient(request: Request) -> Result<PatientId, PatientError>
-  with effects [database.write, audit.write]
+secure flow registerPatient(request: Request) -> RegisterPatientResult
+
+contract {
+  // Security intent: NHS number is PHI — it must be validated at the boundary
+  // before any database write, and redacted before any audit log entry.
+  types {
+    type RegisterPatientResult = Result<PatientId, PatientError>
+  }
+
+  intent {
+    "Validate an unsafe NHS number from the request boundary and register the patient."
+  }
+
+  request {
+    body {
+      nhsNumber: unsafe String
+      // Parser note: body sub-block parsed generically, enforcement pending
+    }
+  }
+
+  effects {
+    database.write
+    audit.write
+  }
+}
 {
   unsafe let rawNhsNumber: String = request.body.nhsNumber
   let nhsNumber: protected NhsNumber = validate.nhsNumber(rawNhsNumber)?

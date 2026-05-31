@@ -8,12 +8,23 @@
 secure flow sendReferral(readonly request: Request) -> SendReferralResult
 
 contract {
+  // Result alias — authority block grants protected data to cross a trust boundary
   types {
     type SendReferralResult = Result<Response, ReferralError>
   }
+
+  intent {
+    "Send patient referral to approved specialist service"
+  }
+
+  effects {
+    pii.read
+    pii.write
+    database.read
+    network.outbound
+    audit.write
+  }
 }
-  with effects [pii.read, pii.write, database.read, network.outbound, audit.write]
-  intent "Send patient referral to approved specialist service"
   authority {
     grant pii.share to SpecialistService
     purpose "patient_referral"

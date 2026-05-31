@@ -6,7 +6,18 @@
 /// test_status: stable
 
 secure flow example(readonly request: Request) -> Void
-  with effects [network.outbound]
+
+contract {
+  // Security intent: unsafe values must not cross network trust boundaries.
+  // This example deliberately passes rawEmail to http.post to demonstrate LLN-VALUESTATE-003.
+  intent {
+    "BUG: demonstrates an unsafe value being sent over the network without validation."
+  }
+
+  effects {
+    network.outbound
+  }
+}
 {
   unsafe let rawEmail: String = request.body.email
   http.post("/customer", rawEmail)?

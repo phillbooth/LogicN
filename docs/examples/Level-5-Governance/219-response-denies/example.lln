@@ -12,7 +12,6 @@
 // Expected diagnostic: LLN-GOV-003 (PROTECTED_DATA_IN_RESPONSE)
 
 secure flow getPatientProfile(readonly request: Request) -> GetPatientProfileResult
-intent "Return a patient profile. Email and NHS number must not appear in the response."
 
 contract {
   types {
@@ -26,9 +25,13 @@ contract {
     exposes { patientId name dateOfBirth }
     denies { email nhsNumber }
   }
+  effects {
+    database.read
+    audit.write
+  }
 }
 
-with effects [database.read, audit.write] {
+{
   let patient = PatientsDB.find(request.params.id)?
   AuditLog.write({ event: "PatientProfileRead", id: patient.id })
   // BUG: email is in contract.response.denies — this leaks protected data

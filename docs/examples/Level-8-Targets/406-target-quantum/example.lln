@@ -8,11 +8,19 @@
 guarded flow runQuantumOptimiser(params: Tensor<Float32, [64]>) -> RunQuantumOptimiserResult
 
 contract {
+  // Result alias — quantum target with classical cpu fallback simulation
   types {
     type RunQuantumOptimiserResult = Result<Tensor<Float32, [64]>, AiError>
   }
+
+  intent {
+    "Run a quantum optimisation algorithm with classical CPU simulation fallback."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
 {
   compute target quantum { fallback cpu }
   return QuantumOptimiser.run(params)?

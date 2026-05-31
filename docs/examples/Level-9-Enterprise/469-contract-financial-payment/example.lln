@@ -27,6 +27,7 @@ secure flow initiatePayment(
 ) -> InitiatePaymentResult
 
 contract {
+  // Result alias — full financial payment contract: errors.redact, privacy.PII, timeouts, signed attestation
   types {
     type InitiatePaymentResult = Result<Response, ApiError>
   }
@@ -187,7 +188,7 @@ contract {
   }
 }
 
-with effects [database.write, network.outbound, audit.write] {
+{
   let actor: Actor = context.actor
   let traceId: TraceId = context.trace_id
 

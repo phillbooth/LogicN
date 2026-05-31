@@ -8,12 +8,22 @@
 secure flow emailPatient(readonly request: Request) -> EmailPatientResult
 
 contract {
+  // Result alias — policy block enforces lawful basis and purpose for PII contact data
   types {
     type EmailPatientResult = Result<Response, NotificationError>
   }
+
+  intent {
+    "Send appointment reminder to patient"
+  }
+
+  effects {
+    pii.read
+    database.read
+    network.outbound
+    audit.write
+  }
 }
-  with effects [pii.read, database.read, network.outbound, audit.write]
-  intent "Send appointment reminder to patient"
   policy {
     purpose "appointment_reminder"
     lawfulBasis "legitimate_interest"

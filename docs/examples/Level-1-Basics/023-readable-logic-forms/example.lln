@@ -8,7 +8,14 @@
 event OrderApproved
 event OrderRejected
 
-pure flow approveOrder(amount: Int, limit: Int, isActive: Bool, isVerified: Bool) -> Bool {
+pure flow approveOrder(amount: Int, limit: Int, isActive: Bool, isVerified: Bool) -> Bool
+
+contract {
+  intent {
+    "Approve an order using readable operator aliases (and, or, unless, is) to express the approval logic."
+  }
+}
+{
 
   // 'and' is an alias for &&
   let bothVerified: Bool = isActive and isVerified

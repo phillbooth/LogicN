@@ -5,8 +5,21 @@
 /// ai_rule: Declare database.write when writing to a database.
 /// test_status: stable
 
-guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-  with effects [database.write]
+guarded flow saveOrder(order: Order) -> SaveOrderResult
+
+contract {
+  types {
+    type SaveOrderResult = Result<OrderId, OrderError>
+  }
+
+  intent {
+    "Persist a customer order to the database and return the generated order ID."
+  }
+
+  effects {
+    database.write
+  }
+}
 {
   let orderId = OrdersDB.insert(order)?
   return Ok(orderId)

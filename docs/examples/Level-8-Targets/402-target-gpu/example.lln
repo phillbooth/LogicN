@@ -8,11 +8,19 @@
 guarded flow runOnGpu(input: Tensor<Float32, [Batch, 224, 224, 3]>) -> RunOnGpuResult
 
 contract {
+  // Result alias — gpu target for large dense vision workloads with cpu fallback
   types {
     type RunOnGpuResult = Result<Tensor<Float32, [Batch, 1000]>, AiError>
   }
+
+  intent {
+    "Run large dense vision model on GPU with CPU fallback."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
 {
   compute target gpu { fallback cpu }
   return VisionModel.forward(input)?

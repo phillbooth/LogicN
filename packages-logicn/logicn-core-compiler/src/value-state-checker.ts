@@ -170,6 +170,60 @@ function isLogCall(node: AstNode): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Governance qualifier helpers
+//
+// Used for LLN-VALUESTATE-006 / LLN-VALUESTATE-007 boundary checks.
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true when the AST node produces a protected value.
+ *
+ * Mirrors the type-checker's inferType protected-value inference:
+ *   protect(x)                              → "protected X"
+ *   validate.email(x) [receiver=validate]   → "protected Email"
+ *   method.startsWith("validate.")          → "protected String" (qualified method name)
+ *
+ * Note: validate.sanitize(x), validate.text(x) etc. have unqualified method names
+ * ("sanitize", "text") so they do NOT produce a protected type and must not fire
+ * this check.
+ *
+ * Also: errorPropagation (?) wrapping any of the above is unwrapped.
+ */
+function isProtectedValueExpression(node: AstNode): boolean {
+  // Unwrap errorPropagation (?)
+  if (node.kind === "errorPropagation") {
+    const inner = node.children?.[0];
+    return inner !== undefined && isProtectedValueExpression(inner);
+  }
+  if (node.kind !== "callExpr") return false;
+  const methodName = node.value ?? "";
+  // protect(x) → protected X
+  if (methodName === "protect") return true;
+  // validate.email(x) — method is "email", receiver is identifier "validate"
+  // or method starts with "validate." (fully-qualified method name)
+  const receiver = node.children?.[0];
+  const receiverIsValidateNamespace =
+    receiver?.kind === "identifier" && receiver.value === "validate";
+  if (receiverIsValidateNamespace && methodName === "email") return true;
+  // Fully-qualified validate method names (method itself starts with "validate.")
+  if (methodName.startsWith("validate.")) return true;
+  return false;
+}
+
+/**
+ * Returns true when the AST node is a `redact(...)` call expression (or wrapped in ?).
+ * Assigning redact(x) to a plain binding is a LLN-VALUESTATE-007 violation.
+ */
+function isRedactCall(node: AstNode): boolean {
+  // Unwrap errorPropagation (?)
+  if (node.kind === "errorPropagation") {
+    const inner = node.children?.[0];
+    return inner !== undefined && isRedactCall(inner);
+  }
+  return node.kind === "callExpr" && (node.value === "redact");
+}
+
+// ---------------------------------------------------------------------------
 // Gate function recognition
 //
 // The right-hand side of `safe mut name = gate(name)?` must match one of these.
@@ -569,6 +623,39 @@ class ValueStateChecker {
         const sourceName = findTaintSourceName(init, (name) => this.lookupBinding(name));
         taintField.tainted = true;
         if (sourceName !== undefined) taintField.taintSource = sourceName;
+      }
+    }
+
+    // LLN-VALUESTATE-006: protected value assigned to plain binding
+    // LLN-VALUESTATE-007: redacted value assigned to plain binding
+    // Only fire when:
+    //   1. The binding has an explicit type annotation (colonIdx present in value string)
+    //   2. The declared type annotation is plain — no "protected" or "redacted" anywhere in the type
+    const rawNodeValue = (node.value ?? "").trim();
+    const colonIdx2 = rawNodeValue.indexOf(":");
+    const hasExplicitType = colonIdx2 !== -1;
+    // Extract the full type annotation section (after the colon)
+    const typeAnnotationSection = hasExplicitType ? rawNodeValue.slice(colonIdx2 + 1).trim() : "";
+    const hasGovernanceQualifier =
+      typeAnnotationSection.includes("protected") || typeAnnotationSection.includes("redacted");
+    if (hasExplicitType && !hasGovernanceQualifier && info.typeName !== "" && init !== undefined) {
+      if (isProtectedValueExpression(init)) {
+        this.diagnostics.push(makeVSDiag(
+          "LLN-VALUESTATE-006",
+          "ProtectedBoundaryViolation",
+          `Cannot assign a 'protected' value to plain binding '${info.name}'. Declare the binding as 'protected ${info.typeName}', or pass the value through an authorised access gate.`,
+          node.location,
+          `Change the type annotation to: protected ${info.typeName}`,
+          `protected ${info.typeName}`,
+        ));
+      } else if (isRedactCall(init)) {
+        this.diagnostics.push(makeVSDiag(
+          "LLN-VALUESTATE-007",
+          "RedactedBoundaryViolation",
+          `Cannot assign a 'redacted' value to plain binding '${info.name}'. Redaction is irreversible — a redacted value cannot be converted back to its original type.`,
+          node.location,
+          `Use the redacted value as-is with type 'redacted ${info.typeName}', or do not redact before this point.`,
+        ));
       }
     }
 

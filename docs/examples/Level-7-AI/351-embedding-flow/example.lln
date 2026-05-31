@@ -8,11 +8,19 @@
 guarded flow embedText(text: String) -> EmbedTextResult
 
 contract {
+  // Result alias — typed tensor output from embedding model
   types {
     type EmbedTextResult = Result<Tensor<Float32, [1, 768]>, AiError>
   }
+
+  intent {
+    "Embed text into a typed tensor using an on-device embedding model."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
 {
   let embedding = EmbeddingModel.embed(text)?
   return Ok(embedding)

@@ -7,8 +7,24 @@
 
 type Email = Brand<String, EmailTag>
 
-secure flow createUser(request: Request) -> Result<UserId, UserError>
-  with effects [database.write, audit.write]
+secure flow createUser(request: Request) -> CreateUserResult
+
+contract {
+  // Security intent: all data from the HTTP request boundary is untrusted.
+  // Use unsafe let to mark it, then validate before any write or protected use.
+  types {
+    type CreateUserResult = Result<UserId, UserError>
+  }
+
+  intent {
+    "Create a user from an HTTP request, treating all request body fields as unsafe at the trust boundary."
+  }
+
+  effects {
+    database.write
+    audit.write
+  }
+}
 {
   unsafe let rawEmail: String = request.body.email
   let email: protected Email = validate.email(rawEmail)?

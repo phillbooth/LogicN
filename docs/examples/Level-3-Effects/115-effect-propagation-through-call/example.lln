@@ -4,14 +4,40 @@
 /// expected_diagnostics: none
 /// ai_rule: A flow calling another flow must declare all effects required by the callee.
 
-guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-  with effects [database.write]
+guarded flow saveOrder(order: Order) -> SaveOrderResult
+
+contract {
+  types {
+    type SaveOrderResult = Result<OrderId, OrderError>
+  }
+
+  intent {
+    "Persist an order to the database and return the generated order ID."
+  }
+
+  effects {
+    database.write
+  }
+}
 {
   return Ok(OrdersDB.insert(order)?)
 }
 
-guarded flow processOrder(order: Order) -> Result<OrderId, ProcessError>
-  with effects [database.write]
+guarded flow processOrder(order: Order) -> ProcessOrderResult
+
+contract {
+  types {
+    type ProcessOrderResult = Result<OrderId, ProcessError>
+  }
+
+  intent {
+    "Process an order by delegating to saveOrder — inherits its database.write effect."
+  }
+
+  effects {
+    database.write
+  }
+}
 {
   let orderId = saveOrder(order)?
   return Ok(orderId)

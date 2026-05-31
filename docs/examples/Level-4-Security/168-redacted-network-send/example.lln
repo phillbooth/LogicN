@@ -5,8 +5,23 @@
 /// ai_rule: Redacted values are safe to transmit to audit or logging endpoints.
 /// test_status: stable
 
-guarded flow forwardAuditEvent(email: protected Email) -> Result<Unit, AuditError>
-  with effects [network.outbound]
+guarded flow forwardAuditEvent(email: protected Email) -> ForwardAuditEventResult
+
+contract {
+  // Security intent: redacting a protected value before sending it over the network
+  // prevents PII leakage. Redacted values are safe for audit and logging endpoints.
+  types {
+    type ForwardAuditEventResult = Result<Unit, AuditError>
+  }
+
+  intent {
+    "Forward a redacted audit event to an external audit endpoint via an outbound network call."
+  }
+
+  effects {
+    network.outbound
+  }
+}
 {
   http.post("/audit", redact(email))?
   return Ok(unit)

@@ -5,8 +5,21 @@
 /// ai_rule: A guarded flow may call effectful flows provided it declares all required effects.
 /// test_status: stable
 
-guarded flow buildPriceQuote(orderId: OrderId) -> Result<Money<GBP>, RateError>
-  with effects [network.outbound]
+guarded flow buildPriceQuote(orderId: OrderId) -> BuildPriceQuoteResult
+
+contract {
+  types {
+    type BuildPriceQuoteResult = Result<Money<GBP>, RateError>
+  }
+
+  intent {
+    "Build a price quote by fetching the current GBP rate from an external service."
+  }
+
+  effects {
+    network.outbound
+  }
+}
 {
   let rate = fetchRate("GBP")?
   return Ok(Money.gbp("100.00") * rate)

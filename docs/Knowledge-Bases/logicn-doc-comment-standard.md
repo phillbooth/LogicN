@@ -100,8 +100,16 @@ pure flow calculateVat(price: Money<GBP>) -> Money<GBP> {
 /// @ai.inputs currency: CurrencyCode
 /// @ai.output Result<Decimal, NetworkError>
 /// @effects network.outbound
-guarded flow fetchRate(currency: CurrencyCode) -> Result<Decimal, NetworkError>
-with effects [network.outbound] {
+guarded flow fetchRate(currency: CurrencyCode) -> FetchRateResult
+contract {
+  types {
+    type FetchRateResult = Result<Decimal, NetworkError>
+  }
+  effects {
+    network.outbound
+  }
+}
+{
   unsafe let rawResponse: String = http.get("/rates/" + currency)?
   let rate: Decimal = json.decode<Decimal>(rawResponse)?
   return Ok(rate)
@@ -121,9 +129,20 @@ with effects [network.outbound] {
 ///   - rawEmail validated via validate.email gate before use
 ///   - email is protected Email — cannot be logged raw
 ///   - email redacted before AuditLog.write
-secure flow createPatient(readonly request: Request) -> Result<Response, ApiError>
-with effects [database.write, audit.write]
-intent "Create patient record with protected PII handling" {
+secure flow createPatient(readonly request: Request) -> CreatePatientResult
+contract {
+  types {
+    type CreatePatientResult = Result<Response, ApiError>
+  }
+  intent {
+    "Create patient record with protected PII handling"
+  }
+  effects {
+    database.write
+    audit.write
+  }
+}
+{
   ...
 }
 ```

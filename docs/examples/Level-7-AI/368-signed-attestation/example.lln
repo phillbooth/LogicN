@@ -11,6 +11,7 @@ event ClassificationFailed
 guarded flow classifyMessage(message: String) -> ClassifyMessageResult
 
 contract {
+  // Result alias — signed attestation proves the build artifact at the compiler level
   types {
     type ClassifyMessageResult = Result<String, AiError>
   }
@@ -39,7 +40,6 @@ contract {
   }
 }
 
-with effects [ai.inference]
 compute target best {
   prefer [npu, gpu, cpu]
   fallback cpu

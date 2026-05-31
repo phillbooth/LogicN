@@ -8,12 +8,20 @@
 secure flow runFraudScore(readonly tx: Transaction) -> RunFraudScoreResult
 
 contract {
+  // Result alias — full governance pattern: compute target, deny, audit
   types {
     type RunFraudScoreResult = Result<FraudScore, AiError>
   }
+
+  intent {
+    "Score fraud risk on approved local hardware"
+  }
+
+  effects {
+    ai.inference
+    audit.write
+  }
 }
-  with effects [ai.inference, audit.write]
-  intent "Score fraud risk on approved local hardware"
 {
   compute target best { prefer [npu, gpu, cpu] fallback cpu deny [remote.execution] }
 

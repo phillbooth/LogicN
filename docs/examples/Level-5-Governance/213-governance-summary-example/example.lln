@@ -11,9 +11,28 @@ contract {
   types {
     type CreatePatientResult = Result<PatientId, PatientError>
   }
+
+  // Security intent: full governance pattern — validate PII at the trust boundary,
+  // restrict to local compute, require authority for external data sharing,
+  // declare policy purpose, and mandate audit evidence.
+  intent {
+    "Create a new patient record from a validated NHS registration request with full governance controls."
+  }
+
+  request {
+    body {
+      email: unsafe String
+      nhsNumber: unsafe String
+      // Parser note: body sub-block parsed generically, enforcement pending
+    }
+  }
+
+  effects {
+    database.write
+    network.outbound
+    audit.write
+  }
 }
-  with effects [database.write, network.outbound, audit.write]
-  intent "Create a new patient record from a validated NHS registration request"
   compute target best {
     prefer [cpu]
     deny [remote.execution]

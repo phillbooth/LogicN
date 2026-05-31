@@ -253,14 +253,18 @@ event UserCreated
 // Shared route
 route POST "/users" { request CreateUserRequest response UserResponse flow createUser }
 
-secure flow createUser(readonly request: Request) -> Result<Response, ApiError>
-effects [database.write, audit.write]
+secure flow createUser(readonly request: Request) -> CreateUserResult
+
 contract {
   types {
     type CreateUserResult = Result<UserId, ValidationError>
   }
   intent { "Create a user from validated request data." }
   events { emits UserCreated }
+  effects {
+    database.write
+    audit.write
+  }
 }
 {
   unsafe let rawEmail: String = request.body.email

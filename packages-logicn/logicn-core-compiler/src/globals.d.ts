@@ -8,3 +8,12 @@ declare const Buffer: {
   isBuffer(obj: unknown): boolean;
   concat(arrays: readonly Uint8Array[], totalLength?: number): Uint8Array & { toString(encoding: string): string };
 };
+
+declare const process: {
+  readonly argv: readonly string[];
+  readonly env: Readonly<Record<string, string | undefined>>;
+  readonly stdout: { write(data: string): boolean };
+  readonly stderr: { write(data: string): boolean };
+  cwd(): string;
+  exit(code?: number): never;
+};

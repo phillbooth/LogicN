@@ -31,9 +31,13 @@ contract {
     require actor
     require trace_id
   }
-}
 
-with effects [database.write, audit.write] {
+  effects {
+    database.write
+    audit.write
+  }
+}
+{
   let actor = context.actor
   let traceId = context.trace_id
   let order = OrdersDB.insert({ actor: actor, items: request.body.items })?

@@ -8,11 +8,19 @@
 guarded flow runLocal(input: Tensor<Float32, [1, 512]>) -> RunLocalResult
 
 contract {
+  // Result alias — deny [remote.execution] blocks dispatch regardless of prefer list
   types {
     type RunLocalResult = Result<Tensor<Float32, [1, 128]>, AiError>
   }
+
+  intent {
+    "Run model locally — deny remote.execution to enforce local data residency."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
 {
   compute target best { prefer [gpu, cpu] deny [remote.execution] fallback cpu }
   return LocalModel.forward(input)?

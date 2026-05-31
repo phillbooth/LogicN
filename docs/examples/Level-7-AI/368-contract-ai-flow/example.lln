@@ -11,7 +11,7 @@ event ClassificationCompleted
 guarded flow classifyMessage(message: String) -> ClassificationResult
 
 contract {
-
+  // Result alias — contract.intent enables IGO to suppress LLN-HINT-COMPUTE-001
   types {
     type ClassificationResult = Result<Label, AiError>
   }
@@ -20,14 +20,16 @@ contract {
     "Classify inbound messages locally without remote execution."
   }
 
+  effects {
+    ai.inference
+  }
+
   events {
     emits ClassificationStarted
     emits ClassificationCompleted
   }
 
 }
-
-with effects [ai.inference]
 {
   emit ClassificationStarted
 

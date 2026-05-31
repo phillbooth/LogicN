@@ -8,12 +8,19 @@
 guarded flow classifyText(text: String) -> ClassifyTextResult
 
 contract {
+  // Result alias — on-device classification with remote execution denied
   types {
     type ClassifyTextResult = Result<Label, AiError>
   }
+
+  intent {
+    "Classify text locally on approved hardware"
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
-  intent "Classify text locally on approved hardware"
 {
   compute target best { prefer [npu, gpu, cpu] deny [remote.execution] }
 

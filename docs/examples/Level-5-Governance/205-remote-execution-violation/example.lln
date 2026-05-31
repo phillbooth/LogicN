@@ -10,9 +10,15 @@ contract {
   types {
     type RunFraudModelResult = Result<FraudScore, FraudError>
   }
+
+  intent {
+    "Score a transaction for fraud risk on-premises only — BUG: remote compute target violates governance policy."
+  }
+
+  effects {
+    audit.write
+  }
 }
-  with effects [audit.write]
-  intent "Score a transaction for fraud risk on-premises only"
   compute target remote
 {
   let score = FraudModel.score(input)

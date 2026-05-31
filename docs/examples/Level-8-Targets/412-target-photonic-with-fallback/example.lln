@@ -8,11 +8,19 @@
 guarded flow runOptical(input: Tensor<Float32, [Batch, 1024]>) -> RunOpticalResult
 
 contract {
+  // Result alias — full fallback chain photonic → npu → gpu → cpu for portability
   types {
     type RunOpticalResult = Result<Tensor<Float32, [Batch, 512]>, AiError>
   }
+
+  intent {
+    "Run optical model with full classical fallback chain for maximum portability."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
 {
   compute target best { prefer [photonic, npu, gpu, cpu] fallback cpu }
   return OpticalProjection.forward(input)?

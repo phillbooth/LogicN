@@ -5,6 +5,13 @@
 /// test_status: stable
 /// ai_rule: Pure flows cannot perform I/O or call effectful operations.
 
-pure flow calculateVat(price: Money<GBP>) -> Money<GBP> {
+pure flow calculateVat(price: Money<GBP>) -> Money<GBP>
+
+contract {
+  intent {
+    "Calculate VAT at 20% for a given price with no side effects."
+  }
+}
+{
   return price * Decimal("0.20")
 }

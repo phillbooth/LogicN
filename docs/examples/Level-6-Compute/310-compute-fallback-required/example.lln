@@ -8,11 +8,20 @@
 secure flow runFraudModel(tx: Transaction) -> RunFraudModelResult
 
 contract {
+  // Result alias — npu/gpu preference with mandatory cpu fallback
   types {
     type RunFraudModelResult = Result<FraudScore, AiError>
   }
+
+  intent {
+    "Run fraud model inference on NPU or GPU with mandatory CPU fallback and audit trail."
+  }
+
+  effects {
+    ai.inference
+    audit.write
+  }
 }
-  with effects [ai.inference, audit.write]
 {
   compute target best { prefer [npu, gpu] fallback cpu }
 

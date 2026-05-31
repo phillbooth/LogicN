@@ -5,7 +5,14 @@
 /// test_status: stable
 /// ai_rule: fn is a local helper defined inside a flow. It cannot declare effects.
 
-pure flow calculateTotal(price: Money<GBP>) -> Money<GBP> {
+pure flow calculateTotal(price: Money<GBP>) -> Money<GBP>
+
+contract {
+  intent {
+    "Calculate the total price including VAT using a local helper function."
+  }
+}
+{
 
   fn calculateVat(value: Money<GBP>) -> Money<GBP> {
     return value * Decimal("0.20")

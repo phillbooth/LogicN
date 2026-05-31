@@ -24,7 +24,8 @@ describe("Governance verifier — LLN-GOV-010 intent missing on secure flow", ()
   it("emits LLN-GOV-010 info when secure flow has no intent in dev mode", () => {
     const result = parseAndVerify(`
 secure flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write, audit.write] {
+contract { effects { database.write audit.write } }
+{
   return Ok(Response.ok({}))
 }
 `, "dev");
@@ -34,7 +35,8 @@ with effects [database.write, audit.write] {
   it("LLN-GOV-010 is error severity in production", () => {
     const result = parseAndVerify(`
 secure flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write, audit.write] {
+contract { effects { database.write audit.write } }
+{
   return Ok(Response.ok({}))
 }
 `, "production");
@@ -57,7 +59,8 @@ describe("Governance verifier — LLN-GOV-002 missing audit for governed sink", 
   it("emits LLN-GOV-002 when database.write declared but no audit.write", () => {
     const result = parseAndVerify(`
 guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-with effects [database.write] {
+contract { effects { database.write } }
+{
   return Ok(order.id)
 }
 `);
@@ -67,7 +70,8 @@ with effects [database.write] {
   it("does not emit LLN-GOV-002 when audit.write is declared", () => {
     const result = parseAndVerify(`
 guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-with effects [database.write, audit.write] {
+contract { effects { database.write audit.write } }
+{
   return Ok(order.id)
 }
 `);
@@ -88,7 +92,8 @@ describe("Governance verifier — proof obligations", () => {
   it("records audit_required obligation when audit.write is declared", () => {
     const result = parseAndVerify(`
 guarded flow log(msg: String) -> Void
-with effects [audit.write] {
+contract { effects { audit.write } }
+{
   return
 }
 `);
@@ -101,7 +106,7 @@ with effects [audit.write] {
   it("records intent_declared obligation when secure flow has intent", () => {
     const result = parseAndVerify(`
 secure flow createPatient(request: Request) -> Result<Response, ApiError>
-with effects [database.write, audit.write]
+contract { effects { database.write audit.write } }
 intent "Create patient record" {
   return Ok(Response.ok({}))
 }
@@ -115,7 +120,7 @@ intent "Create patient record" {
   it("intent status is satisfied when secure flow has intent", () => {
     const result = parseAndVerify(`
 secure flow createPatient(request: Request) -> Result<Response, ApiError>
-with effects [database.write, audit.write]
+contract { effects { database.write audit.write } }
 intent "Create patient record" {
   return Ok(Response.ok({}))
 }
@@ -132,7 +137,7 @@ describe("Governance verifier — LLN-GOV-004 denied target", () => {
     // Full LLN-GOV-004 detection requires Phase 8 compute target body parsing.
     const result = parseAndVerify(`
 secure flow runModel(request: Request) -> Result<Response, AiError>
-with effects [ai.inference, network.outbound]
+contract { effects { ai.inference network.outbound } }
 intent "Run model locally" {
   return Ok(Response.ok({}))
 }
@@ -146,8 +151,8 @@ describe("Governance verifier — LLN-GOV-011 unknown contract set", () => {
   it("emits LLN-GOV-011 when use references an undeclared contract set", () => {
     const result = parseAndVerify(`
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write]
 contract {
+  effects { database.write }
   use UnknownSet
 }
 {
@@ -160,8 +165,8 @@ contract {
   it("LLN-GOV-011 is error severity", () => {
     const result = parseAndVerify(`
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write]
 contract {
+  effects { database.write }
   use UnknownSet
 }
 {
@@ -182,8 +187,8 @@ contract set OrderPolicy {
 }
 
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write]
 contract {
+  effects { database.write }
   use OrderPolicy
 }
 {
@@ -210,8 +215,8 @@ contract set AuditedPolicy {
 }
 
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write]
 contract {
+  effects { database.write }
   use AuditedPolicy
 }
 {
@@ -230,8 +235,8 @@ contract set AuditedPolicy {
 }
 
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write]
 contract {
+  effects { database.write }
   use AuditedPolicy
 }
 {
@@ -252,8 +257,8 @@ contract set AuditedPolicy {
 }
 
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write, audit.write]
 contract {
+  effects { database.write audit.write }
   use AuditedPolicy
 }
 {
@@ -271,8 +276,8 @@ contract set SimplePolicy {
 }
 
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write]
 contract {
+  effects { database.write }
   use SimplePolicy
 }
 {
@@ -303,7 +308,7 @@ describe("Governance verifier — runtime integration", () => {
     const { run } = await import("../dist/index.js");
     const result = await run(
       `secure flow test(request: Request) -> Result<Response, ApiError>
-with effects [database.write] { return Ok(Response.ok({})) }`,
+contract { effects { database.write } } { return Ok(Response.ok({})) }`,
       "test.lln",
       "test",
       new Map(),
@@ -359,8 +364,9 @@ contract {
     returns PatientResponse
     denies { email }
   }
+  effects { database.read }
 }
-with effects [database.read] {
+{
   let patient = PatientsDB.find(request.params.id)?
   return Ok(Response.ok({ patientId: patient.id, email: patient.email }))
 }
@@ -380,8 +386,9 @@ contract {
     exposes { patientId name }
     denies { email nhsNumber }
   }
+  effects { database.read }
 }
-with effects [database.read] {
+{
   let patient = PatientsDB.find(request.params.id)?
   return Ok(Response.ok({ patientId: patient.id, name: patient.name }))
 }
@@ -396,8 +403,9 @@ contract {
   types {
     type GetOrderResult = Result<Response, ApiError>
   }
+  effects { database.read }
 }
-with effects [database.read] {
+{
   return Ok(Response.ok({ orderId: request.params.id, email: request.user.email }))
 }
 `);
@@ -426,8 +434,9 @@ contract {
   context {
     require actor
   }
+  effects { database.read }
 }
-with effects [database.read] {
+{
   let record = RecordsDB.find(request.params.id)?
   return Ok(Response.ok({ id: record.id }))
 }
@@ -445,8 +454,9 @@ contract {
   context {
     require actor
   }
+  effects { database.read }
 }
-with effects [database.read] {
+{
   let actor = context.actor
   let record = RecordsDB.findForActor(actor, request.params.id)?
   return Ok(Response.ok({ id: record.id }))
@@ -462,8 +472,9 @@ contract {
   types {
     type GetOrderResult = Result<Response, ApiError>
   }
+  effects { database.read }
 }
-with effects [database.read] {
+{
   return Ok(Response.ok({}))
 }
 `);
@@ -480,8 +491,9 @@ contract {
   context {
     require trace_id
   }
+  effects { database.read }
 }
-with effects [database.read] {
+{
   return Ok(Response.ok({}))
 }
 `);

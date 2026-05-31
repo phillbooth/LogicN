@@ -11,6 +11,10 @@ contract {
   types {
     type ReadHealthRecordResult = Result<Response, HealthError>
   }
+
+  intent {
+    "Read a HIPAA health record — demonstrates missing phi.read effect declaration."
+  }
 }
 {
   unsafe let rawId: String = request.body.patientId

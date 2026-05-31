@@ -151,8 +151,15 @@ effects must all be reflected in `effects.observed`.
 Example:
 
 ```logicn
-guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-  with effects [database.write]
+guarded flow saveOrder(order: Order) -> SaveOrderResult
+contract {
+  types {
+    type SaveOrderResult = Result<OrderId, OrderError>
+  }
+  effects {
+    database.write
+  }
+}
 {
   let orderId = OrdersDB.insert(order)?
   return Ok(orderId)
@@ -488,13 +495,23 @@ Successful GIR should contain only `satisfied` proof entries. `missing` and
 Source: `docs/Examples/Level-5-Governance/210-governed-execution-plan`
 
 ```logicn
-secure flow runFraudModel(input: FraudInput) -> Result<FraudScore, FraudError>
-  with effects [database.write, audit.write]
-  intent "Score a payment transaction for fraud risk on approved hardware"
-  compute target best {
-    prefer [npu, gpu, cpu]
-    deny [remote.execution]
+secure flow runFraudModel(input: FraudInput) -> RunFraudModelResult
+contract {
+  types {
+    type RunFraudModelResult = Result<FraudScore, FraudError>
   }
+  intent {
+    "Score a payment transaction for fraud risk on approved hardware"
+  }
+  effects {
+    database.write
+    audit.write
+  }
+}
+compute target best {
+  prefer [npu, gpu, cpu]
+  deny [remote.execution]
+}
 {
   let score = FraudModel.score(input)
   let id = FraudScoreDB.insert({ input: input, score: score })?

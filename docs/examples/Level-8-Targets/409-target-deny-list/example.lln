@@ -8,11 +8,19 @@
 guarded flow runStrictLocal(input: Tensor<Float32, [1, 256]>) -> RunStrictLocalResult
 
 contract {
+  // Result alias — all denied categories in one deny [...] clause for auditable exclusions
   types {
     type RunStrictLocalResult = Result<Tensor<Float32, [1, 64]>, AiError>
   }
+
+  intent {
+    "Run strict local inference — deny all remote and cloud dispatch categories."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
 {
   compute target best {
     prefer [npu, gpu, cpu]

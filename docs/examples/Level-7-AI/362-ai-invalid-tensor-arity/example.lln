@@ -8,11 +8,19 @@
 guarded flow badTensor() -> BadTensorResult
 
 contract {
+  // Result alias — Tensor<Float32> missing shape triggers LLN-TYPE-009
   types {
     type BadTensorResult = Result<Tensor<Float32>, AiError>
   }
+
+  intent {
+    "Demonstrate a Tensor type missing its shape argument — compile error LLN-TYPE-009."
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
 {
   // LLN-TYPE-009: Tensor expects 2 type parameters, got 1
   let x: Tensor<Float32> = EmbeddingModel.embed("hello")?

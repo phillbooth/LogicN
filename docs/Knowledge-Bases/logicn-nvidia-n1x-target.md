@@ -22,11 +22,19 @@ LogicN source stays portable. The N1X-specific optimisations live in the target 
 
 ```logicn
 // Source is unchanged — no N1X-specific syntax
-secure flow classifyMessage(readonly request: Request) -> Result<Response, ApiError>
-effects [ai.inference, audit.write]
-intent "Classify message locally on available device acceleration"
+secure flow classifyMessage(readonly request: Request) -> ClassifyMessageResult
+
 contract {
+  types {
+    type ClassifyMessageResult = Result<Response, ApiError>
+  }
+
   intent { "Classify inbound messages locally without remote execution." }
+
+  effects {
+    ai.inference
+    audit.write
+  }
 }
 {
   compute target best {

@@ -193,9 +193,13 @@ limits {
 
 ```logicn
 secure flow boundedImport(readonly request: Request)
--> Result<ImportResult, ApiError>
+-> BoundedImportResult
 
 contract {
+
+  types {
+    type BoundedImportResult = Result<ImportResult, ApiError>
+  }
 
   intent {
     "Import a batch of patient records with bounded execution and explicit retry policy."

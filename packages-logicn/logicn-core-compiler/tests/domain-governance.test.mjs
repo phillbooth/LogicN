@@ -159,7 +159,7 @@ contract {
     require signed attestation
   }
 }
-with effects [database.read, audit.write]
+contract { effects { database.read, audit.write } }
 intent "Return patient record to an authorised clinical actor." {
   let actor = context.actor
   let trace = context.trace_id
@@ -242,7 +242,8 @@ contract {
     denies { email nhsNumber }
   }
 }
-with effects [database.read] {
+contract { effects { database.read } }
+{
   let patient = PatientsDB.find(request.params.id)?
   return Ok(Response.ok({ patientId: patient.id, email: patient.email }))
 }
@@ -258,7 +259,8 @@ contract {
     denies { ssn }
   }
 }
-with effects [database.read] {
+contract { effects { database.read } }
+{
   return Ok(Response.ok({ ssn: patient.ssn }))
 }
 `);
@@ -275,7 +277,8 @@ contract {
     denies { creditCardNumber }
   }
 }
-with effects [database.read] {
+contract { effects { database.read } }
+{
   return Ok(Response.ok({ creditCardNumber: card.num }))
 }
 `);
@@ -293,7 +296,8 @@ contract {
     denies { email nhsNumber }
   }
 }
-with effects [database.read] {
+contract { effects { database.read } }
+{
   return Ok(Response.ok({ patientId: patient.id, name: patient.name }))
 }
 `);
@@ -308,7 +312,8 @@ contract {
     type GetOrderResult = Result<Response, ApiError>
   }
 }
-with effects [database.read] {
+contract { effects { database.read } }
+{
   return Ok(Response.ok({ email: user.email }))
 }
 `);
@@ -330,8 +335,8 @@ describe("LLN-GOV-011 — unknown contract set", () => {
   it("emits LLN-GOV-011 when flow uses an undeclared contract set", () => {
     const { gov } = runPipeline(`
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write]
 contract {
+  effects { database.write }
   use UnknownPolicy
 }
 {
@@ -344,8 +349,8 @@ contract {
   it("LLN-GOV-011 is error severity", () => {
     const { gov } = runPipeline(`
 flow x(request: Request) -> Result<Response, ApiError>
-with effects [database.write]
 contract {
+  effects { database.write }
   use MissingSet
 }
 {
@@ -360,8 +365,8 @@ contract {
   it("LLN-GOV-011 message names the missing set", () => {
     const { gov } = runPipeline(`
 flow x(request: Request) -> Result<Response, ApiError>
-with effects [database.write]
 contract {
+  effects { database.write }
   use GhostPolicy
 }
 {
@@ -382,8 +387,8 @@ contract set OrderPolicy {
 }
 
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write]
 contract {
+  effects { database.write }
   use OrderPolicy
 }
 {
@@ -415,8 +420,8 @@ contract set AuditedPolicy {
 }
 
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write]
 contract {
+  effects { database.write }
   use AuditedPolicy
 }
 {
@@ -435,8 +440,8 @@ contract set AuditedPolicy {
 }
 
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write]
 contract {
+  effects { database.write }
   use AuditedPolicy
 }
 {
@@ -457,8 +462,8 @@ contract set AuditedPolicy {
 }
 
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write, audit.write]
 contract {
+  effects { database.write, audit.write }
   use AuditedPolicy
 }
 {
@@ -476,8 +481,8 @@ contract set SimplePolicy {
 }
 
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write]
 contract {
+  effects { database.write }
   use SimplePolicy
 }
 {
@@ -510,7 +515,8 @@ contract {
     require actor
   }
 }
-with effects [database.read] {
+contract { effects { database.read } }
+{
   let record = RecordsDB.find(request.params.id)?
   return Ok(Response.ok({ id: record.id }))
 }
@@ -526,7 +532,8 @@ contract {
     require trace_id
   }
 }
-with effects [database.read] {
+contract { effects { database.read } }
+{
   return Ok(Response.ok({}))
 }
 `);
@@ -543,7 +550,8 @@ contract {
     require correlation_id
   }
 }
-with effects [database.read] {
+contract { effects { database.read } }
+{
   return Ok(Response.ok({}))
 }
 `);
@@ -560,7 +568,8 @@ contract {
     require actor
   }
 }
-with effects [database.read] {
+contract { effects { database.read } }
+{
   let actor = context.actor
   return Ok(Response.ok({ actor: actor }))
 }
@@ -576,7 +585,8 @@ contract {
     type GetOrderResult = Result<Response, ApiError>
   }
 }
-with effects [database.read] {
+contract { effects { database.read } }
+{
   return Ok(Response.ok({}))
 }
 `);
@@ -598,7 +608,8 @@ describe("LLN-EVENT-001 — emit without global event declaration", () => {
   it("emits LLN-EVENT-001 when an event is emitted without a top-level declaration", () => {
     const { events } = runPipeline(`
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write] {
+contract { effects { database.write } }
+{
   emit OrderCreated
   return Ok(Response.ok({}))
 }
@@ -609,7 +620,8 @@ with effects [database.write] {
   it("LLN-EVENT-001 is error severity", () => {
     const { events } = runPipeline(`
 flow x(request: Request) -> Result<Response, ApiError>
-with effects [database.write] {
+contract { effects { database.write } }
+{
   emit SomeEvent
   return Ok(Response.ok({}))
 }
@@ -622,7 +634,8 @@ with effects [database.write] {
   it("LLN-EVENT-001 message names the undeclared event", () => {
     const { events } = runPipeline(`
 flow x(request: Request) -> Result<Response, ApiError>
-with effects [database.write] {
+contract { effects { database.write } }
+{
   emit PatientCreated
   return Ok(Response.ok({}))
 }
@@ -637,7 +650,8 @@ with effects [database.write] {
 event OrderCreated
 
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write] {
+contract { effects { database.write } }
+{
   emit OrderCreated
   return Ok(Response.ok({}))
 }
@@ -695,7 +709,8 @@ event DeadEvent
 event OrderCreated
 
 flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write] {
+contract { effects { database.write } }
+{
   emit OrderCreated
   return Ok(Response.ok({}))
 }
@@ -718,7 +733,8 @@ describe("Effect checker — LLN-EFFECT-001 undeclared effect", () => {
   it("emits LLN-EFFECT-001 for a guarded flow using an undeclared effect", () => {
     const { effects } = runPipeline(`
 guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-with effects [database.read] {
+contract { effects { database.read } }
+{
   PatientsDB.insert(order)
   return Ok(order.id)
 }
@@ -729,7 +745,8 @@ with effects [database.read] {
   it("LLN-EFFECT-001 is error severity", () => {
     const { effects } = runPipeline(`
 guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-with effects [database.read] {
+contract { effects { database.read } }
+{
   PatientsDB.insert(order)
   return Ok(order.id)
 }
@@ -742,7 +759,8 @@ with effects [database.read] {
   it("does not emit LLN-EFFECT-001 when effect is correctly declared", () => {
     const { effects } = runPipeline(`
 guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-with effects [database.write, database.read] {
+contract { effects { database.write, database.read } }
+{
   PatientsDB.insert(order)
   return Ok(order.id)
 }
@@ -755,7 +773,8 @@ describe("Effect checker — LLN-EFFECT-002 overdeclared effect", () => {
   it("emits LLN-EFFECT-002 (warning) when a declared effect is not observed", () => {
     const { effects } = runPipeline(`
 guarded flow getOrder(request: Request) -> Result<Order, OrderError>
-with effects [database.read, network.outbound] {
+contract { effects { database.read, network.outbound } }
+{
   let order = OrdersDB.find(request.params.id)?
   return Ok(order)
 }
@@ -766,7 +785,8 @@ with effects [database.read, network.outbound] {
   it("LLN-EFFECT-002 is warning severity for overdeclared effect", () => {
     const { effects } = runPipeline(`
 guarded flow getOrder(request: Request) -> Result<Order, OrderError>
-with effects [database.read, network.outbound] {
+contract { effects { database.read, network.outbound } }
+{
   let order = OrdersDB.find(request.params.id)?
   return Ok(order)
 }
@@ -781,7 +801,8 @@ describe("Effect checker — LLN-EFFECT-003 pure flow with effects", () => {
   it("emits LLN-EFFECT-003 when pure flow declares effects", () => {
     const { effects } = runPipeline(`
 pure flow badFlow(x: Int) -> Int
-effects [database.read] {
+contract { effects { database.read } }
+{
   return x
 }
 `);
@@ -791,7 +812,8 @@ effects [database.read] {
   it("LLN-EFFECT-003 is error severity", () => {
     const { effects } = runPipeline(`
 pure flow badFlow(x: Int) -> Int
-effects [database.write] {
+contract { effects { database.write } }
+{
   return x
 }
 `);
@@ -814,7 +836,8 @@ describe("Effect checker — LLN-EFFECT-004 unknown / non-canonical effect name"
   it("emits LLN-EFFECT-004 for a non-canonical alias effect name", () => {
     const { effects } = runPipeline(`
 guarded flow getOrder(request: Request) -> Result<Order, OrderError>
-with effects [database] {
+contract { effects { database } }
+{
   return Ok(order)
 }
 `);
@@ -824,7 +847,8 @@ with effects [database] {
   it("emits LLN-EFFECT-004 for a completely unknown effect name", () => {
     const { effects } = runPipeline(`
 guarded flow doTheThing(request: Request) -> Result<Response, ApiError>
-with effects [magic.spell] {
+contract { effects { magic.spell } }
+{
   return Ok(Response.ok({}))
 }
 `);
@@ -834,7 +858,8 @@ with effects [magic.spell] {
   it("does not emit LLN-EFFECT-004 for canonical effect names", () => {
     const { effects } = runPipeline(`
 guarded flow getOrder(request: Request) -> Result<Order, OrderError>
-with effects [database.read, audit.write] {
+contract { effects { database.read, audit.write } }
+{
   return Ok(order)
 }
 `);
@@ -850,7 +875,7 @@ describe("Governance verifier — GOV-001 intent behaviour mismatch", () => {
   it("emits LLN-GOV-001 warning when intent says local but flow declares network.outbound", () => {
     const { gov } = runPipeline(`
 secure flow runModel(request: Request) -> Result<Response, AiError>
-with effects [ai.inference, network.outbound]
+contract { effects { ai.inference, network.outbound } }
 intent "Run inference locally without remote calls." {
   return Ok(Response.ok({}))
 }
@@ -863,7 +888,8 @@ describe("Governance verifier — GOV-002 missing audit for governed sink", () =
   it("emits LLN-GOV-002 when database.write is declared but audit.write is missing", () => {
     const { gov } = runPipeline(`
 guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-with effects [database.write] {
+contract { effects { database.write } }
+{
   return Ok(order.id)
 }
 `);
@@ -873,7 +899,8 @@ with effects [database.write] {
   it("does not emit LLN-GOV-002 when audit.write is co-declared", () => {
     const { gov } = runPipeline(`
 guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-with effects [database.write, audit.write] {
+contract { effects { database.write, audit.write } }
+{
   return Ok(order.id)
 }
 `);
@@ -885,7 +912,8 @@ describe("Governance verifier — GOV-010 missing intent on secure flow", () => 
   it("emits LLN-GOV-010 info when secure flow has no intent in dev mode", () => {
     const { gov } = runPipeline(`
 secure flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write, audit.write] {
+contract { effects { database.write, audit.write } }
+{
   return Ok(Response.ok({}))
 }
 `, "dev");
@@ -895,7 +923,8 @@ with effects [database.write, audit.write] {
   it("emits LLN-GOV-010 as error in production mode", () => {
     const { gov } = runPipeline(`
 secure flow createOrder(request: Request) -> Result<Response, ApiError>
-with effects [database.write, audit.write] {
+contract { effects { database.write, audit.write } }
+{
   return Ok(Response.ok({}))
 }
 `, "production");
@@ -907,7 +936,7 @@ with effects [database.write, audit.write] {
   it("does not emit LLN-GOV-010 when secure flow has intent", () => {
     const { gov } = runPipeline(`
 secure flow createPatient(request: Request) -> Result<Response, ApiError>
-with effects [database.write, audit.write]
+contract { effects { database.write, audit.write } }
 intent "Create a patient record." {
   return Ok(Response.ok({}))
 }
@@ -980,7 +1009,7 @@ contract {
     require runtime report
   }
 }
-with effects [database.read, audit.write]
+contract { effects { database.read, audit.write } }
 intent "Return a patient profile to an authorised clinical actor." {
   let actor = context.actor
   let trace = context.trace_id
@@ -1085,7 +1114,7 @@ contract {
     require runtime report
   }
 }
-with effects [database.write, audit.write]
+contract { effects { database.write, audit.write } }
 intent "Register a new patient record in the healthcare system." {
   let patient = PatientsDB.insert(request.body)?
   AuditLog.write(event: "createPatient")
@@ -1119,7 +1148,7 @@ contract {
     denies { nhsNumber }
   }
 }
-with effects [database.write, audit.write]
+contract { effects { database.write, audit.write } }
 intent "Register patient." {
   return Ok(Response.created({ nhsNumber: patient.nhsNumber }))
 }
@@ -1157,7 +1186,7 @@ contract {
     retain 30 days
   }
 }
-with effects [ai.inference]
+contract { effects { ai.inference } }
 intent "Run symptom triage using the clinical inference model." {
   let result = ClinicalModel.infer(request.body)?
   return Ok(Response.ok({ diagnosis: result.label, confidence: result.score }))
@@ -1223,7 +1252,7 @@ contract {
   }
   use HealthcarePolicy
 }
-with effects [database.read, audit.write]
+contract { effects { database.read, audit.write } }
 intent "Retrieve patient data under HealthcarePolicy governance." {
   let patient = PatientsDB.find(request.params.id)?
   emit PatientDataAccessed
@@ -1260,8 +1289,8 @@ contract set AuditRequired {
 }
 
 flow addNote(request: Request) -> Result<Response, ApiError>
-with effects [database.write]
 contract {
+  effects { database.write }
   use AuditRequired
 }
 {
@@ -1280,8 +1309,8 @@ contract set BasePolicy {
 }
 
 flow flowA(request: Request) -> Result<Response, ApiError>
-with effects [database.read]
 contract {
+  effects { database.read }
   use BasePolicy
 }
 {
@@ -1289,8 +1318,8 @@ contract {
 }
 
 flow flowB(request: Request) -> Result<Response, ApiError>
-with effects [database.read]
 contract {
+  effects { database.read }
   use BasePolicy
 }
 {
@@ -1319,7 +1348,7 @@ contract {
     "Create a patient record."
   }
 }
-with effects [database.write, audit.write]
+contract { effects { database.write, audit.write } }
 intent "Create a patient record." {
   return Ok(Response.created("123"))
 }
@@ -1355,7 +1384,7 @@ contract {
     audit.write
   }
 }
-with effects [database.read, audit.write]
+contract { effects { database.read, audit.write } }
 intent "Return patient profile." {
   let actor = context.actor
   let trace = context.trace_id
@@ -1373,7 +1402,7 @@ contract {
     type CreatePatientResult = Result<Response, ApiError>
   }
 }
-with effects [database.write, audit.write]
+contract { effects { database.write, audit.write } }
 intent "Create patient." {
   PatientsDB.insert(request.body)?
   AuditLog.write(event: "create")
@@ -1453,7 +1482,7 @@ contract {
     require signed attestation
   }
 }
-with effects [database.write, audit.write]
+contract { effects { database.write, audit.write } }
 intent "Register a new patient in the health system." {
   let actor = context.actor
   let trace = context.trace_id

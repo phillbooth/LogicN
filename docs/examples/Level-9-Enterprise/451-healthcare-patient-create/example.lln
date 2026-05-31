@@ -8,12 +8,21 @@
 secure flow createPatient(readonly request: Request) -> CreatePatientResult
 
 contract {
+  // Result alias — NHS number and PII validated to protected types, audit with redaction
   types {
     type CreatePatientResult = Result<Response, PatientError>
   }
+
+  intent {
+    "Create a new patient record with validated NHS number"
+  }
+
+  effects {
+    pii.write
+    database.write
+    audit.write
+  }
 }
-  with effects [pii.write, database.write, audit.write]
-  intent "Create a new patient record with validated NHS number"
 {
   unsafe let rawNhs: String = request.body.nhsNumber
   unsafe let rawName: String = request.body.fullName

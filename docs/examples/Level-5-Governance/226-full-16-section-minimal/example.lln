@@ -138,7 +138,7 @@ contract {
 
 }
 
-with effects [database.read, audit.write] {
+{
   let actor = context.actor
   let traceId = context.trace_id
 

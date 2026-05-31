@@ -7,12 +7,22 @@
 secure flow sendReferralNoAuthority(readonly request: Request) -> SendReferralNoAuthorityResult
 
 contract {
+  // Result alias — missing authority block on cross-boundary share triggers LLN-GOV-003
   types {
     type SendReferralNoAuthorityResult = Result<Response, ReferralError>
   }
+
+  intent {
+    "Send patient referral to specialist"
+  }
+
+  effects {
+    pii.read
+    database.read
+    network.outbound
+    audit.write
+  }
 }
-  with effects [pii.read, database.read, network.outbound, audit.write]
-  intent "Send patient referral to specialist"
 {
   unsafe let rawId: String = request.body.patientId
   let patientId: protected PatientId = validate.patientId(rawId)?

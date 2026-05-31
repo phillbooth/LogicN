@@ -4,6 +4,9 @@
 
 import { type AstNode, type AstNodeKind, type FlowMeta, type SourceLocation } from "./parser.js";
 import { type EffectCheckResult } from "./effect-checker.js";
+import { SemanticGraphBuilder, type SemanticGraph } from "@logicn/devtools-graph-algorithms";
+import { buildExecutionPlan as _buildExecutionPlanImpl } from "./runtime/executionPlan.js";
+import type { PassiveExecutionPlan } from "./runtime/executionPlan.js";
 
 export interface GIREffect {
   readonly declared: readonly string[];
@@ -73,6 +76,8 @@ export interface GIRFlow {
   readonly tensors: readonly GIRTensorInfo[];
   /** Target affinity hint derived from declared effects. Absent when no hint needed. */
   readonly target_affinity?: GIRTargetAffinity;
+  /** Phase 15: pre-verified execution plan. Present when built via buildExecutionPlan. */
+  readonly executionPlan?: PassiveExecutionPlan;
 }
 
 export interface GIRProgram {
@@ -480,3 +485,349 @@ function stripStringQuotes(value: string): string {
   }
   return value;
 }
+
+// ---------------------------------------------------------------------------
+// Phase 13A — SemanticGraph emission
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds a SemanticGraph from the parsed AST and flow metadata.
+ * Adds a flow node for each flow, plus effect nodes and declaresEffect edges.
+ */
+export function buildSemanticGraph(
+  _ast: AstNode,
+  flows: readonly FlowMeta[],
+): SemanticGraph {
+  const builder = new SemanticGraphBuilder();
+
+  // Add flow nodes
+  for (const flow of flows) {
+    builder.addNode({
+      id: `flow:${flow.name}`,
+      kind: "flow",
+      name: flow.name,
+      meta: {
+        qualifier: flow.qualifier,
+        returnType: flow.returnType,
+        params: flow.params,
+        declaredEffects: flow.declaredEffects,
+      },
+    });
+
+    // Add edges for declared effects
+    for (const effect of flow.declaredEffects) {
+      const effectId = `effect:${effect}`;
+      if (!builder.hasNode(effectId)) {
+        builder.addNode({ id: effectId, kind: "effect", name: effect });
+      }
+      builder.addEdge({ from: `flow:${flow.name}`, to: effectId, kind: "declaresEffect", label: effect });
+    }
+  }
+
+  return builder.build();
+}
+
+export type { SemanticGraph };
+
+// ---------------------------------------------------------------------------
+// AI Graph — version 2 structured output (no values, metadata only)
+// ---------------------------------------------------------------------------
+
+/**
+ * Maps declared LogicN effects to host capability identifiers.
+ * Only types and governance metadata — never actual values or secrets.
+ */
+export const EFFECT_TO_CAPABILITY: ReadonlyMap<string, string> = new Map([
+  ["database.read",    "host.database.read"],
+  ["database.write",   "host.database.write"],
+  ["audit.write",      "host.audit.write"],
+  ["network.outbound", "host.network.outbound"],
+  ["network.inbound",  "host.network.inbound"],
+  ["ai.inference",     "host.ai.inference"],
+  ["filesystem.read",  "host.filesystem.read"],
+  ["filesystem.write", "host.filesystem.write"],
+  ["email.send",       "host.email.send"],
+]);
+
+export interface AiGraphSourceSpan {
+  readonly line: number;
+  readonly column: number;
+}
+
+export interface AiGraphParameter {
+  readonly name: string;
+  readonly type: string;
+  readonly isReadonly: boolean;
+}
+
+export interface AiGraphEvent {
+  readonly kind: "emits";
+  readonly name: string;
+}
+
+export interface AiGraphContract {
+  readonly effects: readonly string[];
+  readonly privacy: readonly string[];
+  readonly audit: readonly string[];
+  readonly rules: readonly string[];
+  readonly errors: readonly string[];
+  readonly context: readonly string[];
+  readonly timeouts: string;
+  readonly retries: string;
+  readonly limits: readonly string[];
+}
+
+export interface AiGraphFlow {
+  readonly name: string;
+  readonly qualifier: "pure" | "guarded" | "secure" | "flow";
+  readonly intent?: string;
+  readonly parameters: readonly AiGraphParameter[];
+  readonly returnType: string;
+  readonly effects: readonly string[];
+  readonly capabilities: readonly string[];
+  readonly calls: readonly string[];
+  readonly events: readonly AiGraphEvent[];
+  readonly sourceFile?: string;
+  readonly sourceSpan: AiGraphSourceSpan;
+  readonly contract?: AiGraphContract;
+}
+
+export interface AiGraphDiagnostic {
+  readonly code: string;
+  readonly severity: string;
+  readonly message: string;
+  readonly sourceSpan?: AiGraphSourceSpan;
+}
+
+export interface AiGraphGovernance {
+  readonly privacy: readonly string[];
+  readonly audit: readonly string[];
+  readonly rules: readonly string[];
+}
+
+export interface LogicNAiGraph {
+  readonly version: "2";
+  readonly generatedAt: string;
+  readonly sourceFile?: string;
+  readonly flows: readonly AiGraphFlow[];
+  readonly diagnostics: readonly AiGraphDiagnostic[];
+  readonly governance: AiGraphGovernance;
+}
+
+/**
+ * Extracts string items from a contractSetDecl block whose value matches sectionName.
+ * Walks children of the contractDecl and returns identifier/stringLiteral values within
+ * the matched section block. Only types and governance declarations — no actual values.
+ */
+function extractContractSection(contractNode: AstNode, sectionName: string): string[] {
+  const results: string[] = [];
+  for (const child of contractNode.children ?? []) {
+    if (child.kind === "contractSetDecl" && child.value === sectionName) {
+      for (const item of child.children ?? []) {
+        const v = item.value?.trim();
+        if (v !== undefined && v !== "") {
+          results.push(v);
+        }
+      }
+    }
+  }
+  return results;
+}
+
+/**
+ * Extracts a single string scalar from a contract section (for timeouts, retries).
+ */
+function extractContractScalar(contractNode: AstNode, sectionName: string): string {
+  const items = extractContractSection(contractNode, sectionName);
+  return items[0] ?? "";
+}
+
+/**
+ * Walks the flow body and collects `emit:EventName` identifier nodes.
+ */
+function extractEmitEvents(flowNode: AstNode): AiGraphEvent[] {
+  const events: AiGraphEvent[] = [];
+  function walk(node: AstNode): void {
+    if (node.kind === "identifier" && node.value !== undefined && node.value.startsWith("emit:")) {
+      const eventName = node.value.slice("emit:".length).trim();
+      if (eventName !== "") {
+        events.push({ kind: "emits", name: eventName });
+      }
+    }
+    for (const child of node.children ?? []) walk(child);
+  }
+  walk(flowNode);
+  return events;
+}
+
+/**
+ * Extracts names of other flows called inside the given flow node body.
+ * Uses callExpr nodes whose value is a known identifier (not a stdlib dot-form).
+ */
+function extractCalledFlows(flowNode: AstNode, allFlowNames: ReadonlySet<string>): string[] {
+  const called = new Set<string>();
+  function walk(node: AstNode): void {
+    if (node.kind === "callExpr" && node.value !== undefined && allFlowNames.has(node.value)) {
+      called.add(node.value);
+    }
+    for (const child of node.children ?? []) walk(child);
+  }
+  walk(flowNode);
+  return [...called];
+}
+
+/**
+ * Parses a parameter string like "name: Type" or "readonly name: Type"
+ * into an AiGraphParameter. Only type metadata — no actual values.
+ */
+function parseAiGraphParam(raw: string): AiGraphParameter {
+  let input = raw.trim();
+  let isReadonly = false;
+  if (input.startsWith("readonly ")) {
+    isReadonly = true;
+    input = input.slice("readonly ".length).trim();
+  }
+  const colon = input.indexOf(":");
+  if (colon < 0) {
+    return { name: input, type: "Unknown", isReadonly };
+  }
+  return {
+    name: input.slice(0, colon).trim(),
+    type: input.slice(colon + 1).trim(),
+    isReadonly,
+  };
+}
+
+/**
+ * Builds the version-2 AI graph output from the parsed AST and flow metadata.
+ *
+ * IMPORTANT: does NOT include actual values (request bodies, secrets, protected
+ * literals). Only types, effects, capabilities, metadata, and governance declarations.
+ */
+export function buildAiGraph(
+  ast: AstNode,
+  flows: readonly FlowMeta[],
+  sourceFile?: string,
+): LogicNAiGraph {
+  const allFlowNames: ReadonlySet<string> = new Set(flows.map((f) => f.name));
+
+  const aiFlows: AiGraphFlow[] = flows.map((flow) => {
+    const flowNode = findFlowNodeForAi(ast, flow.name);
+    const loc = flow.location;
+    const sourceSpan: AiGraphSourceSpan = { line: loc.line, column: loc.column };
+
+    // Parameters — types and readonly metadata only, not values
+    const parameters: AiGraphParameter[] = flow.params.map((p) => parseAiGraphParam(p));
+
+    // Effects and capabilities
+    const effects = [...flow.declaredEffects];
+    const capabilities = effects
+      .map((e) => EFFECT_TO_CAPABILITY.get(e))
+      .filter((c): c is string => c !== undefined);
+
+    // Intent — declared intent string only (no body values)
+    let intent: string | undefined;
+    if (flowNode !== undefined) {
+      const extracted = extractIntent(flowNode);
+      if (extracted !== null) intent = extracted;
+    }
+
+    // Events — emit:EventName identifiers in the body
+    const events: AiGraphEvent[] = flowNode !== undefined ? extractEmitEvents(flowNode) : [];
+
+    // Calls — other user-defined flows called from this body
+    const calls: string[] = flowNode !== undefined ? extractCalledFlows(flowNode, allFlowNames) : [];
+
+    // Contract — governance declarations only
+    let contract: AiGraphContract | undefined;
+    if (flowNode !== undefined) {
+      const contractNode = (flowNode.children ?? []).find((c) => c.kind === "contractDecl");
+      if (contractNode !== undefined) {
+        contract = {
+          effects: extractContractSection(contractNode, "effects"),
+          privacy: extractContractSection(contractNode, "privacy"),
+          audit: extractContractSection(contractNode, "audit"),
+          rules: extractContractSection(contractNode, "rules"),
+          errors: extractContractSection(contractNode, "errors"),
+          context: extractContractSection(contractNode, "context"),
+          timeouts: extractContractScalar(contractNode, "timeouts"),
+          retries: extractContractScalar(contractNode, "retries"),
+          limits: extractContractSection(contractNode, "limits"),
+        };
+      }
+    }
+
+    const aiFlow: AiGraphFlow = {
+      name: flow.name,
+      qualifier: flow.qualifier === "secure" ? "secure" : flow.qualifier,
+      ...(intent !== undefined ? { intent } : {}),
+      parameters,
+      returnType: flow.returnType,
+      effects,
+      capabilities,
+      calls,
+      events,
+      ...(sourceFile !== undefined ? { sourceFile } : {}),
+      sourceSpan,
+      ...(contract !== undefined ? { contract } : {}),
+    };
+    return aiFlow;
+  });
+
+  return {
+    version: "2",
+    generatedAt: new Date().toISOString(),
+    ...(sourceFile !== undefined ? { sourceFile } : {}),
+    flows: aiFlows,
+    diagnostics: [],
+    governance: {
+      privacy: [],
+      audit: [],
+      rules: [],
+    },
+  };
+}
+
+/** Finds a flow AST node by name — variant used by AI graph builder. */
+function findFlowNodeForAi(ast: AstNode, name: string): AstNode | undefined {
+  const FLOW_KINDS_AI: readonly AstNodeKind[] = [
+    "flowDecl",
+    "secureFlowDecl",
+    "pureFlowDecl",
+    "guardedFlowDecl",
+  ];
+  function walk(node: AstNode): AstNode | undefined {
+    if (FLOW_KINDS_AI.includes(node.kind) && node.value === name) return node;
+    for (const child of node.children ?? []) {
+      const found = walk(child);
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  }
+  return walk(ast);
+}
+
+// ---------------------------------------------------------------------------
+// Phase 15 — buildExecutionPlan delegate
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds a PassiveExecutionPlan for a named flow from its AST and flow metadata.
+ * Delegates to the execution plan builder in src/runtime/executionPlan.ts.
+ *
+ * @param ast      - Full program AST (used to find the flow node).
+ * @param flowMeta - FlowMeta for the target flow.
+ * @returns PassiveExecutionPlan for the flow.
+ */
+export function buildExecutionPlan(
+  ast: AstNode,
+  flowMeta: FlowMeta,
+): PassiveExecutionPlan {
+  const flowNode = findFlowNodeForAi(ast, flowMeta.name);
+  if (flowNode === undefined) {
+    throw new Error(`buildExecutionPlan: flow '${flowMeta.name}' not found in AST`);
+  }
+  return _buildExecutionPlanImpl(flowNode, flowMeta);
+}
+
+export type { PassiveExecutionPlan };

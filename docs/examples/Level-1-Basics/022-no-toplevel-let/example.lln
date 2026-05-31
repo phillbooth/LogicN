@@ -9,7 +9,14 @@
 let counter: Int = 0
 
 // RIGHT: binding belongs inside a flow
-pure flow getCount() -> Int {
+pure flow getCount() -> Int
+
+contract {
+  intent {
+    "Return a count value, demonstrating that bindings belong inside flow bodies."
+  }
+}
+{
   let counter: Int = 0
   return counter
 }

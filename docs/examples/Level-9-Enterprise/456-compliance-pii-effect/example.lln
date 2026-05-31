@@ -11,6 +11,10 @@ contract {
   types {
     type ReadPatientRecordResult = Result<Response, PatientError>
   }
+
+  intent {
+    "Read a patient record — demonstrates missing pii.read effect declaration."
+  }
 }
 {
   unsafe let rawId: String = request.body.patientId

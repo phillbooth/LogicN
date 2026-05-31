@@ -12,7 +12,8 @@ import { checkTypes } from "./type-checker.js";
 import { checkValueStates } from "./value-state-checker.js";
 import { checkEffects } from "./effect-checker.js";
 import { verifyGovernance, type GovernanceDiagnostic, type DeploymentProfile } from "./governance-verifier.js";
-import { emitGIR } from "./gir-emitter.js";
+import { emitGIR, buildSemanticGraph, buildAiGraph, buildExecutionPlan } from "./gir-emitter.js";
+import type { SemanticGraph, LogicNAiGraph, PassiveExecutionPlan } from "./gir-emitter.js";
 import { executeFlow, type FlowExecutionResult, type LogicNValue } from "./interpreter.js";
 import { buildFlowAuditEvent, createAuditWriter } from "./audit-writer.js";
 import { buildProofChain, type ExecutionProofChain } from "./proof-chain.js";
@@ -22,6 +23,7 @@ import { buildAttestation, signAttestation, type LogicNAttestation, type Attesta
 import { createContractEnforcer, type ContractEnforcer } from "./runtime/contractEnforcer.js";
 import { createCapabilityHost, type CapabilityHost } from "./runtime/capabilityHost.js";
 import type { ContractEnforcementRecord } from "./runtime/runtimeReport.js";
+import { checkSourceEscapes, type EscapeDiagnostic } from "./source-escape-checker.js";
 
 export type RuntimeMode = "check-only" | "dev" | "production" | "deterministic";
 
@@ -38,6 +40,12 @@ export interface RuntimeOptions {
   };
   /** Optional deadline for execution in milliseconds from now. */
   readonly deadlineMs?: number;
+  /** When true, include the SemanticGraph in the RuntimeResult. */
+  readonly emitSemanticGraph?: boolean;
+  /** When true, include a JSON serialisation of the AI graph (version 2) in the RuntimeResult. */
+  readonly emitAiGraph?: boolean;
+  /** When true, build a PassiveExecutionPlan for the target flow and include it in the result. */
+  readonly emitExecutionPlan?: boolean;
 }
 
 export interface RuntimeResult {
@@ -46,10 +54,15 @@ export interface RuntimeResult {
   readonly execution?: FlowExecutionResult;
   readonly diagnostics: readonly { code: string; severity: string; message: string }[];
   readonly governanceDiagnostics: readonly GovernanceDiagnostic[];
+  readonly escapeDiagnostics: readonly EscapeDiagnostic[];
   readonly proofChain?: ExecutionProofChain;
   readonly attestation?: LogicNAttestation;
   readonly mode: RuntimeMode;
   readonly enforcementRecord?: ContractEnforcementRecord;
+  readonly semanticGraph?: SemanticGraph;
+  readonly aiGraphJson?: string;
+  /** Phase 15: pre-verified passive execution plan. Present when emitExecutionPlan option is set. */
+  readonly executionPlan?: PassiveExecutionPlan;
 }
 
 export async function run(
@@ -109,6 +122,16 @@ export async function run(
     }
   }
 
+  // Phase 12A: Source escape checker (runs after effect checker)
+  const escapeResult = checkSourceEscapes(parseResult.ast);
+  for (const diagnostic of escapeResult.diagnostics) {
+    allDiagnostics.push({
+      code: diagnostic.code,
+      severity: diagnostic.severity,
+      message: diagnostic.message,
+    });
+  }
+
   const hasErrors = allDiagnostics.some((diagnostic) => diagnostic.severity === "error");
 
   // Pass 7: Governance verification (runs even in check-only, uses profile to adjust severity)
@@ -120,12 +143,40 @@ export async function run(
       ok: !hasErrors,
       diagnostics: allDiagnostics,
       governanceDiagnostics: govResult.diagnostics,
+      escapeDiagnostics: escapeResult.diagnostics,
       mode,
     };
   }
 
   // Pass 8: GIR emission (on clean AST)
   const girResult = emitGIR(parseResult.ast, parseResult.flows, effectResults);
+
+  // Phase 15: Passive Execution Plan emission
+  let executionPlanResult: PassiveExecutionPlan | undefined;
+  if (options.emitExecutionPlan === true) {
+    const targetMeta = parseResult.flows.find((f) => f.name === flowName);
+    if (targetMeta !== undefined) {
+      try {
+        executionPlanResult = buildExecutionPlan(parseResult.ast, targetMeta);
+      } catch {
+        // Non-fatal: plan building failure does not abort execution
+      }
+    }
+  }
+
+  // Phase 13A: Semantic graph emission
+  let semanticGraph: SemanticGraph | undefined;
+  let aiGraphJson: string | undefined;
+  if (options.emitSemanticGraph === true || options.emitAiGraph === true) {
+    semanticGraph = buildSemanticGraph(parseResult.ast, parseResult.flows);
+    if (options.emitAiGraph === true) {
+      const aiGraph: LogicNAiGraph = buildAiGraph(parseResult.ast, parseResult.flows, file);
+      aiGraphJson = JSON.stringify(aiGraph, null, 2);
+    }
+    if (options.emitSemanticGraph !== true) {
+      semanticGraph = undefined;
+    }
+  }
 
   // Pass 10: Set up contract enforcement, then execute
   //
@@ -222,6 +273,7 @@ export async function run(
       ...(includeSource ? { sourceText: source } : {}),
       ...(girResult !== undefined ? { girJson: JSON.stringify(girResult) } : {}),
       ...(proofChain !== undefined ? { auditProofJson: JSON.stringify(proofChain) } : {}),
+      ...(executionPlanResult !== undefined ? { executionPlanHash: executionPlanResult.planHash } : {}),
     };
     let att = await buildAttestation(attestInputs);
     if (options.attestation.keyPair !== undefined) {
@@ -237,10 +289,14 @@ export async function run(
     execution,
     diagnostics: allDiagnostics,
     governanceDiagnostics: govResult.diagnostics,
+    escapeDiagnostics: escapeResult.diagnostics,
     ...(proofChain !== undefined ? { proofChain } : {}),
     ...(attestationResult !== undefined ? { attestation: attestationResult } : {}),
     mode,
     enforcementRecord: finalEnforcer.enforcementRecord,
+    ...(semanticGraph !== undefined ? { semanticGraph } : {}),
+    ...(aiGraphJson !== undefined ? { aiGraphJson } : {}),
+    ...(executionPlanResult !== undefined ? { executionPlan: executionPlanResult } : {}),
   };
 }
 

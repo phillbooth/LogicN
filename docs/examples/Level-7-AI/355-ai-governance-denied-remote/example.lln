@@ -8,12 +8,19 @@
 secure flow scoreRisk(readonly patient: Patient) -> ScoreRiskResult
 
 contract {
+  // Result alias — deny [remote.execution] enforces patient data residency
   types {
     type ScoreRiskResult = Result<RiskScore, AiError>
   }
+
+  intent {
+    "Score patient risk without remote execution"
+  }
+
+  effects {
+    ai.inference
+  }
 }
-  with effects [ai.inference]
-  intent "Score patient risk without remote execution"
 {
   compute target best { prefer [npu, gpu, cpu] deny [remote.execution] }
   let score = RiskModel.run(patient)?

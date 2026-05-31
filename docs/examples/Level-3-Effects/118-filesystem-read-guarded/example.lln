@@ -5,8 +5,21 @@
 /// ai_rule: Declare filesystem.read when reading from the filesystem.
 /// test_status: stable
 
-guarded flow loadConfig(path: String) -> Result<Config, ConfigError>
-  with effects [filesystem.read]
+guarded flow loadConfig(path: String) -> LoadConfigResult
+
+contract {
+  types {
+    type LoadConfigResult = Result<Config, ConfigError>
+  }
+
+  intent {
+    "Load and decode a TOML configuration file from the filesystem."
+  }
+
+  effects {
+    filesystem.read
+  }
+}
 {
   unsafe let rawFile = fs.readText(path)?
   let config: Config = toml.decode(rawFile)?

@@ -75,16 +75,33 @@ export const LLN_TYPE_003 = {
     + "Use a validation gate such as validate.x(raw)? to produce a trusted branded value.",
 } as const;
 
-export const LLN_TYPE_010 = { code: "LLN-TYPE-010", name: "CollectionElementTypeMismatch", severity: "error", message: "Collection element type mismatch." } as const;
-export const LLN_TYPE_011 = { code: "LLN-TYPE-011", name: "MapKeyTypeViolation", severity: "error", message: "Map key or value type mismatch." } as const;
-export const LLN_TYPE_012 = { code: "LLN-TYPE-012", name: "TensorElementTypeMismatch", severity: "error", message: "Tensor element type does not match declared element type." } as const;
-export const LLN_TYPE_013 = { code: "LLN-TYPE-013", name: "TensorShapeIncompatibility", severity: "error", message: "Tensor shape incompatibility — shapes cannot be assigned or composed." } as const;
-export const LLN_TYPE_014 = { code: "LLN-TYPE-014", name: "ChannelTypeMismatch", severity: "error", message: "Channel element type mismatch." } as const;
-export const LLN_TYPE_015 = { code: "LLN-TYPE-015", name: "EnumVariantTypeMismatch", severity: "error", message: "Wrong enum variant used in this context." } as const;
-export const LLN_TYPE_016 = { code: "LLN-TYPE-016", name: "GenericConstraintViolation", severity: "error", message: "Type does not satisfy the required generic constraint." } as const;
-export const LLN_TYPE_017 = { code: "LLN-TYPE-017", name: "NumericPrecisionLoss", severity: "warning", message: "Implicit numeric narrowing may lose precision (e.g. Float64 → Float16)." } as const;
-export const LLN_TYPE_018 = { code: "LLN-TYPE-018", name: "ProtectedBoundaryViolation", severity: "error", message: "A protected value is used where the plain (unprotected) type is required. Remove the protection qualifier explicitly before use." } as const;
-export const LLN_TYPE_019 = { code: "LLN-TYPE-019", name: "RedactedBoundaryViolation", severity: "error", message: "A redacted value cannot be converted back to its original type. Redaction is irreversible." } as const;
+// LLN-TYPE-010..019 — per formal-type-system-spec.md canonical mapping
+export const LLN_TYPE_010 = { code: "LLN-TYPE-010", name: "UnsatisfiedGenericConstraint", severity: "error", message: "Type does not satisfy the required generic constraint." } as const;
+export const LLN_TYPE_011 = { code: "LLN-TYPE-011", name: "InvalidCollectionElement", severity: "error", message: "Collection element type does not match the declared element type." } as const;
+export const LLN_TYPE_012 = { code: "LLN-TYPE-012", name: "InvalidResultType", severity: "error", message: "Ok/Err branch type does not match the declared Result<T,E> type." } as const;
+export const LLN_TYPE_013 = { code: "LLN-TYPE-013", name: "InvalidSecretOperation", severity: "error", message: "Protected secret value cannot use this operator. Use constantTimeEquals() for equality." } as const;
+export const LLN_TYPE_014 = { code: "LLN-TYPE-014", name: "MissingRequiredEffect", severity: "error", message: "Calling this function requires an effect that the current flow does not declare." } as const;
+export const LLN_TYPE_015 = { code: "LLN-TYPE-015", name: "GovernedSinkViolation", severity: "error", message: "Governed sink requires a safe/validated binding; received an unsafe binding." } as const;
+export const LLN_TYPE_016 = { code: "LLN-TYPE-016", name: "TensorShapeMismatch", severity: "error", message: "Tensor shapes are incompatible for this operation." } as const;
+export const LLN_TYPE_017 = { code: "LLN-TYPE-017", name: "QuantizedPrecisionMismatch", severity: "warning", message: "Cannot mix quantized (Int8) and floating-point (Float32) without explicit dequantize(). General numeric narrowing is LLN-TYPE-002." } as const;
+export const LLN_TYPE_018 = { code: "LLN-TYPE-018", name: "InvalidRuntimeTargetType", severity: "error", message: "This type cannot exist in the selected compute target." } as const;
+export const LLN_TYPE_019 = { code: "LLN-TYPE-019", name: "UnknownSymbol", severity: "error", message: "Symbol is not defined in the current scope." } as const;
+
+/** LLN-VALUESTATE-006: A protected value was assigned to a plain (unprotected) binding. */
+export const LLN_VALUESTATE_006 = {
+  code: "LLN-VALUESTATE-006",
+  name: "ProtectedBoundaryViolation",
+  severity: "error" as const,
+  message: "A protected value is used where the plain (unprotected) type is required. Declare the binding as 'protected X', or pass through an authorised access gate.",
+} as const;
+
+/** LLN-VALUESTATE-007: A redacted value cannot convert back to its original type. */
+export const LLN_VALUESTATE_007 = {
+  code: "LLN-VALUESTATE-007",
+  name: "RedactedBoundaryViolation",
+  severity: "error" as const,
+  message: "A redacted value cannot be converted back to its original type. Redaction is irreversible.",
+} as const;
 
 export {
   resolveSymbols,
@@ -103,12 +120,39 @@ export {
 export {
   emitGIR,
   emitExpr,
+  buildSemanticGraph,
+  buildAiGraph,
+  buildExecutionPlan,
+  EFFECT_TO_CAPABILITY,
   type GIRFlow,
   type GIRProgram,
   type GIREmitResult,
   type GIRExpr,
   type GIRRecordField,
+  type LogicNAiGraph,
+  type AiGraphFlow,
+  type AiGraphParameter,
+  type AiGraphEvent,
+  type AiGraphContract,
+  type AiGraphDiagnostic,
+  type AiGraphGovernance,
+  type AiGraphSourceSpan,
+  type PassiveExecutionPlan,
 } from "./gir-emitter.js";
+export type { SemanticGraph } from "@logicn/devtools-graph-algorithms";
+
+// Phase 15 — Passive Execution Plans
+export {
+  executePlan,
+  type ExecutionStep,
+  type ApprovedCapability,
+  type ValidateContextStep,
+  type ValidateParamStep,
+  type CapabilityCallStep,
+  type ResponseStep,
+  type EmitEventStep,
+  type ReturnStep,
+} from "./runtime/executionPlan.js";
 
 // Stage A - AST Interpreter
 export {
@@ -233,6 +277,16 @@ export {
   type GovernedMemory,
   type GovernedValueTag,
 } from "./runtime/governedMemory.js";
+
+// Stage B — Root Capability Provider (Phase 14)
+export {
+  createRootCapabilityProvider,
+  COMPILER_MINIMUM_CAPABILITIES,
+  type RootCapabilityProvider,
+  type CompilerCapabilityHost,
+  type UserRuntimeCapabilities,
+  type CapabilityDomain,
+} from "./runtime/rootCapabilityProvider.js";
 
 export interface CompilerInput {
   readonly projectRoot: string;
@@ -827,6 +881,57 @@ export const LLN_MEMORY_DIAGNOSTICS = [
   LLN_MEMORY_007,
   LLN_MEMORY_008,
 ] as const;
+
+// ---------------------------------------------------------------------------
+// Backend / CLI diagnostics — LLN-BACKEND-001
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Build diagnostics — LLN-BUILD-001
+// ---------------------------------------------------------------------------
+
+/**
+ * LLN-BUILD-001: Same source produced different output on repeated compilation.
+ * Indicates a compiler bug, nondeterministic behaviour, or hidden state leakage.
+ */
+export const LLN_BUILD_001 = {
+  code: "LLN-BUILD-001",
+  name: "NonDeterministicBuild",
+  severity: "error" as const,
+  message: "Same source produced different output on repeated compilation. This indicates a compiler bug, nondeterministic behaviour, or hidden state leakage.",
+  suggestedFix: "Check for: timestamp in output, random values in codegen, hash map iteration order, filesystem enumeration order.",
+};
+
+/** LLN-BACKEND-001: The CLI or runtime backend encountered an unrecoverable error (e.g. file read failure). */
+export const LLN_BACKEND_001 = {
+  code: "LLN-BACKEND-001",
+  name: "BackendError",
+  severity: "error" as const,
+  message: "The LogicN compiler backend encountered an unrecoverable error.",
+  why: "A required file could not be read, or an internal pipeline step failed before compilation could begin.",
+  suggestedFix: "Check that the file path is correct and that the file is readable.",
+};
+
+// ---------------------------------------------------------------------------
+// Source-level escape diagnostics — LLN-SOURCE-ESCAPE-001
+// ---------------------------------------------------------------------------
+
+// Phase 12A — Source Escape Checker
+export {
+  checkSourceEscapes,
+  type EscapeDiagnostic,
+  type EscapeCheckResult,
+} from "./source-escape-checker.js";
+
+/** LLN-SOURCE-ESCAPE-001: LogicN source calls eval() or a dynamic code loading function. */
+export const LLN_SOURCE_ESCAPE_001 = {
+  code: "LLN-SOURCE-ESCAPE-001",
+  name: "SourceLevelEvalEscape",
+  severity: "error" as const,
+  message: "LogicN source calls eval() or a dynamic code loading function. This bypasses governance, capability checks, and audit trails.",
+  why: "Dynamic code cannot be effect-checked, verified, or audited.",
+  suggestedFix: "Replace with a declared flow with explicit effects and capability declarations.",
+};
 
 // ---------------------------------------------------------------------------
 // Safety diagnostics — LLN-SAFETY-001..006

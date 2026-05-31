@@ -20,6 +20,7 @@ record ClassifyResponse {
 guarded flow classifyInput(readonly request: Request) -> ClassifyInputResult
 
 contract {
+  // Result alias — full classification contract: model, effects, privacy, audit, attestation
   types {
     type ClassifyInputResult = Result<Response, AiError>
   }
@@ -82,7 +83,7 @@ contract {
   }
 }
 
-with effects [ai.inference, audit.write] {
+{
   compute target npu {}
 
   unsafe let rawText: String = request.params.text

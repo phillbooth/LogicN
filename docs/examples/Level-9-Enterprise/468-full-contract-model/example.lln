@@ -21,6 +21,7 @@ record PatientProfileResponse {
 secure flow getPatient(readonly request: Request) -> GetPatientResult
 
 contract {
+  // Result alias — full 16-section contract; body declares HOW, contract declares WHAT
   types {
     type GetPatientResult = Result<Response, ApiError>
   }
@@ -135,7 +136,7 @@ contract {
   }
 }
 
-with effects [database.read, audit.write] {
+{
   unsafe let rawId: String = request.params.patientId
   let patientId: protected PatientId = validate.patientId(rawId)?
 

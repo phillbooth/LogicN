@@ -54,9 +54,10 @@ function noErrors(result) {
 describe("Security — unsafe let boundary input", () => {
   it("parses unsafe let without error", () => {
     const parsed = parse(`
-secure flow handleRequest(req: Request) -> Result<String, Error>
-effects [database.write] {
-  unsafe let rawEmail: String = req.body.email
+secure flow handleRequest(request: Request) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawEmail: String = request.body.email
   return Ok("ok")
 }
 `);
@@ -66,9 +67,10 @@ effects [database.write] {
 
   it("emits LLN-VALUESTATE-003 when unsafe let reaches a DB insert directly", () => {
     const result = vsCheck(`
-secure flow storeEmail(req: Request) -> Result<String, Error>
-effects [database.write] {
-  unsafe let rawEmail: String = req.body.email
+secure flow storeEmail(request: Request) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawEmail: String = request.body.email
   let saved = UsersDB.insert(rawEmail)?
   return Ok("done")
 }
@@ -79,9 +81,10 @@ effects [database.write] {
 
   it("emits LLN-VALUESTATE-003 when unsafe let reaches AuditLog.write", () => {
     const result = vsCheck(`
-secure flow auditRaw(req: Request) -> Result<String, Error>
-effects [audit.write] {
-  unsafe let rawMsg: String = req.body.message
+secure flow auditRaw(request: Request) -> Result<String, Error>
+contract { effects { audit.write } }
+{
+  unsafe let rawMsg: String = request.body.message
   AuditLog.write(rawMsg)
   return Ok("done")
 }
@@ -93,7 +96,8 @@ effects [audit.write] {
   it("does not emit LLN-VALUESTATE-003 for plain (non-unsafe) let at a sink", () => {
     const result = vsCheck(`
 secure flow storeClean() -> Result<String, Error>
-effects [database.write] {
+contract { effects { database.write } }
+{
   let record: String = buildRecord()
   let saved = UsersDB.insert(record)?
   return Ok("done")
@@ -105,9 +109,10 @@ effects [database.write] {
 
   it("LLN-VALUESTATE-003 diagnostic carries why and risk fields", () => {
     const result = vsCheck(`
-secure flow dangerousFlow(req: Request) -> Result<String, Error>
-effects [database.write] {
-  unsafe let raw: String = req.body.data
+secure flow dangerousFlow(request: Request) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let raw: String = request.body.data
   UsersDB.insert(raw)
   return Ok("done")
 }
@@ -128,7 +133,8 @@ describe("Security — validate.email() produces protected Email", () => {
     // Email is a built-in type; 'protected' is a known qualifier — no LLN-TYPE-001 expected
     const result = tcCheck(`
 secure flow validateEmailFlow(raw: String) -> Result<String, Error>
-effects [database.write] {
+contract { effects { database.write } }
+{
   let email: protected Email = validate.email(raw)?
   return Ok("done")
 }
@@ -141,9 +147,10 @@ effects [database.write] {
 
   it("validate.email() gate breaks taint chain — no LLN-VALUESTATE-003 after gate", () => {
     const result = vsCheck(`
-secure flow processEmail(req: Request) -> Result<String, Error>
-effects [database.write] {
-  unsafe let rawEmail: String = req.body.email
+secure flow processEmail(request: Request) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawEmail: String = request.body.email
   safe mut rawEmail = validate.email(rawEmail)?
   let saved = UsersDB.insert(rawEmail)?
   return Ok("done")
@@ -158,7 +165,8 @@ effects [database.write] {
   it("validate.* gate satisfies safe mut gate requirement (no LLN-VALUESTATE-001)", () => {
     const result = vsCheck(`
 secure flow upgradeEmail(raw: String) -> Result<String, Error>
-effects [database.write] {
+contract { effects { database.write } }
+{
   unsafe let rawEmail: String = raw
   safe mut rawEmail = validate.email(rawEmail)?
   return Ok("done")
@@ -171,7 +179,8 @@ effects [database.write] {
   it("emits LLN-VALUESTATE-001 when safe mut uses a non-gate function", () => {
     const result = vsCheck(`
 secure flow badUpgrade(raw: String) -> Result<String, Error>
-effects [database.write] {
+contract { effects { database.write } }
+{
   unsafe let rawEmail: String = raw
   safe mut rawEmail = formatEmail(rawEmail)
   return Ok("done")
@@ -204,7 +213,8 @@ flow redactEmailFlow(email: Email) -> String {
   it("redact() is a recognised gate — does not emit LLN-VALUESTATE-001 when used in safe mut", () => {
     const result = vsCheck(`
 secure flow safeRedact(raw: String) -> Result<String, Error>
-effects [audit.write] {
+contract { effects { audit.write } }
+{
   unsafe let rawEmail: String = raw
   safe mut rawEmail = redact(rawEmail)
   return Ok("done")
@@ -216,9 +226,10 @@ effects [audit.write] {
 
   it("redact() does not suppress LLN-VALUESTATE-003 — unsafe direct to sink still flagged", () => {
     const result = vsCheck(`
-secure flow misusedRedact(req: Request) -> Result<String, Error>
-effects [database.write] {
-  unsafe let rawEmail: String = req.body.email
+secure flow misusedRedact(request: Request) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawEmail: String = request.body.email
   UsersDB.insert(rawEmail)
   return Ok("done")
 }
@@ -235,9 +246,10 @@ effects [database.write] {
 describe("Security — full chain: unsafe → protected → redacted → audit", () => {
   it("full pipeline emits no security errors", () => {
     const result = vsCheck(`
-secure flow fullChain(req: Request) -> Result<String, Error>
-effects [database.write, audit.write] {
-  unsafe let rawEmail: String = req.body.email
+secure flow fullChain(request: Request) -> Result<String, Error>
+contract { effects { database.write, audit.write } }
+{
+  unsafe let rawEmail: String = request.body.email
   safe mut rawEmail = validate.email(rawEmail)?
   let saved = UsersDB.insert(rawEmail)?
   let audit = redact(rawEmail)
@@ -252,9 +264,10 @@ effects [database.write, audit.write] {
 
   it("skipping validate gate before DB emits LLN-VALUESTATE-003 even when redact is present", () => {
     const result = vsCheck(`
-secure flow skipGate(req: Request) -> Result<String, Error>
-effects [database.write, audit.write] {
-  unsafe let rawEmail: String = req.body.email
+secure flow skipGate(request: Request) -> Result<String, Error>
+contract { effects { database.write, audit.write } }
+{
+  unsafe let rawEmail: String = request.body.email
   let audit = redact(rawEmail)
   UsersDB.insert(rawEmail)
   return Ok("done")
@@ -266,9 +279,10 @@ effects [database.write, audit.write] {
 
   it("full chain with multiple sinks — all clean after gate", () => {
     const result = vsCheck(`
-secure flow multiSink(req: Request) -> Result<String, Error>
-effects [database.write, audit.write] {
-  unsafe let rawData: String = req.body.data
+secure flow multiSink(request: Request) -> Result<String, Error>
+contract { effects { database.write, audit.write } }
+{
+  unsafe let rawData: String = request.body.data
   safe mut rawData = validate.input(rawData)?
   let saved = UsersDB.insert(rawData)?
   AuditLog.write(saved)
@@ -288,9 +302,10 @@ effects [database.write, audit.write] {
 describe("Security — LLN-VALUESTATE-003: unsafe value at governed sink", () => {
   it("emits LLN-VALUESTATE-003 for unsafe binding at shell.exec", () => {
     const result = vsCheck(`
-secure flow runCmd(req: Request) -> Result<String, Error>
-effects [system.exec] {
-  unsafe let rawCmd: String = req.body.command
+secure flow runCmd(request: Request) -> Result<String, Error>
+contract { effects { system.exec } }
+{
+  unsafe let rawCmd: String = request.body.command
   shell.exec(rawCmd)
   return Ok("done")
 }
@@ -301,9 +316,10 @@ effects [system.exec] {
 
   it("emits LLN-VALUESTATE-003 for unsafe binding at EmailService.sendEmail", () => {
     const result = vsCheck(`
-secure flow sendMail(req: Request) -> Result<String, Error>
-effects [email.send] {
-  unsafe let rawTo: String = req.body.to
+secure flow sendMail(request: Request) -> Result<String, Error>
+contract { effects { email.send } }
+{
+  unsafe let rawTo: String = request.body.to
   EmailService.sendEmail(rawTo)
   return Ok("done")
 }
@@ -314,9 +330,10 @@ effects [email.send] {
 
   it("emits LLN-VALUESTATE-003 for unsafe binding at FileSystem.write", () => {
     const result = vsCheck(`
-secure flow writeFile(req: Request) -> Result<String, Error>
-effects [filesystem.write] {
-  unsafe let rawPath: String = req.body.path
+secure flow writeFile(request: Request) -> Result<String, Error>
+contract { effects { filesystem.write } }
+{
+  unsafe let rawPath: String = request.body.path
   FileSystem.write(rawPath)
   return Ok("done")
 }
@@ -327,9 +344,10 @@ effects [filesystem.write] {
 
   it("LLN-VALUESTATE-003 diagnostic message names the binding and the sink", () => {
     const result = vsCheck(`
-secure flow namedSink(req: Request) -> Result<String, Error>
-effects [database.write] {
-  unsafe let rawInput: String = req.body.data
+secure flow namedSink(request: Request) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawInput: String = request.body.data
   UsersDB.insert(rawInput)
   return Ok("done")
 }
@@ -344,9 +362,10 @@ effects [database.write] {
 
   it("LLN-VALUESTATE-003 includes a suggestedFix pointing to a validate gate", () => {
     const result = vsCheck(`
-secure flow fixSuggested(req: Request) -> Result<String, Error>
-effects [database.write] {
-  unsafe let rawInput: String = req.body.data
+secure flow fixSuggested(request: Request) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawInput: String = request.body.data
   UsersDB.insert(rawInput)
   return Ok("done")
 }
@@ -367,9 +386,10 @@ effects [database.write] {
 describe("Security — LLN-VALUESTATE-005: two-hop taint propagation", () => {
   it("emits LLN-VALUESTATE-005 when rawEmail.trim() reaches UsersDB.query", () => {
     const result = vsCheck(`
-guarded flow searchEmail(readonly req: Request) -> String
-effects [database.read] {
-  unsafe let rawEmail: String = req.params.email
+guarded flow searchEmail(readonly request: Request) -> String
+contract { effects { database.read } }
+{
+  unsafe let rawEmail: String = request.params.email
   let cleaned: String = rawEmail.trim()
   UsersDB.query(cleaned)
   return "ok"
@@ -383,9 +403,10 @@ effects [database.read] {
 
   it("emits LLN-VALUESTATE-005 for multi-step taint (trim → toLower → sink)", () => {
     const result = vsCheck(`
-guarded flow multiStep(readonly req: Request) -> String
-effects [database.write] {
-  unsafe let raw: String = req.body.value
+guarded flow multiStep(readonly request: Request) -> String
+contract { effects { database.write } }
+{
+  unsafe let raw: String = request.body.value
   let step1: String = raw.trim()
   let step2: String = step1.toLower()
   UsersDB.insert(step2)
@@ -400,9 +421,10 @@ effects [database.write] {
 
   it("does NOT emit taint diagnostic after validate.* gate clears two-hop taint", () => {
     const result = vsCheck(`
-guarded flow safeSearch(readonly req: Request) -> String
-effects [database.read] {
-  unsafe let rawQuery: String = req.params.query
+guarded flow safeSearch(readonly request: Request) -> String
+contract { effects { database.read } }
+{
+  unsafe let rawQuery: String = request.params.query
   let safeQuery: String = validate.searchQuery(rawQuery)?
   UsersDB.query(safeQuery)
   return "ok"
@@ -416,9 +438,10 @@ effects [database.read] {
 
   it("LLN-VALUESTATE-005 carries why and risk fields", () => {
     const result = vsCheck(`
-guarded flow whyRisk(readonly req: Request) -> String
-effects [database.write] {
-  unsafe let raw: String = req.body.data
+guarded flow whyRisk(readonly request: Request) -> String
+contract { effects { database.write } }
+{
+  unsafe let raw: String = request.body.data
   let cleaned: String = raw.trim()
   UsersDB.insert(cleaned)
   return "ok"
@@ -444,89 +467,86 @@ flow cleanDerivation() -> String {
 });
 
 // =============================================================================
-// 7. LLN-TYPE-018: protected Email used as plain Email
+// 7. LLN-VALUESTATE-006: protected Email used as plain Email
 // =============================================================================
 
-describe("Security — LLN-TYPE-018: protected Email used as plain Email", () => {
-  it("emits LLN-TYPE-018 when validate.email() result is directly assigned to plain Email", () => {
-    // LLN-TYPE-018 fires when the RHS expression is directly inferred as 'protected Email'
-    // and the declared type is plain 'Email'. The gate call returns protected Email,
-    // assigning it inline to a plain Email binding should be flagged.
-    const result = tcCheck(`
+describe("Security — LLN-VALUESTATE-006: protected Email used as plain Email", () => {
+  it("emits LLN-VALUESTATE-006 when validate.email() result is directly assigned to plain Email", () => {
+    // validate.email() returns a protected value; assigning to plain Email is a violation.
+    const result = vsCheck(`
 flow test(raw: String) -> String {
   let plainEmail: Email = validate.email(raw)?
   return "done"
 }
 `);
-    assert.ok(hasDiag(result, "LLN-TYPE-018"),
-      `Expected LLN-TYPE-018 for validate.email() directly assigned to plain Email, got: ${result.diagnostics.map((d) => d.code).join(", ")}`);
+    assert.ok(hasDiag(result, "LLN-VALUESTATE-006"),
+      `Expected LLN-VALUESTATE-006 for validate.email() directly assigned to plain Email, got: ${result.diagnostics.map((d) => d.code).join(", ")}`);
   });
 
-  it("does not emit LLN-TYPE-018 when validate.email() is assigned to protected Email", () => {
-    const result = tcCheck(`
+  it("does not emit LLN-VALUESTATE-006 when validate.email() is assigned to protected Email", () => {
+    const result = vsCheck(`
 flow test(raw: String) -> String {
   let email: protected Email = validate.email(raw)?
   return "done"
 }
 `);
-    assert.ok(!hasDiag(result, "LLN-TYPE-018"),
-      "validate.email() → protected Email binding should not emit LLN-TYPE-018");
+    assert.ok(!hasDiag(result, "LLN-VALUESTATE-006"),
+      "validate.email() → protected Email binding should not emit LLN-VALUESTATE-006");
   });
 
-  it("LLN-TYPE-018 message names the protected type and suggests a fix", () => {
-    const result = tcCheck(`
+  it("LLN-VALUESTATE-006 message names the protected qualifier and suggests a fix", () => {
+    const result = vsCheck(`
 flow test(raw: String) -> String {
   let plainEmail: Email = validate.email(raw)?
   return "done"
 }
 `);
-    const diag = result.diagnostics.find((d) => d.code === "LLN-TYPE-018");
-    assert.ok(diag !== undefined, "Expected LLN-TYPE-018");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-VALUESTATE-006");
+    assert.ok(diag !== undefined, "Expected LLN-VALUESTATE-006");
     assert.ok(typeof diag.suggestedFix === "string" && diag.suggestedFix.length > 0,
-      "Expected suggestedFix on LLN-TYPE-018");
+      "Expected suggestedFix on LLN-VALUESTATE-006");
     assert.ok(diag.message.includes("protected"),
       `Message should mention 'protected': ${diag.message}`);
   });
 });
 
 // =============================================================================
-// 8. LLN-TYPE-019: redacted Email used as plain Email
+// 8. LLN-VALUESTATE-007: redacted Email used as plain Email
 // =============================================================================
 
-describe("Security — LLN-TYPE-019: redacted Email used as plain Email", () => {
-  it("emits LLN-TYPE-019 when redact() result is directly assigned to plain Email", () => {
-    // LLN-TYPE-019 fires when the RHS expression is directly inferred as 'redacted Email'
-    // and the declared type is plain 'Email'.
-    const result = tcCheck(`
+describe("Security — LLN-VALUESTATE-007: redacted Email used as plain Email", () => {
+  it("emits LLN-VALUESTATE-007 when redact() result is directly assigned to plain Email", () => {
+    // redact() produces a redacted value; assigning to plain Email is a violation.
+    const result = vsCheck(`
 flow test(email: Email) -> String {
   let plainEmail: Email = redact(email)
   return "done"
 }
 `);
-    assert.ok(hasDiag(result, "LLN-TYPE-019"),
-      `Expected LLN-TYPE-019 for redact() directly assigned to plain Email, got: ${result.diagnostics.map((d) => d.code).join(", ")}`);
+    assert.ok(hasDiag(result, "LLN-VALUESTATE-007"),
+      `Expected LLN-VALUESTATE-007 for redact() directly assigned to plain Email, got: ${result.diagnostics.map((d) => d.code).join(", ")}`);
   });
 
-  it("does not emit LLN-TYPE-019 when redact() is assigned to redacted Email binding", () => {
-    const result = tcCheck(`
+  it("does not emit LLN-VALUESTATE-007 when redact() is assigned to redacted Email binding", () => {
+    const result = vsCheck(`
 flow test(email: Email) -> String {
   let audit: redacted Email = redact(email)
   return "done"
 }
 `);
-    assert.ok(!hasDiag(result, "LLN-TYPE-019"),
-      "redact() → redacted Email binding should not emit LLN-TYPE-019");
+    assert.ok(!hasDiag(result, "LLN-VALUESTATE-007"),
+      "redact() → redacted Email binding should not emit LLN-VALUESTATE-007");
   });
 
-  it("LLN-TYPE-019 message mentions irreversibility of redaction", () => {
-    const result = tcCheck(`
+  it("LLN-VALUESTATE-007 message mentions irreversibility of redaction", () => {
+    const result = vsCheck(`
 flow test(email: Email) -> String {
   let plainEmail: Email = redact(email)
   return "done"
 }
 `);
-    const diag = result.diagnostics.find((d) => d.code === "LLN-TYPE-019");
-    assert.ok(diag !== undefined, "Expected LLN-TYPE-019");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-VALUESTATE-007");
+    assert.ok(diag !== undefined, "Expected LLN-VALUESTATE-007");
     assert.ok(
       diag.message.toLowerCase().includes("redact") || diag.message.toLowerCase().includes("irreversible"),
       `Message should mention redaction or irreversibility: ${diag.message}`);
@@ -616,7 +636,8 @@ describe("Security — LLN-SECRET-001: SecureString in log calls", () => {
   it("emits LLN-SECRET-001 when SecureString passed to print()", () => {
     const result = vsCheck(`
 secure flow logSecret() -> Result<String, Error>
-effects [secret.read] {
+contract { effects { secret.read } }
+{
   let apiKey: SecureString = env.secret("API_KEY")
   print(apiKey)
   return Ok("done")
@@ -629,7 +650,8 @@ effects [secret.read] {
   it("emits LLN-SECRET-001 when SecureString passed to log.info()", () => {
     const result = vsCheck(`
 secure flow logInfo() -> Result<String, Error>
-effects [secret.read] {
+contract { effects { secret.read } }
+{
   let token: SecureString = env.secret("TOKEN")
   log.info(token)
   return Ok("done")
@@ -642,7 +664,8 @@ effects [secret.read] {
   it("emits LLN-SECRET-001 when SecureString passed to log.error()", () => {
     const result = vsCheck(`
 secure flow logError() -> Result<String, Error>
-effects [secret.read] {
+contract { effects { secret.read } }
+{
   let dbPass: SecureString = env.secret("DB_PASS")
   log.error(dbPass)
   return Ok("done")
@@ -655,7 +678,8 @@ effects [secret.read] {
   it("does NOT emit LLN-SECRET-001 when SecureString is redacted before logging", () => {
     const result = vsCheck(`
 secure flow safeLog() -> Result<String, Error>
-effects [secret.read] {
+contract { effects { secret.read } }
+{
   let apiKey: SecureString = env.secret("API_KEY")
   let masked = redact(apiKey)
   log.info(masked)
@@ -681,7 +705,8 @@ flow logPlain() -> String {
   it("LLN-SECRET-001 diagnostic includes why and risk fields", () => {
     const result = vsCheck(`
 secure flow secretWhy() -> Result<String, Error>
-effects [secret.read] {
+contract { effects { secret.read } }
+{
   let key: SecureString = env.secret("KEY")
   log.warn(key)
   return Ok("done")
@@ -698,7 +723,8 @@ describe("Security — LLN-SECRET-002: SecureString equality comparison", () => 
   it("emits LLN-SECRET-002 when SecureString is compared with ==", () => {
     const result = vsCheck(`
 secure flow compareTokens() -> Result<Bool, Error>
-effects [secret.read] {
+contract { effects { secret.read } }
+{
   let expected: SecureString = env.secret("TOKEN")
   let provided: SecureString = env.secret("PROVIDED")
   let valid: Bool = provided == expected
@@ -712,7 +738,8 @@ effects [secret.read] {
   it("emits LLN-SECRET-002 when SecureString is compared with !=", () => {
     const result = vsCheck(`
 secure flow compareNotEqual() -> Result<Bool, Error>
-effects [secret.read] {
+contract { effects { secret.read } }
+{
   let expected: SecureString = env.secret("TOKEN")
   let provided: SecureString = env.secret("OTHER")
   let different: Bool = provided != expected
@@ -726,7 +753,8 @@ effects [secret.read] {
   it("does NOT emit LLN-SECRET-002 for constantTimeEquals usage", () => {
     const result = vsCheck(`
 secure flow safeCompare() -> Result<Bool, Error>
-effects [secret.read] {
+contract { effects { secret.read } }
+{
   let expected: SecureString = env.secret("TOKEN")
   let provided: SecureString = env.secret("PROVIDED")
   let valid: Bool = constantTimeEquals(expected, provided)
@@ -751,7 +779,8 @@ flow compareStrings(a: String, b: String) -> Bool {
   it("LLN-SECRET-002 diagnostic suggests constantTimeEquals", () => {
     const result = vsCheck(`
 secure flow badCompare() -> Result<Bool, Error>
-effects [secret.read] {
+contract { effects { secret.read } }
+{
   let key: SecureString = env.secret("KEY")
   let other: SecureString = env.secret("OTHER")
   let same: Bool = key == other
@@ -774,12 +803,13 @@ effects [secret.read] {
 describe("Security — user-defined gate functions break taint chain", () => {
   it("fn validateAge() used after unsafe let breaks the taint chain", () => {
     const result = vsCheck(`
-guarded flow processAge(readonly req: Request) -> String
-effects [database.write] {
+guarded flow processAge(readonly request: Request) -> String
+contract { effects { database.write } }
+{
   fn validateAge(raw: String) -> Int {
     return 25
   }
-  unsafe let rawAge: String = req.body.age
+  unsafe let rawAge: String = request.body.age
   let age: Int = validateAge(rawAge)
   UsersDB.insert(age)
   return "ok"
@@ -793,12 +823,13 @@ effects [database.write] {
 
   it("fn sanitizeHtml() breaks taint chain", () => {
     const result = vsCheck(`
-guarded flow processHtml(readonly req: Request) -> String
-effects [database.write] {
+guarded flow processHtml(readonly request: Request) -> String
+contract { effects { database.write } }
+{
   fn sanitizeHtml(raw: String) -> String {
     return raw
   }
-  unsafe let rawHtml: String = req.body.content
+  unsafe let rawHtml: String = request.body.content
   let clean: String = sanitizeHtml(rawHtml)
   UsersDB.insert(clean)
   return "ok"
@@ -812,12 +843,13 @@ effects [database.write] {
 
   it("fn checkRole() breaks taint chain", () => {
     const result = vsCheck(`
-guarded flow processRole(readonly req: Request) -> String
-effects [database.write] {
+guarded flow processRole(readonly request: Request) -> String
+contract { effects { database.write } }
+{
   fn checkRole(raw: String) -> String {
     return raw
   }
-  unsafe let rawRole: String = req.body.role
+  unsafe let rawRole: String = request.body.role
   let role: String = checkRole(rawRole)
   UsersDB.insert(role)
   return "ok"
@@ -831,12 +863,13 @@ effects [database.write] {
 
   it("fn NOT using a gate prefix does NOT break the taint chain", () => {
     const result = vsCheck(`
-guarded flow processValue(readonly req: Request) -> String
-effects [database.write] {
+guarded flow processValue(readonly request: Request) -> String
+contract { effects { database.write } }
+{
   fn formatValue(raw: String) -> String {
     return raw
   }
-  unsafe let rawVal: String = req.body.value
+  unsafe let rawVal: String = request.body.value
   let formatted: String = formatValue(rawVal)
   UsersDB.insert(formatted)
   return "ok"
@@ -851,7 +884,8 @@ effects [database.write] {
   it("user gate fn satisfies safe mut requirement — no LLN-VALUESTATE-001", () => {
     const result = vsCheck(`
 secure flow upgradeWithUserGate(raw: String) -> Result<String, Error>
-effects [database.write] {
+contract { effects { database.write } }
+{
   fn validateUsername(s: String) -> String {
     return s
   }
@@ -867,12 +901,13 @@ effects [database.write] {
 
   it("fn verifySignature() breaks taint chain for cryptographic verification", () => {
     const result = vsCheck(`
-guarded flow verifyWebhook(readonly req: Request) -> String
-effects [database.write] {
+guarded flow verifyWebhook(readonly request: Request) -> String
+contract { effects { database.write } }
+{
   fn verifySignature(raw: String) -> String {
     return raw
   }
-  unsafe let rawPayload: String = req.body.payload
+  unsafe let rawPayload: String = request.body.payload
   let verified: String = verifySignature(rawPayload)
   UsersDB.insert(verified)
   return "ok"
@@ -892,10 +927,11 @@ effects [database.write] {
 describe("Security — real-world secure flow with full security pipeline", () => {
   it("full user registration flow emits no security errors", () => {
     const result = vsCheck(`
-secure flow registerUser(req: Request) -> Result<String, Error>
-effects [database.write, audit.write] {
-  unsafe let rawEmail: String = req.body.email
-  unsafe let rawName: String = req.body.name
+secure flow registerUser(request: Request) -> Result<String, Error>
+contract { effects { database.write, audit.write } }
+{
+  unsafe let rawEmail: String = request.body.email
+  unsafe let rawName: String = request.body.name
   safe mut rawEmail = validate.email(rawEmail)?
   safe mut rawName = validate.name(rawName)?
   let userId = UsersDB.insert(rawEmail)?
@@ -911,10 +947,11 @@ effects [database.write, audit.write] {
 
   it("customer order flow with payment sink — clean after gates", () => {
     const result = vsCheck(`
-secure flow placeOrder(req: Request) -> Result<String, Error>
-effects [database.write, payment.write, audit.write] {
-  unsafe let rawAmount: String = req.body.amount
-  unsafe let rawCard: String = req.body.card
+secure flow placeOrder(request: Request) -> Result<String, Error>
+contract { effects { database.write, payment.write, audit.write } }
+{
+  unsafe let rawAmount: String = request.body.amount
+  unsafe let rawCard: String = request.body.card
   safe mut rawAmount = validate.amount(rawAmount)?
   safe mut rawCard = validate.card(rawCard)?
   let orderId = OrdersDB.insert(rawAmount)?
@@ -930,9 +967,10 @@ effects [database.write, payment.write, audit.write] {
 
   it("failing to gate the card input before payment emits LLN-VALUESTATE-003", () => {
     const result = vsCheck(`
-secure flow badPayment(req: Request) -> Result<String, Error>
-effects [payment.write] {
-  unsafe let rawCard: String = req.body.card
+secure flow badPayment(request: Request) -> Result<String, Error>
+contract { effects { payment.write } }
+{
+  unsafe let rawCard: String = request.body.card
   StripePayment.charge(rawCard)
   return Ok("done")
 }
@@ -943,8 +981,9 @@ effects [payment.write] {
 
   it("SecureString API key used safely with constantTimeEquals and redact before log", () => {
     const result = vsCheck(`
-secure flow verifyApiKey(req: Request) -> Result<Bool, Error>
-effects [secret.read] {
+secure flow verifyApiKey(request: Request) -> Result<Bool, Error>
+contract { effects { secret.read } }
+{
   let expectedKey: SecureString = env.secret("API_KEY")
   let providedKey: SecureString = env.secret("PROVIDED_KEY")
   let valid: Bool = constantTimeEquals(expectedKey, providedKey)
@@ -960,9 +999,10 @@ effects [secret.read] {
 
   it("search flow with two-step taint cleanup emits no errors", () => {
     const result = vsCheck(`
-guarded flow searchUsers(readonly req: Request) -> String
-effects [database.read] {
-  unsafe let rawQuery: String = req.params.query
+guarded flow searchUsers(readonly request: Request) -> String
+contract { effects { database.read } }
+{
+  unsafe let rawQuery: String = request.params.query
   let safeQuery: String = sanitize.searchQuery(rawQuery)
   let results = UsersDB.query(safeQuery)
   return "ok"
@@ -979,40 +1019,41 @@ effects [database.read] {
 // =============================================================================
 
 describe("Security — multiple protected values in same flow", () => {
-  it("two protected Email values in same flow both pass type check cleanly", () => {
+  it("two protected Email values in same flow both pass value-state check cleanly", () => {
     // Email is a built-in type in LogicN
-    const result = tcCheck(`
+    const result = vsCheck(`
 flow processTwoEmails(raw1: String, raw2: String) -> String {
   let email1: protected Email = validate.email(raw1)?
   let email2: protected Email = validate.email(raw2)?
   return "done"
 }
 `);
-    const type018 = diagsWithCode(result, "LLN-TYPE-018");
-    assert.equal(type018.length, 0,
-      `Two protected Email bindings should not emit LLN-TYPE-018: ${type018.map((d) => d.message).join(", ")}`);
+    const vs006 = diagsWithCode(result, "LLN-VALUESTATE-006");
+    assert.equal(vs006.length, 0,
+      `Two protected Email bindings should not emit LLN-VALUESTATE-006: ${vs006.map((d) => d.message).join(", ")}`);
   });
 
-  it("two plain Email bindings assigned directly from validate.email() each emit LLN-TYPE-018", () => {
-    // LLN-TYPE-018 fires on the inline assignment expression, not on identifier re-use
-    const result = tcCheck(`
+  it("two plain Email bindings assigned directly from validate.email() each emit LLN-VALUESTATE-006", () => {
+    // LLN-VALUESTATE-006 fires on the inline assignment expression, not on identifier re-use
+    const result = vsCheck(`
 flow testTwo(raw1: String, raw2: String) -> String {
   let plain1: Email = validate.email(raw1)?
   let plain2: Email = validate.email(raw2)?
   return "done"
 }
 `);
-    const type018 = diagsWithCode(result, "LLN-TYPE-018");
-    assert.equal(type018.length, 2,
-      `Both plain Email assignments from validate.email() should emit LLN-TYPE-018, got ${type018.length}`);
+    const vs006 = diagsWithCode(result, "LLN-VALUESTATE-006");
+    assert.equal(vs006.length, 2,
+      `Both plain Email assignments from validate.email() should emit LLN-VALUESTATE-006, got ${vs006.length}`);
   });
 
   it("multiple unsafe bindings — all must be gated before their respective sinks", () => {
     const result = vsCheck(`
-secure flow multiUnsafe(req: Request) -> Result<String, Error>
-effects [database.write] {
-  unsafe let rawEmail: String = req.body.email
-  unsafe let rawName: String = req.body.name
+secure flow multiUnsafe(request: Request) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawEmail: String = request.body.email
+  unsafe let rawName: String = request.body.name
   UsersDB.insert(rawEmail)
   UsersDB.insert(rawName)
   return Ok("done")
@@ -1025,10 +1066,11 @@ effects [database.write] {
 
   it("multiple unsafe bindings gated independently — all clean at sinks", () => {
     const result = vsCheck(`
-secure flow multiGated(req: Request) -> Result<String, Error>
-effects [database.write] {
-  unsafe let rawEmail: String = req.body.email
-  unsafe let rawName: String = req.body.name
+secure flow multiGated(request: Request) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawEmail: String = request.body.email
+  unsafe let rawName: String = request.body.name
   safe mut rawEmail = validate.email(rawEmail)?
   safe mut rawName = validate.name(rawName)?
   UsersDB.insert(rawEmail)
@@ -1076,9 +1118,10 @@ flow processEmails(emails: Array<Email>) -> String {
 
   it("Array<String> with multiple unsafe values — each must be gated individually", () => {
     const result = vsCheck(`
-secure flow batchInsert(req: Request) -> Result<String, Error>
-effects [database.write] {
-  unsafe let rawItem: String = req.body.item
+secure flow batchInsert(request: Request) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawItem: String = request.body.item
   UsersDB.insert(rawItem)
   return Ok("done")
 }
@@ -1128,10 +1171,11 @@ flow combinedQualifiers(raw: String, email: Email) -> String {
 
   it("collection flow with gated unsafe values — safe through the pipeline", () => {
     const result = vsCheck(`
-secure flow processEmailBatch(req: Request) -> Result<String, Error>
-effects [database.write] {
-  unsafe let rawEmail1: String = req.body.email1
-  unsafe let rawEmail2: String = req.body.email2
+secure flow processEmailBatch(request: Request) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawEmail1: String = request.body.email1
+  unsafe let rawEmail2: String = request.body.email2
   safe mut rawEmail1 = validate.email(rawEmail1)?
   safe mut rawEmail2 = validate.email(rawEmail2)?
   UsersDB.insert(rawEmail1)

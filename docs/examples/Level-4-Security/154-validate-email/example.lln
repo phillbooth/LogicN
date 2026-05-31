@@ -5,8 +5,31 @@
 /// test_status: stable
 /// ai_rule: Email values come from validate.email(). The ? propagates validation failure.
 
-secure flow createUser(request: Request) -> Result<UserId, UserError>
-  with effects [database.write, audit.write]
+secure flow createUser(request: Request) -> CreateUserResult
+
+contract {
+  // Security intent: raw email from the request boundary must pass validate.email()
+  // before it can be stored. validate.email() elevates the value to protected Email.
+  types {
+    type CreateUserResult = Result<UserId, UserError>
+  }
+
+  intent {
+    "Validate an unsafe email from the request boundary and create a user record."
+  }
+
+  request {
+    body {
+      email: unsafe String
+      // Parser note: body sub-block parsed generically, enforcement pending
+    }
+  }
+
+  effects {
+    database.write
+    audit.write
+  }
+}
 {
   unsafe let rawEmail: String = request.body.email
   let email: protected Email = validate.email(rawEmail)?

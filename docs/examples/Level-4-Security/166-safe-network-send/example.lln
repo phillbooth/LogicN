@@ -5,8 +5,23 @@
 /// ai_rule: Protected values are not automatically forbidden from network sends. Governance policy decides.
 /// test_status: stable
 
-guarded flow notifyService(email: protected Email) -> Result<Unit, NotifyError>
-  with effects [network.outbound]
+guarded flow notifyService(email: protected Email) -> NotifyServiceResult
+
+contract {
+  // Security intent: protected values may cross network boundaries only to approved services.
+  // Governance policy (authority block) must authorise external protected data sharing.
+  types {
+    type NotifyServiceResult = Result<Unit, NotifyError>
+  }
+
+  intent {
+    "Send a protected email to an approved notification service via an outbound network call."
+  }
+
+  effects {
+    network.outbound
+  }
+}
 {
   http.post("/approved-service", email)?
   return Ok(unit)

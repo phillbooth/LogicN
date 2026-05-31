@@ -184,6 +184,31 @@ Tree-sitter-style incremental parsing + WASM isolation = safe AI-agent edit loop
 
 ---
 
+## Phase 13 — Semantic Graph System
+
+- [ ] SemanticGraph as canonical semantic layer (built from AST, queryable)
+- [ ] logicn check --emit-semantic-graph → build/semantic/semantic-graph.json
+- [ ] logicn check --emit-ai-graph → build/semantic/logicn.ai.json
+- [ ] TypeGraph (supports LLN-TYPE-* diagnostics via graph)
+- [ ] IntentGraph (supports LLN-INTENT-* diagnostics via graph)
+- [ ] Gradual capability/effect inference in dev mode (logicn dev --infer-effects)
+- [ ] logicn fix --effects command
+- [ ] IDE direct graph query (callers, capability chain, effect propagation, trust boundaries)
+
+---
+
+## Phase 14 — Stage B Self-Hosting Infrastructure
+
+- [ ] Root Capability Provider (compiler authority isolated from user program authority)
+- [ ] Compiler declares its own capabilities in LogicN source
+- [ ] Compiler Phase Memory Boundaries (arena-based, deterministic cleanup)
+- [ ] Deterministic Self-Host Verification (B1 → B2 → B3 output hash comparison)
+- [ ] logicn verify-selfhost command
+- [ ] LLN-BUILD-001 NON_DETERMINISTIC_BUILD diagnostic
+- [ ] CompilerGraph in LLN-Graph (self-analysis)
+
+---
+
 ## Phase 14 — Security Hardening
 
 ### Capability Hardware
@@ -253,3 +278,8 @@ Governance remains above every target.
 - `capability-registry.yaml` — capability ↔ effect mapping
 - `logicn-contract-full-model.md` — 16-section contract reference
 - `logicn-signed-attestation.md` — Ed25519 / ML-DSA attestation pipeline
+- `logicn-semantic-graph-system.md` — Phase 13 SemanticGraph canonical semantic layer
+- `logicn-intent-graph.md` — IntentGraph and LLN-INTENT-* diagnostics via graph
+- `logicn-stage-b-root-capability-provider.md` — Root Capability Provider for Stage B self-hosting
+- `logicn-compiler-phase-memory-boundaries.md` — Compiler Phase Memory Boundaries (arena-based)
+- `logicn-deterministic-selfhost-verification.md` — Deterministic Self-Host Verification (B1→B2→B3)

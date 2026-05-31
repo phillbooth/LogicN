@@ -268,7 +268,8 @@ pure flow greet() -> String {
   it("records AuditLog.write calls", async () => {
     const result = await parseAndRun(`
 guarded flow audited() -> Void
-effects [audit.write] {
+contract { effects { audit.write } }
+{
   AuditLog.write(event: "Test")
   return
 }
@@ -281,7 +282,8 @@ effects [audit.write] {
   it("records AuditLog.write block-style calls", async () => {
     const result = await parseAndRun(`
 guarded flow audited() -> Void
-effects [audit.write] {
+contract { effects { audit.write } }
+{
   AuditLog.write({ event: "Test" })
   return
 }

@@ -8,7 +8,6 @@
 ///          to audit. This is a correct pattern that emits no diagnostics.
 
 secure flow lookupPatient(readonly request: Request) -> LookupPatientResult
-intent "Look up a patient record by ID, returning only safe error variants to the caller."
 
 contract {
   types {
@@ -22,6 +21,10 @@ contract {
     params {
       require patientId
     }
+  }
+  effects {
+    database.read
+    audit.write
   }
   errors {
     returns {
@@ -44,7 +47,7 @@ contract {
   }
 }
 
-with effects [database.read, audit.write] {
+{
   let id = request.params.patientId
   let patient = PatientsDB.find(id)?
   AuditLog.write({ event: "PatientLookup", id: id })

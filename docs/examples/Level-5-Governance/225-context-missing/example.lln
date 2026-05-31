@@ -29,9 +29,14 @@ contract {
   context {
     require actor
   }
+
+  effects {
+    database.read
+    audit.write
+  }
 }
 
-with effects [database.read, audit.write] {
+{
   // BUG: context.actor is declared required but never read here.
   // The actor should be used for access control — e.g. verifying the
   // caller is authorised to read this user's data.

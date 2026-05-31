@@ -7,12 +7,21 @@
 secure flow emailPatientMismatch(readonly request: Request) -> EmailPatientMismatchResult
 
 contract {
+  // Result alias — "marketing_offer" template contradicts "appointment_reminder" purpose, triggers LLN-GOV-005
   types {
     type EmailPatientMismatchResult = Result<Response, NotificationError>
   }
+
+  intent {
+    "Send appointment reminder to patient"
+  }
+
+  effects {
+    pii.read
+    network.outbound
+    audit.write
+  }
 }
-  with effects [pii.read, network.outbound, audit.write]
-  intent "Send appointment reminder to patient"
   policy {
     purpose "appointment_reminder"
     lawfulBasis "legitimate_interest"

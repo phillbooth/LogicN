@@ -5,8 +5,32 @@
 /// test_status: stable
 /// ai_rule: Each protected value must be individually validated and individually redacted for audit.
 
-secure flow createPatientRecord(request: Request) -> Result<PatientId, PatientError>
-  with effects [database.write, audit.write]
+secure flow createPatientRecord(request: Request) -> CreatePatientRecordResult
+
+contract {
+  // Security intent: multiple PII fields (email, NHS number) must each be individually
+  // validated and individually redacted before the audit sink. No shared or combined redaction.
+  types {
+    type CreatePatientRecordResult = Result<PatientId, PatientError>
+  }
+
+  intent {
+    "Validate multiple PII fields and create a patient record with fully redacted audit trail."
+  }
+
+  request {
+    body {
+      email: unsafe String
+      nhsNumber: unsafe String
+      // Parser note: body sub-block parsed generically, enforcement pending
+    }
+  }
+
+  effects {
+    database.write
+    audit.write
+  }
+}
 {
   unsafe let rawEmail: String = request.body.email
   unsafe let rawNhsNumber: String = request.body.nhsNumber

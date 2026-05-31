@@ -5,6 +5,13 @@
 /// ai_rule: Use Option<T> instead of null.
 /// test_status: stable
 
-pure flow findUser(id: UserId) -> Option<User> {
+pure flow findUser(id: UserId) -> Option<User>
+
+contract {
+  intent {
+    "Look up a user by ID, returning None if no matching user is found."
+  }
+}
+{
   return None
 }

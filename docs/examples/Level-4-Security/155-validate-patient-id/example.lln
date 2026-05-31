@@ -5,8 +5,31 @@
 /// test_status: stable
 /// ai_rule: PatientId values come from validate.patientId().
 
-secure flow createPatient(request: Request) -> Result<PatientId, PatientError>
-  with effects [database.write, audit.write]
+secure flow createPatient(request: Request) -> CreatePatientResult
+
+contract {
+  // Security intent: raw patient ID from the HTTP boundary must be validated
+  // via validate.patientId() before any database write or audit operation.
+  types {
+    type CreatePatientResult = Result<PatientId, PatientError>
+  }
+
+  intent {
+    "Validate an unsafe patient ID from the request boundary and create a patient record."
+  }
+
+  request {
+    body {
+      patientId: unsafe String
+      // Parser note: body sub-block parsed generically, enforcement pending
+    }
+  }
+
+  effects {
+    database.write
+    audit.write
+  }
+}
 {
   unsafe let rawPatientId: String = request.body.patientId
   let patientId: protected PatientId = validate.patientId(rawPatientId)?

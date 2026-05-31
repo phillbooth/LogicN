@@ -683,37 +683,37 @@ pure flow remainder(outstanding: Int, installments: Int) -> Int {
 // 9. Overflow safety: Int bounds (precision narrowing warnings)
 // =============================================================================
 
-describe("Arithmetic — overflow safety: sized Int types", () => {
-  it("Int8 = 42 emits LLN-TYPE-017 warning (precision narrowing)", () => {
+// Decision: LLN-TYPE-017 is QuantizedPrecisionMismatch per formal spec —
+// fires when quantized (Int8) tensors mix with Float32 without dequantize().
+// General numeric narrowing (Int → Int8, Float → Float16) is LLN-TYPE-002
+// territory and does NOT emit TYPE-017. See logicn-phase-11-decisions.md.
+
+describe("Arithmetic — sized Int types: narrowing is handled by LLN-TYPE-002", () => {
+  it("Int8 = 42 does not emit LLN-TYPE-017 (narrowing is TYPE-002, not TYPE-017)", () => {
     const result = parseAndCheck(`
 pure flow test() -> Void {
   let x: Int8 = 42
   return
 }
 `);
-    assert.ok(hasDiag(result, "LLN-TYPE-017"), "Expected LLN-TYPE-017 for Int8 = 42 (Int)");
+    // TYPE-017 is QuantizedPrecisionMismatch (tensor context only) — not fired for Int narrowing
+    assert.ok(!hasDiag(result, "LLN-TYPE-017"), "LLN-TYPE-017 must not fire for plain Int narrowing");
   });
 
-  it("LLN-TYPE-017 is a warning, not an error", () => {
-    const result = parseAndCheck(`
-pure flow test() -> Void {
-  let x: Int8 = 100
-  return
-}
-`);
-    const diag = diagsWithCode(result, "LLN-TYPE-017")[0];
-    assert.ok(diag !== undefined, "Expected LLN-TYPE-017 diagnostic");
-    assert.equal(diag.severity, "warning", "LLN-TYPE-017 must be a warning");
+  it("LLN-TYPE-017 constant has correct spec name QuantizedPrecisionMismatch", async () => {
+    const { LLN_TYPE_017 } = await import("../dist/index.js");
+    assert.equal(LLN_TYPE_017.name, "QuantizedPrecisionMismatch");
+    assert.equal(LLN_TYPE_017.severity, "warning");
   });
 
-  it("Int16 = 1000 emits LLN-TYPE-017 warning", () => {
+  it("Int16 = 1000 does not emit LLN-TYPE-017", () => {
     const result = parseAndCheck(`
 pure flow test() -> Void {
   let x: Int16 = 1000
   return
 }
 `);
-    assert.ok(hasDiag(result, "LLN-TYPE-017"), "Expected LLN-TYPE-017 for Int16 = 1000 (Int)");
+    assert.ok(!hasDiag(result, "LLN-TYPE-017"), "LLN-TYPE-017 must not fire for Int16 narrowing");
   });
 
   it("Int64 = 999 does not emit LLN-TYPE-017 (Int is smaller, widening to larger is safe)", () => {
@@ -736,14 +736,15 @@ pure flow test() -> Void {
     assert.ok(!hasDiag(result, "LLN-TYPE-017"), "Unexpected LLN-TYPE-017 for Int = 42 (same precision)");
   });
 
-  it("Float16 = 3.14 emits LLN-TYPE-017 warning (precision loss)", () => {
+  it("Float16 = 3.14 does not emit LLN-TYPE-017 (float narrowing is TYPE-002, not TYPE-017)", () => {
     const result = parseAndCheck(`
 pure flow test() -> Void {
   let x: Float16 = 3.14
   return
 }
 `);
-    assert.ok(hasDiag(result, "LLN-TYPE-017"), "Expected LLN-TYPE-017 for Float16 = 3.14 (Float)");
+    // TYPE-017 is for quantized/float tensor mixing only — not general float narrowing
+    assert.ok(!hasDiag(result, "LLN-TYPE-017"), "LLN-TYPE-017 must not fire for Float → Float16 narrowing");
   });
 
   it("Float64 = 3.14 does not emit LLN-TYPE-017 (widening is safe)", () => {

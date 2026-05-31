@@ -5,8 +5,22 @@
 /// test_status: stable
 /// ai_rule: AuditLog.write requires audit.write to be declared in the effect list.
 
-secure flow createPatient(request: Request) -> Result<PatientId, PatientError>
-  with effects [database.write]
+secure flow createPatient(request: Request) -> CreatePatientResult
+
+contract {
+  types {
+    type CreatePatientResult = Result<PatientId, PatientError>
+  }
+
+  intent {
+    "Create a patient — BUG: AuditLog.write is called but audit.write is not declared in effects."
+  }
+
+  effects {
+    database.write
+    // BUG: audit.write is missing here — LLN-EFFECT-001 fires because AuditLog.write is called in body
+  }
+}
 {
   unsafe let rawEmail: String = request.body.email
   let email: protected Email = validate.email(rawEmail)?

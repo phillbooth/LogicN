@@ -26,6 +26,7 @@ export interface LogicNAttestation {
     readonly contract?: string;         // sha256:hex of contract block source
     readonly runtimeReport?: string;    // sha256:hex of runtime report
     readonly auditProof?: string;       // sha256:hex of existing proof chain
+    readonly executionPlan?: string;    // sha256:hex of PassiveExecutionPlan (Phase 15)
   };
   readonly signature?: {
     readonly algorithm: "Ed25519";
@@ -41,6 +42,8 @@ export interface AttestationInputs {
   readonly contractSource?: string;
   readonly runtimeReportJson?: string;
   readonly auditProofJson?: string;
+  /** Phase 15: planHash string from PassiveExecutionPlan (plain hex, no sha256: prefix). */
+  readonly executionPlanHash?: string;
 }
 
 export interface AttestationKeyPair {
@@ -95,6 +98,7 @@ export async function buildAttestation(
     contract?: string;
     runtimeReport?: string;
     auditProof?: string;
+    executionPlan?: string;
   } = {};
 
   if (inputs.sourceText !== undefined) {
@@ -111,6 +115,10 @@ export async function buildAttestation(
   }
   if (inputs.auditProofJson !== undefined) {
     hashes.auditProof = sha256hex(inputs.auditProofJson);
+  }
+  if (inputs.executionPlanHash !== undefined) {
+    // planHash is already a raw hex digest; prefix it consistently
+    hashes.executionPlan = `sha256:${inputs.executionPlanHash}`;
   }
 
   return {
@@ -225,11 +233,12 @@ export function attestationToYaml(attestation: LogicNAttestation): string {
   lines.push("hashes:");
 
   const h = attestation.hashes;
-  if (h.source !== undefined)        lines.push(`  source: ${h.source}`);
-  if (h.gir !== undefined)           lines.push(`  gir: ${h.gir}`);
-  if (h.contract !== undefined)      lines.push(`  contract: ${h.contract}`);
-  if (h.runtimeReport !== undefined) lines.push(`  runtimeReport: ${h.runtimeReport}`);
-  if (h.auditProof !== undefined)    lines.push(`  auditProof: ${h.auditProof}`);
+  if (h.source !== undefined)         lines.push(`  source: ${h.source}`);
+  if (h.gir !== undefined)            lines.push(`  gir: ${h.gir}`);
+  if (h.contract !== undefined)       lines.push(`  contract: ${h.contract}`);
+  if (h.runtimeReport !== undefined)  lines.push(`  runtimeReport: ${h.runtimeReport}`);
+  if (h.auditProof !== undefined)     lines.push(`  auditProof: ${h.auditProof}`);
+  if (h.executionPlan !== undefined)  lines.push(`  executionPlan: ${h.executionPlan}`);
 
   if (Object.keys(h).length === 0) {
     lines.push("  {}");
