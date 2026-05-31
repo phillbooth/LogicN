@@ -47,34 +47,33 @@ enforced by tooling** — not inferred, guessed, or left to convention.
 
 | Layer | Status | % |
 |---|---|---|
-| Specification / KB | 312 docs, 222 examples, full type hierarchy, 16-section contracts, Phase 18-23 architecture docs | 99% |
-| Lexer | All v1 keywords, full spans, TokenKindId numeric enum, V1_DEPRECATED_RESERVED, LLN-LEX-004..006, slice-based scanning | 99% |
-| Parser | Flows, fn, routes, all contracts, loops, NodeFlags (8 flags), makeNode factory, byteSpan, recovery helpers, prefer [gpu/npu], contract.memory | 97% |
-| Symbol resolver | LLN-NAME-001/002/003, scope, prelude, domain types, cross-module shadow, naming policy | 58% |
-| Type checker | LLN-TYPE-001..022, LLN-BINDING-005, operator rules, Money cross-currency, match exhaustiveness | 82% |
-| Value-state checker | Taint, 2-hop taint, user gates, secrets, protected/redacted boundary, VALUESTATE-002/006/007 | 85% |
-| Effect checker | LLN-EFFECT-001..005, EffectCheckerFlags, FlowEffectSummary bitsets, LLN-STDLIB-001 enforcement, STDLIB_CAPABILITY_MAP wired | 84% |
-| Event checker | LLN-EVENT-001..005, declare-before-emit, contract emit validation | 80% |
-| Governance verifier | 12 codes + LLN-GOV-013, GovernanceFlags bitset, RuntimeManifest generation, contract.context extraction | 78% |
-| GIR emitter | Schema, tensor metadata (wasmSimd/gpu/npu/apu/fixedShape/quantized), sourceHash, entryPoints, allowedEffectsMask, WAT emitter skeleton | 72% |
-| Runtime / interpreter | Loops, assignment, capabilityHost, governed memory, escape checker, executePlan, canonical hashing | 85% |
-| Standard library | Money BigInt, Duration, STDLIB_CAPABILITY_MAP, TRI_STDLIB_OPS, TENSOR_STDLIB_OPS, getStdlibWasmImport | 63% |
-| Route / HTTP | request parameter (canonical style), path params, JSON body, HTTP dispatch | 76% |
-| Audit / proof chain | JSONL, SHA-256 5-hash proof, verify, denial log | 82% |
-| Signed attestation | Ed25519 sign/verify, YAML, runtime integration | 88% |
-| CLI | check, check-strict, build, build-production, build-deterministic, build --target=wasm-standalone, build --target=wasm-hybrid, fix-effects, emit-ai-graph | 85% |
-| CEC coverage | 222/222 stable — all examples passing, 10 domain suites, all real-world patterns | 100% |
-| Internal graph | BFS/DFS/topo, call graph, effect graph, SemanticGraph builder | 88% |
-| Stage B | lexer.lln executing, parser.lln v0, type-checker.lln, compiler.capabilities.lln — 0 parse errors on all 4 milestones | 22% |
-| Passive execution plans | plan types + builder + attestation + hashPassivePlan; executePlan wired; WAT emitter Phase 24 target | 40% |
-| WAT emitter | Type skeleton, renderWAT(), WATModule, WATFunction/Import/Export types — full instruction emission Phase 24 | 28% |
-| Type registry | TypeId (56 IDs), EffectFlags (14), GovernanceFlags (8), EffectCheckerFlags (6), ComputeCompatibilityFlags (7), parseTensorType() | 70% |
-| Lowering plans | TypedArrayLoweringPlan, MonomorphisationPlan, KernelFusionPlan, LazyIteratorChain — stubs ready for Phase 21-22 | 15% |
-| GPU/NPU/APU plans | WebGPUComputePlan, NPUKernelPlan, APUSharedMemoryPlan — stubs with correct type structure | 14% |
-| Register VM | RegisterBytecodeModule, full opcode set, emitBytecode() stub — tree-walker replacement Phase 23C | 12% |
-| Views (String/Bytes/Tensor) | StringView, BytesView, TensorView<T>, WASMLinearMemoryLayout — zero-copy WASM linear memory types | 18% |
-| Root capability provider | full implementation; CLI stub only | 85% |
-| Post-quantum / hardware security | ML-DSA attestation, CHERI mapping, ARM MTE, TEE integration | 5% |
+| Specification / KB | 320+ docs, 222/222 examples stable, hybrid WASM v1.0, security anti-abuse, Phase 25-27 examples | 99% |
+| Lexer | All v1 keywords, TokenKindId, V1_DEPRECATED_RESERVED, LLN-LEX-001..006, slice scanning | 97% |
+| Parser | NodeFlags (8 flags), byteSpan, recovery helpers, prefer [gpu/npu], contract.memory/network | 92% |
+| Type checker | LLN-TYPE-001..022, LLN-TYPE-030/031 (tensor), branded types, TypeId registry | 75% |
+| Value-state checker | Taint, 2-hop, ValueStateFlags, SINK_REQUIREMENTS, LLN-GATE-001 | 85% |
+| Effect checker | LLN-EFFECT-001..005, LLN-STDLIB-001 wired, EffectCheckerFlags, 31 legacy regex tracked | 84% |
+| Governance verifier | LLN-GOV-002..014, GovernanceFlags, RuntimeManifest, contract.context wired | 80% |
+| GIR emitter | GIR v1, tensor metadata (7 flags), TypedArray lowering plan wired, WAT emitter | 73% |
+| Stdlib | STDLIB_CAPABILITY_MAP (35+ functions), TRI_STDLIB_OPS, TENSOR_STDLIB_OPS, BigInt decimal | 63% |
+| Package resolver | LLN-PKG-001..005, hash/signature/targets/compute schema, getResolverReport() | 65% |
+| Runtime interpreter | Loops, assignment, capabilityHost, audit, escape checker — Phase 11C wiring pending | 52% |
+| WAT emitter + assembler | buildWATModule, assembleWAT stub, pure flow real bodies, WASM imports from STDLIB_CAPABILITY_MAP | 35% |
+| Type registry | TypeId (56 IDs), EffectFlags (14), GovernanceFlags (8), NativeCapabilityId (6) | 78% |
+| Security policy | LLN-NET-001/002, LLN-RUNTIME-006, NetworkDestinationPolicy, PRIVATE_IP_RANGES | 30% |
+| Lowering plans | TypedArrayLoweringPlan wired in GIR, MonomorphisationPlan/KernelFusionPlan stubs | 22% |
+| Register VM | Full opcode set, emitBytecode() stub — tree-walker replacement Phase 23C | 13% |
+| Views | StringView, BytesView, TensorView<T>, WASMLinearMemoryLayout — WASM linear memory types | 20% |
+| GPU/NPU/APU plans | WebGPUComputePlan, NPUKernelPlan, APUSharedMemoryPlan, NativePluginManifest | 16% |
+| Hybrid WASM–Native | v1.0 architecture document, EDA model, DataHandle, Component Model ABI spec | 18% |
+| Boundary graph | BoundaryGraph types, getUnauthorisedCrossings() in devtools | 28% |
+| Monkey-patch checker | LLN-SEC-020/021 source-level detection, AST + text level | 85% |
+| devtools-graph | BFS/DFS/topo, flag queries, CapabilityGraph, BoundaryGraph, WASMModuleGraph, NativeCapabilityQuery | 74% |
+| Stage B self-hosting | lexer.lln, parser.lln, type-checker.lln, compiler.capabilities.lln — 0 parse errors | 22% |
+| Passive execution plans | Plan types + builder + attestation + hashPassivePlan + executePlan wired | 40% |
+| Examples | 222/222 CEC stable + auth-service, healthcare, ai-inference deployment examples | 92% |
+| Photonic / Ternary | TriState type, Tri stdlib ops, photonic_compatible flag, NativeCapabilityId.PhotonicBridge | 3% |
+| CLI | check, check-strict, build, build-production, build-deterministic, --target wasm-standalone/hybrid | 88% |
 
 ---
 
@@ -113,7 +112,7 @@ LogicN is three things building toward one platform:
 declared effects, no hidden nulls, no silent failures. Source files use `.lln`.
 
 **2. A compiler and checker** — a pipeline that enforces the language rules
-before code runs. Phases 3–15, 16A, 17A, 17C, 18A and 23 are complete (2286 tests, 0 failures). The
+before code runs. Phases 3–15, 16A, 17A, 17C, 18A–23, 24, and Phase 25-27 scaffolding are complete (2316 tests, 0 failures, 222/222 CEC stable). The
 runtime, IR generation pipeline, and Stage B self-hosting compiler are the
 current focus.
 
@@ -144,7 +143,7 @@ execution**:
 
 LogicN is a **language-design and active compiler project**. It is not a production runtime.
 
-**What works today (2286 tests, 0 failures):**
+**What works today (2316 tests, 0 failures):**
 
 - Full lexer — all v1 keywords, char/hex/binary literals, doc comments, slice-based scanning, direct operator detection, file/line safety limits (Phase 18A)
 - Full parser — all flow qualifiers, match with exhaustiveness, enums with variants, record types with fields, fn helpers, route declarations, `protected`/`redacted` type qualifiers
@@ -391,7 +390,7 @@ Phase 18A — Lexer Performance + Safety Limits                ✅ complete
     endColumn, start, end) match the TypeScript Token interface exactly.
   2286 tests, 0 failures.
 
-Phase 23 complete. Phase 24 next: real WAT instruction bodies for pure flows (unreachable stubs → actual instructions).
+Phases 23 and 24 complete. Phase 25-27 scaffolding complete. Phase 25: wasm-hybrid target bridge. Phase 26-27: auth-service, healthcare, ai-inference deployment examples.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -518,7 +517,7 @@ Layer 5: Audit Proof              — cryptographic evidence chain
 ```text
 C:\laragon\www\LO\
 ├── docs/
-│   ├── Knowledge-Bases/           312 spec docs, grammar, glossary, operator rules
+│   ├── Knowledge-Bases/           320+ spec docs, grammar, glossary, operator rules
 │   └── Examples/                  222 canonical .lln examples across 10 levels
 ├── packages-logicn/
 │   ├── logicn-core-compiler/      compiler pipeline — lexer, parser, all checkers ← active
@@ -551,7 +550,7 @@ npm run build
 npm test
 ```
 
-2286 tests, 0 failures. The compiler accepts `.lln` source via `parseProgram()` and runs all checker passes.
+2316 tests, 0 failures. The compiler accepts `.lln` source via `parseProgram()` and runs all checker passes.
 
 ```typescript
 import { parseProgram, checkTypes, checkValueStates, checkEffects, resolveSymbols } from "@logicn/core-compiler";
