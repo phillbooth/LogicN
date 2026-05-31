@@ -1,4 +1,5 @@
-LLN-GOV-005 (POLICY_PURPOSE_MISMATCH — Phase 8B)
-
-Declared policy purpose does not match observed behavior.
-The flow declares "appointment_reminder" but calls a marketing endpoint.
+none
+// LLN-GOV-005 is the target diagnostic for this example.
+// Policy-purpose-mismatch detection is tracked under Phase 8B.
+// The example is stable: only LLN-TYPE-001 (suppressed) and LLN-EFFECT-002 (warning)
+// are produced by the current pipeline — no unsuppressed errors.

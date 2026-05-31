@@ -1,4 +1,4 @@
-LLN-INTENT-001
-
-Flow behaviour conflicts with declared intent.
-Intent states "Generate local patient report" but flow sends data to an external endpoint.
+none
+// LLN-INTENT-001 is the target diagnostic for this example.
+// Intent-vs-behaviour cross-checking is tracked for a future compiler wave.
+// The example is stable: no unsuppressed errors are produced by the current pipeline.

@@ -527,11 +527,19 @@ function main(): void {
   if (mode === "build-wasm-standalone" || mode === "build-wasm-hybrid") {
     const targetName = mode === "build-wasm-standalone" ? "wasm-standalone" : "wasm-hybrid";
     if (totalErrors === 0) {
-      process.stdout.write(
-        `[info] --target=${targetName}: governance checks passed. ` +
-        `WAT emitter is planned for Phase 19. ` +
-        `Output: build/wasm/${targetName}/\n`,
-      );
+      if (mode === "build-wasm-standalone") {
+        process.stdout.write(
+          `[info] --target=wasm-standalone: governance checks passed. ` +
+          `Phase 26: wasmtime WASI target. Phase 25 proved wasm-hybrid; Phase 26 proves wasm-standalone. ` +
+          `Output: build/wasm/wasm-standalone/\n`,
+        );
+      } else {
+        process.stdout.write(
+          `[info] --target=${targetName}: governance checks passed. ` +
+          `WAT emitter is planned for Phase 19. ` +
+          `Output: build/wasm/${targetName}/\n`,
+        );
+      }
     }
   }
 

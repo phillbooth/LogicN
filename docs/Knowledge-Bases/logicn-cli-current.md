@@ -114,6 +114,20 @@ Produces a self-contained WASM/WASI module; no JS runtime required at deploy tim
 - **Runtime policy limits** (rate limits, memory caps) are enforced via WASM memory limits rather than JS-side guards.
 - Output includes `.wasm` + `.wat` (WAT for inspection). WAT contains `unreachable` stubs in Phases 19–23; real instruction emission begins at Phase 24.
 
+### WAT Assembler
+
+LogicN uses a JS/npm WAT assembler by default. No system wat2wasm required.
+
+  logicn build --target wasm
+    → emits WAT text via wat-emitter.ts
+    → assembles .wasm binary via JS/npm package
+    → no native binary dependency
+
+  logicn build --target wasm --use-system-wabt
+    → optional: use wabt/wat2wasm if installed (faster, dev-only path)
+
+Rule: The default LogicN toolchain must not require external native binaries.
+
 ### `--target=wasm-hybrid`
 
 Produces a JS shell file paired with a `.wasm` module.
@@ -121,3 +135,17 @@ Produces a JS shell file paired with a `.wasm` module.
 - **JS shell** owns: capability acquisition, audit event emission, governance policy enforcement, and host-side effect gating.
 - **WASM core** owns: pure computation — tensor operations, mathematical transformations, validation gate evaluation.
 - The shell/core boundary is determined statically at compile time by the effect system. Flows with no declared effects compile entirely into WASM; flows with effects retain a JS-side stub that delegates pure sub-computations to the WASM core.
+
+---
+
+## Phase Table
+
+| Phase | Description | Status |
+|---|---|---|
+| 19 | CLI command surface established; WASM targets defined; WAT stubs emitted | complete |
+| 20 | Effect system diagnostics wired into build pipeline | complete |
+| 21 | Deterministic build (`--deterministic`, `canonicalHash()`) | complete |
+| 22 | AI graph emit (`--ai-graph`, `logicn.ai.json`) | complete |
+| 23 | Governance enforcement in `--production` mode | complete |
+| 24 | Real WAT instruction emission; JS/npm WAT assembler integrated; no native binary required | complete |
+| 25 | WASM-hybrid JS shell / WASM core split; static boundary analysis | next |

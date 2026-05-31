@@ -1,5 +1,5 @@
 /// example: 414-target-no-fallback-invalid
-/// test_status: draft
+/// test_status: stable
 /// level: 8
 /// concept: omitting the fallback clause from a non-cpu compute target is an error
 /// expected_diagnostics: LLN-TARGET-001

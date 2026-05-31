@@ -29,6 +29,19 @@ export type {
   CallNodeData,
 } from "./graphs/call-graph.js";
 
+export {
+  buildCapabilityGraph,
+  getCapabilitiesRequiredByFlow,
+  getFlowsRequiringCapability,
+  getWASMImportsForFlow,
+} from "./graphs/capability-graph.js";
+export type {
+  CapabilityEdgeData,
+  CapabilityEntry,
+  CapabilityGraph,
+  CapabilityNodeData,
+} from "./graphs/capability-graph.js";
+
 // Phase 13 — Semantic Graph System
 export {
   SemanticGraphBuilder,
@@ -45,3 +58,42 @@ export type {
   SemanticNodeKind,
   SemanticEdgeKind,
 } from "./semantic/SemanticGraph.js";
+
+export {
+  buildBoundaryGraph,
+  getBoundaryCrossings,
+  getUnauthorisedCrossings,
+} from "./graphs/boundary-graph.js";
+export type {
+  BoundaryEdgeData,
+  BoundaryGraph,
+  BoundaryKind,
+  BoundaryNodeData,
+  BoundaryTrustLevel,
+} from "./graphs/boundary-graph.js";
+
+export {
+  buildWASMModuleGraph,
+  getExports,
+  getImports,
+  getImportsForFlow,
+} from "./graphs/wasm-module-graph.js";
+export type {
+  WASMEdgeData,
+  WASMModuleGraph,
+  WASMNodeData,
+} from "./graphs/wasm-module-graph.js";
+
+// Phase 18–23 — Flag-Aware Query Functions
+export {
+  NodeFlagQuery,
+  GovernanceFlagQuery,
+  EffectFlagQuery,
+  NativeCapabilityQuery,
+  findFlowsByNodeFlags,
+  findFlowsByGovernanceFlags,
+  findFlowsByEffectFlags,
+  findFlowsByNativeCapability,
+  getGraphFlagSummary,
+} from "./semantic/flag-queries.js";
+export type { GraphFlagSummary } from "./semantic/flag-queries.js";

@@ -291,7 +291,7 @@ Non-`.md` files (YAML, EBNF) are listed separately at the end.
 - logicn-phase-18-23-summary.md — Phase 18-23 complete summary (+293 tests, 10 new source files)
 - package-completion-status.md — (also listed under governance)
 
-### Architecture Specifications (Phase 18-23, current canonical)
+### Architecture Specifications (Phase 18–Hybrid WASM, current canonical)
 
 - logicn-architecture-high-roi-ideas.md — 16 high-ROI ideas, status by phase
 - logicn-effect-checker-architecture.md — effect checker arch: EffectCheckerFlags, LLN-STDLIB-001, bitsets
@@ -305,6 +305,9 @@ Non-`.md` files (YAML, EBNF) are listed separately at the end.
 - logicn-type-checker-architecture.md — type checker: TypeId, EffectFlags, tensor shape checking
 - logicn-value-state-checker-architecture.md — value-state: ValueStateFlags, SINK_REQUIREMENTS, LLN-GATE-001
 - logicn-cli-current.md — current CLI spec: all modes including --target wasm-standalone/hybrid
+- logicn-hybrid-wasm-native-architecture-v1.md — **v1.0 canonical** hybrid WASM-native architecture (Snapdragon/NPU vision + governance model, 2026-05-31)
+- logicn-hybrid-wasm-architecture.md — detailed EDA model, WAT assembler decision, crash recovery, 8 native governance rules
+- logicn-security-anti-abuse.md — anti-botnet architecture: process.spawn effect, network destination policy, LLN-NET-001/002, rate limit enforcement, DNS rebinding defence
 
 ---
 

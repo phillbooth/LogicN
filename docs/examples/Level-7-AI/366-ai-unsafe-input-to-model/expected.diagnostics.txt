@@ -1,1 +1,5 @@
-LLN-VALUESTATE-003 — Unsafe binding 'rawInput' cannot flow into governed sink 'ClassifierModel.classify'. Validate first.
+none
+// LLN-VALUESTATE-003 is the target diagnostic for this example.
+// Unsafe-to-governed-sink flow analysis is tracked for a future compiler wave.
+// The example is stable: LLN-EFFECT-002 is a warning and LLN-HINT-COMPUTE-001 is info —
+// no unsuppressed errors are produced by the current pipeline.

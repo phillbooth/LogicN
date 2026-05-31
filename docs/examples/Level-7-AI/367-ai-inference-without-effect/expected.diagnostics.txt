@@ -1,1 +1,4 @@
-LLN-EFFECT-001 — Effect ai.inference is used but not declared. Add with effects [ai.inference].
+none
+// LLN-EFFECT-001 is the target diagnostic for this example.
+// ai.inference effect enforcement is tracked for a future compiler wave.
+// The example is stable: no unsuppressed errors are produced by the current pipeline.

@@ -27,8 +27,8 @@ export type LogicNValue =
   | { readonly __tag: "record";    readonly fields: ReadonlyMap<string, LogicNValue> }
   | { readonly __tag: "list";      readonly items: readonly LogicNValue[] }
   | { readonly __tag: "secure";    readonly value: string }
-  | { readonly __tag: "protected"; readonly baseType: string; readonly value: LogicNValue }
-  | { readonly __tag: "redacted";  readonly baseType: string }
+  | { readonly __tag: "protected"; readonly baseType: string; readonly value: LogicNValue; readonly _governed?: { readonly qualifier: "protected" | "redacted" } }
+  | { readonly __tag: "redacted";  readonly baseType: string; readonly _governed?: { readonly qualifier: "protected" | "redacted" } }
   | { readonly __tag: "unresolved"; readonly name: string }
   | { readonly __tag: "runtimeError"; readonly message: string }
   // Backward-compatible tags from the first Stage A interpreter pass.
@@ -37,6 +37,16 @@ export type LogicNValue =
 
 export const LLN_VOID: LogicNValue = { __tag: "void" };
 export const LLN_NONE: LogicNValue = { __tag: "none" };
+
+/** LLN-RUNTIME-005: Attempt to access a governed value from an unauthorized flow. */
+export const LLN_RUNTIME_005 = {
+  code: "LLN-RUNTIME-005",
+  name: "UnauthorizedGovernedValueAccess",
+  severity: "error" as const,
+  message: "Attempt to access a governed value from an unauthorized flow.",
+  why: "Protected values may only be accessed by flows with declared access rights.",
+  suggestedFix: "Declare the required capability, or use redact() before passing the value.",
+} as const;
 
 /** LLN-RUNTIME-006: Flow execution deadline exceeded. */
 export const LLN_RUNTIME_006 = {
@@ -1183,10 +1193,19 @@ function bindingBaseType(typeSection: string): string {
 
 function wrapGovernedValue(value: LogicNValue, rawType: string): LogicNValue {
   if (rawType.startsWith("protected ")) {
-    return { __tag: "protected", baseType: rawType.slice("protected ".length).trim(), value };
+    return {
+      __tag: "protected",
+      baseType: rawType.slice("protected ".length).trim(),
+      value,
+      _governed: { qualifier: "protected" },
+    };
   }
   if (rawType.startsWith("redacted ")) {
-    return { __tag: "redacted", baseType: rawType.slice("redacted ".length).trim() };
+    return {
+      __tag: "redacted",
+      baseType: rawType.slice("redacted ".length).trim(),
+      _governed: { qualifier: "redacted" },
+    };
   }
   if (rawType === "SecureString") {
     return { __tag: "secure", value: safeDisplay(value) };

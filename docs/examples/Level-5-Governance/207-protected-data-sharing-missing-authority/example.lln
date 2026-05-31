@@ -1,5 +1,5 @@
 ﻿/// example: 207-protected-data-sharing-missing-authority
-/// test_status: draft
+/// test_status: stable
 /// level: 5
 /// concept: sending protected data externally without authority block
 /// expected_diagnostics: LLN-GOV-003

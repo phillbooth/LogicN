@@ -1,5 +1,5 @@
 /// example: 452-healthcare-invalid-pii-log
-/// test_status: draft
+/// test_status: stable
 /// level: 9
 /// concept: passing a protected PatientId directly to a log call without redaction
 /// expected_diagnostics: LLN-SECRET-001

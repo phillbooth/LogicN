@@ -3,8 +3,27 @@ import assert from "node:assert/strict";
 
 const { buildEffectGraph } = await import("../dist/graphs/effect-graph.js");
 const { buildCallGraph } = await import("../dist/graphs/call-graph.js");
+const {
+  buildCapabilityGraph,
+  getCapabilitiesRequiredByFlow,
+  getFlowsRequiringCapability,
+  getWASMImportsForFlow,
+} = await import("../dist/graphs/capability-graph.js");
 const { topoSort } = await import("../dist/algorithms/topo.js");
 const { detectCycle } = await import("../dist/algorithms/dfs.js");
+
+const { SemanticGraphBuilder } = await import("../dist/semantic/SemanticGraph.js");
+const {
+  NodeFlagQuery,
+  GovernanceFlagQuery,
+  EffectFlagQuery,
+  NativeCapabilityQuery,
+  findFlowsByNodeFlags,
+  findFlowsByGovernanceFlags,
+  findFlowsByEffectFlags,
+  findFlowsByNativeCapability,
+  getGraphFlagSummary,
+} = await import("../dist/semantic/flag-queries.js");
 
 // ─── EffectGraph ───────────────────────────────────────────────────────────
 
@@ -115,5 +134,287 @@ describe("buildCallGraph", () => {
     const g = buildCallGraph(flows);
     const edge = g.outEdges("main").find((e) => e.to === "authCheck");
     assert.equal(edge?.data.callSite, "main->authCheck");
+  });
+});
+
+// ─── Flag Queries ──────────────────────────────────────────────────────────
+
+// Shared graph used across flag-query tests.
+// 5 flow/fn nodes + 2 non-flow nodes (type, module).
+function buildFlagTestGraph() {
+  const b = new SemanticGraphBuilder();
+  b.addNode({ id: "pureFlow",   kind: "flow",   name: "pureFlow" });
+  b.addNode({ id: "secureFlow", kind: "flow",   name: "secureFlow" });
+  b.addNode({ id: "tensorFlow", kind: "flow",   name: "tensorFlow" });
+  b.addNode({ id: "mixedFlow",  kind: "flow",   name: "mixedFlow" });
+  b.addNode({ id: "helperFn",   kind: "fn",     name: "helperFn" });
+  b.addNode({ id: "MyType",     kind: "type",   name: "MyType" });
+  b.addNode({ id: "myModule",   kind: "module", name: "myModule" });
+  return b.build();
+}
+
+describe("findFlowsByNodeFlags", () => {
+  it("returns only flows that match the IsPure flag", () => {
+    const graph = buildFlagTestGraph();
+    const nodeFlagsMap = new Map([
+      ["pureFlow",   NodeFlagQuery.IsPure | NodeFlagQuery.HasContract],
+      ["secureFlow", NodeFlagQuery.IsSecure],
+      ["tensorFlow", NodeFlagQuery.TensorCandidate],
+      ["mixedFlow",  NodeFlagQuery.IsPure | NodeFlagQuery.IsSecure],
+      ["helperFn",   0],
+    ]);
+    const results = findFlowsByNodeFlags(graph, nodeFlagsMap, NodeFlagQuery.IsPure);
+    const ids = results.map((n) => n.id).sort();
+    assert.deepEqual(ids, ["mixedFlow", "pureFlow"]);
+  });
+
+  it("returns flows matching a combined flag mask (IsPure AND IsSecure)", () => {
+    const graph = buildFlagTestGraph();
+    const nodeFlagsMap = new Map([
+      ["pureFlow",   NodeFlagQuery.IsPure],
+      ["secureFlow", NodeFlagQuery.IsSecure],
+      ["mixedFlow",  NodeFlagQuery.IsPure | NodeFlagQuery.IsSecure],
+    ]);
+    const mask = NodeFlagQuery.IsPure | NodeFlagQuery.IsSecure;
+    const results = findFlowsByNodeFlags(graph, nodeFlagsMap, mask);
+    const ids = results.map((n) => n.id);
+    assert.deepEqual(ids, ["mixedFlow"]);
+  });
+
+  it("returns an empty array when no flows match", () => {
+    const graph = buildFlagTestGraph();
+    const results = findFlowsByNodeFlags(graph, new Map(), NodeFlagQuery.HasPrivacy);
+    assert.deepEqual(results, []);
+  });
+
+  it("includes fn-kind nodes as well as flow-kind nodes", () => {
+    const graph = buildFlagTestGraph();
+    const nodeFlagsMap = new Map([
+      ["helperFn",  NodeFlagQuery.IsPure],
+      ["pureFlow",  NodeFlagQuery.IsPure],
+    ]);
+    const results = findFlowsByNodeFlags(graph, nodeFlagsMap, NodeFlagQuery.IsPure);
+    const ids = results.map((n) => n.id).sort();
+    assert.deepEqual(ids, ["helperFn", "pureFlow"]);
+  });
+
+  it("does NOT include non-flow/non-fn nodes (type, module, etc.)", () => {
+    const graph = buildFlagTestGraph();
+    // Give every node the IsPure flag — type/module must still be excluded
+    const nodeFlagsMap = new Map(
+      graph.nodes.map((n) => [n.id, NodeFlagQuery.IsPure])
+    );
+    const results = findFlowsByNodeFlags(graph, nodeFlagsMap, NodeFlagQuery.IsPure);
+    const nonFlow = results.filter((n) => n.kind !== "flow" && n.kind !== "fn");
+    assert.equal(nonFlow.length, 0);
+  });
+});
+
+describe("findFlowsByGovernanceFlags", () => {
+  it("returns flows that require audit", () => {
+    const graph = buildFlagTestGraph();
+    const govFlagsMap = new Map([
+      ["pureFlow",   GovernanceFlagQuery.RequiresAudit],
+      ["secureFlow", GovernanceFlagQuery.DenyRemote],
+      ["mixedFlow",  GovernanceFlagQuery.RequiresAudit | GovernanceFlagQuery.ContainsPII],
+    ]);
+    const results = findFlowsByGovernanceFlags(graph, govFlagsMap, GovernanceFlagQuery.RequiresAudit);
+    const ids = results.map((n) => n.id).sort();
+    assert.deepEqual(ids, ["mixedFlow", "pureFlow"]);
+  });
+
+  it("returns flows matching a combined governance mask", () => {
+    const graph = buildFlagTestGraph();
+    const govFlagsMap = new Map([
+      ["pureFlow",  GovernanceFlagQuery.RequiresAudit],
+      ["mixedFlow", GovernanceFlagQuery.RequiresAudit | GovernanceFlagQuery.ContainsPII],
+    ]);
+    const mask = GovernanceFlagQuery.RequiresAudit | GovernanceFlagQuery.ContainsPII;
+    const results = findFlowsByGovernanceFlags(graph, govFlagsMap, mask);
+    const ids = results.map((n) => n.id);
+    assert.deepEqual(ids, ["mixedFlow"]);
+  });
+
+  it("returns empty array when governance map is empty", () => {
+    const graph = buildFlagTestGraph();
+    const results = findFlowsByGovernanceFlags(graph, new Map(), GovernanceFlagQuery.DenyRemote);
+    assert.deepEqual(results, []);
+  });
+});
+
+describe("findFlowsByEffectFlags", () => {
+  it("returns flows that have DatabaseWrite effect", () => {
+    const graph = buildFlagTestGraph();
+    const effectFlagsMap = new Map([
+      ["pureFlow",   EffectFlagQuery.DatabaseRead],
+      ["secureFlow", EffectFlagQuery.DatabaseWrite | EffectFlagQuery.AuditWrite],
+      ["mixedFlow",  EffectFlagQuery.DatabaseWrite],
+    ]);
+    const results = findFlowsByEffectFlags(graph, effectFlagsMap, EffectFlagQuery.DatabaseWrite);
+    const ids = results.map((n) => n.id).sort();
+    assert.deepEqual(ids, ["mixedFlow", "secureFlow"]);
+  });
+
+  it("returns flows that write database AND write audit", () => {
+    const graph = buildFlagTestGraph();
+    const effectFlagsMap = new Map([
+      ["secureFlow", EffectFlagQuery.DatabaseWrite | EffectFlagQuery.AuditWrite],
+      ["mixedFlow",  EffectFlagQuery.DatabaseWrite],
+    ]);
+    const mask = EffectFlagQuery.DatabaseWrite | EffectFlagQuery.AuditWrite;
+    const results = findFlowsByEffectFlags(graph, effectFlagsMap, mask);
+    const ids = results.map((n) => n.id);
+    assert.deepEqual(ids, ["secureFlow"]);
+  });
+});
+
+// ─── CapabilityGraph ────────────────────────────────────────────────────────
+
+describe("buildCapabilityGraph", () => {
+  const flows = [
+    {
+      name: "readUserFile",
+      requiredCapabilities: [
+        {
+          functionName: "File.readText",
+          requiredEffects: ["filesystem.read"],
+          wasmImport: "host:fs.readText",
+        },
+      ],
+    },
+    {
+      name: "writeLog",
+      requiredCapabilities: [
+        {
+          functionName: "File.writeText",
+          requiredEffects: ["filesystem.write"],
+          wasmImport: "host:fs.writeText",
+        },
+      ],
+    },
+    {
+      name: "readAndLog",
+      requiredCapabilities: [
+        {
+          functionName: "File.readText",
+          requiredEffects: ["filesystem.read"],
+          wasmImport: "host:fs.readText",
+        },
+        {
+          functionName: "Console.log",
+          requiredEffects: ["io.stdout"],
+        },
+      ],
+    },
+  ];
+
+  it("getCapabilitiesRequiredByFlow returns correct capabilities for a flow", () => {
+    const g = buildCapabilityGraph(flows);
+    const caps = getCapabilitiesRequiredByFlow(g, "readAndLog");
+    const fnNames = caps.map((c) => c.functionName).sort();
+    assert.deepEqual(fnNames, ["Console.log", "File.readText"]);
+    const fileReadCap = caps.find((c) => c.functionName === "File.readText");
+    assert.deepEqual(fileReadCap?.requiredEffects, ["filesystem.read"]);
+    assert.equal(fileReadCap?.wasmImport, "host:fs.readText");
+  });
+
+  it("getFlowsRequiringCapability returns all flows that use a stdlib function", () => {
+    const g = buildCapabilityGraph(flows);
+    const usersOfReadText = getFlowsRequiringCapability(g, "File.readText").slice().sort();
+    assert.deepEqual(usersOfReadText, ["readAndLog", "readUserFile"]);
+
+    const usersOfWriteText = getFlowsRequiringCapability(g, "File.writeText");
+    assert.deepEqual(usersOfWriteText, ["writeLog"]);
+  });
+
+  it("getWASMImportsForFlow returns transitively required WASM imports", () => {
+    const g = buildCapabilityGraph(flows);
+    const imports = getWASMImportsForFlow(g, "readAndLog").slice().sort();
+    // readAndLog needs File.readText (→ host:fs.readText) and Console.log (no wasm import)
+    assert.deepEqual(imports, ["host:fs.readText"]);
+
+    // A capability with no wasmImport produces no wasm entries
+    const consoleImports = getWASMImportsForFlow(g, "writeLog");
+    assert.deepEqual(consoleImports, ["host:fs.writeText"]);
+
+    // Flow not in graph returns empty
+    assert.deepEqual(getWASMImportsForFlow(g, "nonExistentFlow"), []);
+  });
+});
+
+describe("getGraphFlagSummary", () => {
+  it("counts pure, secure, tensor flows correctly", () => {
+    const graph = buildFlagTestGraph();
+    const nodeFlagsMap = new Map([
+      ["pureFlow",   NodeFlagQuery.IsPure],
+      ["secureFlow", NodeFlagQuery.IsSecure],
+      ["tensorFlow", NodeFlagQuery.TensorCandidate],
+      ["mixedFlow",  NodeFlagQuery.IsPure | NodeFlagQuery.IsSecure | NodeFlagQuery.TensorCandidate],
+    ]);
+    const summary = getGraphFlagSummary(graph, nodeFlagsMap, new Map());
+    // 5 flow/fn nodes: pureFlow, secureFlow, tensorFlow, mixedFlow, helperFn
+    assert.equal(summary.totalFlows, 5);
+    assert.equal(summary.pureFlows, 2);        // pureFlow + mixedFlow
+    assert.equal(summary.secureFlows, 2);      // secureFlow + mixedFlow
+    assert.equal(summary.tensorCandidates, 2); // tensorFlow + mixedFlow
+  });
+
+  it("counts governance flags correctly", () => {
+    const graph = buildFlagTestGraph();
+    const govFlagsMap = new Map([
+      ["pureFlow",   GovernanceFlagQuery.RequiresAudit | GovernanceFlagQuery.ContainsPII],
+      ["secureFlow", GovernanceFlagQuery.DenyRemote | GovernanceFlagQuery.AllowsNetwork],
+      ["mixedFlow",  GovernanceFlagQuery.RequiresAudit],
+    ]);
+    const summary = getGraphFlagSummary(graph, new Map(), govFlagsMap);
+    assert.equal(summary.requiresAudit, 2); // pureFlow + mixedFlow
+    assert.equal(summary.containsPII, 1);   // pureFlow
+    assert.equal(summary.denyRemote, 1);    // secureFlow
+    assert.equal(summary.allowsNetwork, 1); // secureFlow
+  });
+
+  it("returns zeros for empty flag maps", () => {
+    const graph = buildFlagTestGraph();
+    const summary = getGraphFlagSummary(graph, new Map(), new Map());
+    assert.equal(summary.pureFlows, 0);
+    assert.equal(summary.secureFlows, 0);
+    assert.equal(summary.tensorCandidates, 0);
+    assert.equal(summary.requiresAudit, 0);
+    assert.equal(summary.containsPII, 0);
+    assert.equal(summary.allowsNetwork, 0);
+    assert.equal(summary.denyRemote, 0);
+  });
+
+  it("totalFlows reflects only flow/fn nodes, not type/module nodes", () => {
+    const graph = buildFlagTestGraph();
+    // buildFlagTestGraph has 5 flow/fn nodes and 2 non-flow nodes
+    const summary = getGraphFlagSummary(graph, new Map(), new Map());
+    assert.equal(summary.totalFlows, 5);
+  });
+});
+
+describe("findFlowsByNativeCapability", () => {
+  it("returns flows that use the specified native capability", () => {
+    const graph = buildFlagTestGraph();
+    const capabilityUsageByFlow = new Map([
+      ["pureFlow",   [NativeCapabilityQuery.NpuInference, NativeCapabilityQuery.GpuCompute]],
+      ["secureFlow", [NativeCapabilityQuery.PhotonicBridge]],
+      ["tensorFlow", [NativeCapabilityQuery.GpuCompute, NativeCapabilityQuery.GpuMatmul]],
+      ["mixedFlow",  []],
+      ["helperFn",   [NativeCapabilityQuery.WasmSimd]],
+    ]);
+    const results = findFlowsByNativeCapability(graph, capabilityUsageByFlow, NativeCapabilityQuery.GpuCompute);
+    const ids = results.map((n) => n.id).sort();
+    assert.deepEqual(ids, ["pureFlow", "tensorFlow"]);
+  });
+
+  it("returns an empty array when no flows use the required capability", () => {
+    const graph = buildFlagTestGraph();
+    const capabilityUsageByFlow = new Map([
+      ["pureFlow",   [NativeCapabilityQuery.NpuInference]],
+      ["secureFlow", [NativeCapabilityQuery.WasmSimd]],
+    ]);
+    const results = findFlowsByNativeCapability(graph, capabilityUsageByFlow, NativeCapabilityQuery.ApuSharedMemory);
+    assert.deepEqual(results, []);
   });
 });

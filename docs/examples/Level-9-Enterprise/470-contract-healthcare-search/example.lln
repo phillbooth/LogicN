@@ -2,7 +2,7 @@
 /// level: 9
 /// concept: healthcare patient search with complete privacy, observability, errors, and context contract sections
 /// expected_diagnostics: none
-/// test_status: draft
+/// test_status: stable
 /// ai_rule: Healthcare flows must declare privacy.contains PII, privacy.retention, deny protected values from logs, and require signed attestation for GDPR/NHS compliance.
 
 event PatientSearched
@@ -172,6 +172,7 @@ contract {
 {
   let actor: Actor = context.actor
   let traceId: TraceId = context.trace_id
+  let deadline: Deadline = context.deadline
 
   unsafe let rawQuery: String = request.params.query
   unsafe let rawLimit: String = request.params.limit
@@ -194,11 +195,5 @@ contract {
 
   emit PatientSearched
 
-  return Ok(Response.okJson({
-    results: results.map(p => ({
-      patientId: p.id,
-      name: p.name,
-      matchScore: p.score
-    }))
-  }))
+  return Ok(Response.okJson(results))
 }

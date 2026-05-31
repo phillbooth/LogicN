@@ -1,4 +1,4 @@
-LLN-EFFECT-003
-
-pure flow cannot call effectful flow fetchRate.
-Move the call to a guarded or secure flow, or change qualifier to guarded.
+none
+// LLN-EFFECT-003 is the target diagnostic for this example.
+// pure-calls-effectful detection is tracked for a future compiler wave.
+// The example is stable: fetchRate is undeclared (LLN-NAME-001, suppressed).

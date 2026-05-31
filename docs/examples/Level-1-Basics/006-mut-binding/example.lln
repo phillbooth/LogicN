@@ -2,9 +2,10 @@
 /// level: 1
 /// concept: mut binding
 /// expected_diagnostics: none
-/// test_status: draft
+/// test_status: stable
 /// ai_rule: mut declares a mutable binding that can be reassigned.
 
-mut count: Int = 0
-
-count = count + 1
+guarded flow example() -> Void {
+  mut count: Int = 0
+  count = count + 1
+}

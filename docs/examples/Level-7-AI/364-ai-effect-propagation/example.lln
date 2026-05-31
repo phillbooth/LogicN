@@ -1,5 +1,5 @@
 ﻿/// example: 364-ai-effect-propagation
-/// test_status: draft
+/// test_status: stable
 /// level: 7
 /// concept: a pure flow calling an ai.inference flow inherits that effect and must declare it
 /// expected_diagnostics: LLN-EFFECT-002

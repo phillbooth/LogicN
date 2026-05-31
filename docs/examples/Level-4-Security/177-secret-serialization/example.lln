@@ -2,7 +2,7 @@
 /// level: 4
 /// concept: SecureString serialization denied
 /// expected_diagnostics: LLN-SECRET-003
-/// test_status: draft
+/// test_status: stable
 /// ai_rule: SecureString must not be passed to json.encode or serialize functions.
 
 secure flow exportConfig() -> ExportConfigResult

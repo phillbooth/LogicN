@@ -20,6 +20,9 @@ import {
   verifyGovernance,
   GovernanceFlags,
   LLN_GOV_013,
+  LLN_GOV_014,
+  executeFlow,
+  LLN_RUNTIME_005,
 } from "../../dist/index.js";
 
 // ---------------------------------------------------------------------------
@@ -291,6 +294,20 @@ contract {
 });
 
 // ---------------------------------------------------------------------------
+// LLN_GOV_014 constant shape
+// ---------------------------------------------------------------------------
+
+describe("LLN_GOV_014: MissingFallbackTarget shape", () => {
+  it("LLN_GOV_014.code === 'LLN-GOV-014'", () => {
+    assert.equal(LLN_GOV_014.code, "LLN-GOV-014");
+  });
+
+  it("LLN_GOV_014.severity === 'warning'", () => {
+    assert.equal(LLN_GOV_014.severity, "warning");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // LLN_GOV_013 constant shape
 // ---------------------------------------------------------------------------
 
@@ -308,5 +325,53 @@ describe("LLN_GOV_013 constant shape", () => {
       "why must be a non-empty string");
     assert.ok(typeof LLN_GOV_013.suggestedFix === "string" && LLN_GOV_013.suggestedFix.length > 0,
       "suggestedFix must be a non-empty string");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 11D: protected value tagging
+// ---------------------------------------------------------------------------
+
+describe("Phase 11D: protected value tagging", () => {
+  it("interpreter does not crash on a flow that declares unsafe let with protected type", async () => {
+    const source = `
+secure flow handleEmail(rawInput: String) -> String
+{
+  unsafe let raw: protected Email = rawInput
+  return "ok"
+}
+`;
+    const parsed = parseProgram(source, "test-11d.lln");
+    const args = new Map([["rawInput", { __tag: "string", value: "user@example.com" }]]);
+    const result = await executeFlow("handleEmail", args, parsed.ast, parsed.flows);
+    // No runtime error — the flow completes successfully
+    assert.ok(
+      result.value.__tag !== "runtimeError" && result.value.__tag !== "error",
+      `Expected no runtime error, got: ${result.value.__tag}`,
+    );
+  });
+
+  it("protected binding carries _governed metadata tag with qualifier 'protected'", async () => {
+    const source = `
+secure flow tagEmail(rawInput: String) -> String
+{
+  unsafe let raw: protected Email = rawInput
+  return "tagged"
+}
+`;
+    const parsed = parseProgram(source, "test-11d-tag.lln");
+    const args = new Map([["rawInput", { __tag: "string", value: "test@example.com" }]]);
+    const result = await executeFlow("tagEmail", args, parsed.ast, parsed.flows);
+    // Flow must complete without error
+    assert.ok(
+      result.value.__tag !== "runtimeError",
+      `Flow must not error, got: ${result.value.__tag}`,
+    );
+    // No diagnostics about governed access yet (Phase 11D is tagging-only)
+    const governedErrors = result.diagnostics.filter(
+      (d) => d.code === LLN_RUNTIME_005.code,
+    );
+    assert.equal(governedErrors.length, 0,
+      "Phase 11D does not yet emit LLN-RUNTIME-005 — tagging only, no enforcement");
   });
 });

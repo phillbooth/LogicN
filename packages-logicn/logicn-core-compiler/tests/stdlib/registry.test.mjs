@@ -12,6 +12,9 @@
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { join, dirname } from "node:path";
 
 import {
   STDLIB_CAPABILITY_MAP,
@@ -24,9 +27,15 @@ import {
   LLN_STDLIB_001,
   renderWAT,
   buildWATModule,
+  emitWATBody,
+  getWATImportsForEffects,
   DEFAULT_WAT_MEMORY,
   DEFAULT_WASM_SIMD,
+  parseProgram,
 } from "../../dist/index.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // ---------------------------------------------------------------------------
 // STDLIB_CAPABILITY_MAP
@@ -338,5 +347,233 @@ describe("DEFAULT_WASM_SIMD: Phase 22A SIMD capability descriptor", () => {
     assert.ok(Array.isArray(DEFAULT_WASM_SIMD.supportedOps), "supportedOps must be an array");
     assert.equal(DEFAULT_WASM_SIMD.supportedOps.length, 0, "Default has no ops enabled");
     assert.equal(DEFAULT_WASM_SIMD.laneWidth, 128, "WASM SIMD lane width is always 128-bit");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildWATModule: pure flow produces real WAT body (Phase 22)
+// ---------------------------------------------------------------------------
+
+describe("buildWATModule: pure flow produces real WAT body", () => {
+  // A pure flow that takes an Int and returns an Int — built with paramTypes + executionPlan.
+  const purePlan = {
+    steps: [
+      { kind: "validate_param" },  // ignored at WAT level
+      { kind: "return" },
+    ],
+  };
+
+  const pureFlowMod = buildWATModule(
+    {
+      flows: [
+        {
+          name: "identityInt",
+          qualifier: "pure",
+          declaredEffects: [],
+          paramTypes: ["Int"],
+          executionPlan: purePlan,
+        },
+      ],
+      entryPoints: ["identityInt"],
+    },
+    STDLIB_CAPABILITY_MAP,
+  );
+
+  it("pure flow WAT body does NOT contain 'unreachable'", () => {
+    const fn = pureFlowMod.functions.find((f) => f.name === "identityInt");
+    assert.ok(fn !== undefined, "identityInt function must exist");
+    assert.ok(
+      !fn.body.includes("unreachable"),
+      `Pure flow body must not contain 'unreachable'. Got: ${fn.body}`,
+    );
+  });
+
+  it("WAT contains '(local.get' for parameter access in pure flow body", () => {
+    const fn = pureFlowMod.functions.find((f) => f.name === "identityInt");
+    assert.ok(fn !== undefined, "identityInt function must exist");
+    assert.ok(
+      fn.body.includes("(local.get"),
+      `Pure flow body must contain '(local.get'. Got: ${fn.body}`,
+    );
+  });
+
+  it("renderWAT of a pure flow compiles to a string starting with '(module'", () => {
+    const wat = renderWAT(pureFlowMod);
+    assert.ok(
+      wat.startsWith("(module"),
+      `renderWAT must start with '(module'. Got: ${wat.slice(0, 50)}`,
+    );
+    // The rendered WAT must also contain the local.get instruction in the output.
+    assert.ok(
+      wat.includes("(local.get"),
+      "Rendered WAT must contain '(local.get' for pure flow parameter access",
+    );
+    // And must not produce unreachable for this pure flow.
+    // (Note: other non-pure flows in the same module might have unreachable —
+    // but this module has only identityInt which is pure, so none expected.)
+    assert.ok(
+      !wat.includes("unreachable"),
+      "Rendered WAT for a pure-only module must not contain 'unreachable'",
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WAT imports from effect declarations
+// ---------------------------------------------------------------------------
+
+describe("WAT imports from effect declarations", () => {
+  it("flow with filesystem.read effect produces WAT containing (import \"host\"", () => {
+    const mod = buildWATModule(
+      {
+        flows: [{ name: "readFile", qualifier: "flow", declaredEffects: ["filesystem.read"] }],
+        entryPoints: [],
+      },
+      STDLIB_CAPABILITY_MAP,
+    );
+    const wat = renderWAT(mod);
+    assert.ok(
+      wat.includes('(import "host"'),
+      `WAT for a flow with filesystem.read must contain (import "host". Got:\n${wat}`,
+    );
+  });
+
+  it("pure flow with no effects produces WAT with no imports", () => {
+    const mod = buildWATModule(
+      {
+        flows: [{ name: "computeSum", qualifier: "pure", declaredEffects: [] }],
+        entryPoints: [],
+      },
+      STDLIB_CAPABILITY_MAP,
+    );
+    const wat = renderWAT(mod);
+    assert.ok(
+      !wat.includes("(import "),
+      `Pure flow WAT must not contain any imports. Got:\n${wat}`,
+    );
+  });
+
+  it("getWATImportsForEffects([\"audit.write\"]) returns import with wasmImport \"host:audit.write\"", () => {
+    const imports = getWATImportsForEffects(["audit.write"]);
+    assert.ok(Array.isArray(imports), "Must return an array");
+    assert.ok(imports.length > 0, "Must return at least one import for audit.write");
+    const auditImport = imports.find((imp) => imp.module === "host" && imp.name === "audit.write");
+    assert.ok(
+      auditImport !== undefined,
+      `Expected an import with module "host" and name "audit.write". Got: ${JSON.stringify(imports)}`,
+    );
+    assert.equal(auditImport.effect, "audit.write", "Import must reference effect audit.write");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 25A: verifyPassword example parses without errors
+// ---------------------------------------------------------------------------
+
+describe("Phase 25A: verifyPassword example parses without errors", () => {
+  it("reads and parses examples/auth-service/verifyPassword.lln with 0 errors, qualifier secure, and required effects", () => {
+    // Resolve path from repo root: tests/stdlib/ -> ../../../.. -> repo root -> examples/
+    // tests/stdlib -> tests -> logicn-core-compiler -> packages-logicn -> LO (repo root)
+    const examplePath = join(__dirname, "..", "..", "..", "..", "examples", "auth-service", "verifyPassword.lln");
+    const source = readFileSync(examplePath, "utf8");
+
+    // Parse (parseProgram takes the raw source string and an optional filename)
+    const parseResult = parseProgram(source, "verifyPassword.lln");
+
+    // 0 parse errors
+    assert.equal(
+      parseResult.diagnostics.length,
+      0,
+      `Expected 0 parse diagnostics, got ${parseResult.diagnostics.length}: ${JSON.stringify(parseResult.diagnostics.map(d => d.message))}`,
+    );
+
+    // Flow 'verifyPassword' found with qualifier 'secure'
+    const flow = parseResult.flows.find((f) => f.name === "verifyPassword");
+    assert.ok(
+      flow !== undefined,
+      `Expected a flow named 'verifyPassword'. Flows found: ${parseResult.flows.map(f => f.name).join(", ")}`,
+    );
+    assert.equal(
+      flow.qualifier,
+      "secure",
+      `Expected qualifier 'secure', got '${flow.qualifier}'`,
+    );
+
+    // Has required effects
+    const required = ["database.read", "crypto.verify", "audit.write"];
+    for (const effect of required) {
+      assert.ok(
+        flow.declaredEffects.includes(effect),
+        `Expected effect '${effect}' in declaredEffects. Got: ${JSON.stringify(flow.declaredEffects)}`,
+      );
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 25B-C: createSession + verifyToken parse correctly
+// ---------------------------------------------------------------------------
+
+describe("Phase 25B-C: createSession + verifyToken parse correctly", () => {
+  it("reads and parses examples/auth-service/createSession.lln with 0 errors, qualifier secure, and effects database.write + audit.write", () => {
+    const examplePath = join(__dirname, "..", "..", "..", "..", "examples", "auth-service", "createSession.lln");
+    const source = readFileSync(examplePath, "utf8");
+
+    const parseResult = parseProgram(source, "createSession.lln");
+
+    assert.equal(
+      parseResult.diagnostics.length,
+      0,
+      `Expected 0 parse diagnostics, got ${parseResult.diagnostics.length}: ${JSON.stringify(parseResult.diagnostics.map(d => d.message))}`,
+    );
+
+    const flow = parseResult.flows.find((f) => f.name === "createSession");
+    assert.ok(
+      flow !== undefined,
+      `Expected a flow named 'createSession'. Flows found: ${parseResult.flows.map(f => f.name).join(", ")}`,
+    );
+    assert.equal(
+      flow.qualifier,
+      "secure",
+      `Expected qualifier 'secure', got '${flow.qualifier}'`,
+    );
+
+    const required = ["database.write", "audit.write"];
+    for (const effect of required) {
+      assert.ok(
+        flow.declaredEffects.includes(effect),
+        `Expected effect '${effect}' in declaredEffects. Got: ${JSON.stringify(flow.declaredEffects)}`,
+      );
+    }
+  });
+
+  it("reads and parses examples/auth-service/verifyToken.lln with 0 errors, qualifier pure, and no effects", () => {
+    const examplePath = join(__dirname, "..", "..", "..", "..", "examples", "auth-service", "verifyToken.lln");
+    const source = readFileSync(examplePath, "utf8");
+
+    const parseResult = parseProgram(source, "verifyToken.lln");
+
+    assert.equal(
+      parseResult.diagnostics.length,
+      0,
+      `Expected 0 parse diagnostics, got ${parseResult.diagnostics.length}: ${JSON.stringify(parseResult.diagnostics.map(d => d.message))}`,
+    );
+
+    const flow = parseResult.flows.find((f) => f.name === "verifyToken");
+    assert.ok(
+      flow !== undefined,
+      `Expected a flow named 'verifyToken'. Flows found: ${parseResult.flows.map(f => f.name).join(", ")}`,
+    );
+    assert.equal(
+      flow.qualifier,
+      "pure",
+      `Expected qualifier 'pure', got '${flow.qualifier}'`,
+    );
+
+    assert.equal(
+      flow.declaredEffects.length,
+      0,
+      `Expected 0 declared effects for pure flow, got: ${JSON.stringify(flow.declaredEffects)}`,
+    );
   });
 });

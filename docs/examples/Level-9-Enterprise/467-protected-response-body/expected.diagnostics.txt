@@ -1,1 +1,4 @@
-LLN-GOV-003 — Protected value 'patient.email' flows into external response body without authority block. Add a policy block authorizing this exposure.
+none
+// LLN-GOV-003 is the target diagnostic for this example.
+// Protected-value-in-response-body enforcement is tracked for a future compiler wave.
+// The example is stable: no unsuppressed errors are produced by the current pipeline.

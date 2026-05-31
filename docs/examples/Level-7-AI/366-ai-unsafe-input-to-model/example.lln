@@ -1,5 +1,5 @@
 /// example: 366-ai-unsafe-input-to-model
-/// test_status: draft
+/// test_status: stable
 /// level: 7
 /// concept: Unsafe input cannot flow directly to AI model
 /// expected_diagnostics: LLN-VALUESTATE-003

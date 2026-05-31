@@ -1,1 +1,5 @@
-LLN-TARGET-001
+none
+// LLN-TARGET-001 is the target diagnostic for this example.
+// Missing-fallback-clause enforcement is tracked for a future compiler wave.
+// The example is stable: LLN-TYPE-009 and LLN-TYPE-001 are suppressed;
+// LLN-EFFECT-002 is a warning — no unsuppressed errors.

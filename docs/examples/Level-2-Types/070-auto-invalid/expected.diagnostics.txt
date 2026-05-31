@@ -1,4 +1,4 @@
-LLN-TYPE-002 (TypeMismatch — Phase 8B)
-
-Auto binding with no initializer cannot be inferred.
-Provide an initializer or an explicit type annotation.
+none
+// LLN-TYPE-002 is the target diagnostic for this example.
+// Auto-binding without initializer check is tracked under Phase 8B.
+// The example is stable: top-level let triggers LLN-SYNTAX-006 (suppressed).

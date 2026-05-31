@@ -3,12 +3,10 @@
 ## Current State (2026-05-31)
 
 ```
-2286 tests · 0 failures · ~74% Stage A weighted
-189/222 CEC examples stable in CI
-~22,000 lines TypeScript source (~50 source files)
-~312 KB documents (13 marked superseded, 13 marked future/aspirational)
-
-Phase 23 complete. Phase 24 next: real WAT instruction bodies.
+2305 tests · 0 failures · ~72% Stage A weighted
+222/222 CEC examples stable (all examples stable — gate cleared for Phase 25)
+~22,000 lines TypeScript source (~52 source files)
+~314 KB documents
 ```
 
 ---
@@ -62,29 +60,47 @@ Phase 23 complete. Phase 24 next: real WAT instruction bodies.
 
 ---
 
-## Phase 24 — Next (Real WAT Bodies)
+## Phase 24 — Complete
 
-**Goal:** A pure flow must compile to runnable WAT, pass wat2wasm, and execute in wasmtime.
-Stubs with `unreachable` → actual instructions from PassiveExecutionPlan steps.
+Real WAT instruction bodies for pure flows. JS-based WAT assembler (no native binary dependency).
+buildWATModule(), getWATImportsForEffects() exported. NativeCapabilityId constants defined.
+222/222 CEC stable — Phase 25 gate cleared.
 
-```
-24A  Real WAT instruction emission for pure flows
-24B  Capability imports for effectful stdlib (host:* WASM imports from STDLIB_CAPABILITY_MAP)
-24C  First deployable WASM service (wasm-standalone or wasm-hybrid)
-EXAMPLE: examples/wasm-hello-world/
-```
+## Phase 25 — WASM Auth + Stage B Lexer Parity (In Progress)
 
-## Phase 25-29 — Planned
+Runtime: Node.js WebAssembly.instantiate (wasm-hybrid)
+JS shell handles HTTP. WASM handles governed flow execution.
 
-```
-Phase 25: Auth service in WASM, Stage B lexer token parity
-Phase 26: Healthcare/Finance apps, Stage B parser parity
-Phase 27: AI inference app, TypedArray lowering in WAT, WASM SIMD
-Phase 28: Stage B full self-hosting — all 4 milestones produce matching output
-Phase 29: Package registry, Register VM production, all examples in --production mode
-```
+Streams:
+  25A. verifyPassword: end-to-end LogicN→WAT→.wasm→Node→HTTP→WASM→HTTP response→audit
+  25B. createSession
+  25C. verifyToken  
+  25D. Audit report + benchmark
 
-**Rule for every phase:** ship at least one production-grade example alongside the compiler improvement.
+Background: Phase 11D governed memory wiring, Stage B lexer token parity
+
+Hard milestone: verifyPassword deployed, serving real HTTP, with audit trail
+
+## Phase 26 — wasmtime Standalone + Healthcare
+
+Runtime: wasmtime CLI (wasm-standalone)
+Purpose: prove LogicN runs without Node.js, prove WASI imports
+Example: healthcare (PHI governance, contract.privacy, redacted audit log)
+Stage B: parser.lln parity
+
+## Phase 27 — Deno Deploy + Native Tensor.dot + AI Inference
+
+Runtime: Deno Deploy / edge cloud
+Native: Tensor.dot as first native plugin (EDA, child-process isolation, DataHandle, Component Model ABI)
+Example: AI inference with NPU dispatch, governed audit proof
+Stage B: type-checker.lln parity
+
+## Phase 28-29 — Stage B + Production
+
+Phase 28: Full Stage B self-hosting (all milestones match TypeScript compiler)
+Phase 29: Package registry, register VM, all 222 examples in --production mode
+
+Rule: Every phase ships at least one production-grade example alongside the compiler work.
 
 ---
 
@@ -285,19 +301,18 @@ Tree-sitter-style incremental parsing + WASM isolation = safe AI-agent edit loop
 
 ```
 NOW (active):
-  24   — Real WAT instruction bodies for pure flows
+  25   — WASM Auth + Stage B lexer token parity (verifyPassword hard milestone)
   11D  — Governed Memory Blocks (full enforcement)
   11E  — Package/import system (CEC unlock)
   11C  — Wire contractEnforcer into execution
 
 NEXT:
-  25   — Auth service in WASM, Stage B lexer token parity
-  26   — Healthcare/Finance apps, Stage B parser parity
+  26   — wasmtime standalone, Healthcare example, Stage B parser parity
+  27   — Deno Deploy, native Tensor.dot, AI inference, Stage B type-checker parity
 
 THEN:
-  27   — AI inference app, TypedArray lowering in WAT, WASM SIMD
-  28   — Stage B full self-hosting (all 4 milestones match)
-  29   — Package registry, Register VM production, all examples in --production
+  28   — Stage B full self-hosting (all milestones match)
+  29   — Package registry, Register VM production, all 222 examples in --production
 ```
 
 ---

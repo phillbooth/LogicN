@@ -107,13 +107,15 @@ export {
   type EffectCheckerMode,
 } from "./effect-checker.js";
 
-// Phase 18D / 18E / 18F — Type Registry
+// Phase 18D / 18E / 18F / Hybrid WASM — Type Registry
 export {
   TypeId,
   EffectFlags,
   EffectCheckerFlags,
   GovernanceFlags,
   ComputeCompatibilityFlags,
+  NativeCapabilityId,
+  EFFECT_TO_NATIVE_CAPABILITY,
   effectsToFlags,
   effectsSubset,
   resolveTypeId,
@@ -121,6 +123,7 @@ export {
   tensorElementTypesCompatible,
   tensorDimensionCountsCompatible,
   TYPE_NAME_TO_ID,
+  DEFAULT_WAT_ASSEMBLER_CONFIG,
   type TypeIdValue,
   type EffectFlagsMask,
   type EffectCheckerFlagsMask,
@@ -128,6 +131,9 @@ export {
   type ComputeCompatibilityFlagsMask,
   type TensorTypeInfo,
   type RuntimeManifest,
+  type NativeCapabilityIdValue,
+  type WATAssemblerConfig,
+  type NativePluginManifest,
 } from "./type-registry.js";
 
 // Phase 6 / 18C — Value-State Checker
@@ -387,6 +393,7 @@ export {
   executeFlow,
   LLN_VOID,
   LLN_NONE,
+  LLN_RUNTIME_005,
   type LogicNValue,
   type ExecutionResult,
   type ExecutionAuditRecord,
@@ -402,11 +409,20 @@ export {
   type AuditWriter,
 } from "./audit-writer.js";
 
-// Phase 19 / 22A — WAT Emitter (WebAssembly Text Format) — skeleton + SIMD types
+// Phase 25 — WAT Assembler (WAT → WASM binary)
+export {
+  assembleWAT,
+  type WATAssemblerResult,
+} from "./wat-assembler.js";
+
+// Phase 19 / 22A / 22 — WAT Emitter (WebAssembly Text Format) — skeleton + SIMD types + pure bodies
 export {
   emitWAT,
   renderWAT,
   buildWATModule,
+  buildWATModuleFromGIR,
+  emitWATBody,
+  getWATImportsForEffects,
   logicNTypeToWAT,
   DEFAULT_WAT_MEMORY,
   DEFAULT_WASM_SIMD,
@@ -420,9 +436,22 @@ export {
   type WATMemory,
   type WATFlowInput,
   type WATGIRInput,
+  type WATParamDef,
   type WASMSIMDCapability,
   type WATSIMDInstruction,
 } from "./wat-emitter.js";
+
+// Security Policy — Anti-abuse architecture (Phase 25D+)
+export {
+  ANTI_ABUSE_EFFECTS,
+  PRIVATE_IP_RANGES,
+  LLN_NET_001,
+  LLN_NET_002,
+  LLN_RUNTIME_006,
+  parseNetworkDestinationPolicy,
+  isHostAllowed,
+  type NetworkDestinationPolicy,
+} from "./security-policy.js";
 
 // Stage A - Runtime Pipeline
 export {
@@ -520,6 +549,16 @@ export {
   type GovernanceVerifyResult,
   type DeploymentProfile,
 } from "./governance-verifier.js";
+
+/** LLN-GOV-014: Flow declares compute targets with prefer [...] but no fallback target is declared. */
+export const LLN_GOV_014 = {
+  code: "LLN-GOV-014",
+  name: "MissingFallbackTarget",
+  severity: "warning" as const,
+  message: "Flow declares compute targets with prefer [...] but no fallback target is declared. A fallback is required — without it, a native accelerator crash becomes an unrecoverable service failure.",
+  why: "When native modules crash, the WASM control plane must fall back to a governed CPU/WASM path. No fallback = potential service outage with no recovery path.",
+  suggestedFix: "Add: targets { fallback cpu } or targets { fallback wasm }",
+} as const;
 
 // Stage A - Boundary Graph
 export {

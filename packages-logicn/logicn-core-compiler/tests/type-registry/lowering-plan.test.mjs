@@ -208,3 +208,60 @@ describe("buildLazyIteratorChain: chain properties", () => {
     assert.equal(chain.estimatedAllocations, 1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// GIR: TypedArrayLoweringPlan wired into GIRFlow
+// ---------------------------------------------------------------------------
+
+import { emitGIR } from "../../dist/index.js";
+import { parseProgram } from "../../dist/index.js";
+import { checkEffects } from "../../dist/index.js";
+
+describe("GIR: TypedArrayLoweringPlan wired into GIRFlow", () => {
+  function makeGIR(source) {
+    const parseResult = parseProgram(source);
+    const effectResults = checkEffects(parseResult.flows, parseResult.ast);
+    return emitGIR(parseResult.ast, parseResult.flows, effectResults);
+  }
+
+  it("flow with Tensor<Float32,[768]> param produces GIRFlow with typedArrayLoweringPlan", () => {
+    const { gir } = makeGIR(`
+      pure flow embed(v: Tensor<Float32, [768]>) -> Float32 {
+        return 0.0
+      }
+    `);
+    assert.equal(gir.flows.length, 1);
+    const flow = gir.flows[0];
+    assert.ok(
+      flow.typedArrayLoweringPlan !== undefined,
+      "typedArrayLoweringPlan should be present for a flow with tensor params",
+    );
+  });
+
+  it("loweringPlan.entries[0].jsTypedArray === 'Float32Array' for Tensor<Float32,[768]>", () => {
+    const { gir } = makeGIR(`
+      pure flow embed(v: Tensor<Float32, [768]>) -> Float32 {
+        return 0.0
+      }
+    `);
+    const flow = gir.flows[0];
+    assert.ok(flow.typedArrayLoweringPlan !== undefined);
+    assert.ok(flow.typedArrayLoweringPlan.entries.length > 0);
+    assert.equal(flow.typedArrayLoweringPlan.entries[0].jsTypedArray, "Float32Array");
+  });
+
+  it("pure flow with no tensors has typedArrayLoweringPlan undefined or absent", () => {
+    const { gir } = makeGIR(`
+      pure flow add(x: Int32, y: Int32) -> Int32 {
+        return 0
+      }
+    `);
+    assert.equal(gir.flows.length, 1);
+    const flow = gir.flows[0];
+    assert.equal(
+      flow.typedArrayLoweringPlan,
+      undefined,
+      "typedArrayLoweringPlan should be absent for flows with no tensors",
+    );
+  });
+});

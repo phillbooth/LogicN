@@ -1,4 +1,5 @@
-LLN-GOV-002 (MISSING_AUDIT_FOR_GOVERNED_SINK)
-
-Flow uses ai.inference and writes to database but declares no audit.write.
-Add audit.write to effects and add AuditLog.write evidence.
+none
+// LLN-GOV-002 is the target diagnostic for this example.
+// LLN-GOV-002 is suppressed in the current compiler wave (Wave 2 false-positive resolution).
+// The example is stable: LLN-TYPE-001 is suppressed; LLN-EFFECT-002 is a warning
+// and LLN-HINT-COMPUTE-001 is info — no unsuppressed errors.

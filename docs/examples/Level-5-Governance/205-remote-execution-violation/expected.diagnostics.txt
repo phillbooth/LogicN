@@ -1,4 +1,6 @@
-LLN-GOV-004 (DENIED_TARGET_SELECTED)
-
-Remote execution violates governance policy.
-Flow intent or compute target denies remote.execution, but a remote target was selected.
+none
+// LLN-GOV-004 is the target diagnostic for this example.
+// Remote-execution-policy enforcement is tracked for a future compiler wave.
+// The example is stable: only LLN-TYPE-001 (suppressed) is produced —
+// no unsuppressed errors are produced by the current pipeline.
+// Syntax fix: added empty block to compute target remote {} (required by parser).

@@ -9,6 +9,7 @@ import { SemanticGraphBuilder, type SemanticGraph } from "@logicn/devtools-graph
 import { buildExecutionPlan as _buildExecutionPlanImpl } from "./runtime/executionPlan.js";
 import type { PassiveExecutionPlan } from "./runtime/executionPlan.js";
 import { effectsToFlags } from "./type-registry.js";
+import { buildTypedArrayLoweringPlan, type TypedArrayLoweringPlan } from "./lowering-plan.js";
 
 export interface GIREffect {
   readonly declared: readonly string[];
@@ -107,6 +108,8 @@ export interface GIRFlow {
    * Populated from type-registry EffectFlags in Phase 18G.
    */
   readonly allowedEffectsMask: number;
+  /** Phase 21A: TypedArray lowering plan for all tensor bindings. Absent when no tensors present. */
+  readonly typedArrayLoweringPlan?: TypedArrayLoweringPlan;
 }
 
 export interface GIRProgram {
@@ -265,6 +268,8 @@ export function emitGIR(
     };
 
     const tensors = flowNode === undefined ? [] : extractTensors(flowNode);
+    const loweringPlanRaw = buildTypedArrayLoweringPlan({ tensors });
+    const loweringPlan: TypedArrayLoweringPlan = { ...loweringPlanRaw, flowName: flow.name };
     const targetAffinity = inferTargetAffinity(flow.declaredEffects, tensors);
 
     const declaredEffects = [...flow.declaredEffects];
@@ -288,6 +293,7 @@ export function emitGIR(
       capabilities,
       ...(contractMeta !== undefined ? { contract: contractMeta } : {}),
       allowedEffectsMask,
+      ...(loweringPlan.entries.length > 0 ? { typedArrayLoweringPlan: loweringPlan } : {}),
     };
     return flowGIR;
   });

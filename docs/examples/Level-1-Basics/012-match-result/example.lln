@@ -2,14 +2,16 @@
 /// level: 1
 /// concept: match on Result
 /// expected_diagnostics: none
-/// test_status: draft
+/// test_status: stable
 /// ai_rule: Every match on Result must handle both Ok and Err.
 
-match parseAge("42") {
+pure flow example() -> Void {
+  match parseAge("42") {
 
-  Ok(age) =>
-    print(age)
+    Ok(age) =>
+      print(age)
 
-  Err(err) =>
-    print(err)
+    Err(err) =>
+      print(err)
+  }
 }

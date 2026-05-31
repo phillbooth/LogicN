@@ -21,22 +21,28 @@ enforced by tooling** — not inferred, guessed, or left to convention.
 ▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   5%
 ```
 
+**Photonic / Ternary Computing** — TriState types, balanced ternary logic, photonic backend bridge, Tri.and/or/not/match
+
+```
+▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   3%  (TriState type · Tri stdlib ops · GIRTensorInfo.photonic_compatible · NativeCapabilityId.PhotonicBridge reserved)
+```
+
 **Passive Execution Plans and Target Bridges** — Phase 13: GIR → Plan → CPU/GPU/NPU/WASM/Photonic
 
 ```
-▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░  12%  (plan types done · runtime execution Phase 16 · target bridges Phase 21-22)
+▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░  22%  (plan types + builder + executePlan wired · WAT emitter Phase 24 · wasm-hybrid Phase 25)
 ```
 
 **Runtime written in LogicN** — Stage B: LogicN compiler compiles itself ← Major achievement milestone
 
 ```
-▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░  20%  (lexer.lln executing · parser.lln v0 · compiler.capabilities.lln · SemanticGraph started)
+▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░  20%  (lexer.lln · parser.lln v0 · type-checker.lln · compiler.capabilities.lln — 0 parse errors on all 4)
 ```
 
 **TypeScript Runtime** — Stage A: compiler pipeline + execution engine running on Node.js
 
 ```
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░  90%  (2286 tests · 0 failures · 188/222 CEC stable)
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░  90%  (2316 tests · 0 failures · 222/222 CEC stable)
 ```
 
 | Layer | Status | % |
@@ -57,7 +63,7 @@ enforced by tooling** — not inferred, guessed, or left to convention.
 | Audit / proof chain | JSONL, SHA-256 5-hash proof, verify, denial log | 82% |
 | Signed attestation | Ed25519 sign/verify, YAML, runtime integration | 88% |
 | CLI | check, check-strict, build, build-production, build-deterministic, build --target=wasm-standalone, build --target=wasm-hybrid, fix-effects, emit-ai-graph | 85% |
-| CEC coverage | 188/222 stable, 10 domain suites, all real-world patterns | 85% |
+| CEC coverage | 222/222 stable — all examples passing, 10 domain suites, all real-world patterns | 100% |
 | Internal graph | BFS/DFS/topo, call graph, effect graph, SemanticGraph builder | 88% |
 | Stage B | lexer.lln executing, parser.lln v0, type-checker.lln, compiler.capabilities.lln — 0 parse errors on all 4 milestones | 22% |
 | Passive execution plans | plan types + builder + attestation + hashPassivePlan; executePlan wired; WAT emitter Phase 24 target | 40% |

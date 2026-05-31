@@ -229,6 +229,40 @@ export const ComputeCompatibilityFlags = {
 export type ComputeCompatibilityFlagsMask = number;
 
 // ---------------------------------------------------------------------------
+// NativeCapabilityId — reserved IDs for native acceleration modules
+//
+// These are the capability IDs that native (non-WASM) modules must declare.
+// Gated identically to any other effect — must appear in contract.effects.
+// The runtime resolves: ai.inference → host.npu.inference (if NPU available).
+//
+// Architecture rule: WASM governs, native accelerates, LogicN proves the boundary.
+// See: docs/Knowledge-Bases/logicn-hybrid-wasm-architecture.md
+// ---------------------------------------------------------------------------
+
+export const NativeCapabilityId = {
+  NpuInference:       "host.npu.inference",
+  GpuCompute:         "host.gpu.compute",
+  GpuMatmul:          "host.gpu.matmul",
+  ApuSharedMemory:    "host.apu.shared_memory",
+  WasmSimd:           "host.wasm.simd",       // WASM SIMD (still WASM)
+  PhotonicBridge:     "host.photonic.bridge", // Phase 29+
+} as const;
+
+export type NativeCapabilityIdValue = typeof NativeCapabilityId[keyof typeof NativeCapabilityId];
+
+/**
+ * Maps LogicN effect names to their preferred native capability IDs.
+ * The runtime selects the best available native target for an effect.
+ * Fallback: CPU (always available, no native capability required).
+ */
+export const EFFECT_TO_NATIVE_CAPABILITY: ReadonlyMap<string, NativeCapabilityIdValue> = new Map([
+  ["ai.inference",  NativeCapabilityId.NpuInference],
+  ["compute.gpu",   NativeCapabilityId.GpuCompute],
+  ["compute.npu",   NativeCapabilityId.NpuInference],
+  ["compute.apu",   NativeCapabilityId.ApuSharedMemory],
+]);
+
+// ---------------------------------------------------------------------------
 // GovernanceFlags — properties proven by the governance verifier
 //
 // Compact bitmask per flow. Many governance checks become:
@@ -370,3 +404,54 @@ export function tensorDimensionCountsCompatible(
 ): boolean {
   return expected.length === actual.length;
 }
+
+// ---------------------------------------------------------------------------
+// NativePluginManifest — manifest schema for Phase 27 native acceleration plugins
+//
+// Every native module that provides hardware acceleration (NPU, GPU, APU) must
+// declare a manifest satisfying this interface. The manifest is signed by the
+// publisher (LLN-PKG-005 equivalent for native modules) and verified by the
+// host runtime before the plugin is loaded.
+//
+// Architecture rules enforced by this manifest:
+//   Rule 1 (Signed):              hash + signature fields required
+//   Rule 2 (Capability-declared): capability field (e.g. "host.npu.inference")
+//   Rule 4 (Offset-based memory): allowedInputHandles / allowedOutputHandles
+//   Rule 7 (Fallback declared):   fallback field required
+//   Phase 27 isolation:           childProcess: true (always child process)
+//
+// See: docs/Knowledge-Bases/logicn-phase-27-ai-native.md
+// See: docs/Knowledge-Bases/logicn-hybrid-wasm-architecture.md
+// ---------------------------------------------------------------------------
+
+export interface NativePluginManifest {
+  readonly schemaVersion: "lln.native-plugin.v1";
+  readonly name: string;
+  readonly capability: string;         // e.g. "host.npu.inference"
+  readonly hash: string;               // sha256: content hash of native binary
+  readonly signature: string;          // ed25519 signature
+  readonly edaArenaLimitMb: number;    // max EDA arena size
+  readonly allowedInputHandles: number; // max DataHandles for input
+  readonly allowedOutputHandles: number;
+  readonly childProcess: true;         // Phase 27: always child process
+  readonly fallback: string;           // e.g. "cpu" or "wasm"
+}
+
+// ---------------------------------------------------------------------------
+// WATAssemblerConfig — configuration for the WAT-to-WASM assembler step
+//
+// Controls whether the JS assembler or system wabt is used, whether the
+// output binary is validated after assembly, and the output format.
+// ---------------------------------------------------------------------------
+
+export interface WATAssemblerConfig {
+  readonly useSystemWabt: boolean;   // --use-system-wabt flag
+  readonly validateOutput: boolean;  // validate .wasm binary after assembly
+  readonly outputFormat: "binary" | "text";
+}
+
+export const DEFAULT_WAT_ASSEMBLER_CONFIG: WATAssemblerConfig = {
+  useSystemWabt: false,    // JS assembler by default
+  validateOutput: true,
+  outputFormat: "binary",
+};

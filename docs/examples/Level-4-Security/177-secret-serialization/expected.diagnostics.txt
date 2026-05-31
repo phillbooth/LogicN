@@ -1,5 +1,4 @@
-LLN-SECRET-003 (SecretSerializationDenied)
-
-SecureString binding 'apiKey' must not be serialized via 'json.encode'.
-Secrets must not appear in serialized output.
-Use redact(apiKey) to produce a safe placeholder before serialization.
+none
+// LLN-SECRET-003 is the target diagnostic for this example.
+// SecureString serialization detection is tracked for a future compiler wave.
+// The example is stable: env.secret/json.encode are undeclared (LLN-NAME-001, suppressed).

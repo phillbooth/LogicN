@@ -2,14 +2,16 @@
 /// level: 1
 /// concept: match on Option
 /// expected_diagnostics: none
-/// test_status: draft
+/// test_status: stable
 /// ai_rule: Every match on Option must handle both Some and None.
 
-match user {
+pure flow example(user: Option<User>) -> Void {
+  match user {
 
-  Some(value) =>
-    print(value.name)
+    Some(value) =>
+      print(value.name)
 
-  None =>
-    print("Missing")
+    None =>
+      print("Missing")
+  }
 }

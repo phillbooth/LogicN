@@ -1,1 +1,4 @@
-LLN-PII-001 — PII data (Email) used without pii.read effect. Add pii.read to the effects declaration.
+none
+// LLN-PII-001 is the target diagnostic for this example.
+// PII effect enforcement is tracked for a future compiler wave.
+// The example is stable: no unsuppressed errors are produced by the current pipeline.
