@@ -20,6 +20,8 @@ All stdlib API decisions should consider WASM compatibility.
 Stage A baseline:  callStdlib(), String/Array/Math/Decimal/Json/File/Http/Crypto stubs ✅
 Phase 18H:         STDLIB_CAPABILITY_MAP, STDLIB_MODULE_KIND, LLN-STDLIB-001,
                    TriState stdlib, Tensor stdlib ops registry ✅
+Phase R4:          Map<K,V> operations, String extended ops, Math extended ops ✅
+                   Tensor.relu, Tensor.dot, Crypto.constantTimeEquals now real (not stubs) ✅
 Phase 19+:         StringView, BytesView, TensorView
 Phase 21+:         WASM SIMD lowering for Tensor stdlib
 Phase 22+:         Arena APIs, target-aware math lowering
@@ -32,20 +34,25 @@ Phase 22+:         Arena APIs, target-aware math lowering
 ### Pure Stdlib (no effects — WASM-compatible, JIT-safe, NPU/GPU/APU candidate)
 
 ```
-String         — immutable operations, char iteration, encoding
+String         — immutable ops, char iteration, encoding; extended: trim, split, contains,
+                 startsWith, endsWith, padStart, padEnd, repeat, toUpperCase, toLowerCase ✅ Phase R4
 Array/List     — filter, map, reduce, fold, collect
+Map<K,V>       — get, set, has, delete, keys, values, entries, size ✅ Phase R4
 Option<T>      — map, flatMap, unwrapOr, isSome
 Result<T,E>    — map, flatMap, mapErr, unwrap, isOk
-Math           — add, sub, mul, div, sqrt, pow, abs, min, max, clamp
+Math           — add, sub, mul, div, sqrt, pow, abs, min, max, clamp;
+                 extended: floor, ceil, round, log, log2, log10, sign, trunc ✅ Phase R4
 Decimal        — arbitrary-precision arithmetic (BigInt-based ✅)
 Json           — local parsing (no I/O)
-Tensor         — matmul, dot, transpose, normalize, relu, softmax, quantize, dequantize
+Tensor         — matmul, dot (real ✅ Phase R4), transpose, normalize,
+                 relu (real ✅ Phase R4), softmax, quantize, dequantize
 Vector         — element-wise ops, cross, dot
 Matrix         — multiply, invert, transpose
 TriState       — and, or, not, toBool, toDecision, match
 Hash           — sha256 (pure computation)
 Bytes          — encode, decode (pure)
 Char           — codePoint, fromCodePoint, isDigit, isAlpha
+Crypto         — constantTimeEquals (real ✅ Phase R4 — timing-safe comparison, no stub)
 ```
 
 ### Effectful Stdlib (declare effects — maps to WASM import table)
@@ -261,6 +268,12 @@ dynamic package loading       → LLN-BACKEND-001
 | TENSOR_STDLIB_OPS registry | ✅ Phase 18H |
 | TRI_STDLIB_OPS registry | ✅ Phase 18H |
 | LLN-STDLIB-001 constant | ✅ Phase 18H |
+| Map<K,V> operations | ✅ Phase R4 |
+| String extended ops (trim/split/contains/pad/repeat/case) | ✅ Phase R4 |
+| Math extended ops (floor/ceil/round/log/sign/trunc) | ✅ Phase R4 |
+| Tensor.relu — real implementation (not stub) | ✅ Phase R4 |
+| Tensor.dot — real implementation (not stub) | ✅ Phase R4 |
+| Crypto.constantTimeEquals — real implementation (not stub) | ✅ Phase R4 |
 | StringView / BytesView / TensorView | 📋 Phase 19 |
 | Lazy iterators / chain fusion | 📋 Phase 21 |
 | WASM SIMD lowering for Tensor ops | 📋 Phase 21 |

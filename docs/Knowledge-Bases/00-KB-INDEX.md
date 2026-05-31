@@ -281,6 +281,7 @@ Non-`.md` files (YAML, EBNF) are listed separately at the end.
 - hello-world-api-pattern.md — (also listed under governance)
 - http-method-declarations.md — HTTP methods as declared governed entry points
 - logicn-code-examples-full-flow.md — (also listed under governance)
+- docs/examples/Level-5-Security/ — Phase R4 security examples: process.spawn governance, anti-abuse patterns (CEC stable)
 
 ### Phase Decisions and Roadmap
 
@@ -307,7 +308,7 @@ Non-`.md` files (YAML, EBNF) are listed separately at the end.
 - logicn-cli-current.md — current CLI spec: all modes including --target wasm-standalone/hybrid
 - logicn-hybrid-wasm-native-architecture-v1.md — **v1.0 canonical** hybrid WASM-native architecture (Snapdragon/NPU vision + governance model, 2026-05-31)
 - logicn-hybrid-wasm-architecture.md — detailed EDA model, WAT assembler decision, crash recovery, 8 native governance rules
-- logicn-security-anti-abuse.md — anti-botnet architecture: process.spawn effect, network destination policy, LLN-NET-001/002, rate limit enforcement, DNS rebinding defence
+- logicn-security-anti-abuse.md — anti-botnet architecture: process.spawn/worker.spawn/event.schedule effects (✅ Phase R4), network destination policy, LLN-NET-001/002, rate limit enforcement, DNS rebinding defence, getAntiAbuseReport() devtools (✅ Phase R4)
 
 ---
 

@@ -180,10 +180,10 @@ contract {
           }
         }
 
-        // Return type: lexer emits "-" then ">" as two Symbol tokens
+        // Return type: lexer emits "->" as a single Operator token
         mut returnType: String = ""
-        if tokVal(tokens, p) == "-" and tokVal(tokens, p + 1) == ">" {
-          p = p + 2
+        if tokVal(tokens, p) == "->" {
+          p = p + 1
           returnType = tokVal(tokens, p)
           p = p + 1
         }

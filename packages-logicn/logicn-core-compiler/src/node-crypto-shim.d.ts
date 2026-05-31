@@ -34,4 +34,6 @@ declare module "node:crypto" {
     keyObject: KeyObjectSpec,
     signature: BufferSource,
   ): boolean;
+
+  export function timingSafeEqual(a: Buffer | Uint8Array, b: Buffer | Uint8Array): boolean;
 }

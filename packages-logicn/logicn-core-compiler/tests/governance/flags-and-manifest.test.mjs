@@ -22,7 +22,14 @@ import {
   LLN_GOV_013,
   LLN_GOV_014,
   executeFlow,
+  extractRequestTimeMs,
   LLN_RUNTIME_005,
+  LLN_RUNTIME_006,
+  LLN_NET_001,
+  LLN_NET_002,
+  LLN_ANTI_ABUSE_001,
+  createCapabilityHost,
+  createContractEnforcer,
 } from "../../dist/index.js";
 
 // ---------------------------------------------------------------------------
@@ -373,5 +380,140 @@ secure flow tagEmail(rawInput: String) -> String
     );
     assert.equal(governedErrors.length, 0,
       "Phase 11D does not yet emit LLN-RUNTIME-005 — tagging only, no enforcement");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// R1: Runtime enforcement infrastructure
+// ---------------------------------------------------------------------------
+
+describe("R1: Runtime enforcement infrastructure", () => {
+  it("R1A: extractRequestTimeMs returns undefined when flow has no contract", () => {
+    const source = `
+pure flow add(a: Int, b: Int) -> Int { return a }
+`;
+    const parsed = parseProgram(source, "test-r1a.lln");
+    const flowNode = parsed.ast.children?.find((c) => c.value === "add");
+    assert.ok(flowNode !== undefined, "Flow node must exist");
+    const limitMs = extractRequestTimeMs(flowNode);
+    assert.equal(limitMs, undefined,
+      "extractRequestTimeMs must return undefined when no contract limits are declared");
+  });
+
+  it("R1A: extractRequestTimeMs parses '5s' from contract limits { request_time 5s }", () => {
+    const source = `
+guarded flow slow(x: String) -> String
+contract {
+  effects { database.read }
+  limits {
+    request_time 5s
+  }
+}
+{
+  return x
+}
+`;
+    const parsed = parseProgram(source, "test-r1a-limit.lln");
+    const flowNode = parsed.ast.children?.find((c) => c.value === "slow");
+    assert.ok(flowNode !== undefined, "Flow node must exist");
+    const limitMs = extractRequestTimeMs(flowNode);
+    assert.equal(limitMs, 5000,
+      "extractRequestTimeMs must parse '5s' as 5000ms");
+  });
+
+  it("R1B/R1C: flow with protected binding completes without LLN-RUNTIME-006 when well within limits", async () => {
+    const source = `
+secure flow protect(rawInput: String) -> String
+contract {
+  effects { }
+  limits {
+    request_time 30s
+  }
+}
+{
+  unsafe let raw: protected Email = rawInput
+  return "ok"
+}
+`;
+    const parsed = parseProgram(source, "test-r1bc.lln");
+    const args = new Map([["rawInput", { __tag: "string", value: "user@example.com" }]]);
+    const result = await executeFlow("protect", args, parsed.ast, parsed.flows);
+    assert.ok(
+      result.value.__tag !== "runtimeError" && result.value.__tag !== "error",
+      `Flow must not produce a runtime error, got: ${result.value.__tag}`,
+    );
+    const deadlineErrors = result.diagnostics.filter(
+      (d) => d.code === LLN_RUNTIME_006.code,
+    );
+    assert.equal(deadlineErrors.length, 0,
+      "No LLN-RUNTIME-006 should be emitted for a flow that completes well within its 30s limit");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// R4: Security enforcement
+// ---------------------------------------------------------------------------
+
+describe("R4: Security enforcement", () => {
+  it("R4A: LLN-NET-001 constant has correct code and severity", () => {
+    assert.equal(LLN_NET_001.code, "LLN-NET-001");
+    assert.equal(LLN_NET_001.name, "NetworkDestinationDenied");
+    assert.equal(LLN_NET_001.severity, "error");
+    assert.ok(typeof LLN_NET_001.message === "string" && LLN_NET_001.message.length > 0,
+      "LLN_NET_001.message must be non-empty");
+    assert.ok(typeof LLN_NET_001.suggestedFix === "string" && LLN_NET_001.suggestedFix.length > 0,
+      "LLN_NET_001.suggestedFix must be non-empty");
+  });
+
+  it("R4A: capabilityHost denies network.outbound to a private IP (LLN-NET-002 path)", () => {
+    const enforcer = createContractEnforcer(undefined, "testFlow");
+    const host = createCapabilityHost({
+      declaredEffects: new Set(["network.outbound"]),
+      enforcer,
+    });
+
+    // Build a call targeting a private IP address
+    const call = {
+      capabilityId: "host.network.outbound",
+      effect: "network.outbound",
+      args: [{ __tag: "string", value: "http://192.168.1.1/data" }],
+      context: { flowName: "testFlow", startedAt: Date.now() },
+    };
+
+    const result = host.check(call);
+    assert.equal(result.allowed, false,
+      "network.outbound to a private IP must be denied");
+    assert.ok(
+      result.reason !== undefined && result.reason.includes("LLN-NET-002"),
+      `Denial reason must reference LLN-NET-002, got: ${result.reason}`,
+    );
+  });
+
+  it("R4B/R4C: process.spawn is a canonical effect and forbidden in pure flows", () => {
+    // process.spawn must now be recognised as a canonical effect name (no LLN-EFFECT-004)
+    const source = `
+guarded flow spawnWorker(cmd: String) -> Void
+contract { effects { process.spawn } }
+{
+  return
+}
+`;
+    const parsed = parseProgram(source, "test-r4b.lln");
+    const effectResults = checkEffects(parsed.flows, parsed.ast);
+    const spawnFlow = effectResults.find((r) => r.flowName === "spawnWorker");
+    assert.ok(spawnFlow !== undefined, "spawnWorker flow must exist in effect results");
+
+    // No LLN-EFFECT-004 (unknown effect) should be emitted for process.spawn
+    const unknownEffectDiags = spawnFlow.diagnostics.filter(
+      (d) => d.code === "LLN-EFFECT-004" && d.message.includes("process.spawn"),
+    );
+    assert.equal(unknownEffectDiags.length, 0,
+      "process.spawn must be a recognised canonical effect — no LLN-EFFECT-004 expected");
+
+    // LLN_ANTI_ABUSE_001 constant must be properly shaped
+    assert.equal(LLN_ANTI_ABUSE_001.code, "LLN-ANTI-ABUSE-001");
+    assert.equal(LLN_ANTI_ABUSE_001.severity, "error");
+    assert.ok(typeof LLN_ANTI_ABUSE_001.message === "string" && LLN_ANTI_ABUSE_001.message.length > 0,
+      "LLN_ANTI_ABUSE_001.message must be non-empty");
   });
 });

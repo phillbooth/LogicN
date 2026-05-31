@@ -90,6 +90,9 @@ export const EFFECT_REGISTRY: Readonly<Record<string, readonly string[]>> = {
   // Email
   "email.send": ["network.outbound", "email.send"],
   "EmailService.send": ["network.outbound", "email.send"],
+
+  // R4B: Anti-abuse — background execution
+  "process.spawn": ["process.spawn"],
 };
 
 /**
@@ -233,6 +236,10 @@ const CANONICAL_EFFECTS = new Set([
   "pii.read",
   "phi.read", "phi.write",
   "email.send",
+  // R4B: anti-abuse effects — prevent covert background execution and scheduled tasks
+  "process.spawn",
+  "worker.spawn",
+  "event.schedule",
 ]);
 
 const EFFECT_NAME_ALIASES: ReadonlyMap<string, string> = new Map([
@@ -329,6 +336,8 @@ const PURE_FORBIDDEN_EFFECTS = new Set([
   "ai.inference",
   "pii.read", "pii.write",
   "phi.read", "phi.write",
+  // R4B: spawning background processes is forbidden in pure flows
+  "process.spawn",
 ]);
 
 const PLAIN_FLOW_PRIVILEGED_EFFECTS = new Set([

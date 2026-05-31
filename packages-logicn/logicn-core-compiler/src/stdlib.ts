@@ -13,6 +13,7 @@
 // =============================================================================
 
 import { LLN_NONE, LLN_VOID, type LogicNValue } from "./interpreter.js";
+import { createHash as _nodeCryptoCreateHash, timingSafeEqual as _nodeCryptoTimingSafeEqual } from "node:crypto";
 
 // =============================================================================
 // BigInt-based decimal arithmetic helpers (Phase 9A-3)
@@ -925,6 +926,18 @@ function numericStatic(receiver: string, method: string, args: readonly LogicNVa
       return { __tag: "int", value: Math.ceil(numVal(args[0] ?? LLN_VOID)) };
     case "Math.round":
       return { __tag: "int", value: Math.round(numVal(args[0] ?? LLN_VOID)) };
+    case "Math.log":
+      return { __tag: "float", value: Math.log(numVal(args[0] ?? LLN_VOID)) };
+    case "Math.log2":
+      return { __tag: "float", value: Math.log2(numVal(args[0] ?? LLN_VOID)) };
+    case "Math.sin":
+      return { __tag: "float", value: Math.sin(numVal(args[0] ?? LLN_VOID)) };
+    case "Math.cos":
+      return { __tag: "float", value: Math.cos(numVal(args[0] ?? LLN_VOID)) };
+    case "Math.tan":
+      return { __tag: "float", value: Math.tan(numVal(args[0] ?? LLN_VOID)) };
+    case "Math.PI":
+      return { __tag: "float", value: Math.PI };
     default:
       return undefined;
   }
@@ -1381,6 +1394,33 @@ export async function callStdlib(
       if (statResult !== undefined) return statResult;
     }
 
+    // ---------------------------------------------------------------------------
+    // Tensor module (Phase R2A) — real TypedArray-backed operations
+    // ---------------------------------------------------------------------------
+    if (fullName.startsWith("Tensor.")) {
+      const tensorMethod = fullName.slice("Tensor.".length);
+      const tensorResult = tensorModule(tensorMethod, args);
+      if (tensorResult !== undefined) return tensorResult;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Hash module (Phase R2C) — real SHA-256/SHA-512 via node:crypto
+    // ---------------------------------------------------------------------------
+    if (fullName.startsWith("Hash.")) {
+      const hashMethod = fullName.slice("Hash.".length);
+      const hashResult = hashModule(hashMethod, args);
+      if (hashResult !== undefined) return hashResult;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Crypto module (Phase R2B) — constant-time equality via node:crypto
+    // ---------------------------------------------------------------------------
+    if (fullName.startsWith("Crypto.")) {
+      const cryptoMethod = fullName.slice("Crypto.".length);
+      const cryptoResult = cryptoModule(cryptoMethod, args);
+      if (cryptoResult !== undefined) return cryptoResult;
+    }
+
     const gateResult = gateFunction(fullName, args);
     if (gateResult !== undefined) return gateResult;
 
@@ -1792,11 +1832,16 @@ function durMs(v: LogicNValue): number {
 function durationStatic(method: string, args: readonly LogicNValue[]): LogicNValue | undefined {
   const n = numVal(args[0] ?? { __tag: "int", value: 0 });
   switch (method) {
-    case "ofMs":       return makeDuration(n);
-    case "ofSeconds":  return makeDuration(n * 1000);
-    case "ofMinutes":  return makeDuration(n * 60000);
-    case "ofHours":    return makeDuration(n * 3600000);
-    case "ofDays":     return makeDuration(n * 86400000);
+    case "ofMs":
+    case "ms":         return makeDuration(n);
+    case "ofSeconds":
+    case "seconds":    return makeDuration(n * 1000);
+    case "ofMinutes":
+    case "minutes":    return makeDuration(n * 60000);
+    case "ofHours":
+    case "hours":      return makeDuration(n * 3600000);
+    case "ofDays":
+    case "days":       return makeDuration(n * 86400000);
     case "zero":       return makeDuration(0);
     default:           return undefined;
   }
@@ -1975,5 +2020,155 @@ function numericMethod(
       return { __tag: "int", value: n > 0 ? 1 : n < 0 ? -1 : 0 };
     }
     default: return undefined;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Phase R2A — Tensor module: real TypedArray-backed operations
+//
+// Tensors are represented as LogicNValue with __tag "list" (or "array" alias).
+// Each element is expected to be an int or float LogicNValue.
+// ---------------------------------------------------------------------------
+
+function getNumericItems(v: LogicNValue): number[] | undefined {
+  if (v.__tag !== "list") return undefined;
+  return v.items.map((item) => numVal(item));
+}
+
+function tensorModule(method: string, args: readonly LogicNValue[]): LogicNValue | undefined {
+  const v = args[0];
+  if (v === undefined) return undefined;
+
+  switch (method) {
+    // Tensor.relu(v) — max(0, x) element-wise
+    case "relu": {
+      const nums = getNumericItems(v);
+      if (nums === undefined) return undefined;
+      const buf = new Float64Array(nums);
+      const result: LogicNValue[] = [];
+      for (let i = 0; i < buf.length; i++) {
+        const x = buf[i]!;
+        result.push({ __tag: "float", value: x > 0 ? x : 0 });
+      }
+      return { __tag: "list", items: result };
+    }
+
+    // Tensor.dot(a, b) — sum of element-wise products
+    case "dot": {
+      const a = getNumericItems(v);
+      const bArg = args[1];
+      if (a === undefined || bArg === undefined) return undefined;
+      const b = getNumericItems(bArg);
+      if (b === undefined) return undefined;
+      const len = Math.min(a.length, b.length);
+      const bufA = new Float64Array(a);
+      const bufB = new Float64Array(b);
+      let sum = 0;
+      for (let i = 0; i < len; i++) {
+        sum += (bufA[i]!) * (bufB[i]!);
+      }
+      return { __tag: "float", value: sum };
+    }
+
+    // Tensor.softmax(v) — exp(x_i) / sum(exp(x_j))
+    case "softmax": {
+      const nums = getNumericItems(v);
+      if (nums === undefined) return undefined;
+      const buf = new Float64Array(nums);
+      // Numerical stability: subtract max before exp
+      let maxVal = -Infinity;
+      for (let i = 0; i < buf.length; i++) {
+        if ((buf[i]!) > maxVal) maxVal = buf[i]!;
+      }
+      const expBuf = new Float64Array(buf.length);
+      let expSum = 0;
+      for (let i = 0; i < buf.length; i++) {
+        expBuf[i] = Math.exp((buf[i]!) - maxVal);
+        expSum += expBuf[i]!;
+      }
+      const result: LogicNValue[] = [];
+      for (let i = 0; i < expBuf.length; i++) {
+        result.push({ __tag: "float", value: (expBuf[i]!) / expSum });
+      }
+      return { __tag: "list", items: result };
+    }
+
+    // Tensor.scale(v, factor) — multiply each element by scalar factor
+    case "scale": {
+      const nums = getNumericItems(v);
+      const factorArg = args[1];
+      if (nums === undefined || factorArg === undefined) return undefined;
+      const factor = numVal(factorArg);
+      const buf = new Float64Array(nums);
+      const result: LogicNValue[] = [];
+      for (let i = 0; i < buf.length; i++) {
+        result.push({ __tag: "float", value: (buf[i]!) * factor });
+      }
+      return { __tag: "list", items: result };
+    }
+
+    default:
+      return undefined;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Phase R2B — Crypto module: real constant-time equality via node:crypto
+// ---------------------------------------------------------------------------
+
+function cryptoModule(method: string, args: readonly LogicNValue[]): LogicNValue | undefined {
+  switch (method) {
+    case "constantTimeEquals": {
+      const aArg = args[0] ?? LLN_VOID;
+      const bArg = args[1] ?? LLN_VOID;
+      const aStr = aArg.__tag === "secure" ? aArg.value : strVal(aArg);
+      const bStr = bArg.__tag === "secure" ? bArg.value : strVal(bArg);
+      try {
+        // Pad both to the same length to avoid timing leaks from length checks.
+        const maxLen = Math.max(aStr.length, bStr.length);
+        const enc = new TextEncoder();
+        const bufA = enc.encode(aStr.padEnd(maxLen, "\0"));
+        const bufB = enc.encode(bStr.padEnd(maxLen, "\0"));
+        // Length mismatch means they are not equal — but use timingSafeEqual
+        // on the padded buffers so the timing is identical regardless of input.
+        const timingEqual = _nodeCryptoTimingSafeEqual(bufA, bufB);
+        const lengthEqual = aStr.length === bStr.length;
+        return { __tag: "bool", value: timingEqual && lengthEqual };
+      } catch {
+        // Fallback: plain equality (non-timing-safe, but functional)
+        return { __tag: "bool", value: aStr === bStr };
+      }
+    }
+    default:
+      return undefined;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Phase R2C — Hash module: real SHA-256/SHA-512 via node:crypto
+// ---------------------------------------------------------------------------
+
+function hashModule(method: string, args: readonly LogicNValue[]): LogicNValue | undefined {
+  switch (method) {
+    case "sha256": {
+      const input = args[0] ?? LLN_VOID;
+      const data = input.__tag === "bytes"
+        ? input.value
+        : new TextEncoder().encode(strVal(input));
+      const hex = _nodeCryptoCreateHash("sha256").update(data).digest("hex");
+      return { __tag: "string", value: `sha256:${hex}` };
+    }
+
+    case "sha512": {
+      const input = args[0] ?? LLN_VOID;
+      const data = input.__tag === "bytes"
+        ? input.value
+        : new TextEncoder().encode(strVal(input));
+      const hex = _nodeCryptoCreateHash("sha512").update(data).digest("hex");
+      return { __tag: "string", value: `sha512:${hex}` };
+    }
+
+    default:
+      return undefined;
   }
 }

@@ -9,6 +9,11 @@
 //   - checkPackageProvenance() → LLN-PKG-003, LLN-PKG-005
 //   - getResolverReport() → ResolverReport
 //   - LLN-PKG-001..005 constant shapes
+//
+// R3: Package type injection tests
+//   - resolveImportedTypes() returns correct types per package
+//   - KNOWN_PACKAGE_TYPES has the expected number of packages
+//   - parseProgram + import + type usage → 0 LLN-TYPE-001 for Email
 // =============================================================================
 
 import assert from "node:assert/strict";
@@ -24,6 +29,10 @@ import {
   LLN_PKG_003,
   LLN_PKG_004,
   LLN_PKG_005,
+  KNOWN_PACKAGE_TYPES,
+  resolveImportedTypes,
+  parseProgram,
+  checkTypes,
 } from "../../dist/index.js";
 
 // ---------------------------------------------------------------------------
@@ -277,5 +286,45 @@ describe("getResolverReport: resolver output report", () => {
     const withInstall = { ...AUTH_MANIFEST, installScript: /** @type {"allow"} */ ("allow") };
     const report = getResolverReport([withInstall], "2026-05-31T00:00:00.000Z");
     assert.ok(report.diagnostics.some((d) => d.code === "LLN-PKG-004"), "LLN-PKG-004 must appear for install-script package");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// R3: Package type injection
+// ---------------------------------------------------------------------------
+
+describe("R3: Package type injection", () => {
+  it("resolveImportedTypes('@logicn/healthcare-types') includes 'Email'", () => {
+    const types = resolveImportedTypes("@logicn/healthcare-types");
+    assert.ok(
+      types.includes("Email"),
+      `Expected 'Email' in @logicn/healthcare-types exports, got: ${types.join(", ")}`,
+    );
+  });
+
+  it("KNOWN_PACKAGE_TYPES has >= 5 packages", () => {
+    assert.ok(
+      KNOWN_PACKAGE_TYPES.size >= 5,
+      `Expected at least 5 packages in KNOWN_PACKAGE_TYPES, got: ${KNOWN_PACKAGE_TYPES.size}`,
+    );
+  });
+
+  it("parseProgram with import Email from '@logicn/healthcare-types' + type usage → 0 LLN-TYPE-001 for Email", () => {
+    const source = `import Email from "@logicn/healthcare-types"
+
+flow sendWelcome(address: Email) -> String {
+  return "ok"
+}
+`;
+    const { ast } = parseProgram(source, "test.lln");
+    // Inject the types exported by the package into the type checker
+    const injectedTypes = resolveImportedTypes("@logicn/healthcare-types");
+    const result = checkTypes(ast, injectedTypes);
+    const type001Diags = result.diagnostics.filter((d) => d.code === "LLN-TYPE-001" && d.message.includes("Email"));
+    assert.equal(
+      type001Diags.length,
+      0,
+      `Expected 0 LLN-TYPE-001 for Email, got: ${type001Diags.map((d) => d.message).join("; ")}`,
+    );
   });
 });

@@ -10,6 +10,7 @@
 // =============================================================================
 
 import { type AstNode, type SourceLocation } from "./parser.js";
+import { resolveImportedTypes } from "./package-type-registry.js";
 
 export interface SymbolDiagnostic {
   readonly code: string;
@@ -258,6 +259,18 @@ class SymbolResolver {
   }
 
   private collectTopLevelDeclarations(node: AstNode): void {
+    // R3: Package type injection — seed types from known @logicn/* packages
+    if (node.kind === "importDecl" && node.value !== undefined) {
+      const packageMatch = node.value.match(/from\s+["']([^"']+)["']/);
+      if (packageMatch?.[1] !== undefined) {
+        const packageName = packageMatch[1];
+        const injectedTypes = resolveImportedTypes(packageName);
+        for (const typeName of injectedTypes) {
+          this.currentScope().set(typeName, { kind: "identifier", value: typeName });
+        }
+      }
+    }
+
     if (FLOW_DECL_KINDS.has(node.kind) && node.value !== undefined) {
       const flowName = node.value.trim();
       this.currentScope().set(flowName, node);
@@ -377,6 +390,10 @@ class SymbolResolver {
     switch (node.kind) {
       case "program":
         this.walkChildren(node, "normal");
+        return;
+
+      case "importDecl":
+        // Types from known packages were already injected in collectTopLevelDeclarations
         return;
 
       case "typeRef":

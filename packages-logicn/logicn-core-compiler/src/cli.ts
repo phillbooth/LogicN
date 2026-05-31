@@ -26,10 +26,13 @@ import { checkEffects } from "./effect-checker.js";
 import { checkSourceEscapes } from "./source-escape-checker.js";
 import { verifyGovernance } from "./governance-verifier.js";
 import { checkNamingPolicy } from "./naming-policy-checker.js";
-import { buildAiGraph } from "./gir-emitter.js";
+import { buildAiGraph, emitGIR } from "./gir-emitter.js";
 import { EFFECT_REGISTRY } from "./effect-checker.js";
-import { canonicalHash, hashSource } from "./runtime/canonicalHash.js";
+import { canonicalHash, hashSource, hashGIR } from "./runtime/canonicalHash.js";
 import type { Dirent } from "node:fs";
+
+// LLN-BUILD-001: Same source produced different output on repeated compilation.
+const LLN_BUILD_001_CODE = "LLN-BUILD-001";
 
 // ---------------------------------------------------------------------------
 // Internal types
@@ -323,6 +326,20 @@ pure flow verifySample(x: Int) -> Int {
   return canonicalHash({ registryHash, sourceHash, planHash });
 }
 
+/**
+ * Compile a single .lln source string twice and return both GIR hashes.
+ * Used to prove that the GIR emitter is deterministic on repeated compilation.
+ */
+function doubleCompileGirHash(source: string, fileName: string): { hash1: string; hash2: string } {
+  function compileOnce(): string {
+    const parseResult = parseProgram(source, fileName);
+    const effectResults = checkEffects(parseResult.flows, parseResult.ast);
+    const girResult = emitGIR(parseResult.ast, parseResult.flows, effectResults);
+    return hashGIR(girResult.gir);
+  }
+  return { hash1: compileOnce(), hash2: compileOnce() };
+}
+
 function runVerifySelfhost(): void {
   process.stdout.write("logicn verify-selfhost\n");
   process.stdout.write("─────────────────────\n");
@@ -334,13 +351,9 @@ function runVerifySelfhost(): void {
   process.stdout.write(`Run 1: ${run1}\n`);
   process.stdout.write(`Run 2: ${run2}\n`);
 
-  if (run1 === run2) {
-    process.stdout.write("✓ Deterministic. Build verified.\n");
-    process.stdout.write("✓ Self-host verification PASSED. Build is deterministic.\n");
-    process.exit(0);
-  } else {
+  if (run1 !== run2) {
     process.stderr.write(
-      `[error] LLN-BUILD-001 NonDeterministicBuild\n` +
+      `[error] ${LLN_BUILD_001_CODE} NonDeterministicBuild\n` +
       `  Run 1 hash: ${run1}\n` +
       `  Run 2 hash: ${run2}\n` +
       `  Same source produced different output on repeated compilation.\n` +
@@ -348,6 +361,67 @@ function runVerifySelfhost(): void {
     );
     process.exit(1);
   }
+
+  // R7C: Double-compile each .lln file and compare GIR hashes.
+  // If any file produces different GIR hashes on two compilations, emit LLN-BUILD-001.
+  process.stdout.write("Checking GIR determinism across .lln files...\n");
+
+  const selfHostedDir = join(getSrcDir(), "self-hosted");
+  let llnFiles: string[] = [];
+  try {
+    llnFiles = readdirSync(selfHostedDir)
+      .filter((f) => f.endsWith(".lln"))
+      .map((f) => join(selfHostedDir, f));
+  } catch {
+    // self-hosted directory may not be present in all environments — skip silently
+    process.stdout.write("  [info] self-hosted/ directory not found; skipping GIR determinism check.\n");
+  }
+
+  let girDeterminismPassed = true;
+
+  for (const filePath of llnFiles) {
+    let source: string;
+    try {
+      source = readFileSync(filePath, "utf8");
+    } catch {
+      continue;
+    }
+
+    const fileName = filePath.split(/[\\/]/).pop() ?? filePath;
+    const { hash1, hash2 } = doubleCompileGirHash(source, fileName);
+
+    if (hash1 !== hash2) {
+      process.stderr.write(
+        `[error] ${LLN_BUILD_001_CODE} NonDeterministicBuild\n` +
+        `  File: ${filePath}\n` +
+        `  GIR hash 1: ${hash1}\n` +
+        `  GIR hash 2: ${hash2}\n` +
+        `  Same source produced different GIR on repeated compilation.\n`,
+      );
+      girDeterminismPassed = false;
+    } else {
+      process.stdout.write(`  ✓ ${fileName}: GIR deterministic (${hash1.slice(0, 20)}...)\n`);
+    }
+  }
+
+  if (!girDeterminismPassed) {
+    process.exit(1);
+  }
+
+  process.stdout.write("✓ Deterministic. Build verified.\n");
+  process.stdout.write("✓ Self-host verification PASSED. Build is deterministic.\n");
+  process.exit(0);
+}
+
+/**
+ * Returns the src/ directory relative to the compiler's current working
+ * directory. Used to locate the self-hosted/ subdirectory.
+ *
+ * In a project install this resolves to <project-root>/src.
+ * If the directory does not exist the GIR determinism check is skipped gracefully.
+ */
+function getSrcDir(): string {
+  return join(process.cwd(), "src");
 }
 
 // ---------------------------------------------------------------------------

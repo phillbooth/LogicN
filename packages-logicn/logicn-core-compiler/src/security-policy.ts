@@ -142,6 +142,27 @@ export interface NetworkDestinationPolicy {
   readonly denyPrivateRanges: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// LLN-ANTI-ABUSE-001: Ungoverned background execution attempt
+// ---------------------------------------------------------------------------
+
+/**
+ * LLN-ANTI-ABUSE-001: A flow attempted to spawn a background process, worker,
+ * or scheduled task without declaring the required effect.
+ *
+ * process.spawn, worker.spawn, and event.schedule must be declared in the
+ * flow's contract. Without the declaration, the compiler blocks the attempt.
+ * This prevents covert background execution that bypasses governance and audit.
+ */
+export const LLN_ANTI_ABUSE_001 = {
+  code: "LLN-ANTI-ABUSE-001",
+  name: "UngovernesBackgroundExecution",
+  severity: "error" as const,
+  message: "Background execution (process.spawn, worker.spawn, event.schedule) requires an explicit effect declaration. Undeclared background execution bypasses governance.",
+  why: "Covert background workers can exfiltrate data, communicate with C2 servers, or spawn unbounded compute — all outside the governance contract. Requiring an explicit declaration makes spawn attempts detectable and blockable.",
+  suggestedFix: "Declare the required effect in the contract: contract { effects { process.spawn } }",
+} as const;
+
 /**
  * Parse network destination policy from contract sub-block children.
  * Sub-block identifiers follow the pattern "decl:allow host api.stripe.com",

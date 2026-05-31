@@ -40,6 +40,33 @@
 // =============================================================================
 
 import { type AstNode, type SourceLocation } from "./parser.js";
+import { resolveTypeId, TypeId } from "./type-registry.js";
+import { KNOWN_DOMAIN_TYPES } from "./package-type-registry.js";
+
+// ---------------------------------------------------------------------------
+// R5A: isBuiltInType — unified built-in type check (TypeId hot-path + BUILT_IN_TYPES fallback)
+//
+// Returns true when typeName is a recognised built-in:
+//   1. Fast path: TypeId registry — numeric IDs for core types (Int, String, Bool, etc.)
+//   2. Fallback: BUILT_IN_TYPES string Set — domain/enterprise types not yet assigned
+//      a TypeId (e.g. Email, Url, PatientId, PatientError, AccountId).
+//   3. Fallback: KNOWN_DOMAIN_TYPES — commonly used domain types that may appear in
+//      Level 5+ CEC examples without an explicit import declaration.
+//
+// Use isBuiltInType() everywhere instead of calling resolveTypeId() or
+// BUILT_IN_TYPES.has() directly — this is the single authoritative gate.
+// The dual-check at call sites (isBuiltInType(x) || BUILT_IN_TYPES.has(x))
+// is now collapsed into a single isBuiltInType(x) call.
+// ---------------------------------------------------------------------------
+
+function isBuiltInType(typeName: string): boolean {
+  // Fast path: TypeId numeric registry (Int, String, Bool, Array, Result, etc.)
+  if (resolveTypeId(typeName) !== TypeId.Unknown) return true;
+  // Fallback 1: domain/enterprise types in the BUILT_IN_TYPES string Set
+  if (BUILT_IN_TYPES.has(typeName)) return true;
+  // Fallback 2: commonly used domain types (KNOWN_DOMAIN_TYPES)
+  return KNOWN_DOMAIN_TYPES.has(typeName);
+}
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -585,13 +612,15 @@ class TypeChecker {
       }
 
       case "memberExpr": {
-        // member.field — infer base type from the receiver, then the field type
+        // R5B: member.field — infer base type from the receiver, then the field type.
+        // If receiver type is "unknown" or not in scope → return undefined (don't crash).
         const receiverNode = node.children?.[0];
         if (receiverNode === undefined) return undefined;
         const receiverType = this.inferType(receiverNode);
         const field = node.value ?? "";
 
-        if (receiverType === undefined) return undefined;
+        // Graceful fallback: undefined receiver type or explicit "unknown" → unknown field
+        if (receiverType === undefined || receiverType === "unknown" || receiverType === "") return undefined;
 
         // Request object fields — any field access on Request → String
         // This is the common case: request.body.email, request.params.id, etc.
@@ -621,8 +650,9 @@ class TypeChecker {
           if (field === "ok" || field === "success" || field === "active" || field === "enabled") return "Bool";
         }
 
-        // For any other field access, conservatively return undefined
-        // (let later passes handle it)
+        // R5B: For any other field access (unknown record types, etc.),
+        // return undefined gracefully — do not crash, let later passes handle it.
+        // Phase 11B will add full record schema lookup.
         return undefined;
       }
 
@@ -659,9 +689,27 @@ class TypeChecker {
         const receiverNode = node.children?.[0];
         const receiverType = receiverNode !== undefined ? this.inferType(receiverNode) : undefined;
 
-        // Validation gates: validate.email(raw) → protected Email
+        // R5C: Validation gates — validate.<field>(raw) → "protected <Field>"
+        // e.g. validate.email(raw) → "protected Email"
+        //      validate.userId(raw) → "protected UserId"
+        if (method.startsWith("validate.")) {
+          const gateName = method.slice("validate.".length);
+          if (gateName !== "") {
+            const fieldType = gateName.charAt(0).toUpperCase() + gateName.slice(1);
+            return `protected ${fieldType}`;
+          }
+          return "protected String";
+        }
         if (method === "email" && receiverType === undefined) return "protected Email";
-        if (method.startsWith("validate.")) return "protected String";
+
+        // R5C: json.decode<T>() → "Result<T, DecodeError>"
+        // The generic type arg is carried in node.typeArgs when present;
+        // fall back to "Result<unknown, DecodeError>" when not inferrable.
+        if (method === "decode" && receiverType === "Json") {
+          const typeArg = (node as AstNode & { typeArgs?: readonly string[] }).typeArgs?.[0];
+          if (typeArg !== undefined && typeArg !== "") return `Result<${typeArg}, DecodeError>`;
+          return "Result<unknown, DecodeError>";
+        }
 
         // protect/redact helpers
         if (method === "redact") return `redacted ${receiverType ?? ""}`.trim();
@@ -1318,7 +1366,8 @@ class TypeChecker {
     // they are valid string concatenation operands without explicit .toString().
     if (op === "+") {
       if (leftBase === "String" && rightBase !== "String" && rightBase !== "") {
-        if (BUILT_IN_TYPES.has(rightBase) && !STRING_BASED_TYPES.has(rightBase)) {
+        // R5A: isBuiltInType — unified check (TypeId registry + BUILT_IN_TYPES + KNOWN_DOMAIN_TYPES)
+        if (isBuiltInType(rightBase) && !STRING_BASED_TYPES.has(rightBase)) {
           this.diagnostics.push(makeTCDiag(
             "LLN-TYPE-004",
             "InvalidBinaryOperation",
@@ -1330,7 +1379,8 @@ class TypeChecker {
         return;
       }
       if (rightBase === "String" && leftBase !== "String" && leftBase !== "") {
-        if (BUILT_IN_TYPES.has(leftBase) && !STRING_BASED_TYPES.has(leftBase)) {
+        // R5A: isBuiltInType — unified check (TypeId registry + BUILT_IN_TYPES + KNOWN_DOMAIN_TYPES)
+        if (isBuiltInType(leftBase) && !STRING_BASED_TYPES.has(leftBase)) {
           this.diagnostics.push(makeTCDiag(
             "LLN-TYPE-004",
             "InvalidBinaryOperation",
@@ -1475,7 +1525,9 @@ class TypeChecker {
     if (INFERENCE_MARKERS.has(base)) return;
 
     // ── LLN-TYPE-001: Unknown type ──────────────────────────────────────────
-    if (!BUILT_IN_TYPES.has(base) && !this.userDefinedTypes.has(base)) {
+    // R5A: isBuiltInType is the unified gate — covers TypeId registry, BUILT_IN_TYPES,
+    // and KNOWN_DOMAIN_TYPES. userDefinedTypes covers locally declared types.
+    if (!isBuiltInType(base) && !this.userDefinedTypes.has(base)) {
       const suggestion = this.fuzzyTypeSuggestion(base);
       const singleCandidate = this.fuzzySingleCandidate(base);
       this.diagnostics.push(makeTCDiag(

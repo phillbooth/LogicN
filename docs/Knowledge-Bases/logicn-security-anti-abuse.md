@@ -48,8 +48,9 @@ Without this declaration, the compiler blocks any attempt to spawn. This covers:
 - Worker threads
 - Child process execution
 
-**New effect:** `process.spawn` → `EffectFlags.ProcessSpawn`
-**Diagnostic:** LLN-EFFECT-001 fires if spawn attempted without declared effect
+**Status:** ✅ Phase R4 — `process.spawn`, `worker.spawn`, and `event.schedule` added to
+`CANONICAL_EFFECTS` in `effect-checker.ts`. LLN-EFFECT-001 now fires if any of these
+effects are used without declaration.
 
 ### 2. Network destination policy (most important gap)
 
@@ -178,19 +179,41 @@ Loopback:                 127.0.0.0/8, ::1
 
 ---
 
+## Devtools: getAntiAbuseReport()
+
+A devtools function that reports the anti-abuse governance posture of a compiled program.
+Returns a structured report covering all spawn effects, network destination rules, rate
+limit declarations, and any gaps detected.
+
+```logicn
+// Usage (devtools only — not available in production mode)
+let report = getAntiAbuseReport()
+// report.spawnEffects        — list of flows declaring process.spawn / worker.spawn
+// report.networkPolicies     — destination allow/deny rules per flow
+// report.rateLimitGaps       — flows with network.outbound but no limits declared
+// report.undeclaredSpawns    — flows that call spawn without declaring the effect (LLN-EFFECT-001)
+```
+
+**Status:** ✅ Phase R4 — `getAntiAbuseReport()` available in `logicn check --devtools` output.
+
+---
+
 ## Implementation Status
 
 | Feature | Status |
 |---|---|
-| process.spawn as declared effect | 📋 Phase 25D |
-| network.contract sub-block (destination policy) | 📋 Phase 25D |
-| LLN-NET-001 (NetworkDestinationDenied) | 📋 Phase 25D |
-| LLN-NET-002 (PrivateRangeAccess / SSRF) | 📋 Phase 25D |
+| process.spawn as declared effect | ✅ Phase R4 (added to CANONICAL_EFFECTS) |
+| worker.spawn as declared effect | ✅ Phase R4 (added to CANONICAL_EFFECTS) |
+| event.schedule as declared effect | ✅ Phase R4 (added to CANONICAL_EFFECTS) |
+| getAntiAbuseReport() devtools function | ✅ Phase R4 |
+| network.contract sub-block (destination policy) | 📋 Phase R4 (in progress) |
+| LLN-NET-001 (NetworkDestinationDenied) | 📋 Phase R4 (in progress) |
+| LLN-NET-002 (PrivateRangeAccess / SSRF) | 📋 Phase R4 (in progress) |
 | Rate limit enforcement (timeoutPolicy wired) | 📋 Phase 26 (Phase 11C gap) |
 | LLN-RUNTIME-006 (RateLimitExceeded) | 📋 Phase 26 |
 | Memory hard_limit enforcement | 📋 Phase 26 |
 | DNS rebinding defence in capability host | 📋 Phase 26 |
-| Anti-abuse example (processWebhook) | 📋 Phase 25D |
+| Anti-abuse example (processWebhook) | 📋 Phase R4 (in progress) |
 
 ---
 

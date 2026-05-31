@@ -98,6 +98,78 @@ contract {
   return [word, i.toString()]
 }
 
+// ── scanOperator: peek ahead for two-char operators ──────────────────────────
+// Returns [opString, endPos, isMultiChar] where isMultiChar is "true" or "false".
+// Known two-char operators (must match TypeScript lexer): -> => == != <= >= && || .. :: // /*
+pure flow scanOperator(source: String, pos: Int, srcLen: Int) -> Array<String>
+contract {
+  intent { "Peek at current and next char; if they form a known two-char operator return [op, pos+2, \"true\"], else return [singleChar, pos+1, \"false\"]." }
+}
+{
+  let optA: Option<Char> = source.charAt(pos)
+  match optA {
+    None => {
+      return ["", pos.toString(), "false"]
+    }
+    Some(ca) => {
+      let single = ca.toString()
+      if pos + 1 < srcLen {
+        let optB: Option<Char> = source.charAt(pos + 1)
+        match optB {
+          None => {
+            return [single, (pos + 1).toString(), "false"]
+          }
+          Some(cb) => {
+            let two = single + cb.toString()
+            if two == "->" {
+              return ["->", (pos + 2).toString(), "true"]
+            }
+            else if two == "=>" {
+              return ["=>", (pos + 2).toString(), "true"]
+            }
+            else if two == "==" {
+              return ["==", (pos + 2).toString(), "true"]
+            }
+            else if two == "!=" {
+              return ["!=", (pos + 2).toString(), "true"]
+            }
+            else if two == "<=" {
+              return ["<=", (pos + 2).toString(), "true"]
+            }
+            else if two == ">=" {
+              return [">=", (pos + 2).toString(), "true"]
+            }
+            else if two == "&&" {
+              return ["&&", (pos + 2).toString(), "true"]
+            }
+            else if two == "||" {
+              return ["||", (pos + 2).toString(), "true"]
+            }
+            else if two == ".." {
+              return ["..", (pos + 2).toString(), "true"]
+            }
+            else if two == "::" {
+              return ["::", (pos + 2).toString(), "true"]
+            }
+            else if two == "//" {
+              return ["//", (pos + 2).toString(), "true"]
+            }
+            else if two == "/*" {
+              return ["/*", (pos + 2).toString(), "true"]
+            }
+            else {
+              return [single, (pos + 1).toString(), "false"]
+            }
+          }
+        }
+      }
+      else {
+        return [single, (pos + 1).toString(), "false"]
+      }
+    }
+  }
+}
+
 // ── scanDigits: read digits starting at pos ───────────────────────────────────
 pure flow scanDigits(source: String, startPos: Int, srcLen: Int) -> Array<String>
 contract {
@@ -224,14 +296,26 @@ contract {
           tokens = tokens.append(tok)
         }
 
-        // Symbol or operator — emit Symbol for now
+        // Symbol or operator — check for two-char operators first
         else {
           let startLine = line
           let startCol = col
-          let tok = { kind: TokenKind.Symbol, value: c.toString(), line: startLine, column: startCol, endLine: line, endColumn: col + 1, start: pos, end: pos + 1 }
-          tokens = tokens.append(tok)
-          pos = pos + 1
-          col = col + 1
+          let scanResult = scanOperator(source, pos, srcLen)
+          let opStr = scanResult.first().unwrapOr(c.toString())
+          let endPosStr = scanResult.get(1).unwrapOr((pos + 1).toString())
+          let isMulti = scanResult.last().unwrapOr("false")
+          let newPos = endPosStr.toInt().unwrapOr(pos + 1)
+          let opLen = newPos - pos
+          if isMulti == "true" {
+            let tok = { kind: TokenKind.Operator, value: opStr, line: startLine, column: startCol, endLine: line, endColumn: startCol + opLen, start: pos, end: newPos }
+            tokens = tokens.append(tok)
+          }
+          else {
+            let tok = { kind: TokenKind.Symbol, value: opStr, line: startLine, column: startCol, endLine: line, endColumn: startCol + opLen, start: pos, end: newPos }
+            tokens = tokens.append(tok)
+          }
+          pos = newPos
+          col = col + opLen
         }
       }
     }

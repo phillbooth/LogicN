@@ -268,6 +268,14 @@ export {
   type ImportResolveResult,
 } from "./import-resolver.js";
 
+// Phase R3 — Package Type Registry
+export {
+  KNOWN_PACKAGE_TYPES,
+  KNOWN_DOMAIN_TYPES,
+  resolveImportedTypes,
+  loadManifestTypes,
+} from "./package-type-registry.js";
+
 // Phase 17A / 18B — Package Manifest Resolver
 export {
   loadPackageManifest,
@@ -391,6 +399,8 @@ export {
 // Stage A - AST Interpreter
 export {
   executeFlow,
+  extractRequestTimeMs,
+  extractNetworkRequestsLimit,
   LLN_VOID,
   LLN_NONE,
   LLN_RUNTIME_005,
@@ -448,6 +458,7 @@ export {
   LLN_NET_001,
   LLN_NET_002,
   LLN_RUNTIME_006,
+  LLN_ANTI_ABUSE_001,
   parseNetworkDestinationPolicy,
   isHostAllowed,
   type NetworkDestinationPolicy,
@@ -623,14 +634,19 @@ export {
 
 export type { ContractEnforcementRecord } from "./runtime/runtimeReport.js";
 export type { RuntimeContext } from "./runtime/runtimeContext.js";
+export { verifyRuntimeManifestHash } from "./runtime/runtimeContext.js";
 
-// Phase 11C — Capability Host
+// Phase 11C / R4 — Capability Host
 export {
   createCapabilityHost,
+  parseNetworkDestinationPolicy as parseNetworkDestinationPolicyForHost,
   type CapabilityHost,
   type CapabilityCall,
   type CapabilityResult,
   type CapabilityCheckResult,
+  type CapabilityHostConfig,
+  type FlowCallCounters,
+  type NetworkDestinationPolicy as CapabilityNetworkPolicy,
 } from "./runtime/capabilityHost.js";
 
 // Phase 11D — Governed Memory (skeleton)
@@ -713,6 +729,13 @@ export {
   type TensorView,
   type WASMLinearMemoryLayout,
 } from "./views.js";
+
+// Stage B — Self-hosting milestone tracker
+export {
+  generateStageBReport,
+  type StageBMilestone,
+  type StageBReport,
+} from "./stage-b-report.js";
 
 export interface CompilerInput {
   readonly projectRoot: string;

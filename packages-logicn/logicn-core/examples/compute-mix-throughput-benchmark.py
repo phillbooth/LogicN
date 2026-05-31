@@ -1,5 +1,13 @@
+"""
+Harder benchmark v2:
+Per operation: 2 LCG steps, 2 xorshift mixing rounds,
+float sqrt, float-to-int conversion, 4-way conditional branch.
+Algorithm must produce the same checksum as the Node.js version.
+"""
+
 import argparse
 import json
+import math
 import os
 import platform
 import sys
@@ -12,22 +20,44 @@ except ModuleNotFoundError:
     resource = None
 
 
-DEFAULT_TARGET_MS = 20_000
-DEFAULT_WARMUP_MS = 2_000
-DEFAULT_BATCH_SIZE = 100_000
+DEFAULT_TARGET_MS = 30_000
+DEFAULT_WARMUP_MS = 3_000
+DEFAULT_BATCH_SIZE = 50_000
 DEFAULT_SEED = 123_456_789
-UINT32_MASK = 0xFFFFFFFF
+UINT32_MASK = 0xFFFF_FFFF
 
 
 def run_batch(seed, checksum, batch_size):
     for _ in range(batch_size):
+        # Step 1 — LCG advance
         seed = ((seed * 1_664_525) + 1_013_904_223) & UINT32_MASK
-        mixed = ((seed ^ (seed >> 16)) * 2_246_822_519) & UINT32_MASK
-        checksum = (checksum ^ mixed) & UINT32_MASK
-        if mixed & 1:
-            checksum = (checksum + mixed) & UINT32_MASK
+
+        # Step 2 — first xorshift mix
+        mix1 = ((seed ^ (seed >> 13)) * 2_246_822_519) & UINT32_MASK
+
+        # Step 3 — second xorshift mix (harder)
+        mix2 = ((mix1 ^ (mix1 >> 17)) * 3_266_489_917) & UINT32_MASK
+
+        # Step 4 — float work: sqrt of normalised value
+        fval    = mix2 / 4_294_967_296.0           # [0, 1)
+        sqrtval = math.sqrt(fval + 1.0)            # [1, sqrt(2))
+        intval  = int(sqrtval * 1_000_000.0) & UINT32_MASK
+
+        # Step 5 — 4-way branch (not just 2-way)
+        branch = mix2 & 3
+        if branch == 0:
+            checksum = (checksum ^ intval) & UINT32_MASK
+        elif branch == 1:
+            checksum = (checksum + mix2) & UINT32_MASK
+        elif branch == 2:
+            checksum = (checksum ^ ((mix1 << 3) & UINT32_MASK)) & UINT32_MASK
         else:
-            checksum = (checksum ^ ((mixed << 1) & UINT32_MASK)) & UINT32_MASK
+            checksum = (checksum + intval + mix1) & UINT32_MASK
+
+        # Step 6 — second LCG for extra arithmetic work (multiplier must be < 2^32)
+        seed     = ((seed * 2_891_336_453) + 1_442_695_041) & UINT32_MASK
+        checksum = (checksum ^ seed) & UINT32_MASK
+
     return seed, checksum
 
 
@@ -55,24 +85,18 @@ def memory_report(use_tracemalloc):
         "tracemallocPeakBytes": None,
         "maxRssBytes": None,
     }
-
     if use_tracemalloc:
         current, peak = tracemalloc.get_traced_memory()
         report["tracemallocCurrentBytes"] = current
         report["tracemallocPeakBytes"] = peak
-
     try:
         if resource is None:
             raise RuntimeError("resource module unavailable")
         usage = resource.getrusage(resource.RUSAGE_SELF)
         max_rss = usage.ru_maxrss
-        if sys.platform == "win32":
-            report["maxRssBytes"] = max_rss
-        else:
-            report["maxRssBytes"] = max_rss * 1024
+        report["maxRssBytes"] = max_rss if sys.platform == "win32" else max_rss * 1024
     except Exception:
-        report["maxRssBytes"] = None
-
+        pass
     return report
 
 
@@ -82,19 +106,17 @@ def run_benchmark(args):
     if args.tracemalloc:
         tracemalloc.start()
 
-    warmup_started_at = time.perf_counter()
+    # Warmup
     if args.warmup_ms > 0:
-        warmup_seed = args.seed & UINT32_MASK
-        warmup_checksum = 0
+        warmup_started_at = time.perf_counter()
+        w_seed, w_checksum = args.seed & UINT32_MASK, 0
         while elapsed_ms(warmup_started_at) < args.warmup_ms:
-            warmup_seed, warmup_checksum = run_batch(warmup_seed, warmup_checksum, args.batch_size)
+            w_seed, w_checksum = run_batch(w_seed, w_checksum, args.batch_size)
 
-    seed = args.seed & UINT32_MASK
-    checksum = 0
-
-    started_at = time.perf_counter()
+    seed, checksum = args.seed & UINT32_MASK, 0
+    started_at  = time.perf_counter()
     started_cpu = time.process_time()
-    operations = 0
+    operations  = 0
 
     if args.operations is not None:
         while operations < args.operations:
@@ -106,49 +128,59 @@ def run_benchmark(args):
             seed, checksum = run_batch(seed, checksum, args.batch_size)
             operations += args.batch_size
 
-    elapsed = elapsed_ms(started_at)
-    cpu_ms = (time.process_time() - started_cpu) * 1000
+    elapsed  = elapsed_ms(started_at)
+    cpu_ms   = (time.process_time() - started_cpu) * 1000
+    ops_sec  = round(operations / max(elapsed / 1000, sys.float_info.epsilon), 2)
+    ops_cpu  = round(operations / max(cpu_ms, sys.float_info.epsilon), 2)
 
     return {
-        "runtime": "python",
-        "benchmark": "compute-mix-throughput",
-        "executionMode": "direct-python",
+        "runtime":        "python",
+        "benchmark":      "compute-mix-throughput-v2",
+        "executionMode":  "direct-python",
         "comparisonType": "direct-runtime",
-        "targetMs": args.target_ms,
-        "warmupMs": args.warmup_ms,
-        "batchSize": args.batch_size,
-        "seed": args.seed,
-        "elapsedMs": round(elapsed, 3),
-        "operations": operations,
-        "operationsPerSecond": round(operations / max(elapsed / 1000, sys.float_info.epsilon), 2),
-        "checksum": checksum & UINT32_MASK,
+        "version":        2,
+        "algorithm":      "lcg2x-xorshift2x-sqrt-4branch",
+        "targetMs":       args.target_ms,
+        "warmupMs":       args.warmup_ms,
+        "batchSize":      args.batch_size,
+        "seed":           args.seed,
+        "elapsedMs":      round(elapsed, 3),
+        "operations":     operations,
+        "operationsPerSecond": ops_sec,
+        "operationsPerCpuMs":  ops_cpu,
+        "checksum":       checksum & UINT32_MASK,
         "cpu": {
-            "userMs": None,
+            "userMs":   None,
             "systemMs": None,
-            "totalMs": round(cpu_ms, 3),
+            "totalMs":  round(cpu_ms, 3),
         },
-        "memory": memory_report(args.tracemalloc),
+        "memory":  memory_report(args.tracemalloc),
         "process": {
-            "pid": os.getpid(),
-            "node": None,
-            "python": platform.python_version(),
+            "pid":      os.getpid(),
+            "node":     None,
+            "python":   platform.python_version(),
             "platform": platform.platform(),
-            "arch": platform.machine(),
+            "arch":     platform.machine(),
         },
-        "notes": ["Memory tracing disabled for speed tests. Use --tracemalloc for diagnostics."]
-        if not args.tracemalloc
-        else ["Memory tracing enabled; do not use this run as the speed score."],
+        "notes": [
+            "v2: 2x LCG, 2x xorshift mix, float sqrt, 4-way branch per operation",
+            "Harder than v1 — exercises float, int, and branch prediction together",
+        ] + (
+            ["Memory tracing enabled; do not use this run as the speed score."]
+            if args.tracemalloc else
+            ["Memory tracing disabled for speed tests. Use --tracemalloc for diagnostics."]
+        ),
     }
 
 
 def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--target-ms", type=int, default=DEFAULT_TARGET_MS)
-    parser.add_argument("--warmup-ms", type=int, default=DEFAULT_WARMUP_MS)
-    parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
-    parser.add_argument("--operations", type=int, default=None)
-    parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
-    parser.add_argument("--tracemalloc", action="store_true")
+    parser = argparse.ArgumentParser(description="Compute-mix throughput benchmark v2")
+    parser.add_argument("--target-ms",  type=int,  default=DEFAULT_TARGET_MS)
+    parser.add_argument("--warmup-ms",  type=int,  default=DEFAULT_WARMUP_MS)
+    parser.add_argument("--batch-size", type=int,  default=DEFAULT_BATCH_SIZE)
+    parser.add_argument("--operations", type=int,  default=None)
+    parser.add_argument("--seed",       type=int,  default=DEFAULT_SEED)
+    parser.add_argument("--tracemalloc",    action="store_true")
     parser.add_argument("--no-tracemalloc", action="store_true")
     args = parser.parse_args()
     if args.no_tracemalloc:

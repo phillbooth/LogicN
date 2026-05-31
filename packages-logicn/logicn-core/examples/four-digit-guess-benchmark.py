@@ -1,3 +1,11 @@
+"""
+Harder v2: expanded to 6-digit codes (1M combinations).
+Each attempt computes a bulls+cows score (Wordle-style):
+  bulls = digits correct position, cows = digits present, wrong position.
+This makes each comparison ~6x more expensive than raw string equality.
+max-attempts default raised to 2,000,000.
+"""
+
 import argparse
 import json
 import os
@@ -7,104 +15,110 @@ import sys
 import time
 import tracemalloc
 
-
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Local-only four-digit guessing benchmark with time, CPU and memory stats."
-    )
-    parser.add_argument("--target", default="0420", help="four digit target, for example 0420")
-    parser.add_argument("--max", "--max-attempts", dest="max_attempts", type=int, default=100000)
-    parser.add_argument("--mode", choices=["sequential", "random"], default="sequential")
-    return parser.parse_args()
-
-
-def validate(target, max_attempts):
-    if len(target) != 4 or not target.isdigit():
-        raise ValueError("target must be exactly four digits, for example 0420")
-
-    if max_attempts <= 0:
-        raise ValueError("max attempts must be a positive integer")
-
-    if max_attempts > 10_000_000:
-        raise ValueError("max attempts is capped at 10000000 for a local demo")
+DEFAULT_MAX_ATTEMPTS = 2_000_000
+CODE_LENGTH          = 6
+CODE_SPACE           = 10 ** CODE_LENGTH   # 1_000_000
 
 
 def format_code(value):
-    return str(value).zfill(4)
+    return str(value).zfill(CODE_LENGTH)
 
 
-def get_optional_process_memory():
-    try:
-        import psutil  # type: ignore
+def bulls_and_cows(candidate, target):
+    """Return (bulls, cows) for candidate vs target."""
+    bulls = 0
+    cand_count = [0] * 10
+    targ_count = [0] * 10
 
-        process = psutil.Process(os.getpid())
-        info = process.memory_info()
-        return {
-            "rssBytes": int(info.rss),
-            "vmsBytes": int(info.vms),
-        }
-    except Exception:
-        return {
-            "rssBytes": None,
-            "vmsBytes": None,
-        }
+    for c, t in zip(candidate, target):
+        if c == t:
+            bulls += 1
+        else:
+            cand_count[int(c)] += 1
+            targ_count[int(t)] += 1
+
+    cows = sum(min(cand_count[d], targ_count[d]) for d in range(10))
+    return bulls, cows
 
 
-def guess_four_digit_code(target, max_attempts, mode):
+def run_benchmark(target, max_attempts, mode):
     tracemalloc.start()
-    started_at = time.perf_counter()
+    started_at  = time.perf_counter()
     started_cpu = time.process_time()
 
-    attempt = 0
-    guessed_value = None
+    attempt     = 0
+    found       = False
+    last_bulls  = last_cows = 0
+    total_bulls = total_cows = 0
 
     while attempt < max_attempts:
-        attempt += 1
-        candidate = format_code(random.randrange(0, 10000) if mode == "random" else (attempt - 1) % 10000)
+        candidate = format_code(random.randrange(0, CODE_SPACE) if mode == "random" else attempt % CODE_SPACE)
+        attempt  += 1
 
-        if candidate == target:
-            guessed_value = candidate
+        bulls, cows = bulls_and_cows(candidate, target)
+        total_bulls += bulls
+        total_cows  += cows
+
+        if bulls == CODE_LENGTH:
+            found      = True
+            last_bulls = bulls
+            last_cows  = cows
             break
 
-    elapsed_ms = (time.perf_counter() - started_at) * 1000
-    cpu_ms = (time.process_time() - started_cpu) * 1000
+    elapsed_ms = (time.perf_counter() - started_at) * 1_000
+    cpu_ms     = (time.process_time() - started_cpu) * 1_000
     current_bytes, peak_bytes = tracemalloc.get_traced_memory()
-    process_memory = get_optional_process_memory()
     tracemalloc.stop()
 
-    attempts = attempt if guessed_value is not None else max_attempts
-
     return {
-        "runtime": "python",
-        "mode": mode,
-        "target": target,
-        "found": guessed_value is not None,
-        "attempts": attempts,
-        "guessedValue": guessed_value,
-        "elapsedMs": round(elapsed_ms, 3),
-        "attemptsPerSecond": round(attempts / max(elapsed_ms / 1000, sys.float_info.epsilon), 2),
+        "runtime":           "python",
+        "benchmark":         "four-digit-guess-v2",
+        "version":           2,
+        "codeLength":        CODE_LENGTH,
+        "mode":              mode,
+        "target":            target,
+        "found":             found,
+        "attempts":          attempt,
+        "finalScore":        {"bulls": last_bulls, "cows": last_cows} if found else None,
+        "totalBulls":        total_bulls,
+        "totalCows":         total_cows,
+        "elapsedMs":         round(elapsed_ms, 3),
+        "attemptsPerSecond": round(attempt / max(elapsed_ms / 1_000, sys.float_info.epsilon), 2),
         "cpu": {
             "processMs": round(cpu_ms, 3),
         },
         "memory": {
             "tracemallocCurrentBytes": current_bytes,
-            "tracemallocPeakBytes": peak_bytes,
-            **process_memory,
+            "tracemallocPeakBytes":    peak_bytes,
         },
         "process": {
-            "pid": os.getpid(),
-            "python": sys.version.split()[0],
+            "pid":      os.getpid(),
+            "python":   platform.python_version(),
             "platform": platform.platform(),
-            "machine": platform.machine(),
+            "arch":     platform.machine(),
         },
+        "notes": [
+            "v2: 6-digit codes (1M combinations), bulls+cows scoring per attempt",
+            "Each attempt is ~6x more expensive than raw string equality",
+        ],
     }
 
 
 def main():
-    args = parse_args()
-    validate(args.target, args.max_attempts)
-    report = guess_four_digit_code(args.target, args.max_attempts, args.mode)
-    print(json.dumps(report, indent=2))
+    parser = argparse.ArgumentParser(description="Six-digit guess benchmark v2")
+    parser.add_argument("--target",        default="042069")
+    parser.add_argument("--max", "--max-attempts", dest="max_attempts", type=int, default=DEFAULT_MAX_ATTEMPTS)
+    parser.add_argument("--mode",          choices=["sequential", "random"], default="sequential")
+    args = parser.parse_args()
+
+    if len(args.target) != CODE_LENGTH or not args.target.isdigit():
+        print(f"target must be exactly {CODE_LENGTH} digits", file=sys.stderr)
+        sys.exit(1)
+    if args.max_attempts <= 0 or args.max_attempts > 20_000_000:
+        print("max-attempts must be 1 … 20000000", file=sys.stderr)
+        sys.exit(1)
+
+    print(json.dumps(run_benchmark(args.target, args.max_attempts, args.mode), indent=2))
 
 
 if __name__ == "__main__":

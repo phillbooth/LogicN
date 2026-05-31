@@ -9,6 +9,8 @@ import { type RuntimeContext } from "./runtime/runtimeContext.js";
 import { type ContractEnforcer } from "./runtime/contractEnforcer.js";
 import { type ContractEnforcementRecord } from "./runtime/runtimeReport.js";
 import { type PassiveExecutionPlan, executePlan } from "./runtime/executionPlan.js";
+import { type RuntimeManifest } from "./type-registry.js";
+import { LLN_RUNTIME_006 } from "./security-policy.js";
 
 export type LogicNValue =
   | { readonly __tag: "int";       readonly value: number }
@@ -48,13 +50,6 @@ export const LLN_RUNTIME_005 = {
   suggestedFix: "Declare the required capability, or use redact() before passing the value.",
 } as const;
 
-/** LLN-RUNTIME-006: Flow execution deadline exceeded. */
-export const LLN_RUNTIME_006 = {
-  code: "LLN-RUNTIME-006",
-  name: "FlowDeadlineExceeded",
-  severity: "error" as const,
-  message: "Flow execution deadline exceeded.",
-} as const;
 
 interface BindingEntry {
   readonly value: LogicNValue;
@@ -93,6 +88,12 @@ export interface ExecutionAuditRecord {
   readonly auditEntries: readonly RuntimeAuditEntry[];
   readonly result: "ok" | "error";
   readonly error?: string;
+  /** R6B: Set to true when this execution was driven by a verified RuntimeManifest. */
+  readonly manifestVerified?: boolean;
+  /** R6B: The manifest.flow name when a manifest was used. */
+  readonly manifestFlow?: string;
+  /** R6B: The manifest.governanceFlagsMask when a manifest was used. */
+  readonly manifestGovernanceFlagsMask?: number;
 }
 
 export interface FlowExecutionResult {
@@ -173,6 +174,14 @@ class Interpreter {
   private readonly runtimeOptions: InterpreterRuntimeOptions;
   /** Optional map of flow name → PassiveExecutionPlan for plan-based execution. */
   private readonly executionPlans: ReadonlyMap<string, PassiveExecutionPlan>;
+  /** Optional RuntimeManifest — when provided and verified, enables the fast-path. */
+  private readonly manifest: RuntimeManifest | undefined;
+  /** R6A: tracks whether AuditLog.write was called during this execution. */
+  private auditWriteCalled = false;
+  /** R4C: the name of the currently executing flow (for governed-value access checks). */
+  private currentFlowName: string | undefined;
+  /** R4C: maps binding name → the flow that declared it as a governed value. */
+  private readonly governedBindingSource = new Map<string, string>();
 
   constructor(
     private readonly ast: AstNode,
@@ -181,12 +190,14 @@ class Interpreter {
     capabilityHost?: CapabilityHost,
     runtimeOptions?: InterpreterRuntimeOptions,
     executionPlans?: ReadonlyMap<string, PassiveExecutionPlan>,
+    manifest?: RuntimeManifest,
   ) {
     this.flowIndex = buildFlowIndex(ast);
     this.enforcer = enforcer;
     this.capabilityHost = capabilityHost;
     this.runtimeOptions = runtimeOptions ?? {};
     this.executionPlans = executionPlans ?? new Map();
+    this.manifest = manifest;
   }
 
   private getContext(flowName?: string): RuntimeContext {
@@ -226,6 +237,10 @@ class Interpreter {
 
   async runFlow(flowName: string, args: ReadonlyMap<string, LogicNValue>): Promise<FlowExecutionResult> {
     const startedAt = new Date().toISOString();
+    // R1A: Record entry timestamp for request_time limit enforcement
+    const flowStartMs = Date.now();
+    // R4C: track current flow name for governed-value access checks
+    this.currentFlowName = flowName;
     const flowNode = this.flowIndex.get(flowName);
     const qualifier = flowNode === undefined ? "flow" : qualifierFromFlowKind(flowNode.kind);
 
@@ -247,6 +262,15 @@ class Interpreter {
       const value: LogicNValue = { __tag: "runtimeError", message: msg };
       this.diagnostics.push({ code: "LLN-RUNTIME-002", message: msg });
       return this.buildResult(flowName, qualifier, startedAt, value, msg);
+    }
+
+    // R6A: If a verified RuntimeManifest is provided, use its allowedEffects as the
+    // pre-approved capability list and skip re-running the full contract check.
+    // This is the fast-path for production execution.
+    if (this.manifest !== undefined && this.manifest.verified) {
+      for (const effect of this.manifest.allowedEffects) {
+        this.effectsObserved.add(effect);
+      }
     }
 
     // Task 1 / Phase 16: If a PassiveExecutionPlan is available and useExecutionPlan is set,
@@ -329,6 +353,28 @@ class Interpreter {
       this.popScope();
     }
 
+    // R1A: Check request_time limit at flow exit — add warning diagnostic if exceeded
+    if (flowNode !== undefined) {
+      const requestTimeLimitMs = extractRequestTimeMs(flowNode);
+      if (requestTimeLimitMs !== undefined) {
+        const durationMs = Date.now() - flowStartMs;
+        if (durationMs > requestTimeLimitMs) {
+          this.diagnostics.push({
+            code: LLN_RUNTIME_006.code,
+            message: `Flow '${flowName}' exceeded request_time limit of ${requestTimeLimitMs}ms (actual: ${durationMs}ms)`,
+          });
+        }
+      }
+    }
+
+    // R6A: If manifest.requiresAudit === true, enforce that AuditLog.write was called
+    if (this.manifest !== undefined && this.manifest.verified && this.manifest.requiresAudit && !this.auditWriteCalled) {
+      this.diagnostics.push({
+        code: "LLN-RUNTIME-007",
+        message: `Flow '${flowName}' is governed by a manifest that requires an audit entry, but AuditLog.write was not called.`,
+      });
+    }
+
     return this.buildResult(flowName, qualifier, startedAt, returnValue, runtimeError);
   }
 
@@ -340,6 +386,15 @@ class Interpreter {
     runtimeError: string | undefined,
   ): FlowExecutionResult {
     const error = runtimeError ?? (isRuntimeError(value) ? value.message : undefined);
+    // R6B: Include manifest metadata in audit record when manifest was used
+    const manifestFields: Partial<ExecutionAuditRecord> =
+      this.manifest !== undefined && this.manifest.verified
+        ? {
+            manifestVerified: true,
+            manifestFlow: this.manifest.flow,
+            manifestGovernanceFlagsMask: this.manifest.governanceFlagsMask,
+          }
+        : {};
     const audit: ExecutionAuditRecord = {
       schemaVersion: "lln.runtime.audit.v1",
       flowName,
@@ -350,6 +405,7 @@ class Interpreter {
       auditEntries: [...this.auditEntries],
       result: error === undefined ? "ok" : "error",
       ...(error === undefined ? {} : { error }),
+      ...manifestFields,
     };
 
     return {
@@ -382,6 +438,10 @@ class Interpreter {
     const scope = this.scopes[this.scopes.length - 1];
     if (scope !== undefined) {
       scope.set(name, { value, unsafe, typeName });
+      // R4C: record governed binding source for cross-flow access detection
+      if ((value.__tag === "protected" || value.__tag === "redacted") && this.currentFlowName !== undefined) {
+        this.governedBindingSource.set(name, this.currentFlowName);
+      }
     }
   }
 
@@ -427,7 +487,12 @@ class Interpreter {
         const initNode = node.children?.[0];
         const initVal = initNode !== undefined ? await this.evalExpr(initNode) : LLN_VOID;
         const { name, safetyPrefix, typeName, rawType } = parseBindingValue(node.value ?? "");
-        this.declare(name, wrapGovernedValue(initVal, rawType), safetyPrefix === "unsafe", typeName);
+        const wrappedVal = wrapGovernedValue(initVal, rawType);
+        // R1C: Soft-tag governed values with a non-enumerable _governed property (Phase 11D)
+        if (rawType.startsWith("protected ") || rawType.startsWith("redacted ")) {
+          tagGovernedValue(wrappedVal, rawType.startsWith("protected ") ? "protected" : "redacted");
+        }
+        this.declare(name, wrappedVal, safetyPrefix === "unsafe", typeName);
         return undefined;
       }
 
@@ -436,6 +501,10 @@ class Interpreter {
         const initVal = initNode !== undefined ? await this.evalExpr(initNode) : LLN_VOID;
         const { name, safetyPrefix, typeName, rawType } = parseBindingValue(node.value ?? "");
         const value = wrapGovernedValue(initVal, rawType);
+        // R1C: Soft-tag governed values with a non-enumerable _governed property (Phase 11D)
+        if (rawType.startsWith("protected ") || rawType.startsWith("redacted ")) {
+          tagGovernedValue(value, rawType.startsWith("protected ") ? "protected" : "redacted");
+        }
         if (safetyPrefix === "safe") {
           if (!this.assign(name, value, false)) this.declare(name, value, false, typeName);
         } else {
@@ -581,7 +650,22 @@ class Interpreter {
         if (name === "false") return { __tag: "bool", value: false };
         if (name === "Ok" || name === "Err" || name === "Some") return { __tag: "unresolved", name };
         const entry = this.lookup(name);
-        if (entry !== undefined) return entry.value;
+        if (entry !== undefined) {
+          // R4C: LLN-RUNTIME-005 — check governed value cross-flow access
+          const governedSourceFlow = this.governedBindingSource.get(name);
+          if (
+            governedSourceFlow !== undefined &&
+            this.currentFlowName !== undefined &&
+            governedSourceFlow !== this.currentFlowName &&
+            (entry.value.__tag === "protected" || entry.value.__tag === "redacted")
+          ) {
+            this.diagnostics.push({
+              code: LLN_RUNTIME_005.code,
+              message: `${LLN_RUNTIME_005.message} Binding '${name}' was created in flow '${governedSourceFlow}' but accessed from '${this.currentFlowName}'.`,
+            });
+          }
+          return entry.value;
+        }
         // Capital-letter identifiers not in scope are module/type names (Math, Duration, Array, etc.)
         // Return unresolved so the stdlib dispatcher can handle them as static calls.
         // Symbol resolver already validates lowercase identifiers — capital ones are stdlib modules.
@@ -744,6 +828,15 @@ class Interpreter {
     if (this.capabilityHost !== undefined) {
       const capEffect = resolveCapabilityEffect(fullName);
       if (capEffect !== undefined) {
+        // R1B: Check contract enforcer deadline before each capability call
+        if (this.enforcer !== undefined) {
+          try {
+            this.enforcer.checkDeadline();
+          } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            this.diagnostics.push({ code: LLN_RUNTIME_006.code, message });
+          }
+        }
         const capId = `host.${capEffect}`;
         const stdlibCtx = this.makeStdlibContext();
         const result = await this.capabilityHost.execute(
@@ -798,6 +891,8 @@ class Interpreter {
     }
 
     if (fullName === "AuditLog.write") {
+      // R6A: track that AuditLog.write was called (for requiresAudit enforcement)
+      this.auditWriteCalled = true;
       if (this.capabilityHost !== undefined) {
         const auditArgs = evaluatedArgs;
         const result = await this.capabilityHost.execute(
@@ -809,14 +904,20 @@ class Interpreter {
           },
           async (_capArgs) => {
             this.effectsObserved.add("audit.write");
-            this.auditEntries.push(await this.buildAuditEntry(args));
+            const entry = await this.buildAuditEntry(args);
+            // R6C: attach manifest.flow and manifest.governanceFlagsMask when available
+            const enrichedEntry = this.enrichAuditEntryWithManifest(entry);
+            this.auditEntries.push(enrichedEntry);
             return LLN_VOID;
           },
         );
         return result.value;
       }
       this.effectsObserved.add("audit.write");
-      this.auditEntries.push(await this.buildAuditEntry(args));
+      const entry = await this.buildAuditEntry(args);
+      // R6C: attach manifest.flow and manifest.governanceFlagsMask when available
+      const enrichedEntry = this.enrichAuditEntryWithManifest(entry);
+      this.auditEntries.push(enrichedEntry);
       return LLN_VOID;
     }
 
@@ -1031,6 +1132,17 @@ class Interpreter {
     return result.value;
   }
 
+  /** R6C: Enrich an audit entry with manifest.flow and manifest.governanceFlagsMask if a manifest is present. */
+  private enrichAuditEntryWithManifest(entry: RuntimeAuditEntry): RuntimeAuditEntry {
+    if (this.manifest === undefined) return entry;
+    const enrichedFields: Record<string, string> = {
+      ...entry.fields,
+      manifest_flow: this.manifest.flow,
+      manifest_governance_flags_mask: String(this.manifest.governanceFlagsMask),
+    };
+    return { ...entry, fields: enrichedFields };
+  }
+
   private async buildAuditEntry(argNodes: readonly AstNode[]): Promise<RuntimeAuditEntry> {
     const fields: Record<string, string> = {};
     let event = "UnnamedEvent";
@@ -1191,6 +1303,25 @@ function bindingBaseType(typeSection: string): string {
   return stripped.split(/[<\s]/)[0] ?? stripped;
 }
 
+/**
+ * R1C: Soft-tag a governed value with a non-enumerable '_governed' property.
+ * This is a Phase 11D marker — it does not change runtime behaviour yet.
+ * The tag is non-enumerable so it is invisible to JSON serialisation and
+ * normal property enumeration, but readable by governance enforcement code.
+ */
+function tagGovernedValue(value: LogicNValue, qualifier: "protected" | "redacted"): void {
+  try {
+    Object.defineProperty(value, "_governed", {
+      value: qualifier,
+      enumerable: false,
+      writable: false,
+      configurable: false,
+    });
+  } catch {
+    // Frozen or sealed objects cannot be tagged — ignore silently
+  }
+}
+
 function wrapGovernedValue(value: LogicNValue, rawType: string): LogicNValue {
   if (rawType.startsWith("protected ")) {
     return {
@@ -1327,6 +1458,81 @@ function resolveCapabilityEffect(fullName: string): string | undefined {
   return undefined;
 }
 
+// =============================================================================
+// Phase R1A — Request-time limit extraction from contract.limits
+// =============================================================================
+
+/**
+ * Extracts the request_time limit in milliseconds from a flow's contractDecl node.
+ *
+ * Walks the contractDecl children looking for a "limits:block" identifier, then
+ * inspects nested identifier children for "decl:request_time <N><unit>" entries.
+ *
+ * Supported suffixes: s → *1000, ms → *1
+ *
+ * Returns undefined when no contract node, limits block, or request_time decl is present.
+ */
+export function extractRequestTimeMs(flowNode: AstNode): number | undefined {
+  const contractNode = (flowNode.children ?? []).find((c) => c.kind === "contractDecl");
+  if (contractNode === undefined) return undefined;
+
+  // Find the limits sub-block — stored as { kind: "identifier", value: "limits:block" }
+  const limitsBlock = (contractNode.children ?? []).find(
+    (c) =>
+      c.kind === "identifier" &&
+      (c.value === "limits:block" || c.value === "limits:"),
+  );
+  if (limitsBlock === undefined) return undefined;
+
+  for (const child of limitsBlock.children ?? []) {
+    if (child.kind !== "identifier" || typeof child.value !== "string") continue;
+    const v = child.value;
+    // Match "decl:request_time <N>s" or "decl:request_time <N>ms"
+    if (!v.startsWith("decl:request_time")) continue;
+    const rest = v.slice("decl:request_time".length).trim();
+    const m = rest.match(/^(\d+(?:\.\d+)?)\s*(ms|s)$/i);
+    if (m === null || m[1] === undefined || m[2] === undefined) continue;
+    const num = parseFloat(m[1]);
+    const unit = m[2].toLowerCase();
+    return unit === "ms" ? num : num * 1000;
+  }
+
+  return undefined;
+}
+
+// =============================================================================
+// Phase R4B — network_requests limit extraction from contract.limits
+// =============================================================================
+
+/**
+ * Extracts the network_requests limit as a plain number from a flow's contractDecl node.
+ *
+ * Looks for "decl:network_requests N" inside the limits block.
+ * Returns undefined when not declared.
+ */
+export function extractNetworkRequestsLimit(flowNode: AstNode): number | undefined {
+  const contractNode = (flowNode.children ?? []).find((c) => c.kind === "contractDecl");
+  if (contractNode === undefined) return undefined;
+
+  const limitsBlock = (contractNode.children ?? []).find(
+    (c) =>
+      c.kind === "identifier" &&
+      (c.value === "limits:block" || c.value === "limits:"),
+  );
+  if (limitsBlock === undefined) return undefined;
+
+  for (const child of limitsBlock.children ?? []) {
+    if (child.kind !== "identifier" || typeof child.value !== "string") continue;
+    const v = child.value;
+    if (!v.startsWith("decl:network_requests")) continue;
+    const rest = v.slice("decl:network_requests".length).trim();
+    const m = rest.match(/^(\d+)$/);
+    if (m !== null && m[1] !== undefined) return parseInt(m[1], 10);
+  }
+
+  return undefined;
+}
+
 export async function executeFlow(
   flowName: string,
   args: ReadonlyMap<string, LogicNValue>,
@@ -1336,7 +1542,8 @@ export async function executeFlow(
   capabilityHost?: CapabilityHost,
   runtimeOptions?: InterpreterRuntimeOptions,
   executionPlans?: ReadonlyMap<string, PassiveExecutionPlan>,
+  manifest?: RuntimeManifest,
 ): Promise<FlowExecutionResult> {
-  const interpreter = new Interpreter(ast, knownFlows ?? [], enforcer, capabilityHost, runtimeOptions, executionPlans);
+  const interpreter = new Interpreter(ast, knownFlows ?? [], enforcer, capabilityHost, runtimeOptions, executionPlans, manifest);
   return interpreter.runFlow(flowName, args);
 }

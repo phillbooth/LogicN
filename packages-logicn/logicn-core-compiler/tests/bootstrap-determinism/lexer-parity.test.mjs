@@ -1,9 +1,11 @@
 // =============================================================================
-// Stage B Lexer Parity — TypeScript lexer vs lexer.lln
+// Phase R7A: Stage B Lexer Parity — TypeScript lexer vs lexer.lln
 //
 // Verifies that the self-hosted lexer (src/self-hosted/lexer.lln) produces
-// the same token sequence as the TypeScript reference lexer (m.lex) for
+// the same token sequence as the TypeScript reference lexer (lex) for
 // real LogicN source.
+//
+// Test input: "pure flow add(a: Int, b: Int) -> Int { return a }"
 //
 // Gap reporting strategy:
 //   If lexer.lln does not yet match, the test logs the diff and passes with
@@ -35,7 +37,7 @@ import {
 // Flip to true once lexer.lln achieves full parity with the TS lexer.
 // When true, every comparison becomes a hard assertion.
 // ---------------------------------------------------------------------------
-const PARITY_ACHIEVED = false;
+const PARITY_ACHIEVED = true;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -126,7 +128,10 @@ function significantTokens(toks) {
 // The source under test
 // ---------------------------------------------------------------------------
 
-const FLOW_GREET_SOURCE = "flow greet(name: String) -> String { return name }";
+// Phase R7A: Stage B parity input — "pure flow add" uses the pure qualifier,
+// two typed parameters, the -> return-type arrow, and a return expression.
+// This exercises keywords, identifiers, symbols, and the multi-char operator.
+const FLOW_GREET_SOURCE = "pure flow add(a: Int, b: Int) -> Int { return a }";
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -137,7 +142,7 @@ describe("Stage B lexer parity: TS lexer vs lexer.lln", () => {
   // ── 1. TS lexer baseline ─────────────────────────────────────────────────
 
   it("TS lexer: tokenises FLOW_GREET_SOURCE without diagnostics", () => {
-    const result = lex(FLOW_GREET_SOURCE, "parity-test.lln");
+    const result = lex(FLOW_GREET_SOURCE, "parity.lln");
     const errors = result.diagnostics.filter((d) => d.severity === "error");
     assert.equal(
       errors.length,
@@ -146,24 +151,36 @@ describe("Stage B lexer parity: TS lexer vs lexer.lln", () => {
     );
   });
 
+  it("TS lexer: produces > 10 tokens for FLOW_GREET_SOURCE", () => {
+    const result = lex(FLOW_GREET_SOURCE, "parity.lln");
+    // "pure flow add(a: Int, b: Int) -> Int { return a }" yields 18 significant + eof = 19 total
+    assert.ok(result.tokens.length > 10, `Expected >10 tokens, got ${result.tokens.length}`);
+  });
+
   it("TS lexer: produces expected token sequence for FLOW_GREET_SOURCE", () => {
-    const result = lex(FLOW_GREET_SOURCE, "parity-test.lln");
+    const result = lex(FLOW_GREET_SOURCE, "parity.lln");
     const sig = result.tokens.filter(
       (t) => t.kind !== "eof" && t.kind !== "newline",
     );
+    // "pure flow add(a: Int, b: Int) -> Int { return a }"
     const expected = [
+      { kind: "keyword",    value: "pure"   },
       { kind: "keyword",    value: "flow"   },
-      { kind: "identifier", value: "greet"  },
+      { kind: "identifier", value: "add"    },
       { kind: "symbol",     value: "("      },
-      { kind: "identifier", value: "name"   },
+      { kind: "identifier", value: "a"      },
       { kind: "symbol",     value: ":"      },
-      { kind: "identifier", value: "String" },
+      { kind: "identifier", value: "Int"    },
+      { kind: "symbol",     value: ","      },
+      { kind: "identifier", value: "b"      },
+      { kind: "symbol",     value: ":"      },
+      { kind: "identifier", value: "Int"    },
       { kind: "symbol",     value: ")"      },
       { kind: "operator",   value: "->"     },
-      { kind: "identifier", value: "String" },
+      { kind: "identifier", value: "Int"    },
       { kind: "symbol",     value: "{"      },
       { kind: "keyword",    value: "return" },
-      { kind: "identifier", value: "name"   },
+      { kind: "identifier", value: "a"      },
       { kind: "symbol",     value: "}"      },
     ];
     assert.equal(sig.length, expected.length, `Expected ${expected.length} tokens, got ${sig.length}`);
@@ -206,7 +223,7 @@ describe("Stage B lexer parity: TS lexer vs lexer.lln", () => {
   it("parity: both lexers produce the same number of significant tokens", async () => {
     const parsed = loadSelfHostedLexer();
 
-    const tsResult  = lex(FLOW_GREET_SOURCE, "parity-test.lln");
+    const tsResult  = lex(FLOW_GREET_SOURCE, "parity.lln");
     const tsSig     = significantTokens(tsResult.tokens.map((t) => ({ kind: t.kind, value: t.value })));
     const llnTokens = await selfHostedTokens(parsed, FLOW_GREET_SOURCE);
     const llnSig    = significantTokens(llnTokens);
@@ -230,7 +247,7 @@ describe("Stage B lexer parity: TS lexer vs lexer.lln", () => {
   it("parity: token kinds match at each position (normalised to PascalCase)", async () => {
     const parsed = loadSelfHostedLexer();
 
-    const tsResult  = lex(FLOW_GREET_SOURCE, "parity-test.lln");
+    const tsResult  = lex(FLOW_GREET_SOURCE, "parity.lln");
     const tsSig     = significantTokens(tsResult.tokens.map((t) => ({ kind: t.kind, value: t.value })));
     const llnTokens = await selfHostedTokens(parsed, FLOW_GREET_SOURCE);
     const llnSig    = significantTokens(llnTokens);
@@ -261,7 +278,7 @@ describe("Stage B lexer parity: TS lexer vs lexer.lln", () => {
   it("parity: token values match at each position", async () => {
     const parsed = loadSelfHostedLexer();
 
-    const tsResult  = lex(FLOW_GREET_SOURCE, "parity-test.lln");
+    const tsResult  = lex(FLOW_GREET_SOURCE, "parity.lln");
     const tsSig     = significantTokens(tsResult.tokens.map((t) => ({ kind: t.kind, value: t.value })));
     const llnTokens = await selfHostedTokens(parsed, FLOW_GREET_SOURCE);
     const llnSig    = significantTokens(llnTokens);
@@ -294,7 +311,7 @@ describe("Stage B lexer parity: TS lexer vs lexer.lln", () => {
   it("parity: print full side-by-side comparison", async () => {
     const parsed = loadSelfHostedLexer();
 
-    const tsResult  = lex(FLOW_GREET_SOURCE, "parity-test.lln");
+    const tsResult  = lex(FLOW_GREET_SOURCE, "parity.lln");
     const tsSig     = tsResult.tokens.map((t) => ({ kind: t.kind, value: t.value }));
     const llnTokens = await selfHostedTokens(parsed, FLOW_GREET_SOURCE);
 

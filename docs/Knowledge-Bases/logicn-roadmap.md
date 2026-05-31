@@ -66,6 +66,47 @@ Real WAT instruction bodies for pure flows. JS-based WAT assembler (no native bi
 buildWATModule(), getWATImportsForEffects() exported. NativeCapabilityId constants defined.
 222/222 CEC stable — Phase 25 gate cleared.
 
+## Phase R1-R7 — In Progress (Phase R1-R7 workflow running)
+
+These phases run as a structured workflow across the runtime hardening and security track.
+WASM continues as background work throughout all R-phases.
+
+### R1 — Effect Checker Hardening
+Tighten CANONICAL_EFFECTS enforcement; broad-alias warnings in dev, errors in production.
+
+### R2 — Value-State Checker Hardening
+SINK_REQUIREMENTS fully enforced; LLN-GATE-001 in all modes.
+
+### R3 — Runtime Manifest Completeness
+All flows emit runtimeManifest; governance verifier uses manifests for proof chain.
+
+### R4 — Security + Anti-Abuse (Added)
+Anti-botnet governance: process.spawn effect enforced, network destination policy,
+DNS rebinding defence, rate limit wiring, devtools report.
+
+  - process.spawn added to CANONICAL_EFFECTS (✅ done — R4B commit)
+  - worker.spawn, event.schedule added to CANONICAL_EFFECTS (✅ done — R4B commit)
+  - getAntiAbuseReport() devtools function (✅ done)
+  - LLN-NET-001/002 network destination diagnostics (in progress)
+  - Anti-abuse example: processWebhook (in progress)
+
+### R5 — Package Resolver Integration
+LLN-PKG-001..005 enforced end-to-end in CI; signed package policy in runtime.
+
+### R6 — Stage B Lexer Token Parity
+lexer.lln produces identical token stream to TypeScript lexer.
+Hard milestone: token parity verified by hash comparison.
+
+### R7 — verifyPassword Hard Milestone
+Runtime: Node.js WebAssembly.instantiate (wasm-hybrid)
+JS shell handles HTTP. WASM handles governed flow execution.
+End-to-end: LogicN→WAT→.wasm→Node→HTTP→WASM→HTTP response→audit
+
+Background (WASM — continues throughout R-phases):
+  - Phase 11D governed memory wiring
+  - WAT instruction body completeness
+  - wasm-hybrid runtime stabilisation
+
 ## Phase 25 — WASM Auth + Stage B Lexer Parity (In Progress)
 
 Runtime: Node.js WebAssembly.instantiate (wasm-hybrid)

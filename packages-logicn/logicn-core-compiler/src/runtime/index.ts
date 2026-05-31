@@ -13,6 +13,7 @@ export {
   createContext,
   isExpired,
   remainingMs,
+  verifyRuntimeManifestHash,
   type RuntimeContext,
 } from "./runtimeContext.js";
 
