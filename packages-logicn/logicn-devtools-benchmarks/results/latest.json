@@ -1,0 +1,282 @@
+[
+  {
+    "benchmark": "compute-mix",
+    "results": {
+      "nodejs": {
+        "runtime": "nodejs",
+        "benchmark": "compute-mix-throughput-v2",
+        "executionMode": "direct-nodejs",
+        "comparisonType": "direct-runtime",
+        "version": 2,
+        "algorithm": "lcg2x-xorshift2x-sqrt-4branch",
+        "targetMs": 30000,
+        "warmupMs": 3000,
+        "batchSize": 50000,
+        "seed": 123456789,
+        "elapsedMs": 30000.463,
+        "operations": 3018750000,
+        "operationsPerSecond": 100623447.38,
+        "operationsPerCpuMs": 106331.45,
+        "checksum": 1681031242,
+        "cpu": {
+          "userMs": 28218,
+          "systemMs": 172,
+          "totalMs": 28390
+        },
+        "memory": {
+          "rssBytes": 38682624,
+          "heapTotalBytes": 6062080,
+          "heapUsedBytes": 4294136,
+          "externalBytes": 1493625,
+          "arrayBuffersBytes": 10531,
+          "maxRssBytes": 38944768
+        },
+        "process": {
+          "pid": 40372,
+          "node": "v22.14.0",
+          "python": null,
+          "platform": "win32",
+          "arch": "x64"
+        },
+        "notes": [
+          "v2: 2x LCG, 2x xorshift mix, float sqrt, 4-way branch per operation",
+          "Harder than v1 — exercises float, int, and branch prediction together"
+        ]
+      },
+      "python": {
+        "runtime": "python",
+        "benchmark": "compute-mix-throughput-v2",
+        "executionMode": "direct-python",
+        "comparisonType": "direct-runtime",
+        "version": 2,
+        "algorithm": "lcg2x-xorshift2x-sqrt-4branch",
+        "targetMs": 30000,
+        "warmupMs": 3000,
+        "batchSize": 50000,
+        "seed": 123456789,
+        "elapsedMs": 30014.098,
+        "operations": 24250000,
+        "operationsPerSecond": 807953.65,
+        "operationsPerCpuMs": 840.74,
+        "checksum": 3370348027,
+        "cpu": {
+          "userMs": null,
+          "systemMs": null,
+          "totalMs": 28843.75
+        },
+        "memory": {
+          "rssBytes": null,
+          "heapUsedBytes": null,
+          "heapTotalBytes": null,
+          "tracemallocCurrentBytes": null,
+          "tracemallocPeakBytes": null,
+          "maxRssBytes": null
+        },
+        "process": {
+          "pid": 23224,
+          "node": null,
+          "python": "3.13.1",
+          "platform": "Windows-11-10.0.26200-SP0",
+          "arch": "AMD64"
+        },
+        "notes": [
+          "v2: 2x LCG, 2x xorshift mix, float sqrt, 4-way branch per operation",
+          "Harder than v1 — exercises float, int, and branch prediction together"
+        ]
+      },
+      "logicnGoverned": {
+        "runtime": "logicn-governed",
+        "error": true,
+        "parseErrors": 8,
+        "firstError": "Unexpected token \"{\" in statement position.",
+        "parseMs": 6.55
+      },
+      "logicnManifest": {
+        "runtime": "logicn-manifest",
+        "error": true,
+        "parseErrors": 8,
+        "firstError": "Unexpected token \"{\" in statement position.",
+        "parseMs": 1.95
+      }
+    }
+  },
+  {
+    "benchmark": "arithmetic-threshold",
+    "results": {
+      "nodejs": {
+        "runtime": "nodejs",
+        "benchmark": "arithmetic-threshold-v2",
+        "version": 2,
+        "threshold": 200000000000000,
+        "total": 200000030000001,
+        "nextI": 20000002,
+        "additions": 20000002,
+        "checksum": 1048227940,
+        "loopCycles": 10000001,
+        "elapsedMs": 27.034,
+        "additionsPerSecond": 739822886.42,
+        "cpu": {
+          "userMs": 0,
+          "systemMs": 16,
+          "totalMs": 16
+        },
+        "memory": {
+          "rssBytes": 43880448,
+          "heapTotalBytes": 7110656,
+          "heapUsedBytes": 4562312,
+          "externalBytes": 1553546,
+          "arrayBuffersBytes": 10531,
+          "maxRssBytes": 44032000
+        },
+        "process": {
+          "pid": 15676,
+          "node": "v22.14.0",
+          "platform": "win32",
+          "arch": "x64"
+        },
+        "notes": [
+          "v2: doubled threshold, +imul+XOR checksum per cycle"
+        ]
+      },
+      "python": {
+        "runtime": "python",
+        "benchmark": "arithmetic-threshold-v2",
+        "version": 2,
+        "threshold": 200000000000000,
+        "total": 200000030000001,
+        "nextI": 20000002,
+        "additions": 20000002,
+        "checksum": 1048227940,
+        "loopCycles": 10000001,
+        "elapsedMs": 4188.571,
+        "additionsPerSecond": 4774898.42,
+        "cpu": {
+          "processMs": 4125
+        },
+        "memory": {
+          "tracemallocEnabled": false,
+          "tracemallocCurrentBytes": null,
+          "tracemallocPeakBytes": null
+        },
+        "process": {
+          "pid": 46780,
+          "python": "3.13.1",
+          "platform": "Windows-11-10.0.26200-SP0",
+          "arch": "AMD64"
+        },
+        "notes": [
+          "v2: doubled threshold, +multiply+XOR checksum per cycle"
+        ]
+      },
+      "logicnGoverned": {
+        "runtime": "logicn-governed",
+        "error": true,
+        "parseErrors": 8,
+        "firstError": "Unexpected token \"{\" in statement position.",
+        "parseMs": 1.5
+      },
+      "logicnManifest": {
+        "runtime": "logicn-manifest",
+        "error": true,
+        "parseErrors": 8,
+        "firstError": "Unexpected token \"{\" in statement position.",
+        "parseMs": 0.41
+      }
+    }
+  },
+  {
+    "benchmark": "six-digit-guess",
+    "results": {
+      "nodejs": {
+        "runtime": "nodejs",
+        "benchmark": "six-digit-guess-v2",
+        "version": 2,
+        "codeLength": 6,
+        "mode": "sequential",
+        "target": "042069",
+        "found": true,
+        "attempts": 42070,
+        "finalScore": {
+          "bulls": 6,
+          "cows": 0
+        },
+        "totalBulls": 60897,
+        "totalCows": 68205,
+        "elapsedMs": 22.562,
+        "attemptsPerSecond": 1864639.66,
+        "cpu": {
+          "userMs": 0,
+          "systemMs": 16,
+          "totalMs": 16
+        },
+        "memory": {
+          "rssBytes": 46907392,
+          "heapTotalBytes": 10518528,
+          "heapUsedBytes": 6240616,
+          "externalBytes": 1917095,
+          "arrayBuffersBytes": 16675,
+          "maxRssBytes": 47521792
+        },
+        "process": {
+          "pid": 31464,
+          "node": "v22.14.0",
+          "platform": "win32",
+          "arch": "x64"
+        },
+        "notes": [
+          "v2: 6-digit codes (1M combinations), bulls+cows scoring per attempt",
+          "Each attempt is ~6x more expensive than raw string equality"
+        ]
+      },
+      "python": {
+        "runtime": "python",
+        "benchmark": "four-digit-guess-v2",
+        "version": 2,
+        "codeLength": 6,
+        "mode": "sequential",
+        "target": "042069",
+        "found": true,
+        "attempts": 42070,
+        "finalScore": {
+          "bulls": 6,
+          "cows": 0
+        },
+        "totalBulls": 60897,
+        "totalCows": 68205,
+        "elapsedMs": 811.004,
+        "attemptsPerSecond": 51874.01,
+        "cpu": {
+          "processMs": 796.875
+        },
+        "memory": {
+          "tracemallocCurrentBytes": 143,
+          "tracemallocPeakBytes": 815
+        },
+        "process": {
+          "pid": 32256,
+          "python": "3.13.1",
+          "platform": "Windows-11-10.0.26200-SP0",
+          "arch": "AMD64"
+        },
+        "notes": [
+          "v2: 6-digit codes (1M combinations), bulls+cows scoring per attempt",
+          "Each attempt is ~6x more expensive than raw string equality"
+        ]
+      },
+      "logicnGoverned": {
+        "runtime": "logicn-governed",
+        "error": true,
+        "parseErrors": 7,
+        "firstError": "Unexpected token \"{\" in statement position.",
+        "parseMs": 1.01
+      },
+      "logicnManifest": {
+        "runtime": "logicn-manifest",
+        "error": true,
+        "parseErrors": 7,
+        "firstError": "Unexpected token \"{\" in statement position.",
+        "parseMs": 0.44
+      }
+    }
+  }
+]

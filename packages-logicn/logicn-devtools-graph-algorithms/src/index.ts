@@ -95,5 +95,9 @@ export {
   findFlowsByEffectFlags,
   findFlowsByNativeCapability,
   getGraphFlagSummary,
+  findFlowsWithNetworkPolicy,
+  findFlowsWithProcessSpawn,
+  findFlowsWithSecretAccess,
+  getAntiAbuseReport,
 } from "./semantic/flag-queries.js";
-export type { GraphFlagSummary } from "./semantic/flag-queries.js";
+export type { GraphFlagSummary, AntiAbuseReport } from "./semantic/flag-queries.js";

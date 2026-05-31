@@ -23,6 +23,10 @@ const {
   findFlowsByEffectFlags,
   findFlowsByNativeCapability,
   getGraphFlagSummary,
+  findFlowsWithNetworkPolicy,
+  findFlowsWithProcessSpawn,
+  findFlowsWithSecretAccess,
+  getAntiAbuseReport,
 } = await import("../dist/semantic/flag-queries.js");
 
 // ─── EffectGraph ───────────────────────────────────────────────────────────
@@ -416,5 +420,55 @@ describe("findFlowsByNativeCapability", () => {
     ]);
     const results = findFlowsByNativeCapability(graph, capabilityUsageByFlow, NativeCapabilityQuery.ApuSharedMemory);
     assert.deepEqual(results, []);
+  });
+});
+
+// ─── Anti-abuse graph queries ──────────────────────────────────────────────
+
+describe("Anti-abuse graph queries", () => {
+  it("getAntiAbuseReport with empty graph returns all zeros", () => {
+    const b = new SemanticGraphBuilder();
+    const graph = b.build();
+    const report = getAntiAbuseReport(graph, new Map(), new Map());
+    assert.equal(report.networkFlows, 0);
+    assert.equal(report.auditedFlows, 0);
+    assert.equal(report.unauditedNetworkFlows, 0);
+    assert.equal(report.processSpawnFlows, 0);
+    assert.equal(report.piiFlows, 0);
+  });
+
+  it("findFlowsWithNetworkPolicy returns correct flows", () => {
+    const graph = buildFlagTestGraph();
+    const effectFlagsMap = new Map([
+      ["pureFlow",   EffectFlagQuery.NetworkOutbound],
+      ["secureFlow", EffectFlagQuery.DatabaseRead],
+      ["tensorFlow", EffectFlagQuery.NetworkOutbound | EffectFlagQuery.AuditWrite],
+      ["mixedFlow",  0],
+      ["helperFn",   0],
+    ]);
+    const results = findFlowsWithNetworkPolicy(graph, effectFlagsMap);
+    const ids = results.map((n) => n.id).sort();
+    assert.deepEqual(ids, ["pureFlow", "tensorFlow"]);
+  });
+
+  it("unauditedNetworkFlows detected correctly", () => {
+    const graph = buildFlagTestGraph();
+    // pureFlow: network only (no audit) — risk
+    // tensorFlow: network + audit — safe
+    // secureFlow: audit only — not a network flow
+    const effectFlagsMap = new Map([
+      ["pureFlow",   EffectFlagQuery.NetworkOutbound],
+      ["tensorFlow", EffectFlagQuery.NetworkOutbound | EffectFlagQuery.AuditWrite],
+      ["secureFlow", EffectFlagQuery.AuditWrite],
+    ]);
+    const report = getAntiAbuseReport(graph, effectFlagsMap, new Map());
+    assert.equal(report.networkFlows, 2);
+    assert.equal(report.auditedFlows, 2);
+    assert.equal(report.unauditedNetworkFlows, 1); // only pureFlow
+  });
+
+  it("EffectFlagQuery.ProcessSpawn is a power of 2", () => {
+    const v = EffectFlagQuery.ProcessSpawn;
+    assert.ok(v > 0 && (v & (v - 1)) === 0, `ProcessSpawn (${v}) must be a power of 2`);
   });
 });

@@ -43,6 +43,8 @@ export const EffectFlagQuery = {
   NetworkOutbound: 1 << 2,
   AuditWrite:      1 << 3,
   AiInference:     1 << 4,
+  SecretAccess:    1 << 9,   // secret.access / secret.read
+  ProcessSpawn:    1 << 14,  // process.spawn
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -206,4 +208,93 @@ export function getGraphFlagSummary(
     allowsNetwork,
     denyRemote,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Anti-abuse query functions
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns flow/fn nodes that declare network.outbound — these need network
+ * destination policy review.
+ */
+export function findFlowsWithNetworkPolicy(
+  graph: SemanticGraph,
+  effectFlagsByFlow: ReadonlyMap<string, number>,
+): SemanticNode[] {
+  return flowNodes(graph).filter((node) => {
+    const flags = effectFlagsByFlow.get(node.id) ?? 0;
+    return (flags & EffectFlagQuery.NetworkOutbound) !== 0;
+  });
+}
+
+/**
+ * Returns flow/fn nodes that declare process.spawn — background workers that
+ * need governance review.
+ */
+export function findFlowsWithProcessSpawn(
+  graph: SemanticGraph,
+  effectFlagsByFlow: ReadonlyMap<string, number>,
+): SemanticNode[] {
+  return flowNodes(graph).filter((node) => {
+    const flags = effectFlagsByFlow.get(node.id) ?? 0;
+    return (flags & EffectFlagQuery.ProcessSpawn) !== 0;
+  });
+}
+
+/**
+ * Returns flow/fn nodes that declare secret.access or secret.read — secret
+ * handling flows.
+ */
+export function findFlowsWithSecretAccess(
+  graph: SemanticGraph,
+  effectFlagsByFlow: ReadonlyMap<string, number>,
+): SemanticNode[] {
+  return flowNodes(graph).filter((node) => {
+    const flags = effectFlagsByFlow.get(node.id) ?? 0;
+    return (flags & EffectFlagQuery.SecretAccess) !== 0;
+  });
+}
+
+export interface AntiAbuseReport {
+  readonly networkFlows: number;           // flows with network.outbound
+  readonly auditedFlows: number;           // flows with audit.write
+  readonly unauditedNetworkFlows: number;  // network.outbound WITHOUT audit.write (risk)
+  readonly processSpawnFlows: number;      // flows with process.spawn
+  readonly piiFlows: number;               // flows with ContainsPII governance flag
+}
+
+/**
+ * Returns a summary of the anti-abuse posture for a graph.
+ *
+ * `effectFlagsByFlow` is keyed by full node id (e.g. "fetchUser").
+ * `governanceFlagsByFlow` is keyed by plain flow name (prefixes stripped).
+ */
+export function getAntiAbuseReport(
+  graph: SemanticGraph,
+  effectFlagsByFlow: ReadonlyMap<string, number>,
+  governanceFlagsByFlow: ReadonlyMap<string, number>,
+): AntiAbuseReport {
+  const flows = flowNodes(graph);
+  let networkFlows = 0;
+  let auditedFlows = 0;
+  let unauditedNetworkFlows = 0;
+  let processSpawnFlows = 0;
+  let piiFlows = 0;
+
+  for (const node of flows) {
+    const ef = effectFlagsByFlow.get(node.id) ?? 0;
+    const gf = governanceFlagsByFlow.get(flowName(node.id)) ?? 0;
+
+    const hasNetwork = (ef & EffectFlagQuery.NetworkOutbound) !== 0;
+    const hasAudit   = (ef & EffectFlagQuery.AuditWrite) !== 0;
+
+    if (hasNetwork)  networkFlows++;
+    if (hasAudit)    auditedFlows++;
+    if (hasNetwork && !hasAudit) unauditedNetworkFlows++;
+    if ((ef & EffectFlagQuery.ProcessSpawn) !== 0)         processSpawnFlows++;
+    if ((gf & GovernanceFlagQuery.ContainsPII) !== 0)      piiFlows++;
+  }
+
+  return { networkFlows, auditedFlows, unauditedNetworkFlows, processSpawnFlows, piiFlows };
 }

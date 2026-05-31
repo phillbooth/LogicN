@@ -1,0 +1,25 @@
+/// arithmetic-threshold benchmark — LogicN governed runtime
+/// Returns the final checksum after looping until total > threshold.
+/// The logicn-runner times executeFlow() externally.
+/// Threshold is kept small (1M) because the tree-walker is ~100-1000x slower than Python.
+
+pure flow main() -> Int {
+  mut total: Int = 0
+  mut i: Int = 0
+  mut additions: Int = 0
+  mut checksum: Int = 0
+
+  while total <= 1000000 {
+    total = total + i
+    i = i + 1
+    additions = additions + 1
+
+    total = total + i
+    i = i + 1
+    additions = additions + 1
+
+    checksum = checksum + i
+  }
+
+  return checksum
+}

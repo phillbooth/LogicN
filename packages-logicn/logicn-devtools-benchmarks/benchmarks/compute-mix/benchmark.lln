@@ -1,0 +1,32 @@
+/// compute-mix benchmark — LogicN governed runtime
+/// Simple mixed arithmetic loop that stays within safe integer range.
+/// Measures tree-walker interpreter overhead vs JIT and interpreter runtimes.
+
+pure flow main() -> Int {
+  mut a: Int = 123456789
+  mut b: Int = 987654321
+  mut checksum: Int = 0
+  mut i: Int = 0
+
+  while i < 10000 {
+    let t: Int = a + b
+    a = b
+    b = t - (t / 1000000) * 1000000
+
+    let branch: Int = b - (b / 4) * 4
+
+    if branch == 0 {
+      checksum = checksum + b
+    } else if branch == 1 {
+      checksum = checksum - a
+    } else if branch == 2 {
+      checksum = checksum + a + b
+    } else {
+      checksum = checksum - b + a
+    }
+
+    i = i + 1
+  }
+
+  return checksum
+}

@@ -1,0 +1,18 @@
+/// six-digit-guess benchmark — LogicN governed runtime
+/// Sequential search up to maxAttempts. Returns number of loop iterations.
+/// Target value is 42069 (equivalent of "042069" as an integer).
+
+pure flow main() -> Int {
+  mut attempt: Int = 0
+  mut result: Int = 0
+
+  while attempt < 50000 {
+    attempt = attempt + 1
+    if attempt == 42069 {
+      result = attempt
+      attempt = 50000
+    }
+  }
+
+  return result
+}

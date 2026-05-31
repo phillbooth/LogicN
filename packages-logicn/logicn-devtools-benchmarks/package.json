@@ -1,0 +1,20 @@
+{
+  "name": "@logicn/devtools-benchmarks",
+  "version": "0.1.0",
+  "description": "Runtime comparison benchmarks: Python · Node.js · C++ · Rust · LogicN (governed + manifest)",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "run":               "node src/runner.mjs",
+    "run:compute-mix":   "node src/runner.mjs --benchmark compute-mix",
+    "run:arithmetic":    "node src/runner.mjs --benchmark arithmetic-threshold",
+    "run:guess":         "node src/runner.mjs --benchmark six-digit-guess",
+    "compare":           "node src/compare.mjs",
+    "build:native":      "node src/build-native.mjs"
+  },
+  "dependencies": {
+    "@logicn/core-compiler": "file:../logicn-core-compiler"
+  },
+  "engines": { "node": ">=18" }
+}
