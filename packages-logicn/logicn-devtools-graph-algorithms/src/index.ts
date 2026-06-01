@@ -99,5 +99,11 @@ export {
   findFlowsWithProcessSpawn,
   findFlowsWithSecretAccess,
   getAntiAbuseReport,
+  getPerformanceSummary,
+  getGraphReadiness,
 } from "./semantic/flag-queries.js";
-export type { GraphFlagSummary, AntiAbuseReport } from "./semantic/flag-queries.js";
+export type {
+  GraphFlagSummary,
+  AntiAbuseReport,
+  PerformanceSummary,
+} from "./semantic/flag-queries.js";

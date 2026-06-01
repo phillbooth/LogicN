@@ -27,6 +27,8 @@ const {
   findFlowsWithProcessSpawn,
   findFlowsWithSecretAccess,
   getAntiAbuseReport,
+  getPerformanceSummary,
+  getGraphReadiness,
 } = await import("../dist/semantic/flag-queries.js");
 
 // ─── EffectGraph ───────────────────────────────────────────────────────────
@@ -470,5 +472,79 @@ describe("Anti-abuse graph queries", () => {
   it("EffectFlagQuery.ProcessSpawn is a power of 2", () => {
     const v = EffectFlagQuery.ProcessSpawn;
     assert.ok(v > 0 && (v & (v - 1)) === 0, `ProcessSpawn (${v}) must be a power of 2`);
+  });
+});
+
+// ─── Performance queries ───────────────────────────────────────────────────
+
+describe("Performance queries: getPerformanceSummary and getGraphReadiness", () => {
+  it("getPerformanceSummary counts pure and hotDispatchable flows correctly", () => {
+    const graph = buildFlagTestGraph();
+    // pureFlow: IsPure + HasCompute (effect-free) → pure + hotDispatchable
+    // mixedFlow: IsPure + HasEffects → pure but NOT hotDispatchable
+    // tensorFlow: TensorCandidate only → neither pure nor hotDispatchable; no compute → opportunity
+    // secureFlow: IsSecure only → none
+    // helperFn: no flags → fallback
+    const nodeFlagsMap = new Map([
+      ["pureFlow",   NodeFlagQuery.IsPure | NodeFlagQuery.HasCompute],
+      ["mixedFlow",  NodeFlagQuery.IsPure | NodeFlagQuery.HasEffects],
+      ["tensorFlow", NodeFlagQuery.TensorCandidate],
+      ["secureFlow", NodeFlagQuery.IsSecure],
+      ["helperFn",   0],
+    ]);
+    const summary = getPerformanceSummary(graph, nodeFlagsMap, new Map());
+    assert.equal(summary.totalFlows, 5);
+    assert.equal(summary.pureFlows, 2);          // pureFlow + mixedFlow
+    assert.equal(summary.hotDispatchable, 1);    // only pureFlow (pure + effect-free + compute)
+    assert.equal(summary.cachedFlows, 0);
+    assert.equal(summary.cacheHitRate, 0);
+    // tensorFlow has TensorCandidate but no compute → should note opportunity
+    const hasTensorNote = summary.optimisationOpportunities.some((o) =>
+      o.includes("TensorCandidate") && o.includes("no compute block")
+    );
+    assert.ok(hasTensorNote, "should flag TensorCandidate without compute block");
+  });
+
+  it("getPerformanceSummary includes low-cache-hit-rate advisory when below 50%", () => {
+    const graph = buildFlagTestGraph();
+    const nodeFlagsMap = new Map([
+      ["pureFlow", NodeFlagQuery.IsPure | NodeFlagQuery.HasCompute],
+    ]);
+    const cacheStats = { hits: 1, misses: 9, size: 1 };
+    const summary = getPerformanceSummary(graph, nodeFlagsMap, new Map(), cacheStats);
+    assert.equal(summary.cacheHitRate, 0.1);
+    const hasHitRateNote = summary.optimisationOpportunities.some((o) =>
+      o.includes("below 50%")
+    );
+    assert.ok(hasHitRateNote, "should warn about low cache hit rate");
+  });
+
+  it("getGraphReadiness classifies flows into ready / partial / fallback", () => {
+    const graph = buildFlagTestGraph();
+    // pureFlow: IsPure, no HasEffects → ready
+    // mixedFlow: IsPure + HasEffects → partial
+    // secureFlow: IsSecure only (not IsPure) → fallback
+    // tensorFlow: TensorCandidate only → fallback
+    // helperFn: no flags → fallback
+    const nodeFlagsMap = new Map([
+      ["pureFlow",   NodeFlagQuery.IsPure],
+      ["mixedFlow",  NodeFlagQuery.IsPure | NodeFlagQuery.HasEffects],
+      ["secureFlow", NodeFlagQuery.IsSecure],
+      ["tensorFlow", NodeFlagQuery.TensorCandidate],
+      ["helperFn",   0],
+    ]);
+    const readiness = getGraphReadiness(graph, nodeFlagsMap);
+    assert.equal(readiness.get("pureFlow"),   "ready");
+    assert.equal(readiness.get("mixedFlow"),  "partial");
+    assert.equal(readiness.get("secureFlow"), "fallback");
+    assert.equal(readiness.get("tensorFlow"), "fallback");
+    assert.equal(readiness.get("helperFn"),   "fallback");
+  });
+
+  it("getGraphReadiness returns an empty map for an empty graph", () => {
+    const b = new SemanticGraphBuilder();
+    const graph = b.build();
+    const readiness = getGraphReadiness(graph, new Map());
+    assert.equal(readiness.size, 0);
   });
 });

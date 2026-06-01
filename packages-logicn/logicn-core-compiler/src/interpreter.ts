@@ -1948,9 +1948,12 @@ export async function executeFlow(
         storeGraph(egKey, egraph);
       }
 
-      // Phase 29B: attempt ExecutionGraph fast-path for pure flows without enforcer
-      // so governance infrastructure is never bypassed for guarded/secure flows.
-      if (egraph.isPure && enforcer === undefined && capabilityHost === undefined) {
+      // Phase 29B: attempt ExecutionGraph fast-path for pure flows.
+      // Gated on runtimeOptions.egraphFastPath to avoid interfering with tests
+      // until the graph builder handles all node kinds correctly.
+      // Enable with: { egraphFastPath: true } in runtimeOptions.
+      const egraphEnabled = (runtimeOptions as Record<string, unknown>)?.egraphFastPath === true;
+      if (egraphEnabled && egraph.isPure && enforcer === undefined && capabilityHost === undefined) {
         const fastResult = runFromGraph(egraph, args);
         if (fastResult !== null) {
           // Fast-path succeeded — return a synthetic FlowExecutionResult

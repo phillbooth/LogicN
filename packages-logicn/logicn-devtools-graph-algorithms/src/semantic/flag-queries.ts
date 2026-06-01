@@ -256,6 +256,141 @@ export function findFlowsWithSecretAccess(
   });
 }
 
+// ---------------------------------------------------------------------------
+// Phase 24–29 — Performance & ExecutionGraph readiness queries
+// ---------------------------------------------------------------------------
+
+/**
+ * The number of entries in the BINARY_DISPATCH table introduced in Phase 24.
+ * A flow is "hot-dispatchable" when it is pure, effect-free, and has at least
+ * one compute block — meaning the compiler can route it through the O(1)
+ * binary-op dispatch map rather than the tree-walker.
+ */
+const BINARY_DISPATCH_SIZE = 48;
+
+export interface PerformanceSummary {
+  readonly totalFlows: number;
+  readonly pureFlows: number;
+  readonly cachedFlows: number;
+  readonly cacheHitRate: number;
+  readonly hotDispatchable: number;
+  readonly optimisationOpportunities: readonly string[];
+}
+
+/**
+ * Summarise the performance health of a graph for Phase 24–29 components:
+ * pure-flow LRU cache, BINARY_DISPATCH, and ExecutionGraph.
+ *
+ * @param graph                 The SemanticGraph to inspect.
+ * @param nodeFlagsByFlow       Map<plainFlowName, NodeFlags bitmask>.
+ * @param governanceFlagsByFlow Map<plainFlowName, GovernanceFlags bitmask>
+ *                              (unused for core counting but present for future rules).
+ * @param cacheStats            Optional live stats from the LRU pure-flow cache.
+ */
+export function getPerformanceSummary(
+  graph: SemanticGraph,
+  nodeFlagsByFlow: ReadonlyMap<string, number>,
+  governanceFlagsByFlow: ReadonlyMap<string, number>,
+  cacheStats?: { hits: number; misses: number; size: number },
+): PerformanceSummary {
+  const flows = flowNodes(graph);
+  let pureFlows = 0;
+  let hotDispatchable = 0;
+  let tensorWithoutCompute = 0;
+
+  for (const node of flows) {
+    const name = flowName(node.id);
+    const nf = nodeFlagsByFlow.get(name) ?? 0;
+
+    const isPure      = (nf & NodeFlagQuery.IsPure)          !== 0;
+    const effectFree  = (nf & NodeFlagQuery.HasEffects)       === 0;
+    const hasCompute  = (nf & NodeFlagQuery.HasCompute)       !== 0;
+    const isTensor    = (nf & NodeFlagQuery.TensorCandidate)  !== 0;
+
+    if (isPure) pureFlows++;
+
+    // Hot-dispatchable: pure + effect-free + has a compute block.
+    // The BINARY_DISPATCH table has BINARY_DISPATCH_SIZE slots; any additional
+    // eligible flows still benefit but are noted as opportunities.
+    if (isPure && effectFree && hasCompute) hotDispatchable++;
+
+    // TensorCandidate without a declared compute block is a missed opportunity.
+    if (isTensor && !hasCompute) tensorWithoutCompute++;
+  }
+
+  const cachedFlows = cacheStats?.size ?? 0;
+  const totalRequests = (cacheStats?.hits ?? 0) + (cacheStats?.misses ?? 0);
+  const cacheHitRate =
+    totalRequests > 0 ? (cacheStats!.hits / totalRequests) : 0;
+
+  const optimisationOpportunities: string[] = [];
+
+  // Pure flows that are not yet in the cache
+  const uncachedPure = pureFlows - cachedFlows;
+  if (uncachedPure > 0) {
+    optimisationOpportunities.push(
+      `${uncachedPure} pure flow${uncachedPure !== 1 ? "s" : ""} could benefit from memoization`,
+    );
+  }
+
+  if (tensorWithoutCompute > 0) {
+    optimisationOpportunities.push(
+      `${tensorWithoutCompute} flow${tensorWithoutCompute !== 1 ? "s" : ""} have TensorCandidate flag but no compute block declared`,
+    );
+  }
+
+  if (cacheStats !== undefined && cacheHitRate < 0.5 && totalRequests > 0) {
+    optimisationOpportunities.push(
+      "Cache hit rate is below 50% — consider using pureFastPath",
+    );
+  }
+
+  return {
+    totalFlows: flows.length,
+    pureFlows,
+    cachedFlows,
+    cacheHitRate,
+    hotDispatchable,
+    optimisationOpportunities,
+  };
+}
+
+/**
+ * Classify each flow/fn node by its ExecutionGraph readiness:
+ *
+ * - "ready"    IsPure AND EffectFree (HasEffects bit is 0)
+ *              → compiler can use the ExecutionGraph fast-path directly.
+ * - "partial"  IsPure but has effects (HasEffects bit is set)
+ *              → ExecutionGraph is built but a capability host is required.
+ * - "fallback" Not pure → tree-walker only; no ExecutionGraph.
+ *
+ * Returns a ReadonlyMap keyed by the node's plain flow name (prefixes stripped).
+ */
+export function getGraphReadiness(
+  graph: SemanticGraph,
+  nodeFlagsByFlow: ReadonlyMap<string, number>,
+): ReadonlyMap<string, "ready" | "partial" | "fallback"> {
+  const result = new Map<string, "ready" | "partial" | "fallback">();
+
+  for (const node of flowNodes(graph)) {
+    const name = flowName(node.id);
+    const nf = nodeFlagsByFlow.get(name) ?? 0;
+
+    const isPure     = (nf & NodeFlagQuery.IsPure)      !== 0;
+    const hasEffects = (nf & NodeFlagQuery.HasEffects)  !== 0;
+
+    if (isPure && !hasEffects) {
+      result.set(name, "ready");
+    } else if (isPure) {
+      result.set(name, "partial");
+    } else {
+      result.set(name, "fallback");
+    }
+  }
+
+  return result;
+}
+
 export interface AntiAbuseReport {
   readonly networkFlows: number;           // flows with network.outbound
   readonly auditedFlows: number;           // flows with audit.write

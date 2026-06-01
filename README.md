@@ -1,15 +1,12 @@
 ﻿# LogicN
 
-LogicN is a governance-first programming language, runtime and execution
-architecture designed to make secure computation **explicit, auditable and
-portable** across CPUs, GPUs, NPUs, APUs, TPUs, AI accelerators, WASM and
-future heterogeneous hardware — including any device that can run governed
-compute, from edge silicon to data centre accelerators.
+LogicN aims to be the language of choice for software that handles money, personal information, healthcare data, and public services.
 
-Rather than adding safety features to an existing language, LogicN is designed
-from the ground up around the principle that execution intent, capability
-boundaries, memory ownership, and effects should be **declared in source and
-enforced by tooling** — not inferred, guessed, or left to convention.
+Built for financial, medical, government, and enterprise platforms, LogicN introduces governance, privacy, authority, and auditability directly into the architecture of an application, helping organisations reduce risk while building secure and transparent systems.
+
+---
+
+The language is designed from the ground up so that execution intent, capability boundaries, memory ownership, and effects are **declared in source and enforced by tooling** — not inferred, guessed, or left to convention. It targets CPUs, GPUs, NPUs, APUs, WASM and future heterogeneous hardware.
 
 ---
 
@@ -42,34 +39,35 @@ enforced by tooling** — not inferred, guessed, or left to convention.
 **TypeScript Runtime** — Stage A: compiler pipeline + execution engine running on Node.js
 
 ```
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (2368 tests · 0 failures · 223/223 CEC stable · R3/R4/R5/R6 complete · Stage B parity achieved)
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (2563 tests · 0 failures · 223/223 CEC stable · R3/R4/R5/R6 complete · Stage B parity achieved · Phase 29 complete)
 ```
 
 | Layer | Status | % |
 |---|---|---|
-| Specification / KB | 320+ docs, 223/223 examples stable, hybrid WASM v1.0, security anti-abuse, Phase 25-27 examples | 99% |
-| Lexer | All v1 keywords, TokenKindId, V1_DEPRECATED_RESERVED, LLN-LEX-001..006, slice scanning | 97% |
+| Specification / KB | 320+ docs, 223/223 examples stable, hybrid WASM v1.0, security anti-abuse, Phase 25-29 complete | 99% |
+| Lexer | All v1 keywords, TokenKindId, V1_DEPRECATED_RESERVED, LLN-LEX-001..006, slice scanning, FlatTokenStream | 97% |
 | Parser | NodeFlags (8 flags), byteSpan, recovery helpers, prefer [gpu/npu], contract.memory/network | 92% |
 | Type checker | LLN-TYPE-001..022, LLN-TYPE-030/031 (tensor), branded types, TypeId registry (R5 complete) | 80% |
 | Value-state checker | Taint, 2-hop, ValueStateFlags, SINK_REQUIREMENTS, LLN-GATE-001 | 85% |
 | Effect checker | LLN-EFFECT-001..005, LLN-STDLIB-001 wired, EffectCheckerFlags, 31 legacy regex tracked | 84% |
 | Governance verifier | LLN-GOV-002..014, GovernanceFlags, RuntimeManifest, contract.context wired | 80% |
-| GIR emitter | GIR v1, tensor metadata (7 flags), TypedArray lowering plan wired, WAT emitter | 73% |
+| GIR emitter | GIR v1, tensor metadata (7 flags), TypedArray lowering plan wired, WAT emitter + SIMD ops | 74% |
 | Stdlib | STDLIB_CAPABILITY_MAP (35+ functions), TRI_STDLIB_OPS, TENSOR_STDLIB_OPS, BigInt decimal | 63% |
 | Package resolver | LLN-PKG-001..005, 11-package type registry, cross-module import resolution (R3 complete) | 75% |
-| Runtime interpreter | Loops, assignment, capabilityHost, audit, rate-limit + manifest-driven enforcement (R4/R6 complete) | 62% |
-| WAT emitter + assembler | buildWATModule, assembleWAT stub, pure flow real bodies, WASM imports from STDLIB_CAPABILITY_MAP | 35% |
+| Runtime interpreter | NaN-boxing (Phase 29A), SlottedScope O(1), pure-flow erasure, ExecutionGraph fast-path (Phase 29B) | 68% |
+| WAT emitter + assembler | buildWATModule, assembleWAT, real WAT bodies, WASM host imports, wasmtime scaffold, SIMD ops map | 42% |
 | Type registry | TypeId (56 IDs), EffectFlags (14), GovernanceFlags (8), NativeCapabilityId (6) | 78% |
 | Security policy | LLN-NET-001/002, LLN-RUNTIME-006, NetworkDestinationPolicy, PRIVATE_IP_RANGES | 30% |
+| SoA Arena | SoANodeArena (Int16/Int32 parallel arrays), FlatTokenStream (stride-4), FusedPass scaffold | 35% |
 | Lowering plans | TypedArrayLoweringPlan wired in GIR, MonomorphisationPlan/KernelFusionPlan stubs | 22% |
-| Register VM | Full opcode set, emitBytecode() stub — tree-walker replacement Phase 23C | 13% |
+| Register VM | runFromGraph() fast-path live (LOAD_CONST/SLOT/BINOP/RETURN), emitBytecode stub | 20% |
 | Views | StringView, BytesView, TensorView<T>, WASMLinearMemoryLayout — WASM linear memory types | 20% |
 | GPU/NPU/APU plans | WebGPUComputePlan, NPUKernelPlan, APUSharedMemoryPlan, NativePluginManifest | 16% |
 | Hybrid WASM–Native | v1.0 architecture document, EDA model, DataHandle, Component Model ABI spec | 18% |
 | Boundary graph | BoundaryGraph types, getUnauthorisedCrossings() in devtools | 28% |
 | Monkey-patch checker | LLN-SEC-020/021 source-level detection, AST + text level | 85% |
 | devtools-graph | BFS/DFS/topo, flag queries, CapabilityGraph, BoundaryGraph, WASMModuleGraph, NativeCapabilityQuery | 74% |
-| Stage B self-hosting | lexer.lln parity 19/19 tokens, parser.lln -> fix, type-checker.lln, compiler.capabilities.lln | 28% |
+| Stage B self-hosting | All 4 files parse with 0 errors: lexer.lln, parser.lln, type-checker.lln, compiler.capabilities.lln | 32% |
 | Passive execution plans | Plan types + builder + attestation + hashPassivePlan + executePlan wired | 40% |
 | Examples | 223/223 CEC stable + auth-service, healthcare, ai-inference deployment examples | 92% |
 | Photonic / Ternary | TriState type, Tri stdlib ops, photonic_compatible flag, NativeCapabilityId.PhotonicBridge | 3% |
@@ -112,8 +110,8 @@ LogicN is three things building toward one platform:
 declared effects, no hidden nulls, no silent failures. Source files use `.lln`.
 
 **2. A compiler and checker** — a pipeline that enforces the language rules
-before code runs. Phases 3–15, 16A, 17A, 17C, 18A–23, 24, 25-27 scaffolding, and R1-R7 runtime enforcement are complete (2359 tests, 0 failures, 223/223 CEC stable). The
-runtime, IR generation pipeline, and Stage B self-hosting compiler are the
+before code runs. Phases 3–15, 16A, 17A, 17C, 18A–23, 24–29, and R1-R7 runtime enforcement are complete (2563 tests, 0 failures, 223/223 CEC stable). The
+register VM fast-path, WASM emission, and Stage B self-hosting compiler are the
 current focus.
 
 **3. A governed runtime architecture** — a model for coordinating compute
@@ -143,7 +141,7 @@ execution**:
 
 LogicN is a **language-design and active compiler project**. It is not a production runtime.
 
-**What works today (2359 tests, 0 failures):**
+**What works today (2563 tests, 0 failures):**
 
 - Full lexer — all v1 keywords, char/hex/binary literals, doc comments, slice-based scanning, direct operator detection, file/line safety limits (Phase 18A)
 - Full parser — all flow qualifiers, match with exhaustiveness, enums with variants, record types with fields, fn helpers, route declarations, `protected`/`redacted` type qualifiers

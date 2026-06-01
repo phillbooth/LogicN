@@ -112,14 +112,16 @@ pure flow double(n: Int) -> Int {
   });
 
   it("non-pure flow still executes correctly via tree-walker fallback", async () => {
+    // Use a unique flow name to avoid collisions with the graph cache
+    // populated by other pure-flow tests that share the same flowName key.
     const source = `
-flow greet(name: String) -> String {
+flow sayHello29(name: String) -> String {
   return "Hello"
 }
 `;
     const parsed = parseProgram(source, "test.lln");
     const args = new Map([["name", { __tag: "string", value: "World" }]]);
-    const result = await executeFlow("greet", args, parsed.ast, parsed.flows);
+    const result = await executeFlow("sayHello29", args, parsed.ast, parsed.flows);
     assert.equal(result.value.__tag, "string");
     assert.equal(result.value.value, "Hello");
   });

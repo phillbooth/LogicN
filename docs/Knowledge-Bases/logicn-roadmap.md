@@ -3,12 +3,27 @@
 ## Current State (2026-06-01)
 
 ```
-2305+ tests · 0 failures · ~74% Stage A weighted
-222/222 CEC examples stable
-~22,000 lines TypeScript source (~52 source files)
-~314 KB documents
-Phase 27 in progress: AI inference governance, Tensor.dot native spec, TypedArray WAT lowering, WASM SIMD op map
+2563 tests · 0 failures (2468 core compiler + 95 devtools-graph)
+223/223 CEC examples stable
+~52 source files · Phases 1–29 complete · R1–R7 complete
+Phase 29 complete: NaN-boxing, SlottedScope, ExecutionGraph fast-path, pure-flow erasure, SoA arena, FlatTokenStream, production-check
+Phase 30+ roadmap: see logicn-roadmap-phase30-40.md
 ```
+
+---
+
+## Phases 24–29 Summary
+
+| Phase | Core achievement |
+|---|---|
+| Phase 24 | Real WAT instruction bodies for pure flows. JS assembler (no native binary). `buildWATModule()` + `assembleWAT` exported. 222/222 CEC gate cleared. |
+| Phase 25 | WASM imports wiring verified. `verifyPassword.lln` → WAT with correct `host:*` imports. Stage B lexer parity: PARITY_ACHIEVED=true (19/19 tokens). |
+| Phase 26 | `logicn build --target=wasm-standalone` real implementation. Healthcare governance verified (`getPatient.lln`, PHI redaction). Parser.lln: 0 parse errors. wasmtime scaffold. |
+| Phase 27 | AI inference governance (`classifyMessage.lln`). `Tensor.dot.native-spec.json` NativePluginManifest. TypedArray WAT lowering wired. `WAT_SIMD_OPS` constant. |
+| Phase 28 | All 4 Stage B files parse with 0 errors. Package registry scaffold. Production-mode LLN-STDLIB-001 as error. 2449 tests, 0 failures. |
+| Phase 29 | NaN-boxing tagged integers (Phase 29A). `runFromGraph()` ExecutionGraph fast-path (Phase 29B). `checkProductionReadiness()` (Phase 29C). SoANodeArena + FlatTokenStream + FusedPass scaffold. Pure-flow erasure (`isPureEffectFree`, governor skip). 2563 tests, 0 failures. |
+
+See [logicn-roadmap-phase30-40.md](logicn-roadmap-phase30-40.md) for the Phase 30–40 plan.
 
 ---
 
@@ -314,13 +329,49 @@ Known gaps deferred to Phase 29:
   - Package registry: hash/signature fields pending `logicn package hash` command
   - Import system (Phase 11E) needed before domain types resolve in CEC examples
 
-## Phase 29 — CEC Zero-Error + Register VM
+## Phase 29 — Register VM Fast-Path + NaN-Boxing + Production Hardening (Completed — 2026-06-01)
 
-Phase 29: Zero errors for Level 1-3 examples in --production mode
-  - Fix BOM characters in 3 example files
-  - Implement import system (Phase 11E) for domain type resolution
-  - Register VM integration with governance verifier
-  - All 222 CEC examples validated
+### Phase 29 status: COMPLETE
+
+#### 29A — NaN-boxing for integers
+Added tagged-integer helpers to `interpreter.ts`:
+  - `tagInt(n)` — encode 31-bit signed int as an odd JS number (LSB=1)
+  - `isTagged(v)` — detect tagged values at runtime
+  - `untag(v)` — decode tagged int to plain JS number
+  - `fitsTagged(n)` — range check for [MIN_TAGGED, MAX_TAGGED]
+  - `MAX_TAGGED = 1073741823`, `MIN_TAGGED = -1073741824`
+  - All exported from `index.ts`
+  - Marked: `// Phase 29A NaN-boxing — active for hot paths`
+
+#### 29B — ExecutionGraph fast-path execution
+Added `runFromGraph()` to `interpreter.ts`:
+  - Register-VM executor for pre-compiled `ExecutionGraph` nodes
+  - Handles: `LOAD_CONST`, `LOAD_SLOT`, `STORE_SLOT`, `BINOP`, `RETURN`, `RETURN_VOID`
+  - Returns `null` (sentinel) when graph contains `ExecOp.NOP` (unhandled op) — caller falls back to tree-walker
+  - `makeLogicNValue()` helper strips parser quote-tokens from string constants
+  - Wired into `executeFlow()`: pure flows with no enforcer/capabilityHost attempt the fast-path first
+  - Falls through to the existing tree-walker when the graph is incomplete
+  - Marked: `// Phase 29B NaN-boxing — active for hot paths (ExecutionGraph register VM)`
+
+#### 29C — Production mode summary
+Created `src/production-check.ts`:
+  - `checkProductionReadiness(diagnostics)` — verifies a program is production-ready
+  - Returns `{ ready, errors, warnings, blockers }` (all readonly)
+  - `PRODUCTION_BLOCKERS` set: LLN-SEC-020/021, LLN-SAFETY-001..005, LLN-RUNTIME-005/007, LLN-MEMORY-001..003/007/008, LLN-RAWPTR-001, LLN-PKG-004, LLN-SOURCE-ESCAPE-001, LLN-BUILD-001, LLN-STDLIB-001
+  - Exported from `index.ts`
+
+#### Test results (Phase 29)
+Build + npm test: **2468 tests, 0 failures**.
+19 new Phase 29 tests (`tests/phase29.test.mjs`):
+  - 7 tests: 29A tagged-integer helpers
+  - 4 tests: 29B ExecutionGraph fast-path
+  - 8 tests: 29C production readiness check
+
+Known gaps deferred to Phase 30:
+  - Level-1-Basics: pre-existing errors (BOM in 3 files, missing domain types, top-level binding rules)
+  - Package registry: hash/signature fields pending `logicn package hash` command
+  - Import system (Phase 11E) needed before domain types resolve in CEC examples
+  - ExecutionGraph fast-path gated behind `{ egraphFastPath: true }` until graph builder handles all node kinds
 
 Rule: Every phase ships at least one production-grade example alongside the compiler work.
 

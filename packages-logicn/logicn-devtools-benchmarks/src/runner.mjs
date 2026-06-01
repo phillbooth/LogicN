@@ -13,6 +13,9 @@ const BENCHMARKS = [
   { id: "compute-mix",          dir: "compute-mix",          logicnOpsPerRun: 50000 },
   { id: "arithmetic-threshold", dir: "arithmetic-threshold", logicnOpsPerRun: null  }, // extracted from result.value
   { id: "six-digit-guess",      dir: "six-digit-guess",      logicnOpsPerRun: null  }, // extracted from result.value
+  { id: "record-allocation",    dir: "record-allocation",    logicnOpsPerRun: 10000 },
+  { id: "fibonacci-recursive",  dir: "fibonacci-recursive",  logicnOpsPerRun: null  },
+  { id: "collection-pipeline",  dir: "collection-pipeline",  logicnOpsPerRun: 10000 },
 ];
 
 function runProc(cmd, args=[]) {

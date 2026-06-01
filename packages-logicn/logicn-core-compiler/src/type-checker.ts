@@ -40,7 +40,13 @@
 // =============================================================================
 
 import { type AstNode, type SourceLocation } from "./parser.js";
-import { resolveTypeId, TypeId } from "./type-registry.js";
+import {
+  resolveTypeId,
+  TypeId,
+  parseTensorType,
+  tensorElementTypesCompatible,
+  tensorDimensionCountsCompatible,
+} from "./type-registry.js";
 import { KNOWN_DOMAIN_TYPES } from "./package-type-registry.js";
 
 // ---------------------------------------------------------------------------
@@ -366,6 +372,30 @@ const ORDERABLE_TYPES: ReadonlySet<string> = new Set([
 function isAssignmentCompatible(declared: string, inferred: string): boolean {
   if (declared === inferred) return true;
   if (declared === "Auto" || declared === "" || inferred === "") return true;
+
+  // TypeId fast-path: if both types are known in the TypeId registry and they differ,
+  // they are incompatible (no widening). This avoids string allocation for core types.
+  const declaredId = resolveTypeId(declared);
+  const inferredId = resolveTypeId(inferred);
+  if (
+    declaredId !== TypeId.Unknown &&
+    inferredId !== TypeId.Unknown &&
+    declaredId !== inferredId
+  ) {
+    // Numeric widening: Int (TypeId.Int = 5) is compatible with all numeric types.
+    // We still need to fall through to the numeric widening rules below, so only
+    // short-circuit when neither side is Int/Float/Decimal (the widening types).
+    const isWideningSource =
+      inferredId === TypeId.Int ||
+      inferredId === TypeId.Float32 ||
+      inferredId === TypeId.Float64 ||
+      (inferred === "Float") ||
+      (inferred === "Decimal") ||
+      (inferred === "Byte");
+    if (!isWideningSource) {
+      return false; // Known type mismatch — emit LLN-TYPE-002 with high confidence
+    }
+  }
 
   // Strip governance qualifiers (protected/redacted) from inferred before comparing.
   // "protected Email" is assignment-compatible with "Email" because the qualifier
@@ -1274,12 +1304,72 @@ class TypeChecker {
           }
         }
 
-        // LLN-TYPE-017: QuantizedPrecisionMismatch — per formal spec, this fires when
-        // mixing quantized (Int8/UInt8) tensors with floating-point (Float32) without
-        // an explicit dequantize() call. General numeric narrowing (Float64 → Float16)
-        // falls under ordinary LLN-TYPE-002 TypeMismatch / assignment incompatibility.
-        // Stub: enforcement deferred until tensor types are fully in scope (Phase 13).
-        // Do NOT fire for general float-to-float narrowing — that is TYPE-002 territory.
+        // LLN-TYPE-016 / LLN-TYPE-030 / LLN-TYPE-017: Tensor type checking
+        // When both declared and inferred types are Tensor<>, compare element types and
+        // dimension counts using the tensor helpers from type-registry.
+        if (declaredBase === "Tensor" && initNode !== undefined) {
+          const inferredType = this.inferType(initNode);
+          // inferredType may come from a binding (e.g. a parameter or let binding).
+          // For Tensor checking we need the *full* declared type string vs. the inferred type.
+          const inferredFull = inferredType ?? "";
+          if (inferredFull.startsWith("Tensor<")) {
+            const declaredTensor = parseTensorType(typeSection);
+            const inferredTensor = parseTensorType(inferredFull);
+            if (declaredTensor.valid && inferredTensor.valid) {
+              // LLN-TYPE-030: element type mismatch
+              if (!tensorElementTypesCompatible(declaredTensor.elementType, inferredTensor.elementType)) {
+                this.diagnostics.push(makeTCDiag(
+                  "LLN-TYPE-030",
+                  "TensorElementTypeMismatch",
+                  `Tensor element type mismatch: expected '${declaredTensor.elementType}' but got '${inferredTensor.elementType}'. Cannot assign Tensor<${inferredTensor.elementType}> to Tensor<${declaredTensor.elementType}>.`,
+                  node.location,
+                  `Use dequantize() to convert Int8 to Float32 before assignment, or quantize() for the reverse.`,
+                ));
+
+                // LLN-TYPE-017: QuantizedPrecisionMismatch — fires when mixing
+                // quantized (Int8) and floating-point (Float32) tensors without dequantize().
+                const isQuantizedMix =
+                  (declaredTensor.elementType === "Float32" && inferredTensor.elementType === "Int8") ||
+                  (declaredTensor.elementType === "Int8" && inferredTensor.elementType === "Float32");
+                if (isQuantizedMix) {
+                  this.diagnostics.push({
+                    code: "LLN-TYPE-017",
+                    name: "QuantizedPrecisionMismatch",
+                    severity: "warning",
+                    message: `Cannot mix quantized (Int8) and floating-point (Float32) tensors without explicit dequantize(). Declare the binding as Tensor<${inferredTensor.elementType}, [...]> or call dequantize() first.`,
+                    ...(node.location !== undefined ? { location: node.location } : {}),
+                    suggestedFix: `Call dequantize() to convert Int8 to Float32, or quantize() for Float32 to Int8.`,
+                  });
+                }
+              }
+
+              // LLN-TYPE-016: shape mismatch — rank differs, or fixed dimension values differ.
+              // tensorDimensionCountsCompatible checks rank (number of dims).
+              // Additionally, if rank matches, check fixed dimension values pairwise.
+              const rankMismatch = !tensorDimensionCountsCompatible(declaredTensor.dimensions, inferredTensor.dimensions);
+              let dimValueMismatch = false;
+              if (!rankMismatch) {
+                for (let i = 0; i < declaredTensor.dimensions.length; i++) {
+                  const d = declaredTensor.dimensions[i];
+                  const a = inferredTensor.dimensions[i];
+                  if (typeof d === "number" && typeof a === "number" && d !== a) {
+                    dimValueMismatch = true;
+                    break;
+                  }
+                }
+              }
+              if (rankMismatch || dimValueMismatch) {
+                this.diagnostics.push(makeTCDiag(
+                  "LLN-TYPE-016",
+                  "TensorShapeMismatch",
+                  `Tensor shape mismatch: expected [${declaredTensor.dimensions.join(", ")}] but got [${inferredTensor.dimensions.join(", ")}].`,
+                  node.location,
+                  `Use Tensor.unsqueeze() to add a dimension, Tensor.squeeze() to remove one, or reshape to match [${declaredTensor.dimensions.join(", ")}].`,
+                ));
+              }
+            }
+          }
+        }
 
       } else if (declaredBase === "Auto") {
         // Auto inference: register the inferred type
