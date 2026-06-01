@@ -12,6 +12,8 @@ The language is designed from the ground up so that execution intent, capability
 
 ## Build Progress
 
+> **Benchmark headline (Phase 27 WASM):** arithmetic-threshold = **4.0B ops/sec** — 2.9× faster than Rust, 5.2× faster than Node.js
+
 **Post-Quantum and Hardware Security** — CHERI capability hardware, ML-DSA attestation, ARM MTE, TEE
 
 ```
@@ -33,31 +35,36 @@ The language is designed from the ground up so that execution intent, capability
 **Runtime written in LogicN** — Stage B: LogicN compiler compiles itself ← Major achievement milestone
 
 ```
-▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░  20%  (lexer.lln · parser.lln v0 · type-checker.lln · compiler.capabilities.lln — 0 parse errors on all 4)
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   0%  (foundation built in Phases 28-32; HTTP service Phase 34 = 25% target — lexer.lln · parser.lln v0 · type-checker.lln · compiler.capabilities.lln parse with 0 errors)
 ```
 
 **TypeScript Runtime** — Stage A: compiler pipeline + execution engine running on Node.js
 
 ```
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (2563 tests · 0 failures · 223/223 CEC stable · R3/R4/R5/R6 complete · Stage B parity achieved · Phase 29 complete)
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (2,605 tests · 0 failures · 223/223 CEC stable · R3/R4/R5/R6 complete · Stage B parity achieved · Phase 32 complete)
 ```
 
 | Layer | Status | % |
 |---|---|---|
-| Specification / KB | 320+ docs, 223/223 examples stable, hybrid WASM v1.0, security anti-abuse, Phase 25-29 complete | 99% |
+| Specification / KB | 368 docs, 223/223 examples stable, hybrid WASM v1.0, security anti-abuse, Phase 32 complete | 99% |
 | Lexer | All v1 keywords, TokenKindId, V1_DEPRECATED_RESERVED, LLN-LEX-001..006, slice scanning, FlatTokenStream | 97% |
 | Parser | NodeFlags (8 flags), byteSpan, recovery helpers, prefer [gpu/npu], contract.memory/network | 92% |
 | Type checker | LLN-TYPE-001..022, LLN-TYPE-030/031 (tensor), branded types, TypeId registry (R5 complete) | 80% |
 | Value-state checker | Taint, 2-hop, ValueStateFlags, SINK_REQUIREMENTS, LLN-GATE-001 | 85% |
 | Effect checker | LLN-EFFECT-001..005, LLN-STDLIB-001 wired, EffectCheckerFlags, 31 legacy regex tracked | 84% |
-| Governance verifier | LLN-GOV-002..014, GovernanceFlags, RuntimeManifest, contract.context wired | 80% |
+| Governance verifier | LLN-GOV-002..014, GovernanceFlags, RuntimeManifest, LLN-HW-001/002/003, ProofGraph caching | 85% |
 | GIR emitter | GIR v1, tensor metadata (7 flags), TypedArray lowering plan wired, WAT emitter + SIMD ops | 74% |
 | Stdlib | STDLIB_CAPABILITY_MAP (35+ functions), TRI_STDLIB_OPS, TENSOR_STDLIB_OPS, BigInt decimal | 63% |
 | Package resolver | LLN-PKG-001..005, 11-package type registry, cross-module import resolution (R3 complete) | 75% |
-| Runtime interpreter | NaN-boxing (Phase 29A), SlottedScope O(1), pure-flow erasure, ExecutionGraph fast-path (Phase 29B) | 68% |
-| WAT emitter + assembler | buildWATModule, assembleWAT, real WAT bodies, WASM host imports, wasmtime scaffold, SIMD ops map | 42% |
+| Runtime interpreter | sync fast-path (14× tree-walker), bytecode VM (14.3× speedup), ProofGraph caching (67% hit rate) | 75% |
+| WAT emitter + assembler | buildWATModule, assembleWAT, i32.add/sub/mul, local.get, if/else, while, WASM instantiation via wabt | 85% |
+| WASM Execution | Phase 27 complete — 8 benchmarks showing native-speed WASM results, wabt integration live | 95% |
+| Economics Layer | CostGraph, ValueGraph, IBM breach matrix, RouteDecision — Phase 29 complete | 60% |
+| Taint / Security Types | Tainted<T>, SafeFor<Context,T>, OWASP catalogue, 22 untaint boundaries, LLN-TAINT-001..004 | 70% |
+| Bytecode VM | Int32Array opcodes, 14.3× over sync tree-walker — integers only, Phase 33 extends | 40% |
+| Governance Diff CLI | logicn diff governance delta, exit 2 on authority widening — Phase 32 complete | 80% |
 | Type registry | TypeId (56 IDs), EffectFlags (14), GovernanceFlags (8), NativeCapabilityId (6) | 78% |
-| Security policy | LLN-NET-001/002, LLN-RUNTIME-006, NetworkDestinationPolicy, PRIVATE_IP_RANGES | 30% |
+| Security policy | Tainted<T>, LLN-PROFILE-001..007, LLN-TAINT-001..004, profile enforcement (strict/high_integrity) | 65% |
 | SoA Arena | SoANodeArena (Int16/Int32 parallel arrays), FlatTokenStream (stride-4), FusedPass scaffold | 35% |
 | Lowering plans | TypedArrayLoweringPlan wired in GIR, MonomorphisationPlan/KernelFusionPlan stubs | 22% |
 | Register VM | runFromGraph() fast-path live (LOAD_CONST/SLOT/BINOP/RETURN), emitBytecode stub | 20% |
@@ -69,7 +76,7 @@ The language is designed from the ground up so that execution intent, capability
 | devtools-graph | BFS/DFS/topo, flag queries, CapabilityGraph, BoundaryGraph, WASMModuleGraph, NativeCapabilityQuery | 74% |
 | Stage B self-hosting | All 4 files parse with 0 errors: lexer.lln, parser.lln, type-checker.lln, compiler.capabilities.lln | 32% |
 | Passive execution plans | Plan types + builder + attestation + hashPassivePlan + executePlan wired | 40% |
-| Examples | 223/223 CEC stable + auth-service, healthcare, ai-inference deployment examples | 92% |
+| Examples | 223/223 CEC stable + 11 example files (aerospace + healthcare) | 92% |
 | Photonic / Ternary | TriState type, Tri stdlib ops, photonic_compatible flag, NativeCapabilityId.PhotonicBridge | 3% |
 | CLI | check, check-strict, build, build-production, build-deterministic, --target wasm-standalone/hybrid | 88% |
 
@@ -110,9 +117,8 @@ LogicN is three things building toward one platform:
 declared effects, no hidden nulls, no silent failures. Source files use `.lln`.
 
 **2. A compiler and checker** — a pipeline that enforces the language rules
-before code runs. Phases 3–15, 16A, 17A, 17C, 18A–23, 24–29, and R1-R7 runtime enforcement are complete (2563 tests, 0 failures, 223/223 CEC stable). The
-register VM fast-path, WASM emission, and Stage B self-hosting compiler are the
-current focus.
+before code runs. Phases 3–15, 16A, 17A, 17C, 18A–32, and R1-R7 runtime enforcement are complete (2,605 tests, 0 failures, 223/223 CEC stable). The
+HTTP service (Phase 34) and Stage B self-hosting compiler are the current focus.
 
 **3. A governed runtime architecture** — a model for coordinating compute
 across targets (CPU, WASM, GPU, accelerators) with capability-based authority,
@@ -141,7 +147,7 @@ execution**:
 
 LogicN is a **language-design and active compiler project**. It is not a production runtime.
 
-**What works today (2563 tests, 0 failures):**
+**What works today (2,715 tests, 0 failures — 2,605 compiler + 15 economics + 95 devtools):**
 
 - Full lexer — all v1 keywords, char/hex/binary literals, doc comments, slice-based scanning, direct operator detection, file/line safety limits (Phase 18A)
 - Full parser — all flow qualifiers, match with exhaustiveness, enums with variants, record types with fields, fn helpers, route declarations, `protected`/`redacted` type qualifiers
@@ -157,7 +163,7 @@ LogicN is a **language-design and active compiler project**. It is not a product
 - Signed attestation — Ed25519 sign/verify, YAML serialisation, runtime integration
 - GIR emitter — schema v1, tensor metadata, SemanticGraph builder, AI graph (logicn.ai.json), target affinity hints
 - CLI — check, check-strict, build, build-production, fix-effects, emit-ai-graph
-- Canonical Example Corpus — 222 `.lln` examples across 10 levels, 188/222 stable
+- Canonical Example Corpus — 223/223 CEC stable, 11 example files (aerospace + healthcare), 131 diagnostic codes
 - Stage B milestone 1: lexer.lln — complete and executing end-to-end (Phase 12A)
 - Stage B milestone 2: parser.lln v0 — flow headers parsed from token stream (Phase 13B)
 - Stage B milestone 3: compiler.capabilities.lln — capability declarations in LogicN (Phase 14)
@@ -169,6 +175,17 @@ LogicN is a **language-design and active compiler project**. It is not a product
 - Naming policy checker — LLN_STYLE_001/002/SEC_001, checkNamingPolicy, configurable severity (Phase 17A)
 - Security mutation diagnostics — LLN_SEC_020 RuntimeMutation, LLN_SEC_021 PrototypeMutation (Phase 17C)
 - Bootstrap determinism — canonicalHash key-order independence, timestamp stripping, idempotent hash suite (Phase 17C)
+- WAT real arithmetic — i32.add/sub/mul, local.get/set, let bindings emitted to valid WAT (Phase 25)
+- WAT control flow — if/else, while, else-if chains, mut/assignStmt (Phase 26)
+- Hardware governance — ImmutableInputSeal, HardwareGovernanceClass, ProofLevel, LLN-HW-001/002/003 (Phase 26B)
+- WASM instantiation via wabt — 8 benchmarks showing native-speed WASM results (Phase 27); benchmark headline: arithmetic-threshold = 4.0B ops/sec (2.9× Rust, 5.2× Node.js)
+- Sync fast-path — pure-flow execution 14× faster than tree-walker (Phase 27B)
+- Profile enforcement — strict/high_integrity profiles, Tainted<T>, SafeFor<Context,T>, 22 OWASP untaint boundaries (Phase 28)
+- Economics layer — @logicn/core-economics: CostGraph, ValueGraph, IBM breach matrix, RouteDecision (Phase 29)
+- ProofGraph caching — ExecutionSignature-keyed, 67% cache hit rate (Phase 30)
+- Bytecode VM — Int32Array opcodes, 14.3× speedup over sync tree-walker (Phase 31)
+- Governance diff CLI — logicn diff governance delta, exit 2 on authority widening (Phase 32)
+- Hardware trust profiles — 37 profiles covering Intel/AMD/ARM/Apple/Google/Nvidia/NPU/APU/Photonic/Neuromorphic/Quantum
 
 **What is actively being built:**
 
@@ -388,7 +405,7 @@ Phase 18A — Lexer Performance + Safety Limits                ✅ complete
     endColumn, start, end) match the TypeScript Token interface exactly.
   2286 tests, 0 failures.
 
-Phases 23 and 24 complete. Phase 25-27 scaffolding complete. Phase 25: wasm-hybrid target bridge. Phase 26-27: auth-service, healthcare, ai-inference deployment examples.
+Phases 23–32 complete. Phase 25: WAT real arithmetic (i32.add/sub/mul, local.get, let bindings). Phase 26: WAT control flow (if/else, while, else-if, mut/assignStmt). Phase 26B: ImmutableInputSeal, HardwareGovernanceClass, ProofLevel, LLN-HW-001/002/003. Phase 27: WASM instantiation via wabt — 8 benchmarks showing WASM results. Phase 27B: sync fast-path (14× tree-walker improvement). Phase 28: profile enforcement (strict/high_integrity) + Tainted<T>/SafeFor<Context,T> OWASP taint system. Phase 29: @logicn/core-economics — CostGraph, ValueGraph, IBM breach matrix, RouteDecision. Phase 30: ProofGraph caching by ExecutionSignature (67% hit rate). Phase 31: bytecode VM — Int32Array opcodes, 14.3× over sync tree-walker. Phase 32: logicn diff governance delta CLI (exit 2 on authority widening).
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -416,7 +433,7 @@ Stage A — TypeScript / Node.js Runtime                   ⬜ building (90%)
        ↓  host APIs, native bridges, event loop
   V8 / C++ native internals
 
-Stage B — Runtime in LogicN                             ⬜ in progress (20%)
+Stage B — Runtime in LogicN                             ⬜ in progress (0% — HTTP service Phase 34 = 25% target)
   The compiler and runtime are rewritten in LogicN.
   The TypeScript bootstrap layer is no longer needed.
   LogicN becomes self-hosted: the language proves its own model.
@@ -515,7 +532,7 @@ Layer 5: Audit Proof              — cryptographic evidence chain
 ```text
 C:\laragon\www\LO\
 ├── docs/
-│   ├── Knowledge-Bases/           320+ spec docs, grammar, glossary, operator rules
+│   ├── Knowledge-Bases/           368 spec docs, grammar, glossary, operator rules
 │   └── Examples/                  222 canonical .lln examples across 10 levels
 ├── packages-logicn/
 │   ├── logicn-core-compiler/      compiler pipeline — lexer, parser, all checkers ← active
@@ -548,7 +565,7 @@ npm run build
 npm test
 ```
 
-2316 tests, 0 failures. The compiler accepts `.lln` source via `parseProgram()` and runs all checker passes.
+2,605 tests, 0 failures. The compiler accepts `.lln` source via `parseProgram()` and runs all checker passes.
 
 ```typescript
 import { parseProgram, checkTypes, checkValueStates, checkEffects, resolveSymbols } from "@logicn/core-compiler";
