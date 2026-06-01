@@ -28,6 +28,7 @@ inputs, outputs, diagnostic ownership, stopping rules, and execution modes.
 ## TL;DR
 - Passes 1–7 collect diagnostics and continue — they do not stop on first error
 - GIR emission (Pass 8) runs only when all checker passes produce zero errors
+- Passes 7–10 are prototype-implemented: governance-verifier.ts, gir-emitter.ts, wat-emitter.ts, runtime/
 - The current compiler exposes individual pass functions — a unified `compile()` is planned
 
 ---
@@ -90,10 +91,10 @@ Pass 10: Runtime Execution
 | 4 | Type Checker | AST | type-annotated AST metadata + `TypeDiagnostic[]` | `LLN-TYPE-*`, `LLN-MATCH-*` aliases where applicable | Phase 7A | `packages-logicn/logicn-core-compiler/src/type-checker.ts` |
 | 5 | Value-State Checker | AST | value-state diagnostics and binding-state evidence | `LLN-VALUESTATE-*`, `LLN-SECRET-*`, `LLN-SAFETY-*` | Phase 7A | `packages-logicn/logicn-core-compiler/src/value-state-checker.ts` |
 | 6 | Effect Checker | `FlowMeta[]` + AST | `EffectCheckResult[]` | `LLN-EFFECT-*` | Phase 7A | `packages-logicn/logicn-core-compiler/src/effect-checker.ts` |
-| 7 | Governance Verifier | checked AST + checker evidence | governance diagnostics and proof obligations | `LLN-INTENT-*`, `LLN-GOV-*`, `LLN-PII-*`, `LLN-PHI-*`, `LLN-AUDIT-*` | Phase 8+ | pending |
-| 8 | GIR Emitter | clean checked AST + checker evidence | Governed IR YAML/JSON | emitter/report diagnostics only | Phase 8+ | pending |
-| 9 | Backend Lowering | GIR | backend IR or target package input | `LLN-BACKEND-*`, `LLN-TARGET-*`, `LLN-NPU-*`, `LLN-PHOTONIC-*` | Phase 8+ | pending |
-| 10 | Runtime Execution | backend IR + runtime manifest | execution result + audit/proof record | `LLN-RUNTIME-*` | Phase 8+ | pending |
+| 7 | Governance Verifier | checked AST + checker evidence | governance diagnostics and proof obligations | `LLN-INTENT-*`, `LLN-GOV-*`, `LLN-PII-*`, `LLN-PHI-*`, `LLN-AUDIT-*` | prototype implemented | `packages-logicn/logicn-core-compiler/src/governance-verifier.ts` |
+| 8 | GIR Emitter | clean checked AST + checker evidence | Governed IR YAML/JSON | emitter/report diagnostics only | prototype implemented | `packages-logicn/logicn-core-compiler/src/gir-emitter.ts` |
+| 9 | Backend Lowering (WAT) | GIR | WAT text + assembled WASM bytes | `LLN-BACKEND-*`, `LLN-TARGET-*`, `LLN-NPU-*`, `LLN-PHOTONIC-*` | prototype implemented | `packages-logicn/logicn-core-compiler/src/wat-emitter.ts`, `packages-logicn/logicn-core-compiler/src/wat-assembler.ts` |
+| 10 | Runtime Execution | backend IR + runtime manifest | execution result + audit/proof record | `LLN-RUNTIME-*` | prototype implemented | `packages-logicn/logicn-core-compiler/src/runtime/index.ts` |
 
 ---
 
@@ -359,13 +360,13 @@ LLN-AUDIT-*
 Status:
 
 ```text
-Phase 8+
+prototype implemented
 ```
 
 Source:
 
 ```text
-pending
+packages-logicn/logicn-core-compiler/src/governance-verifier.ts
 ```
 
 The governance verifier checks intent, policy blocks, authority declarations,
@@ -396,13 +397,13 @@ emitter/report diagnostics only
 Status:
 
 ```text
-Phase 8+
+prototype implemented
 ```
 
 Source:
 
 ```text
-pending
+packages-logicn/logicn-core-compiler/src/gir-emitter.ts
 ```
 
 The GIR emitter serializes the verified governance contract. It must not run
@@ -436,18 +437,21 @@ LLN-QUANT-*
 Status:
 
 ```text
-Phase 8+
+prototype implemented (WAT/WASM path)
 ```
 
 Source:
 
 ```text
-pending target packages
+packages-logicn/logicn-core-compiler/src/wat-emitter.ts   (WAT text emission)
+packages-logicn/logicn-core-compiler/src/wat-assembler.ts (WAT → WASM assembly)
+packages-logicn/logicn-core-compiler/src/lowering-plan.ts (lowering plan)
 ```
 
 Backend lowering translates GIR into target-specific representations such as
 TypeScript, WASM, GPU kernels, NPU plans, photonic bridge IR, or future quantum
-bridge IR.
+bridge IR. The WAT/WASM path is prototype-implemented; GPU, NPU, and photonic
+paths remain planned.
 
 ## Pass 10: Runtime Execution
 
@@ -476,13 +480,17 @@ LLN-RUNTIME-*
 Status:
 
 ```text
-Phase 8+
+prototype implemented
 ```
 
 Source:
 
 ```text
-pending runtime packages
+packages-logicn/logicn-core-compiler/src/runtime/index.ts
+packages-logicn/logicn-core-compiler/src/runtime/runtimeContext.ts
+packages-logicn/logicn-core-compiler/src/runtime/contractEnforcer.ts
+packages-logicn/logicn-core-compiler/src/runtime/executionPlan.ts
+packages-logicn/logicn-core-compiler/src/runtime/capabilityHost.ts
 ```
 
 Runtime execution is coordinated by the Governed Execution Director. The runtime

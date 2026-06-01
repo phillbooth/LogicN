@@ -103,7 +103,24 @@ export function getCachedPureFlow(key: string): LogicNValue | undefined {
   return SESSION_CACHE.get(key);
 }
 
+/**
+ * Set a cached pure-flow result.
+ *
+ * Phase 33 security: The cache is process-wide. PII-touching flows MUST NOT
+ * be cached — a result from user A could be served to user B if they send
+ * the same arguments. The caller is responsible for checking PII status before
+ * calling this function.
+ *
+ * Flows that have `ContainsPII` in their GovernanceFlags, or whose declared
+ * effects include `pii.*` / `phi.*`, should set `noCache: true` in their
+ * runtimeOptions and never reach this function.
+ *
+ * @param key   - Cache key from pureFlowCacheKey()
+ * @param value - The deterministic result to cache
+ */
 export function setCachedPureFlow(key: string, value: LogicNValue): void {
+  // Guard: never cache error results (they may contain internal state info)
+  if (value.__tag === "runtimeError" || value.__tag === "error") return;
   SESSION_CACHE.set(key, value);
 }
 

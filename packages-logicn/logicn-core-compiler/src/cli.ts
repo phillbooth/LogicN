@@ -19,7 +19,8 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { execSync, spawnSync } from "node:child_process";
-import { parseProgram } from "./parser.js";
+import { parseProgram, type FlowMeta } from "./parser.js";
+import { diffGovernance, renderGovernanceDiff } from "./governance-diff.js";
 import { resolveSymbols } from "./symbol-resolver.js";
 import { checkTypes } from "./type-checker.js";
 import { checkValueStates } from "./value-state-checker.js";
@@ -62,7 +63,8 @@ type CliMode =
   | "fix-effects"
   | "emit-ai-graph"
   | "verify-selfhost"
-  | "cost-analysis";
+  | "cost-analysis"
+  | "governance-diff";
 
 // ---------------------------------------------------------------------------
 // File discovery
@@ -551,6 +553,9 @@ function parseArgs(): { readonly mode: CliMode; readonly targetDir: string } {
       }
       mode = "cost-analysis";
       break;
+    case "diff":
+      mode = "governance-diff";
+      break;
     default:
       process.stderr.write(
         "Usage: logicn <command> [options] [path]\n" +
@@ -565,7 +570,8 @@ function parseArgs(): { readonly mode: CliMode; readonly targetDir: string } {
         "  fix --effects                Suggest missing effect declarations\n" +
         "  emit --ai-graph              Emit build/semantic/logicn.ai.json\n" +
         "  verify-selfhost              Verify deterministic (reproducible) build\n" +
-        "  cost --analysis              Analyse contract.economics blocks across all flows\n",
+        "  cost --analysis              Analyse contract.economics blocks across all flows\n" +
+        "  diff [baseRef] [--json]      Governance delta vs a git ref (exit 2 if authority widens)\n",
       );
       process.exit(1);
   }
@@ -698,6 +704,46 @@ function runWasmStandaloneBuild(targetDir: string, files: string[]): void {
  * Phase 30 note: estimatedComputeMs is always null until the CostGraph is
  * wired (Phase 30). The field is reserved for future population.
  */
+/**
+ * Phase 32: `logicn diff [baseRef]` — governance delta between a git ref and the working tree.
+ * Compares the governance shape (effects, qualifier) of every flow.
+ * Default baseRef: HEAD. Use `--json` for machine-readable output.
+ */
+function runGovernanceDiff(baseRefArg: string): void {
+  // baseRefArg defaults to process.cwd() when no positional given — treat that as HEAD.
+  const baseRef = baseRefArg === process.cwd() ? "HEAD" : baseRefArg.replace(/\.\.$/, "");
+  const wantJson = process.argv.includes("--json");
+
+  // Collect all .lln files currently present
+  const files = findLlnFiles(process.cwd());
+  const beforeFlows: FlowMeta[] = [];
+  const afterFlows: FlowMeta[] = [];
+
+  for (const file of files) {
+    const rel = file.replace(process.cwd() + "\\", "").replace(process.cwd() + "/", "").replace(/\\/g, "/");
+    // After = working tree
+    try {
+      const afterSrc = readFileSync(file, "utf8");
+      afterFlows.push(...parseProgram(afterSrc, file).flows);
+    } catch { /* skip unreadable */ }
+    // Before = the file at baseRef (git show)
+    try {
+      const beforeSrc = execSync(`git show ${baseRef}:${rel}`, { encoding: "utf8" });
+      beforeFlows.push(...parseProgram(beforeSrc, file).flows);
+    } catch { /* file did not exist at baseRef — treated as added */ }
+  }
+
+  const diff = diffGovernance(beforeFlows, afterFlows);
+
+  if (wantJson) {
+    process.stdout.write(JSON.stringify(diff, null, 2) + "\n");
+  } else {
+    process.stdout.write(renderGovernanceDiff(diff) + "\n");
+  }
+  // Exit non-zero if authority was widened — useful as a CI gate
+  process.exit(diff.widensAuthority ? 2 : 0);
+}
+
 function runCostAnalysis(targetDir: string): void {
   const files = findLlnFiles(targetDir);
   if (files.length === 0) {
@@ -851,6 +897,12 @@ function main(): void {
   // cost --analysis is a special path
   if (mode === "cost-analysis") {
     runCostAnalysis(targetDir);
+    return;
+  }
+
+  // diff main..branch is a special path
+  if (mode === "governance-diff") {
+    runGovernanceDiff(targetDir);
     return;
   }
 

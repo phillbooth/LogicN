@@ -29,21 +29,42 @@ version of this file, designed for alias resolution without prose parsing.
 
 ## Execution Model
 
-### `fn` — Reusable computation unit
+### `fn` — Local helper function
 
-**Aliases:** function, helper function, pure function, local function
+**Aliases:** function, helper function, local function
 
-A `fn` does computation and returns a value. It may declare effects it needs.
-If no effects are declared, the compiler treats it as pure/locally-bounded.
-A `fn` does not carry permissions, policies, or audit rules — those belong in `flow`.
+A `fn` is a local helper routine scoped inside a `flow` body. It does pure
+computation and returns a value. It cannot declare effects, capabilities,
+authority, or contracts — those belong in `flow`. It is always synchronous.
+
+A `fn` may only appear inside a `flow` body. Top-level `fn` is a compiler
+error (`LLN-SYNTAX-005`). A `fn` that declares effects emits `LLN-SEC-014`.
+
+If a `fn` uses an operation that observes an effect (e.g. a network call), that
+effect is attributed to the containing `flow` — the `fn` itself still cannot
+declare it.
 
 ```logicn
+// Correct — pure local helper, no effects declared
 fn add(a: Int, b: Int) -> Int {
   return a + b
 }
 
-fn fetchUser(id: UserId) -> Result<UserProfile, NetworkError>
-  effect network
+// Correct — inside a flow body, effect attributed to the containing flow
+pure flow calculateTotal(price: Money<GBP>) -> Money<GBP> {
+  fn calculateVat(value: Money<GBP>) -> Money<GBP> {
+    return value * Decimal("0.20")
+  }
+  return price + calculateVat(price)
+}
+
+// WRONG — fn cannot declare effects (LLN-SEC-014):
+// fn fetchUser(id: UserId) -> Result<UserProfile, NetworkError>
+//   effect network
+// { ... }
+// Use a flow instead:
+flow fetchUser(id: UserId) -> Result<UserProfile, NetworkError>
+  effects [network.outbound]
 {
   return http.get("/users/" + id)
 }
@@ -77,9 +98,10 @@ flow createOrder(request: CreateOrderRequest) -> Result<OrderResponse, ApiError>
 route -> flow -> fn
 ```
 
-Effects propagate upward. If a `flow` calls a `fn` with `effect network`, the
-flow must also declare or be permitted for that effect — otherwise the compiler
-rejects it.
+Effects propagate upward. If a `flow` calls a `fn` that observes a `network`
+effect internally, the containing `flow` must declare that effect — otherwise
+the compiler rejects it. Note: the `fn` does not and cannot declare the effect
+itself; it is attributed to the containing `flow`.
 
 **See also:** `flow-vs-fn-security-model.md`
 
@@ -134,8 +156,10 @@ route POST "/orders" {
 
 **Aliases:** side effect, capability, authority, permission effect, runtime authority
 
-A declared runtime authority that a `fn` or `flow` requires. Effects are explicit
-and propagate upward through the call graph. No declared effects = pure/local.
+A declared runtime authority that a `flow` (or `guarded flow` / `secure flow`)
+requires. Effects are explicit and propagate upward through the call graph.
+Only `flow` variants declare effects — `fn` cannot declare effects (`LLN-SEC-014`).
+No declared effects on a flow = pure/local for that flow.
 
 ```logicn
 effects [database.write, audit.write, network.outbound]

@@ -82,6 +82,19 @@ GPU (RTX 2060 6GB / RTX 3050 Ti 4GB):
   Require signed/native provider + audit + CPU fallback.
 ```
 
+### i5 ⇄ i9 Equivalence (Confirmed)
+
+The i5 laptop and i9 desktop are **architecturally equivalent for LogicN**:
+- Both route to the AVX2 tier (neither has AVX-512) → same compiler hardware path
+- Both symmetric topology → same scheduler, no P/E logic
+- Both CUDA/WebGPU GPUs under native-provider governance
+- i5 is newer (Tiger Lake, better IPC); i9 has more cores + higher clock (faster absolute)
+
+**Conclusion:** Develop and benchmark on the i5 freely. Results are *proportionally*
+identical (traffic-light colours match). The i9 is the canonical "truth" machine for
+final published figures — re-run benchmarks there before release, but no code or
+architecture changes are needed to move between them. The i5 is a valid CI/dev machine.
+
 This means the **Two-Tier Hardware Design** (Phase 33) routes to **AVX2** as the top tier,
 never AVX-512. The benchmark `Rust AVX-512` column will always be `—` on these machines.
 

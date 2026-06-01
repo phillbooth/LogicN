@@ -92,6 +92,43 @@ export function startServer(
         ["req",     reqValue],
       ]);
 
+      // ── SECURITY: Runtime effect gate (F1 hardened — Audit Pass 2) ─────────
+      // Policy-driven: deny ANY effect not in the deployment profile's allowlist.
+      // Previously only checked a hardcoded list in deterministic mode.
+      // Now generalised: any effect not in PROFILE_ALLOWED_EFFECTS[mode] is denied
+      // for all non-dev modes. Default-deny; explicit allow.
+      //
+      // Phase 39: this list comes from a signed runtime manifest. Until then we
+      // use a conservative compile-time profile table.
+      const flowMeta = flows.find(f => f.name === match.route.flowName);
+      const mode = config.mode ?? "dev";
+
+      // Effects allowed per deployment profile (default-deny for unlisted).
+      // dev: no restrictions. production: no process.spawn or dynamic load.
+      // deterministic: no outbound I/O without manifest proof.
+      const PROFILE_DENIED_EFFECTS: Readonly<Record<string, readonly string[]>> = {
+        production:    ["process.spawn", "eval.execute"],
+        deterministic: ["process.spawn", "eval.execute", "network.outbound", "filesystem.write"],
+      };
+
+      if (flowMeta !== undefined && mode !== "dev") {
+        const deniedForMode = PROFILE_DENIED_EFFECTS[mode] ?? [];
+        const violations = flowMeta.declaredEffects.filter(e => deniedForMode.includes(e));
+        if (violations.length > 0) {
+          res.statusCode = 403;
+          res.setHeader("Content-Type", "application/json");
+          res.setHeader("X-LogicN-Denial-Reason", "effect-gate");
+          res.end(JSON.stringify({
+            error: "Governance Denied",
+            code: "LLN-RUNTIME-EFFECT-GATE",
+            detail: `Flow '${match.route.flowName}' declares effects disallowed in '${mode}' profile`,
+            deniedEffects: violations,
+            profile: mode,
+          }));
+          return;
+        }
+      }
+
       executeFlow(match.route.flowName, args, ast, flows).then((execution) => {
         serializeResponse(execution.value, res);
       }).catch((error: unknown) => {
@@ -187,7 +224,16 @@ function parseQueryString(url: string): ReadonlyMap<string, string> {
     if (pair === "") continue;
     const [rawKey, rawValue] = pair.split("=");
     if (rawKey !== undefined) {
-      map.set(decodeURIComponent(rawKey), decodeURIComponent(rawValue ?? ""));
+      // SECURITY: wrap decodeURIComponent — malformed % sequences throw URIError
+      // which previously propagated as an unhandled exception → 500/process instability.
+      // Now: silently skip malformed pairs (400 is returned by the body handler).
+      try {
+        const key = decodeURIComponent(rawKey);
+        const val = decodeURIComponent(rawValue ?? "");
+        map.set(key, val);
+      } catch {
+        // Malformed URI encoding — skip this pair (attacker cannot influence values)
+      }
     }
   }
   return map;

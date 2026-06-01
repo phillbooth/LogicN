@@ -14,6 +14,7 @@
 
 import { LLN_NONE, LLN_VOID, type LogicNValue } from "./interpreter.js";
 import { createHash as _nodeCryptoCreateHash, timingSafeEqual as _nodeCryptoTimingSafeEqual } from "node:crypto";
+import { resolve as pathResolve, relative as pathRelative, isAbsolute as pathIsAbsolute } from "node:path";
 // process is globally available in Node.js — cast to any to access Node-specific methods
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const _proc = process as any;
@@ -179,6 +180,28 @@ function asList(v: LogicNValue): readonly LogicNValue[] {
   return v.__tag === "list" ? v.items : [];
 }
 
+/**
+ * SECURITY (Finding 8): Validate a regex pattern before compiling it from runtime input.
+ * Returns an error string if the pattern is dangerous, null if safe.
+ *
+ * Limits:
+ *   - Max 500 characters (prevents huge patterns)
+ *   - Blocks known catastrophic patterns: nested quantifiers (a+)+, {n,m} in groups
+ *   - Blocks character class explosions: [^...]{n,}
+ *   - Does NOT block all ReDoS — that requires a full automata analysis.
+ *     For full safety, use Regex.escapeLiteral() for user input → LITERAL matching.
+ */
+function validateRegexPattern(pattern: string): string | null {
+  if (pattern.length > 500) {
+    return "RegexError: pattern exceeds maximum length (500 chars) — ReDoS prevention";
+  }
+  // Detect common catastrophic backtracking patterns
+  if (/\([^)]*[+*][^)]*\)[+*{]/.test(pattern)) {
+    return "RegexError: nested quantifier detected (e.g. (a+)+ ) — ReDoS prevention";
+  }
+  return null;
+}
+
 function ok(value: LogicNValue): LogicNValue {
   return { __tag: "ok", value };
 }
@@ -335,15 +358,21 @@ function stringMethod(receiver: LogicNValue, method: string, args: readonly Logi
 
     case "matchesPattern": {
       const pattern = strVal(args[0] ?? { __tag: "string", value: "" });
+      // SECURITY (Finding 8 — MEDIUM): ReDoS via dynamic regex from runtime input.
+      // Apply pattern length + complexity limits before compiling.
+      const regexErr = validateRegexPattern(pattern);
+      if (regexErr !== null) return err(regexErr);
       try {
         return { __tag: "bool", value: new RegExp(pattern).test(s) };
       } catch {
-        return err(`RegexError: invalid pattern: ${pattern}`);
+        return err(`RegexError: invalid pattern`);
       }
     }
 
     case "extractGroups": {
       const pattern = strVal(args[0] ?? { __tag: "string", value: "" });
+      const regexErr2 = validateRegexPattern(pattern);
+      if (regexErr2 !== null) return err(regexErr2);
       try {
         const match = new RegExp(pattern).exec(s);
         if (!match) return { __tag: "list", items: [] };
@@ -352,17 +381,19 @@ function stringMethod(receiver: LogicNValue, method: string, args: readonly Logi
         );
         return { __tag: "list", items: groups };
       } catch {
-        return err(`RegexError: invalid pattern: ${pattern}`);
+        return err(`RegexError: invalid pattern`);
       }
     }
 
     case "replacePattern": {
       const pattern = strVal(args[0] ?? { __tag: "string", value: "" });
       const replacement = strVal(args[1] ?? { __tag: "string", value: "" });
+      const regexErr3 = validateRegexPattern(pattern);
+      if (regexErr3 !== null) return err(regexErr3);
       try {
         return { __tag: "string", value: s.replace(new RegExp(pattern, "g"), replacement) };
       } catch {
-        return err(`RegexError: invalid pattern: ${pattern}`);
+        return err(`RegexError: invalid pattern`);
       }
     }
 
@@ -1153,24 +1184,46 @@ async function filesystemAsync(fullName: string, args: readonly LogicNValue[], c
   const path = strVal(args[0] ?? LLN_VOID);
   if (path === "") return err("FileError: empty path");
 
+  // SECURITY (F3 hardened — Audit Pass 2): segment-safe path confinement.
+  //
+  // PREVIOUS BUG: `startsWith` is bypassable — if root = "/app/root" then
+  // "/app/root2/evil" still passes the check because it starts with "/app/root".
+  //
+  // FIX: use path.relative(root, target). When the resolved target escapes the
+  // root, relative() returns a path that starts with ".." or is absolute.
+  // This is the canonical segment-safe confinement check.
+  //
+  // NOTE: symlink escapes require realpath() which is async. We use the sync
+  // resolve() path for now. Phase 34 wires this through an async policy check
+  // using fs.realpath() before dispatch. See logicn-security-hardening-phase34.md.
+  const _proc = process as unknown as { env: Record<string, string>; cwd(): string };
+  const fsRootRaw = _proc.env["LOGICN_FS_ROOT"] ?? _proc.cwd();
+  const fsRoot    = pathResolve(fsRootRaw);         // canonical absolute root
+  const safePath  = pathResolve(fsRoot, path);      // fully resolved target
+  const rel       = pathRelative(fsRoot, safePath);  // relative from root to target
+  // If rel starts with ".." OR is absolute, target escaped the root
+  if (rel.startsWith("..") || pathIsAbsolute(rel)) {
+    return err(`FileError: path '${path}' escapes the allowed root '${fsRootRaw}'`);
+  }
+
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const nodeFs = await import("node:fs/promises") as any;
     if (fullName === "fs.readText" || fullName === "File.readText") {
-      const text: string = await nodeFs.readFile(path, "utf8");
+      const text: string = await nodeFs.readFile(safePath, "utf8");
       return ok({ __tag: "string", value: String(text) });
     }
     if (fullName === "fs.readBytes" || fullName === "File.readBytes") {
-      const buffer: Uint8Array = await nodeFs.readFile(path);
+      const buffer: Uint8Array = await nodeFs.readFile(safePath);
       return ok({ __tag: "bytes", value: new Uint8Array(buffer) });
     }
     if (fullName === "fs.writeText" || fullName === "File.writeText") {
-      await nodeFs.writeFile(path, strVal(args[1] ?? LLN_VOID), "utf8");
+      await nodeFs.writeFile(safePath, strVal(args[1] ?? LLN_VOID), "utf8");
       return ok(LLN_VOID);
     }
     if (fullName === "fs.writeBytes" || fullName === "File.writeBytes") {
       const bytes = args[1]?.__tag === "bytes" ? args[1].value : new Uint8Array();
-      await nodeFs.writeFile(path, bytes);
+      await nodeFs.writeFile(safePath, bytes);
       return ok(LLN_VOID);
     }
   } catch (error) {

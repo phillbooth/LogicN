@@ -22,6 +22,21 @@ The 10 phases below take the runtime from 0% to ~50% (first governed HTTP servic
 
 ---
 
+## ✅ Progress (2026-06-01)
+
+| Phase | Status | Delivered |
+|---|---|---|
+| **28** | ✅ DONE | `checkProfiles` (LLN-PROFILE-001/002/006), `checkTaint` (LLN-TAINT-001/003/004), OWASP catalogue |
+| **29** | ✅ DONE | `@logicn/core-economics` package — CostGraph, ValueGraph, IBM risk matrix, RouteDecision (governanceApproved literal) |
+| **30** | ✅ DONE | `buildProofGraphCached` — ExecutionSignature-keyed proof shape cache (67% hit rate on same-shape flows) |
+| **31** | ✅ DONE | Bytecode VM — Int32Array opcodes, 14.3× over sync tree-walker, ~300× over async governed |
+| **32** | ✅ DONE | `logicn diff` governance delta CLI (exit 2 on authority widening) + governance-diff module |
+
+**Test count: 2,605 compiler + 15 economics + 95 devtools = 2,715 total, 0 failures.**
+Phases 33-37 remain (integer fast-path, verifyPassword HTTP service → Runtime 25%, etc.).
+
+---
+
 ## Phase 28 — Profile Enforcement + Security Types
 **Theme: Governance completeness**
 **Runtime %: 0% (foundation)**

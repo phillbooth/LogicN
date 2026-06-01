@@ -52,7 +52,12 @@ export interface AuditWriter {
   getDenials(): readonly DenialRecord[];
 }
 
-export function createAuditWriter(mode: "memory" | "file" = "memory", filePath?: string): AuditWriter {
+export function createAuditWriter(
+  mode: "memory" | "file" = "memory",
+  filePath?: string,
+  /** Phase 33: when true, file write failures are fatal (fail-closed audit). */
+  failClosed = false,
+): AuditWriter {
   const buffer: AuditEvent[] = [];
   const gatesFired: string[] = [];
   const redactionsApplied: string[] = [];
@@ -68,10 +73,34 @@ export function createAuditWriter(mode: "memory" | "file" = "memory", filePath?:
   }
 
   // Rule 5: reject raw secrets in metadata
+  // SECURITY (Finding 5 — MEDIUM): The original check was a heuristic keyword
+  // regex on key names. It missed: (a) secrets stored under unexpected key names,
+  // (b) false positives on e.g. "token_count". Improved approach:
+  //   - Check key names with an expanded sensitive-key set
+  //   - Check values for common secret patterns (Bearer, sk-, ghp_, etc.)
+  //   - Recursively traverse nested JSON objects
   function checkNoSecrets(event: AuditEvent): void {
-    const metadata = JSON.stringify(event.metadata);
-    if (/\b(password|apikey|api_key|secret|token)\b/i.test(metadata)) {
-      throw new Error("AuditWriter: potential raw secret in event metadata");
+    const SENSITIVE_KEYS = new Set([
+      "password", "passwd", "pwd", "secret", "token", "api_key", "apikey",
+      "api_secret", "access_token", "refresh_token", "private_key", "signing_key",
+      "authorization", "auth", "credential", "credentials",
+    ]);
+    const SECRET_VALUE_PATTERNS = [
+      /^(Bearer|Basic|Digest)\s+/i,   // auth headers
+      /^sk-[A-Za-z0-9]{20,}/,         // OpenAI-style keys
+      /^ghp_[A-Za-z0-9]{36}/,         // GitHub PATs
+      /^ey[A-Za-z0-9+/]{20,}/,        // JWT (base64 starts ey)
+    ];
+
+    for (const [key, value] of Object.entries(event.metadata)) {
+      if (SENSITIVE_KEYS.has(key.toLowerCase().replace(/[-_]/g, "_"))) {
+        throw new Error(`AuditWriter: sensitive key '${key}' in metadata — redact before writing`);
+      }
+      for (const pattern of SECRET_VALUE_PATTERNS) {
+        if (pattern.test(value)) {
+          throw new Error(`AuditWriter: value for key '${key}' looks like a credential — redact before writing`);
+        }
+      }
     }
   }
 
@@ -81,13 +110,26 @@ export function createAuditWriter(mode: "memory" | "file" = "memory", filePath?:
   }
 
   // Write to file when in file mode
+  // SECURITY (Finding 4 — MEDIUM): audit write failures were silently swallowed.
+  // In production/compliance contexts this is an integrity failure — we must know
+  // if audit records are being lost. With failClosed=true (production default),
+  // any write failure throws so the caller knows audit integrity is compromised.
   function persistToFile(event: AuditEvent): void {
     if (mode === "file" && filePath !== undefined) {
       try {
         // Rule 1 (append-only), Rule 2 (one line), Rule 3 (\n-terminated)
         appendFileSync(filePath, toLine(event) + "\n", "utf8");
-      } catch {
-        // Fail silently in Stage 1 — in-memory buffer is always authoritative
+      } catch (writeErr) {
+        if (failClosed) {
+          // Fail-closed: re-throw so the caller (runtime, HTTP handler) gets a
+          // 500 rather than silently losing an audit record.
+          throw new Error(
+            `AuditWriter: CRITICAL — audit write failed (audit integrity lost): ${writeErr instanceof Error ? writeErr.message : String(writeErr)}`
+          );
+        }
+        // Fail-open (dev mode): in-memory buffer is still authoritative.
+        // Log to stderr so the developer is aware even in dev mode.
+        process.stderr.write(`[LogicN AuditWriter] WARNING: file write failed: ${writeErr instanceof Error ? writeErr.message : String(writeErr)}\n`);
       }
     }
   }

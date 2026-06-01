@@ -1,4 +1,9 @@
 > ⚠️ **SUPERSEDED** — This is a v0.2 historical document. Current spec: see See Also links.
+>
+> ⚠️ **CANONICAL RULE (applies even to historical reading):** In the current LogicN model, only
+> `flow` variants may declare effects. `fn` cannot declare `effects [...]` or `with effects [...]`
+> — this emits `LLN-SEC-014`. The `CheckedFunction` class below reflects v0.2 compiler internals
+> that predate this rule. See `flow-vs-fn-security-model.md` for the canonical `fn` contract.
 
 # LogicN Core Compiler: Effect Checker and Boundary Checker v0.2
 

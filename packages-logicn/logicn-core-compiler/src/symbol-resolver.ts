@@ -367,9 +367,33 @@ class SymbolResolver {
     if (name.includes(":")) return;
 
     // Capital-letter identifiers are type constructors or stdlib module names.
-    // Unknown types are handled by LLN-TYPE-001 in the type checker.
-    // Suppress here to avoid noise on stdlib names like UsersDB, FraudModel, etc.
-    if (name[0] !== undefined && name[0] >= "A" && name[0] <= "Z") return;
+    // SECURITY (Finding 6 — MEDIUM): The original suppression was unconditional
+    // for ALL capitalised identifiers. A typo like `FsytexDB.query()` (instead
+    // of `FilesystemDB.query()`) would silently pass symbol resolution, potentially
+    // executing an unexpected code path if a module with that name exists at runtime.
+    //
+    // Narrowed: suppress ONLY known stdlib module prefixes from STDLIB_MODULE_KINDS
+    // and type names from the type registry. Unknown capitalised names fall through
+    // to the existing type-checker diagnostic (LLN-TYPE-001) rather than being
+    // silently ignored here.
+    //
+    // Note: this may increase noise slightly during development. That is acceptable
+    // — the alternative (silently ignoring typo-squatted identifiers) is worse.
+    const KNOWN_STDLIB_PREFIXES = new Set([
+      "AuditLog", "BCrypt", "Csv", "Css", "Database", "Db", "Dom", "Duration",
+      "Env", "FileName", "File", "FileSystem", "Html", "Http", "Int", "Float",
+      "Js", "Json", "Ldap", "Log", "Math", "Money", "Network", "NoSql",
+      "Ok", "Err", "Path", "Process", "Regex", "Request", "Response",
+      "Shell", "Sql", "String", "Tensor", "TPU", "Url", "Xml",
+      // User-defined type constructors (single-word capitalized) are fine
+    ]);
+    if (name[0] !== undefined && name[0] >= "A" && name[0] <= "Z") {
+      // Allow known stdlib modules and simple type constructor names (no dots)
+      const prefix = name.split(".")[0] ?? name;
+      if (KNOWN_STDLIB_PREFIXES.has(prefix) || !name.includes(".")) return;
+      // Unknown capitalised module reference (e.g. "FraudModel.analyse") —
+      // fall through to the lookup check rather than suppressing silently.
+    }
 
     // Numeric placeholders
     if (/^\d/.test(name)) return;

@@ -319,6 +319,104 @@ export function sharesGovernanceShape(a: ProofGraph, b: ProofGraph): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 30 — ProofGraph cache (governance overhead reduction)
+//
+// Two flows with identical ExecutionSignatures have identical proof shapes:
+// same obligations, same evidence structure, same verified status. Only the
+// flowName differs. Building the ProofGraph (hashing, obligation iteration,
+// verification check) is the main governance cost. By caching the proof SHAPE
+// keyed by signatureHash, the Nth flow with a given shape is near-free.
+//
+// This reduces the governed/manifest overhead ratio — the goal of Phase 30.
+// ---------------------------------------------------------------------------
+
+/** Cached proof shape — everything except the per-flow name. */
+interface CachedProofShape {
+  readonly sigHash: string;
+  readonly obligations: readonly ProofObligation[];
+  readonly evidence: readonly ProofEvidence[];
+  readonly verified: boolean;
+}
+
+/** Module-level cache keyed by ExecutionSignature hash. */
+const PROOF_SHAPE_CACHE = new Map<string, CachedProofShape>();
+
+/** Cache statistics for diagnostics. */
+let _proofCacheHits = 0;
+let _proofCacheMisses = 0;
+
+/**
+ * Phase 30: Build a ProofGraph using the signature-keyed shape cache.
+ *
+ * If a flow with the same governance shape was already proven, the cached
+ * shape is reused (only the flowName is swapped). This makes the Nth flow
+ * with a given shape near-free — the expensive hashing + verification runs once.
+ *
+ * Functionally identical to buildProofGraph(), just faster on repeated shapes.
+ */
+export function buildProofGraphCached(
+  flowName: string,
+  sig: ExecutionSignature,
+  obligations: readonly ProofObligation[],
+  evidence: readonly ProofEvidence[],
+  generatedAt: string,
+): ProofGraph {
+  const sigHash = executionSignatureHash(sig);
+  const cached = PROOF_SHAPE_CACHE.get(sigHash);
+
+  if (cached !== undefined) {
+    _proofCacheHits++;
+    return {
+      schemaVersion: "lln.proof.v1",
+      flowName,
+      executionSignature: sig,
+      signatureHash: cached.sigHash,
+      obligations: cached.obligations,
+      evidence: cached.evidence,
+      verified: cached.verified,
+      generatedAt,
+    };
+  }
+
+  _proofCacheMisses++;
+  const verified = obligations.length > 0 &&
+    obligations.every(ob =>
+      evidence.some(ev => ev.obligationKind === ob.kind && ev.checkerPassed),
+    );
+
+  PROOF_SHAPE_CACHE.set(sigHash, { sigHash, obligations, evidence, verified });
+
+  return {
+    schemaVersion: "lln.proof.v1",
+    flowName,
+    executionSignature: sig,
+    signatureHash: sigHash,
+    obligations,
+    evidence,
+    verified,
+    generatedAt,
+  };
+}
+
+/** Phase 30: ProofGraph cache statistics. */
+export function getProofCacheStats(): { hits: number; misses: number; size: number; hitRate: number } {
+  const total = _proofCacheHits + _proofCacheMisses;
+  return {
+    hits: _proofCacheHits,
+    misses: _proofCacheMisses,
+    size: PROOF_SHAPE_CACHE.size,
+    hitRate: total > 0 ? _proofCacheHits / total : 0,
+  };
+}
+
+/** Phase 30: Clear the ProofGraph cache (per-compilation isolation). */
+export function clearProofCache(): void {
+  PROOF_SHAPE_CACHE.clear();
+  _proofCacheHits = 0;
+  _proofCacheMisses = 0;
+}
+
+// ---------------------------------------------------------------------------
 // GovernanceROIReport
 //
 // Machine-readable return-on-investment report for a set of ProofGraphs.

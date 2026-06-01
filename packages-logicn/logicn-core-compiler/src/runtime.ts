@@ -256,9 +256,14 @@ export async function run(
   }
 
   // Audit + proof chain
+  // SECURITY (F4 fixed — Audit Pass 2): failClosed=true in production/deterministic.
+  // The audit writer previously silently dropped file-write failures; in any
+  // non-dev deployment mode that is an integrity failure — we must know.
+  const isStrictMode = mode === "production" || mode === "deterministic";
   const writer = createAuditWriter(
     options.auditFilePath !== undefined ? "file" : "memory",
     options.auditFilePath,
+    /* failClosed */ isStrictMode,
   );
   const auditEvent = buildFlowAuditEvent(
     flowName,

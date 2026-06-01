@@ -28,7 +28,7 @@
 import { type AstNode, type AstNodeKind, type FlowMeta, type SourceLocation } from "./parser.js";
 import { type EffectCheckResult } from "./effect-checker.js";
 import { GovernanceFlags, type GovernanceFlagsMask, type RuntimeManifest } from "./type-registry.js";
-import { buildProofGraph, computeExecutionSignature, type ProofGraph, type ProofObligation, LLN_HW_001, LLN_HW_002, LLN_HW_003 } from "./proof-graph.js";
+import { buildProofGraphCached, computeExecutionSignature, type ProofGraph, type ProofObligation, LLN_HW_001, LLN_HW_002, LLN_HW_003 } from "./proof-graph.js";
 import { HARDWARE_TRUST_PROFILES, ProofLevel } from "./type-registry.js";
 
 // ---------------------------------------------------------------------------
@@ -1227,7 +1227,7 @@ class GovernanceVerifier {
         flow.declaredEffects.length, 0, false,
       );
 
-      const pg = buildProofGraph(
+      const pg = buildProofGraphCached(
         flow.name, sig, obligations,
         obligations.map((ob) => ({
           obligationKind: ob.kind,

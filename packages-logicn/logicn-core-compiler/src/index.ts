@@ -113,6 +113,9 @@ export {
   computeExecutionSignature,
   executionSignatureHash,
   buildProofGraph,
+  buildProofGraphCached,
+  getProofCacheStats,
+  clearProofCache,
   sharesGovernanceShape,
   diffFingerprints,
   generateROIReport,
@@ -646,6 +649,57 @@ export {
   type GovernanceVerifyResult,
   type DeploymentProfile,
 } from "./governance-verifier.js";
+
+// Phase 28 — Runtime Profile Enforcement (strict / high_integrity / deterministic)
+export {
+  checkProfiles,
+  PROFILE_DIAGNOSTICS,
+  LLN_PROFILE_001, LLN_PROFILE_002, LLN_PROFILE_003, LLN_PROFILE_004,
+  LLN_PROFILE_005, LLN_PROFILE_005B, LLN_PROFILE_006, LLN_PROFILE_007,
+  type RuntimeProfile,
+  type ProfileDiagnostic,
+} from "./profile-checker.js";
+
+// Phase 32 — Governance Diff (logicn diff main..branch)
+export {
+  diffGovernance,
+  flowShape,
+  renderGovernanceDiff,
+  type GovernanceDiff,
+  type FlowDelta,
+  type FlowGovernanceShape,
+} from "./governance-diff.js";
+
+// Phase 31 — Bytecode VM for pure integer flows
+export {
+  compileToBytecode,
+  runBytecode,
+  tryRunBytecode,
+  clearBytecodeCache,
+  Op,
+  type BytecodeProgram,
+} from "./bytecode-vm.js";
+
+// Phase 28 — Taint Tracking & Sink Safety (Tainted<T> / SafeFor<Context,T>)
+export {
+  checkTaint,
+  UNTAINT_BOUNDARIES,
+  INJECTION_SINKS,
+  TAINT_DIAGNOSTICS,
+  LLN_TAINT_001, LLN_TAINT_002, LLN_TAINT_003, LLN_TAINT_004,
+  type SinkContext,
+  type TaintDiagnostic,
+  LLN_TAINT_005,
+  LLN_TAINT_006,
+} from "./taint-checker.js";
+
+// Phase 29/33 — Economics Inference (convention over configuration)
+export {
+  inferFlowEconomics,
+  describeEconomics,
+  type InferredEconomics,
+  type InferredTarget,
+} from "./economics-inference.js";
 
 // ---------------------------------------------------------------------------
 // Economics / Lineage / AI governance diagnostics — LLN-ECON-001..003
