@@ -35,34 +35,36 @@ The language is designed from the ground up so that execution intent, capability
 **Runtime written in LogicN** — Stage B: LogicN compiler compiles itself ← Major achievement milestone
 
 ```
-░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   0%  (foundation built in Phases 28-32; HTTP service Phase 34 = 25% target — lexer.lln · parser.lln v0 · type-checker.lln · compiler.capabilities.lln parse with 0 errors)
+░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   0%  (foundation built in Phases 28-32; Phase 34 = verifyPassword HTTP service = 25% target)
 ```
+
+> ℹ️ **What 0% means:** The TypeScript runtime (Stage A) is 100% functional. "Runtime written in LogicN" tracks Stage B — how much of the runtime platform is re-expressed as governed `.lln` source files. lexer.lln, parser.lln, type-checker.lln, and compiler.capabilities.lln all parse with 0 errors (structure exists), but execution via Stage B compiler is not yet live. Phase 34 (HTTP service endpoint) = 25%; Phase 41 (Stage B compiles Stage A) = 50%.
 
 **TypeScript Runtime** — Stage A: compiler pipeline + execution engine running on Node.js
 
 ```
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (2,605 tests · 0 failures · 223/223 CEC stable · R3/R4/R5/R6 complete · Stage B parity achieved · Phase 32 complete)
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (2,642 tests · 0 failures · 223/223 CEC stable · Phases 25-32 complete · Security Audit Pass 2 complete)
 ```
 
 | Layer | Status | % |
 |---|---|---|
-| Specification / KB | 368 docs, 223/223 examples stable, hybrid WASM v1.0, security anti-abuse, Phase 32 complete | 99% |
+| Specification / KB | 368+ docs, 223/223 examples stable, hybrid WASM v1.0, security anti-abuse, Phase 32 complete | 99% |
 | Lexer | All v1 keywords, TokenKindId, V1_DEPRECATED_RESERVED, LLN-LEX-001..006, slice scanning, FlatTokenStream | 97% |
-| Parser | NodeFlags (8 flags), byteSpan, recovery helpers, prefer [gpu/npu], contract.memory/network | 92% |
+| Parser | NodeFlags (8 flags), byteSpan, recovery helpers, prefer [gpu/npu], contract.memory/network/hardware | 92% |
 | Type checker | LLN-TYPE-001..022, LLN-TYPE-030/031 (tensor), branded types, TypeId registry (R5 complete) | 80% |
 | Value-state checker | Taint, 2-hop, ValueStateFlags, SINK_REQUIREMENTS, LLN-GATE-001 | 85% |
 | Effect checker | LLN-EFFECT-001..005, LLN-STDLIB-001 wired, EffectCheckerFlags, 31 legacy regex tracked | 84% |
 | Governance verifier | LLN-GOV-002..014, GovernanceFlags, RuntimeManifest, LLN-HW-001/002/003, ProofGraph caching | 85% |
 | GIR emitter | GIR v1, tensor metadata (7 flags), TypedArray lowering plan wired, WAT emitter + SIMD ops | 74% |
-| Stdlib | STDLIB_CAPABILITY_MAP (35+ functions), TRI_STDLIB_OPS, TENSOR_STDLIB_OPS, BigInt decimal | 63% |
+| Stdlib | STDLIB_CAPABILITY_MAP (35+ functions), path sandbox (F3), regex ReDoS guard (F8) | 65% |
 | Package resolver | LLN-PKG-001..005, 11-package type registry, cross-module import resolution (R3 complete) | 75% |
-| Runtime interpreter | sync fast-path (14× tree-walker), bytecode VM (14.3× speedup), ProofGraph caching (67% hit rate) | 75% |
-| WAT emitter + assembler | buildWATModule, assembleWAT, i32.add/sub/mul, local.get, if/else, while, WASM instantiation via wabt | 85% |
-| WASM Execution | Phase 27 complete — 8 benchmarks showing native-speed WASM results, wabt integration live | 95% |
-| Economics Layer | CostGraph, ValueGraph, IBM breach matrix, RouteDecision — Phase 29 complete | 60% |
-| Taint / Security Types | Tainted<T>, SafeFor<Context,T>, OWASP catalogue, 22 untaint boundaries, LLN-TAINT-001..004 | 70% |
-| Bytecode VM | Int32Array opcodes, 14.3× over sync tree-walker — integers only, Phase 33 extends | 40% |
-| Governance Diff CLI | logicn diff governance delta, exit 2 on authority widening — Phase 32 complete | 80% |
+| Runtime interpreter | sync fast-path (14× tree-walker), bytecode VM (auto-routed), ProofGraph caching (67% hit rate) | 78% |
+| WAT emitter + assembler | i32.add/sub/mul, if/else, while, mut/assign, WASM instantiation via wabt — Phase 27 complete | 88% |
+| WASM Execution | 8/8 benchmarks at native speed; arithmetic-threshold 3.7B/s (4.7× faster than Node.js) | 95% |
+| Economics Layer | CostGraph, ValueGraph, IBM breach matrix, RouteDecision, economics auto-inferred — Phase 29+33 | 65% |
+| Security (Taint/Profiles) | LLN-TAINT-001..006, LLN-PROFILE-001..007/005B, OWASP 24-boundary catalogue, F1-F8 hardened | 72% |
+| Bytecode VM | Int32Array opcodes, 14.3× over sync tree-walker, auto-routed in executeFlow — Phase 31 | 45% |
+| Governance Diff CLI | logicn diff — governance delta, exit 2 on authority widening, AI_INDEX, spec manifest | 82% |
 | Type registry | TypeId (56 IDs), EffectFlags (14), GovernanceFlags (8), NativeCapabilityId (6) | 78% |
 | Security policy | Tainted<T>, LLN-PROFILE-001..007, LLN-TAINT-001..004, profile enforcement (strict/high_integrity) | 65% |
 | SoA Arena | SoANodeArena (Int16/Int32 parallel arrays), FlatTokenStream (stride-4), FusedPass scaffold | 35% |
