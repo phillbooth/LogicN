@@ -35,15 +35,15 @@ The language is designed from the ground up so that execution intent, capability
 **Runtime written in LogicN** — Stage B: LogicN compiler compiles itself ← Major achievement milestone
 
 ```
-░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   0%  (foundation built in Phases 28-32; Phase 34 = verifyPassword HTTP service = 25% target)
+███████▌░░░░░░░░░░░░░░░░░░░░░░░  25%  (Phase 34 ACHIEVED — verifyPasswordService.lln IS a live governed HTTP service)
 ```
 
-> ℹ️ **What 0% means:** The TypeScript runtime (Stage A) is 100% functional. "Runtime written in LogicN" tracks Stage B — how much of the runtime platform is re-expressed as governed `.lln` source files. lexer.lln, parser.lln, type-checker.lln, and compiler.capabilities.lln all parse with 0 errors (structure exists), but execution via Stage B compiler is not yet live. Phase 34 (HTTP service endpoint) = 25%; Phase 41 (Stage B compiles Stage A) = 50%.
+> ℹ️ **What 25% means:** As of Phase 34, the first `.lln` file that IS a runtime service is live: `examples/auth-service/verifyPasswordService.lln` serves real HTTP — `POST /auth/verify` → governance check → `BCrypt.verify` (real bcrypt) → audit → governed JSON response. This is no longer parse-only; the flow *executes* to handle requests. Next milestones: Phase 41 (Stage B compiles Stage A) = 50%; Phase 44 (capability host in LogicN) = 75%; Phase 50 (v1.0) = 100%. Password handling matures across Phases 34–37: bcrypt → Password API → Argon2id → automatic hash migration.
 
 **TypeScript Runtime** — Stage A: compiler pipeline + execution engine running on Node.js
 
 ```
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (2,642 tests · 0 failures · 223/223 CEC stable · Phases 25-32 complete · Security Audit Pass 2 complete)
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (2,696 tests · 0 failures · 223/223 CEC stable · Phases 25-34 complete · Security Audit Pass 2 complete)
 ```
 
 | Layer | Status | % |
