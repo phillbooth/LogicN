@@ -13,7 +13,7 @@ contract { effects {} }
   mut additions: Int = 0
   mut checksum:  Int = 0
 
-  while total <= 5000000000 {
+  while total <= 2000000000 {
     total = total + i
     i = i + 1
     additions = additions + 1

@@ -58,7 +58,10 @@ export async function runLogicNPassiveBenchmark(llnPath, callCount = 1000) {
   // ── Cold-loop: clear cache between calls (shows execution-without-cache)
   const cpuBefore2 = process.cpuUsage();
   const tCold = performance.now();
-  const coldCalls = Math.min(callCount, 100); // fewer cold calls (cache clear overhead)
+  // Cold calls: always 1 for heavy benchmarks (callCount ≤ 5) to avoid minutes of
+  // cache-clearing overhead. For light benchmarks (callCount ≥ 10), use more cold
+  // calls so the throughput average is stable.
+  const coldCalls = callCount <= 5 ? 1 : Math.min(callCount, 20);
   for (let i = 0; i < coldCalls; i++) {
     m.clearPureFlowCache?.();
     await m.executeFlow(mainFlow.name, new Map(), parsed.ast, parsed.flows,

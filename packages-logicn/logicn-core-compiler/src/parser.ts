@@ -2611,6 +2611,17 @@ class Parser {
         continue;
       }
 
+      // `hardware { target arm.sve2 require mte require pac allow google.tpu.inference }`
+      // Hardware execution target and security feature requirements.
+      // CostGraph uses these hints to route execution to the appropriate hardware.
+      // Hardware may NEVER grant authority — it only affects execution cost/path.
+      // Applies: ARM SVE2/SME2/MTE/PAC, AMD Zen4/RDNA/CDNA, Google Axion/TPU, Intel AVX2/AVX-512.
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "hardware") {
+        children.push(this.parseContractSubBlock("hardware"));
+        this.skipNewlines();
+        continue;
+      }
+
       // Skip unrecognised content gracefully
       if (this.currentIs("symbol", "{")) {
         this.skipBalancedBraces();
@@ -3531,6 +3542,7 @@ class Parser {
       "ai",        // contract.ai { max_token_cost approved_models }
       "value",     // contract.value { classification safety_critical domain aerospace }
       "safety",    // contract.safety { require deterministic_execution }
+      "hardware",  // contract.hardware { target arm.sve2 require mte require pac }
     ]);
     while (!this.isEof()) {
       if (this.currentIs("symbol", "}")) break;

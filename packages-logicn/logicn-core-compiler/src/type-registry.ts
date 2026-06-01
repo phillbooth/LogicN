@@ -335,6 +335,237 @@ export const EffectCheckerFlags = {
   ReadyForNPU:           1 << 5,  // pure + no dynamic branch + tensor types → NPU candidate
 } as const;
 
+// ---------------------------------------------------------------------------
+// HardwareGovernanceClass — classifies hardware by governance authority
+//
+// Every hardware target in LogicN has a class that determines:
+//   - Whether it may be part of the GovernancePlane
+//   - What proof level is required before dispatching work to it
+//   - What observability guarantees it provides
+//
+// The Governance Visibility Rule: less observable → stronger proof requirements.
+// The Accelerator Sovereignty Rule: no accelerator may become a governance authority.
+// ---------------------------------------------------------------------------
+
+/**
+ * HardwareGovernanceClass classifies every compute target by its role in
+ * the governance hierarchy.
+ *
+ * GovernancePlane (0):   CPU, WASM, Trusted Runtime.
+ *   May: issue leases, enforce policy, evaluate authority, build ProofGraph.
+ *   Proof requirement: Standard ProofGraph.
+ *
+ * ExecutionPlane (1):    GPU, NPU, TPU. Deterministic, observable.
+ *   May: execute pre-approved work.
+ *   Proof requirement: ProofGraph + Input Seal.
+ *
+ * AcceleratorPlane (2):  Photonic, Neuromorphic. Partially observable.
+ *   May: accelerate approved mathematical operations.
+ *   Proof requirement: ProofGraph + Input Seal + Runtime Attestation.
+ *
+ * ExperimentalPlane (3): Quantum, future novel substrates. Opaque/probabilistic.
+ *   May: act as Mathematical Oracle (never governance authority).
+ *   Proof requirement: Full proof chain + Post-execution validation.
+ */
+export const HardwareGovernanceClass = {
+  /** CPU, WASM, Trusted Runtime — the sovereign anchor */
+  GovernancePlane:   0,
+  /** GPU, NPU, TPU — deterministic, observable execution */
+  ExecutionPlane:    1,
+  /** Photonic, Neuromorphic — partially observable acceleration */
+  AcceleratorPlane:  2,
+  /** Quantum, future substrates — probabilistic, opaque, needs full proof chain */
+  ExperimentalPlane: 3,
+} as const;
+
+export type HardwareGovernanceClassId = (typeof HardwareGovernanceClass)[keyof typeof HardwareGovernanceClass];
+
+/**
+ * Hardware observability level — numeric enum for type system enforcement.
+ *
+ * Maps directly to ProofLevel: less observable → higher proof requirement.
+ *
+ * Governance Visibility Rule:
+ *   FullyObservable     → Standard proof
+ *   PartiallyObservable → Attested proof
+ *   Opaque              → Sealed proof (Input/Output seals required)
+ *   Probabilistic       → Escalated / FormalRequired
+ *
+ * This is a TYPE SYSTEM property — the compiler enforces proof level
+ * based on the observability of the hardware target declared in contract.hardware.
+ */
+export const HardwareObservabilityLevel = {
+  FullyObservable:     0,  // CPU, GPU — deterministic registers, fully inspectable
+  PartiallyObservable: 1,  // NPU, TPU, ANE — deterministic result but opaque loops
+  Opaque:              2,  // Photonic, Neuromorphic — analog/event-driven, partial visibility
+  Probabilistic:       3,  // Quantum — wave-function collapse, inherently non-deterministic
+} as const;
+
+export type HardwareObservabilityLevelId = (typeof HardwareObservabilityLevel)[keyof typeof HardwareObservabilityLevel];
+
+/**
+ * ProofLevel — required proof burden based on hardware observability.
+ *
+ * ProofLevel is proportional to 1/Observability.
+ *
+ * Standard     — CPU/WASM (GovernancePlane). ProofGraph only.
+ * Attested     — GPU/NPU (ExecutionPlane, fully observable). ProofGraph + ExecutionSignature.
+ * Sealed       — NPU/TPU/ANE (ExecutionPlane, opaque loops). ProofGraph + Input/Output Seals.
+ * Escalated    — Photonic/Neuromorphic (AcceleratorPlane). + Runtime Attestation.
+ * FormalRequired — Quantum (ExperimentalPlane). Full chain + post-execution validation.
+ */
+export const ProofLevel = {
+  Standard:       0,  // CPU, WASM — standard ProofGraph
+  Attested:       1,  // GPU, deterministic NPU — + ExecutionSignature
+  Sealed:         2,  // NPU, TPU, ANE — + ImmutableInputSeal + OutputSeal
+  Escalated:      3,  // Photonic, Neuromorphic — + RuntimeAttestation
+  FormalRequired: 4,  // Quantum — + post-execution validation, result sanitisation
+} as const;
+
+export type ProofLevelId = (typeof ProofLevel)[keyof typeof ProofLevel];
+
+/**
+ * Full hardware trust profile — combines governance class, observability, and proof level.
+ * Used by the ProofGraph builder to escalate proof requirements automatically.
+ */
+export interface HardwareTrustProfile {
+  readonly targetId:          string;
+  readonly governanceClass:   HardwareGovernanceClassId;
+  readonly observabilityLevel: HardwareObservabilityLevelId;
+  readonly requiredProofLevel: ProofLevelId;
+  readonly requiresInputSeal:  boolean;  // true for Sealed+ targets
+  readonly requiresAttestation: boolean; // true for Escalated+ targets
+}
+
+/**
+ * Legacy string-based observability (for KB/display use).
+ * Use HardwareObservabilityLevel (numeric) in type-system enforcement.
+ */
+export const HardwareObservability = {
+  Full:    "full",     // GovernancePlane + ExecutionPlane (CPU, GPU)
+  High:    "high",     // ExecutionPlane (NPU, TPU — deterministic but internal state hidden)
+  Partial: "partial",  // AcceleratorPlane (photonic, neuromorphic)
+  Opaque:  "opaque",   // ExperimentalPlane (quantum — cannot observe without disturbing)
+} as const;
+
+/**
+ * Complete hardware trust profile map.
+ * Maps target IDs to their full trust profile for ProofGraph escalation.
+ */
+export const HARDWARE_TRUST_PROFILES: ReadonlyMap<string, HardwareTrustProfile> = new Map(
+  (
+    [
+      // GovernancePlane — Standard proof, fully observable
+      ["wasm",                   HardwareGovernanceClass.GovernancePlane,  HardwareObservabilityLevel.FullyObservable,     ProofLevel.Standard,       false, false],
+      ["wasm.simd128",           HardwareGovernanceClass.GovernancePlane,  HardwareObservabilityLevel.FullyObservable,     ProofLevel.Standard,       false, false],
+      ["cpu",                    HardwareGovernanceClass.GovernancePlane,  HardwareObservabilityLevel.FullyObservable,     ProofLevel.Standard,       false, false],
+      // ExecutionPlane, fully observable — Attested proof
+      ["intel",                  HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.FullyObservable,     ProofLevel.Attested,       false, false],
+      ["intel.avx2",             HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.FullyObservable,     ProofLevel.Attested,       false, false],
+      ["intel.avx512",           HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.FullyObservable,     ProofLevel.Attested,       false, false],
+      ["amd",                    HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.FullyObservable,     ProofLevel.Attested,       false, false],
+      ["amd.zen4",               HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.FullyObservable,     ProofLevel.Attested,       false, false],
+      ["amd.zen5",               HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.FullyObservable,     ProofLevel.Attested,       false, false],
+      ["arm",                    HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.FullyObservable,     ProofLevel.Attested,       false, false],
+      ["arm.neon",               HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.FullyObservable,     ProofLevel.Attested,       false, false],
+      ["arm.sve2",               HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.FullyObservable,     ProofLevel.Attested,       false, false],
+      ["arm.sme2",               HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.FullyObservable,     ProofLevel.Attested,       false, false],
+      ["amd.rdna",               HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.FullyObservable,     ProofLevel.Attested,       false, false],
+      ["gpu",                    HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.FullyObservable,     ProofLevel.Attested,       false, false],
+      // ExecutionPlane, partially observable — Sealed proof (Input/Output seals required)
+      ["npu",                    HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.PartiallyObservable, ProofLevel.Sealed,         true,  false],
+      ["npu.validation",         HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.PartiallyObservable, ProofLevel.Sealed,         true,  false],
+      ["npu.ai",                 HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.PartiallyObservable, ProofLevel.Sealed,         true,  false],
+      ["apu",                    HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.PartiallyObservable, ProofLevel.Sealed,         true,  false],
+      ["apple.neural_engine",    HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.PartiallyObservable, ProofLevel.Sealed,         true,  false],
+      ["apple.silicon",          HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.PartiallyObservable, ProofLevel.Sealed,         true,  false],
+      ["google.tpu.inference",   HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.PartiallyObservable, ProofLevel.Sealed,         true,  false],
+      ["google.tpu.training",    HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.PartiallyObservable, ProofLevel.Sealed,         true,  false],
+      ["google.axion",           HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.FullyObservable,     ProofLevel.Attested,       false, false],
+      ["amd.cdna",               HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.PartiallyObservable, ProofLevel.Sealed,         true,  false],
+      ["amd.instinct",           HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.PartiallyObservable, ProofLevel.Sealed,         true,  false],
+      ["qualcomm.hexagon",       HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.PartiallyObservable, ProofLevel.Sealed,         true,  false],
+      // Nvidia GPU targets — ExecutionPlane, partially observable (CUDA opaque loops)
+      ["nvidia",                 HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.PartiallyObservable, ProofLevel.Sealed,         true,  false],
+      ["nvidia.blackwell",       HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.PartiallyObservable, ProofLevel.Sealed,         true,  false],
+      ["nvidia.blackwell.rtx",   HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.PartiallyObservable, ProofLevel.Sealed,         true,  false],
+      ["nvidia.blackwell.b200",  HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.PartiallyObservable, ProofLevel.Sealed,         true,  false],
+      ["nvidia.hopper",          HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.PartiallyObservable, ProofLevel.Sealed,         true,  false],
+      ["nvidia.ada",             HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.PartiallyObservable, ProofLevel.Sealed,         true,  false],
+      ["nvidia.ampere",          HardwareGovernanceClass.ExecutionPlane,   HardwareObservabilityLevel.PartiallyObservable, ProofLevel.Sealed,         true,  false],
+      // AcceleratorPlane — Escalated proof (+ Runtime Attestation)
+      ["photonic",               HardwareGovernanceClass.AcceleratorPlane, HardwareObservabilityLevel.Opaque,             ProofLevel.Escalated,      true,  true ],
+      ["neuromorphic",           HardwareGovernanceClass.AcceleratorPlane, HardwareObservabilityLevel.Opaque,             ProofLevel.Escalated,      true,  true ],
+      // ExperimentalPlane — FormalRequired proof
+      ["quantum",                HardwareGovernanceClass.ExperimentalPlane, HardwareObservabilityLevel.Probabilistic,     ProofLevel.FormalRequired, true,  true ],
+    ] as const
+  ).map(([targetId, governanceClass, observabilityLevel, requiredProofLevel, requiresInputSeal, requiresAttestation]) => [
+    targetId,
+    { targetId, governanceClass, observabilityLevel, requiredProofLevel, requiresInputSeal, requiresAttestation } as HardwareTrustProfile,
+  ])
+);
+
+/**
+ * Maps hardware target IDs to their governance class.
+ * Used by CostGraph for routing decisions and ProofGraph for proof escalation.
+ */
+export const HARDWARE_GOVERNANCE_CLASS_MAP: ReadonlyMap<string, HardwareGovernanceClassId> = new Map([
+  // GovernancePlane (0) — may issue authority
+  ["wasm",                    HardwareGovernanceClass.GovernancePlane],
+  ["wasm.simd128",            HardwareGovernanceClass.GovernancePlane],
+  ["wasm.wasi",               HardwareGovernanceClass.GovernancePlane],
+  ["cpu",                     HardwareGovernanceClass.GovernancePlane],
+  // ExecutionPlane (1) — deterministic, observable execution
+  ["intel",                   HardwareGovernanceClass.ExecutionPlane],
+  ["intel.avx2",              HardwareGovernanceClass.ExecutionPlane],
+  ["intel.avx512",            HardwareGovernanceClass.ExecutionPlane],
+  ["intel.pcore",             HardwareGovernanceClass.ExecutionPlane],
+  ["intel.ecore",             HardwareGovernanceClass.ExecutionPlane],
+  ["amd",                     HardwareGovernanceClass.ExecutionPlane],
+  ["amd.zen4",                HardwareGovernanceClass.ExecutionPlane],
+  ["amd.zen5",                HardwareGovernanceClass.ExecutionPlane],
+  ["amd.epyc",                HardwareGovernanceClass.ExecutionPlane],
+  ["amd.rdna",                HardwareGovernanceClass.ExecutionPlane],
+  ["amd.cdna",                HardwareGovernanceClass.ExecutionPlane],
+  ["amd.instinct",            HardwareGovernanceClass.ExecutionPlane],
+  ["arm",                     HardwareGovernanceClass.ExecutionPlane],
+  ["arm.neon",                HardwareGovernanceClass.ExecutionPlane],
+  ["arm.sve2",                HardwareGovernanceClass.ExecutionPlane],
+  ["arm.sme2",                HardwareGovernanceClass.ExecutionPlane],
+  ["arm.cloud",               HardwareGovernanceClass.ExecutionPlane],
+  ["arm.edge",                HardwareGovernanceClass.ExecutionPlane],
+  ["npu",                     HardwareGovernanceClass.ExecutionPlane],
+  ["npu.validation",          HardwareGovernanceClass.ExecutionPlane],
+  ["npu.audit",               HardwareGovernanceClass.ExecutionPlane],
+  ["npu.ai",                  HardwareGovernanceClass.ExecutionPlane],
+  ["apu",                     HardwareGovernanceClass.ExecutionPlane],
+  ["gpu",                     HardwareGovernanceClass.ExecutionPlane],
+  ["apple.silicon",           HardwareGovernanceClass.ExecutionPlane],
+  ["apple.cpu.arm64",         HardwareGovernanceClass.ExecutionPlane],
+  ["apple.gpu.metal",         HardwareGovernanceClass.ExecutionPlane],
+  ["apple.neural_engine",     HardwareGovernanceClass.ExecutionPlane],
+  ["apple.m_series",          HardwareGovernanceClass.ExecutionPlane],
+  ["apple.a_series",          HardwareGovernanceClass.ExecutionPlane],
+  ["google.axion",            HardwareGovernanceClass.ExecutionPlane],
+  ["google.titanium",         HardwareGovernanceClass.ExecutionPlane],
+  ["google.tpu.inference",    HardwareGovernanceClass.ExecutionPlane],
+  ["google.tpu.training",     HardwareGovernanceClass.ExecutionPlane],
+  ["qualcomm.hexagon",        HardwareGovernanceClass.ExecutionPlane],
+  // Nvidia
+  ["nvidia",                  HardwareGovernanceClass.ExecutionPlane],
+  ["nvidia.blackwell",        HardwareGovernanceClass.ExecutionPlane],
+  ["nvidia.blackwell.rtx",    HardwareGovernanceClass.ExecutionPlane],
+  ["nvidia.blackwell.b200",   HardwareGovernanceClass.ExecutionPlane],
+  ["nvidia.hopper",           HardwareGovernanceClass.ExecutionPlane],
+  ["nvidia.ada",              HardwareGovernanceClass.ExecutionPlane],
+  ["nvidia.ampere",           HardwareGovernanceClass.ExecutionPlane],
+  // AcceleratorPlane (2) — partially observable, needs attestation
+  ["photonic",                HardwareGovernanceClass.AcceleratorPlane],
+  ["neuromorphic",            HardwareGovernanceClass.AcceleratorPlane],
+  // ExperimentalPlane (3) — opaque/probabilistic, needs full proof chain
+  ["quantum",                 HardwareGovernanceClass.ExperimentalPlane],
+]);
+
 export type EffectCheckerFlagsMask = number;
 
 // ---------------------------------------------------------------------------

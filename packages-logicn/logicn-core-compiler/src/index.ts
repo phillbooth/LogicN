@@ -108,6 +108,7 @@ export {
 } from "./effect-checker.js";
 
 // Execution Graph Kernel — ProofGraph, ExecutionSignature, GraphFingerprint
+// Phase 26B: ImmutableInputSeal, HardwareSealedDispatch, LLN-HW-001/002/003
 export {
   computeExecutionSignature,
   executionSignatureHash,
@@ -115,6 +116,9 @@ export {
   sharesGovernanceShape,
   diffFingerprints,
   generateROIReport,
+  LLN_HW_001,
+  LLN_HW_002,
+  LLN_HW_003,
   type ExecutionSignature,
   type ProofGraph,
   type ProofObligation,
@@ -122,6 +126,8 @@ export {
   type ProofEvidence,
   type GraphFingerprint,
   type GovernanceROIReport,
+  type ImmutableInputSeal,
+  type HardwareSealedDispatch,
 } from "./proof-graph.js";
 
 // Phase 18D / 18E / 18F / Hybrid WASM — Type Registry
@@ -129,6 +135,16 @@ export {
   TypeId,
   EffectFlags,
   EffectCheckerFlags,
+  HardwareGovernanceClass,
+  HardwareObservabilityLevel,
+  HardwareObservability,
+  ProofLevel,
+  HARDWARE_GOVERNANCE_CLASS_MAP,
+  HARDWARE_TRUST_PROFILES,
+  type HardwareGovernanceClassId,
+  type HardwareObservabilityLevelId,
+  type ProofLevelId,
+  type HardwareTrustProfile,
   GovernanceFlags,
   ComputeCompatibilityFlags,
   NativeCapabilityId,
@@ -428,6 +444,8 @@ export {
   SlottedScope,
   // Optimization B: while loop fast-path stub
   tryWhileFastPath,
+  tryPureFlowSync,
+  executeFlowSync,
   // Phase 29A: NaN-boxing helpers
   tagInt,
   isTagged,
@@ -479,7 +497,9 @@ export {
 // Phase 25 — WAT Assembler (WAT → WASM binary)
 export {
   assembleWAT,
+  executeWASMFlow,
   type WATAssemblerResult,
+  type WASMExecutionResult,
 } from "./wat-assembler.js";
 
 // Phase 19 / 22A / 22 / 27D — WAT Emitter (WebAssembly Text Format) — skeleton + SIMD types + pure bodies + SIMD ops

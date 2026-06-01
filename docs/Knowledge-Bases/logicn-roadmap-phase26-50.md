@@ -1,4 +1,4 @@
-# LogicN — Roadmap: Phase 26 → Phase 41
+# LogicN — Roadmap: Phase 26 → Phase 50
 
 **Version: 1.0 — 2026-06-01**
 **Status: Planned — post Phase 25 completion**

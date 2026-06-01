@@ -1,5 +1,10 @@
 build/target-cache/
+build/.lln-cache/
+**/.lln-cache/
+**/*.egraph.json
+**/*.egraph.json.gz
 .logicn/capabilities.local.json
 .logicn/capabilities.local.*
 packages-logicn/logicn-core/examples/benchmark-results/*.json
+packages-logicn/logicn-devtools-benchmarks/results/history/
 /NOTES TO COVER

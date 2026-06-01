@@ -25,11 +25,60 @@ become allowed? If the answer is ever yes, the package boundary is wrong.
 
 ---
 
+## The Total Cost Formula
+
+```
+total_cost = compute_cost
+           + audit_cost
+           + governance_cost
+           + AI_cost
+           + storage_cost
+           + network_cost
+           + risk_cost
+```
+
+**compute_cost**: CPU/GPU/NPU time × hardware price per unit time
+**audit_cost**: cost of writing to AuditGraph (I/O, storage, seal computation)
+**governance_cost**: ProofGraph construction, capability lease resolution
+**AI_cost**: tokens × model pricing (from contract.ai.max_token_cost)
+**storage_cost**: lineage data, audit records, retained evidence
+**network_cost**: data transfer to/from cloud targets
+**risk_cost**: breach_probability × breach_loss (from contract.value.estimated_loss_per_incident)
+
+**The CostGraph's question is not "what is fastest?" — it is:**
+> "What is the cheapest option that still satisfies governance, safety, privacy, audit, and latency?"
+
+**Dynamic Proof Level Matching:**
+The CostGraph assigns proof overhead based on the hardware target's ProofLevel:
+```
+CPU target  → ProofLevel.Standard  (zero runtime overhead — compile-time proof)
+NPU target  → ProofLevel.Sealed    (Input/Output seal cost — ~2 SHA-256 hashes)
+Quantum     → ProofLevel.Formal    (time-lock verification — significant overhead)
+```
+
+You only pay the security overhead tax for the exact risk level your hardware introduces.
+
+**Zero-allocation pipeline splicing:**
+Because ProofGraph resolves all capability and governance checks at compile time,
+runtime execution reduces to:
+```
+check lease (O(1) cache lookup)
+check input seal (one hash comparison)
+dispatch to hardware
+validate output seal (one hash comparison)
+write audit record (one append)
+```
+
+No runtime interception agents. No per-request permission checks. No cache invalidation.
+Governance checks run once at compile time. Execution runs at hardware speed.
+
+---
+
 ## Package Responsibilities
 
 ```
 logicn-core-economics
-├── CostGraph          — Expected cost per execution path
+├── CostGraph          — Expected cost per execution path (total_cost formula)
 ├── ValueGraph         — Risk-adjusted value per data classification
 ├── RouteGraph         — Hardware routing decision (CPU / GPU / NPU / WASM)
 ├── EconomicConstraint — Budget rules from contract.economics

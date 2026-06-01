@@ -19,7 +19,9 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@logicn/devtools-graph-algorithms": "file:../logicn-devtools-graph-algorithms"
+    "@logicn/devtools-graph-algorithms": "file:../logicn-devtools-graph-algorithms",
+    "wabt": "^1.0.39",
+    "wat-wasm": "^1.0.43"
   },
   "devDependencies": {
     "typescript": "^5.5.0"

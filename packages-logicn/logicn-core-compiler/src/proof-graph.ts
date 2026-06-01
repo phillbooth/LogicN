@@ -22,7 +22,7 @@
 // =============================================================================
 
 import { canonicalHash } from "./runtime/canonicalHash.js";
-import type { EffectFlagsMask, GovernanceFlagsMask } from "./type-registry.js";
+import type { EffectFlagsMask, GovernanceFlagsMask, ProofLevelId } from "./type-registry.js";
 import type { ValueStateFlagsMask } from "./value-state-checker.js";
 
 // ---------------------------------------------------------------------------
@@ -105,6 +105,105 @@ export function executionSignatureHash(sig: ExecutionSignature): string {
 }
 
 // ---------------------------------------------------------------------------
+// ImmutableInputSeal — Phase 26B
+//
+// Before any ExecutionPlane, AcceleratorPlane, or ExperimentalPlane target
+// receives work, the GovernancePlane records:
+//   inputSeal  = hash(inputs)  → in ProofGraph before dispatch
+//   outputSeal = hash(outputs) → in AuditGraph after return
+//
+// This means even an opaque NPU, photonic processor, or quantum coprocessor
+// has cryptographic proof of what entered and what emerged.
+// The hardware itself cannot forge these seals — they are computed by the CPU.
+//
+// Auto-inferred: the compiler reads HARDWARE_TRUST_PROFILES.get(target).requiresInputSeal
+// No explicit syntax needed in the contract — the seal is automatic.
+// ---------------------------------------------------------------------------
+
+/**
+ * Phase 26B — Immutable Input/Output seal for hardware dispatch.
+ *
+ * Records the hash of inputs and outputs for any hardware target that is
+ * not fully observable (ProofLevel.Sealed or higher).
+ * Computed by the GovernancePlane (CPU/WASM) — cannot be forged by the accelerator.
+ */
+export interface ImmutableInputSeal {
+  readonly targetId:    string;       // hardware target that received work
+  readonly proofLevel:  ProofLevelId; // ProofLevel.Sealed / Escalated / FormalRequired
+  readonly inputSeal:   string;       // sha256: of inputs before dispatch
+  readonly outputSeal?: string;       // sha256: of outputs after return (populated post-execution)
+  readonly dispatchAt:  string;       // ISO-8601 timestamp of dispatch
+  readonly returnAt?:   string;       // ISO-8601 timestamp of return
+  readonly sealAlgorithm: "sha256";   // future-proof: algorithm used for sealing
+}
+
+/**
+ * Phase 26B — Hardware sealed dispatch record.
+ *
+ * Combines the execution target, its trust profile classification, and the
+ * immutable seals into a single record attached to the ProofGraph.
+ * Stored in ProofGraph.hardwareSeal (optional — only present when hardware
+ * target with ProofLevel.Sealed or higher is declared in contract.hardware).
+ */
+export interface HardwareSealedDispatch {
+  readonly targetId:        string;       // e.g. "npu", "photonic", "quantum"
+  readonly governanceClass: number;       // HardwareGovernanceClass (0-3)
+  readonly observabilityLevel: number;    // HardwareObservabilityLevel (0-3)
+  readonly requiredProofLevel: ProofLevelId;
+  readonly seal: ImmutableInputSeal;
+  readonly cpuSovereigntyVerified: boolean; // APU pattern: CPU verified as GovernancePlane
+}
+
+// ---------------------------------------------------------------------------
+// LLN-HW diagnostics — Hardware governance violations
+// ---------------------------------------------------------------------------
+
+/**
+ * LLN-HW-001: contract.hardware declares a quantum target but the flow
+ * does not have a FormalRequired proof chain.
+ *
+ * Quantum targets are ExperimentalPlane (Class 3) with Probabilistic observability.
+ * They require post-execution validation and result sanitisation before results
+ * enter the governance pipeline.
+ */
+export const LLN_HW_001 = {
+  code: "LLN-HW-001",
+  name: "QuantumTargetRequiresFormalProof",
+  severity: "error" as const,
+  message: "contract.hardware { target quantum } requires ProofLevel.FormalRequired. Quantum coprocessors are ExperimentalPlane (probabilistic, unobservable). Add formal proof requirements or use a lower-class target.",
+  why: "Quantum results are probabilistic. Capability decisions based on unvalidated quantum output cannot be trusted. The type system enforces FormalRequired before quantum work may affect governance.",
+  suggestedFix: "Add post-execution validation: contract { safety { require deterministic_execution } } or use a deterministic fallback: hardware { target quantum fallback cpu }",
+} as const;
+
+/**
+ * LLN-HW-002: contract.hardware declares a Sealed target (NPU, TPU, ANE)
+ * but the flow declares no audit record for hardware dispatch.
+ * The Input/Output seal requires an audit trail to be meaningful.
+ */
+export const LLN_HW_002 = {
+  code: "LLN-HW-002",
+  name: "SealedTargetRequiresAuditTrace",
+  severity: "warning" as const,
+  message: "contract.hardware declares a sealed target (NPU, TPU, or ANE). The Input/Output seal is auto-applied, but audit.write is recommended to record the seal in the audit trail.",
+  why: "The ImmutableInputSeal proves what entered and emerged from the accelerator, but is only forensically useful if recorded in the AuditGraph.",
+  suggestedFix: "Add `audit.write` to effects and `require proof_graph` to the audit block.",
+} as const;
+
+/**
+ * LLN-HW-003: contract.hardware declares a photonic or neuromorphic target
+ * (AcceleratorPlane) without a runtime attestation requirement.
+ * Escalated proof requires attestation for partially observable hardware.
+ */
+export const LLN_HW_003 = {
+  code: "LLN-HW-003",
+  name: "AcceleratorPlaneRequiresAttestation",
+  severity: "warning" as const,
+  message: "contract.hardware declares a photonic or neuromorphic target (AcceleratorPlane). ProofLevel.Escalated requires runtime attestation. Add `require runtime_attestation` to the audit block.",
+  why: "Photonic and neuromorphic hardware is partially observable. Runtime attestation records which physical execution path was used.",
+  suggestedFix: "Add `require runtime_attestation` to the audit block.",
+} as const;
+
+// ---------------------------------------------------------------------------
 // ProofObligation
 //
 // A single governance claim that was proven during compilation.
@@ -161,6 +260,24 @@ export interface ProofGraph {
   readonly evidence:         readonly ProofEvidence[];
   readonly verified:         boolean;  // all obligations have evidence
   readonly generatedAt:      string;   // ISO timestamp (stripped in canonical hash)
+  /**
+   * Phase 26B: ImmutableInputSeal for hardware dispatch.
+   * Present when contract.hardware declares a target with ProofLevel.Sealed or higher.
+   * Auto-inferred from HARDWARE_TRUST_PROFILES — no explicit contract syntax needed.
+   * The seal is populated at dispatch time (inputSeal) and updated at return (outputSeal).
+   */
+  readonly hardwareSeal?: HardwareSealedDispatch;
+  /**
+   * Phase 39: GovernanceSignature — quantum-resistant proof certificate.
+   * Present in production profile. algorithm: "lln.gov.sig.v1".
+   * See logicn-governance-signature.md for full spec.
+   */
+  readonly governanceSignature?: {
+    readonly algorithm: "lln.gov.sig.v1";
+    readonly signerKeyId: string;
+    readonly signature: string;
+    readonly signedAt: string;
+  };
 }
 
 /**

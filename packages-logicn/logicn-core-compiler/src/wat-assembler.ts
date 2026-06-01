@@ -98,10 +98,20 @@ export async function assembleWAT(
   watSource: string,
   config?: WATAssemblerConfig,
 ): Promise<WATAssemblerResult> {
-  // Phase 25: Minimal binary encoder for simple pure-flow WAT modules
-  // Handles: single no-param i32-returning function with i32.const 0 body
-  // Full implementation: install wabt npm package (Phase 26)
+  // Phase 27: Use wabt npm package for real binary assembly.
+  // This replaces the Phase 25 minimal encoder and handles all WAT patterns
+  // emitted by the LogicN WAT emitter (arithmetic, locals, if/else, while loops).
+  try {
+    const wabtModule = await loadWabt();
+    if (wabtModule !== null) {
+      return assembleWithWabt(watSource, wabtModule);
+    }
+  } catch {
+    // wabt not available — fall through to minimal encoder
+  }
 
+  // Fallback: Phase 25 minimal binary encoder (handles simple constant/identity patterns).
+  // Used when wabt npm package is not installed or unavailable.
   try {
     const binary = encodeMinimalWASM(watSource);
     const valid = binary.length > 8
@@ -111,7 +121,9 @@ export async function assembleWAT(
       wasm: binary,
       sourceWAT: watSource,
       valid,
-      diagnostics: valid ? [] : [{ message: "Minimal encoder: complex WAT patterns not yet supported" }],
+      diagnostics: valid
+        ? [{ message: "wabt not available — using minimal encoder (limited WAT support)" }]
+        : [{ message: "Minimal encoder: complex WAT patterns not yet supported; install wabt npm package" }],
     };
   } catch (err) {
     return {
@@ -119,6 +131,134 @@ export async function assembleWAT(
       sourceWAT: watSource,
       valid: false,
       diagnostics: [{ message: String(err) }],
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Phase 27 — wabt npm package integration
+// ---------------------------------------------------------------------------
+
+/** Cached wabt instance to avoid re-initialising per call. */
+let _wabtInstance: unknown = null;
+
+/**
+ * Lazily loads and caches the wabt npm package.
+ * Returns null if the package is not installed.
+ */
+async function loadWabt(): Promise<unknown> {
+  if (_wabtInstance !== null) return _wabtInstance;
+  try {
+    // Dynamic import — wabt is an optional peer dependency
+    const wabtInit = (await import("wabt" as string)).default as () => Promise<unknown>;
+    _wabtInstance = await wabtInit();
+    return _wabtInstance;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Phase 27: Assembles WAT using the wabt npm package.
+ * Produces real spec-compliant WASM for all WAT patterns:
+ *   - arithmetic (i32.add, i32.sub, i32.mul, etc.)
+ *   - local variables (local.set, local.get)
+ *   - control flow (if/else, block/loop/br_if)
+ *   - memory operations
+ */
+function assembleWithWabt(watSource: string, wabtMod: unknown): WATAssemblerResult {
+  const m = wabtMod as {
+    parseWat: (name: string, src: string, opts: object) => {
+      validate: () => void;
+      toBinary: (opts: object) => { buffer: ArrayBuffer };
+      destroy: () => void;
+    };
+  };
+
+  const parsed = m.parseWat("logicn.wat", watSource, {});
+  try {
+    parsed.validate();
+    const { buffer } = parsed.toBinary({});
+    const wasm = new Uint8Array(buffer);
+    const valid = wasm.length > 4
+      && wasm[0] === 0x00 && wasm[1] === 0x61
+      && wasm[2] === 0x73 && wasm[3] === 0x6d;
+    return { wasm, sourceWAT: watSource, valid, diagnostics: [] };
+  } finally {
+    parsed.destroy();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Phase 27 — WASM execution
+// ---------------------------------------------------------------------------
+
+/**
+ * Phase 27: Result of executing a pure flow inside a WASM module.
+ */
+export interface WASMExecutionResult {
+  readonly flowName:    string;
+  readonly args:        readonly number[];
+  readonly result:      number | bigint | null;
+  readonly error?:      string;
+  readonly execMs:      number;
+  readonly binaryBytes: number;
+}
+
+/**
+ * Phase 27: Compiles a LogicN pure flow to binary WASM and executes it.
+ *
+ * Full pipeline:
+ *   1. Assemble WAT → binary WASM via wabt
+ *   2. WebAssembly.instantiate(binary)
+ *   3. Call the exported function with args
+ *   4. Return the result
+ *
+ * @param watSource - WAT module source (from renderWAT).
+ * @param flowName  - Name of the exported function to call.
+ * @param args      - Integer arguments to pass (must match the function signature).
+ * @returns         - Execution result including the return value and timing.
+ */
+export async function executeWASMFlow(
+  watSource: string,
+  flowName: string,
+  args: readonly number[],
+): Promise<WASMExecutionResult> {
+  const assembled = await assembleWAT(watSource);
+  if (!assembled.valid) {
+    return {
+      flowName,
+      args,
+      result: null,
+      error: assembled.diagnostics.map(d => d.message).join("; "),
+      execMs: 0,
+      binaryBytes: assembled.wasm.byteLength,
+    };
+  }
+
+  try {
+    const t0 = performance.now();
+    const wasmResult: unknown = await WebAssembly.instantiate(assembled.wasm);
+    const instance = (wasmResult as { instance: WebAssembly.Instance }).instance
+                  ?? (wasmResult as unknown as WebAssembly.Instance);
+    const fn = (instance.exports as Record<string, unknown>)[flowName];
+    if (typeof fn !== "function") {
+      return {
+        flowName, args, result: null,
+        error: `Export '${flowName}' not found. Available: ${Object.keys(instance.exports).join(", ")}`,
+        execMs: performance.now() - t0,
+        binaryBytes: assembled.wasm.byteLength,
+      };
+    }
+    const result = (fn as (...a: number[]) => number | bigint)(...args);
+    const execMs = performance.now() - t0;
+    return { flowName, args, result: result as number | bigint, execMs, binaryBytes: assembled.wasm.byteLength };
+  } catch (err) {
+    return {
+      flowName, args, result: null,
+      error: String(err),
+      execMs: 0,
+      binaryBytes: assembled.wasm.byteLength,
     };
   }
 }

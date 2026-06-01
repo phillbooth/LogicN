@@ -28,7 +28,8 @@
 import { type AstNode, type AstNodeKind, type FlowMeta, type SourceLocation } from "./parser.js";
 import { type EffectCheckResult } from "./effect-checker.js";
 import { GovernanceFlags, type GovernanceFlagsMask, type RuntimeManifest } from "./type-registry.js";
-import { buildProofGraph, computeExecutionSignature, type ProofGraph, type ProofObligation } from "./proof-graph.js";
+import { buildProofGraph, computeExecutionSignature, type ProofGraph, type ProofObligation, LLN_HW_001, LLN_HW_002, LLN_HW_003 } from "./proof-graph.js";
+import { HARDWARE_TRUST_PROFILES, ProofLevel } from "./type-registry.js";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -553,6 +554,53 @@ function extractSafetyRequirements(flowNode: AstNode): Set<string> {
 }
 
 /**
+ * Phase 26B: Extracts hardware target IDs from `contract.hardware { target <id> allow <id> }`.
+ *
+ * The AST structure is:
+ *   contractDecl → identifier [hardware:block] → identifier [decl:target <id> allow <id2> ...]
+ *
+ * Returns all declared target IDs (primary + allowed).
+ */
+function extractHardwareTargets(flowNode: AstNode): string[] {
+  const contractNode = (flowNode.children ?? []).find((c) => c.kind === "contractDecl");
+  const targets: string[] = [];
+  if (contractNode === undefined) return targets;
+
+  for (const child of contractNode.children ?? []) {
+    if (child.kind === "identifier" && child.value === "hardware:block") {
+      for (const hwChild of child.children ?? []) {
+        if (hwChild.kind === "identifier" && hwChild.value?.startsWith("decl:")) {
+          const raw = hwChild.value.slice("decl:".length);
+          // Parse "target arm . sve2 allow google . tpu . inference require mte"
+          // Target IDs use dots but the lexer splits on dots — rejoin with dots
+          const tokens = raw.split(/\s+/);
+          let i = 0;
+          while (i < tokens.length) {
+            const tok = tokens[i];
+            if (tok === "target" || tok === "allow") {
+              // Collect the dot-separated ID that follows
+              i++;
+              const parts: string[] = [];
+              while (i < tokens.length && tokens[i] !== "target" &&
+                     tokens[i] !== "allow" && tokens[i] !== "require" &&
+                     tokens[i] !== "deny" && tokens[i] !== "fallback") {
+                if (tokens[i] !== ".") parts.push(tokens[i] ?? "");
+                i++;
+              }
+              const id = parts.join(".");
+              if (id.length > 0) targets.push(id);
+            } else {
+              i++;
+            }
+          }
+        }
+      }
+    }
+  }
+  return targets;
+}
+
+/**
  * Checks whether a given context field name is referenced in the flow body.
  * Looks for any identifier node with value matching the field name, or
  * member access patterns like `context.actor` (memberExpr/callExpr with the field name).
@@ -1035,6 +1083,61 @@ class GovernanceVerifier {
               suggestedFix: LLN_VAL_002.suggestedFix,
             });
           }
+        }
+      }
+    }
+
+    // ── LLN-HW: contract.hardware ProofLevel enforcement ─────────────────
+    // Phase 26B: auto-infer proof requirements from HARDWARE_TRUST_PROFILES.
+    // No explicit contract syntax needed — the seal and proof level are automatic.
+    if (flowNode !== undefined) {
+      const hwTargets = extractHardwareTargets(flowNode);
+      const hasAuditWrite = flow.declaredEffects.includes("audit.write");
+      const hasAuditAttestation = (flowNode.children ?? []).some(c =>
+        c.kind === "contractDecl" &&
+        (c.children ?? []).some(child =>
+          child.kind === "identifier" &&
+          child.value === "audit:block" &&
+          (child.children ?? []).some(a =>
+            a.kind === "identifier" && a.value?.includes("runtime_attestation")
+          )
+        )
+      );
+
+      for (const targetId of hwTargets) {
+        const profile = HARDWARE_TRUST_PROFILES.get(targetId);
+        if (profile === undefined) continue; // unknown target — not our concern here
+
+        // LLN-HW-001: quantum target requires FormalRequired proof chain
+        if (profile.requiredProofLevel >= ProofLevel.FormalRequired) {
+          this.diagnostics.push({
+            ...LLN_HW_001,
+            message: `Flow '${flow.name}' declares hardware target '${targetId}' (ExperimentalPlane). ${LLN_HW_001.message}`,
+            location: loc,
+            suggestedFix: LLN_HW_001.suggestedFix,
+          });
+        }
+
+        // LLN-HW-002: sealed target (NPU/TPU/ANE) without audit.write
+        if (profile.requiredProofLevel >= ProofLevel.Sealed &&
+            profile.requiredProofLevel < ProofLevel.FormalRequired &&
+            !hasAuditWrite) {
+          this.diagnostics.push({
+            ...LLN_HW_002,
+            message: `Flow '${flow.name}' uses sealed hardware target '${targetId}' but does not declare audit.write. ${LLN_HW_002.message}`,
+            location: loc,
+            suggestedFix: LLN_HW_002.suggestedFix,
+          });
+        }
+
+        // LLN-HW-003: AcceleratorPlane (photonic/neuromorphic) without attestation requirement
+        if (profile.requiresAttestation && !hasAuditAttestation && !hasAuditWrite) {
+          this.diagnostics.push({
+            ...LLN_HW_003,
+            message: `Flow '${flow.name}' uses AcceleratorPlane target '${targetId}'. ${LLN_HW_003.message}`,
+            location: loc,
+            suggestedFix: LLN_HW_003.suggestedFix,
+          });
         }
       }
     }

@@ -57,6 +57,33 @@ function heapDelta(r)     { return r?.memory?.heapUsedDelta                     
 function cpuMs(r)         { return r?.cpu?.totalMs ?? r?.cpu?.processMs ?? r?.cpu?.warmTotalMs ?? null; }
 function wallMs(r)        { return r?.elapsedMs ?? r?.execMs ?? r?.warmMs              ?? null; }
 
+// ── Traffic Light ──────────────────────────────────────────────────────────────
+// Compares a runtime's throughput to a reference (best, Node.js, or Rust).
+// ratio = subject / reference:
+//   🟢 > 0.9  = green  (same speed or faster — within 10%)
+//   ⚪ > 0.5  = white  (within 2× — comparable)
+//   🟡 > 0.1  = yellow (2-10× slower — a little slow)
+//   🔴 > 0.01 = red    (10-100× slower — much slower)
+//   ⚫ ≤ 0.01 = black  (100×+ slower — terrible in comparison)
+
+function trafficLight(subject, reference) {
+  if (!subject || !reference || reference === 0) return "—";
+  const r = subject / reference;
+  if (r >= 0.9)  return "🟢";
+  if (r >= 0.5)  return "⚪";
+  if (r >= 0.1)  return "🟡";
+  if (r >= 0.01) return "🔴";
+  return "⚫";
+}
+
+function trafficLightLabel(subject, reference) {
+  if (!subject || !reference || reference === 0) return "—";
+  const r = subject / reference;
+  const light = trafficLight(subject, reference);
+  const mult = r >= 1 ? `${r.toFixed(1)}×` : `${(1/r).toFixed(1)}× slower`;
+  return `${light} ${mult}`;
+}
+
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
 function fmtT(n) {
@@ -108,6 +135,29 @@ catch { console.error("No results — run: npm run run"); process.exit(1); }
 // ── 1. Throughput summary ──────────────────────────────────────────────────────
 
 console.log("# LogicN Benchmark Report\n");
+
+// ── Key / Legend ─────────────────────────────────────────────────────────────
+console.log("## Key\n");
+console.log("**Traffic lights** (🚦) compare each runtime to **Node.js** (the production baseline):\n");
+console.log("| Light | Meaning | Speed vs Node.js |");
+console.log("|---|---|---|");
+console.log("| 🟢 | Green — fast | At or faster than Node.js (within 10%, or quicker) |");
+console.log("| ⚪ | White — comparable | Within 2× of Node.js |");
+console.log("| 🟡 | Yellow — a little slower | 2–10× slower than Node.js |");
+console.log("| 🔴 | Red — much slower | 10–100× slower than Node.js |");
+console.log("| ⚫ | Black — terrible | 100×+ slower than Node.js |");
+console.log("");
+console.log("**Medals** (🥇🥈🥉) rank runtimes by throughput within each benchmark — fastest first.\n");
+console.log("**Runtimes:**");
+console.log("- **Rust (generic / AVX2)** — native compiled baseline (ceiling).");
+console.log("- **Node.js** — V8 JIT (production baseline for traffic lights).");
+console.log("- **Python** — CPython interpreter (comparison floor).");
+console.log("- **WASM (Phase 27)** — LogicN pure flow → WAT → WebAssembly.instantiate (governed at compile time).");
+console.log("- **LogicN (governed)** — full governance tree-walker (capabilities + audit + proof).");
+console.log("- **LogicN (manifest)** — pre-verified runtime manifest, governance erased at runtime.");
+console.log("- **LogicN (passive)** — pre-compiled deployment model with LRU result cache (warm path).\n");
+console.log("---\n");
+
 console.log("## 1. Throughput\n");
 // NOTE: Node/LogicN ratio: >1 = Node.js faster, <1 = LogicN faster.
 // governance-cost: governed/manifest ratio is the key metric; cross-runtime comparison is invalid.
@@ -137,6 +187,53 @@ for (const bench of data) {
 console.log("\n> †`Node/LogicN > 1` = Node.js faster. `< 1` = LogicN faster (e.g. collection-pipeline).");
 console.log("> †fibonacci: LogicN=fib(20), others=fib(30) — different workload depth.");
 
+// ── 1.5 Traffic Light Summary ──────────────────────────────────────────────────
+// Shows at a glance how each key runtime compares to the best result.
+// 🟢 within 10% of best  ⚪ within 2×  🟡 2-10× slower  🔴 10-100× slower  ⚫ 100×+ slower
+
+console.log("\n## 1.5 Traffic Light Summary\n");
+console.log("> 🟢 = at/near best | ⚪ = within 2× | 🟡 = 2-10× slower | 🔴 = 10-100× slower | ⚫ = 100×+ slower\n");
+console.log("| Benchmark | WASM (Phase 27) | vs Rust | vs Node.js | LogicN governed | vs Rust | vs Node | Implication |");
+console.log("|---|---|---|---|---|---|---|---|");
+
+for (const bench of data) {
+  const mt = {}; for (const rt of ORDER) mt[rt] = throughput(bench.results?.[rt]);
+  const bestRust = Math.max(mt.rustAvx512 ?? 0, mt.rustAvx2 ?? 0, mt.rust ?? 0) || null;
+  const node     = mt.nodejs;
+  const wasm     = mt.wasm;
+  const governed = mt.logicnGoverned;
+
+  if (!wasm && !governed) continue;
+
+  const wasmVsRust = wasm && bestRust ? trafficLightLabel(wasm, bestRust) : "—";
+  const wasmVsNode = wasm && node     ? trafficLightLabel(wasm, node)     : "—";
+  const govVsRust  = governed && bestRust ? trafficLightLabel(governed, bestRust) : "—";
+  const govVsNode  = governed && node     ? trafficLightLabel(governed, node)     : "—";
+
+  // Implication: is WASM matching native? is governed usable for serving?
+  let impl = "";
+  if (wasm && bestRust) {
+    const wr = wasm / bestRust;
+    if (wr >= 0.9)       impl = "WASM = native speed";
+    else if (wr >= 2.0)  impl = "WASM beats Rust";
+    else if (wr >= 0.5)  impl = "WASM near native";
+    else if (wr >= 0.1)  impl = "WASM usable";
+    else                 impl = "WASM lags native";
+  }
+  if (governed && node) {
+    const gr = governed / node;
+    const sep = impl ? " | " : "";
+    if (gr >= 0.9)       impl += sep + "governed ≈ Node";
+    else if (gr >= 0.1)  impl += sep + "governed usable";
+    else if (gr >= 0.01) impl += sep + "governed slow";
+    else                 impl += sep + "governed needs sync";
+  }
+
+  const wasmStr  = wasm     ? fmtT(wasm)     : "pending";
+  const govStr   = governed ? fmtT(governed) : "—";
+  console.log(`| ${bench.benchmark} | ${wasmStr} | ${wasmVsRust} | ${wasmVsNode} | ${govStr} | ${govVsRust} | ${govVsNode} | ${impl} |`);
+}
+
 // ── 2. Memory usage ────────────────────────────────────────────────────────────
 
 console.log("\n## 2. Memory Usage\n");
@@ -148,7 +245,7 @@ for (const bench of data) {
     const r = bench.results?.[rt];
     if (!r || r.error) continue;
     const rss = rssBytes(r), peak = peakRss(r), heap = heapUsed(r), hd = heapDelta(r);
-    if (rss === null && heap === null) continue;
+    // Always show the row — use "—" for runtimes (Rust, Python) that don't report memory
     console.log(`| ${bench.benchmark} | ${LABEL[rt]} | ${fmtB(rss)} | ${fmtB(peak)} | ${fmtB(heap)} | ${fmtB(hd)} |`);
   }
 }
@@ -181,18 +278,31 @@ console.log("\n## 4. Per-Benchmark Detail\n");
 
 for (const bench of data) {
   console.log(`### ${bench.benchmark}\n`);
-  console.log("| Runtime | Throughput | Wall | CPU | RSS | Heap | vs Python | vs Node |");
-  console.log("|---|---|---|---|---|---|---|---|");
+  console.log("| # | 🚦 | Runtime | Throughput | Wall | CPU | RSS | Heap | vs Python | vs Node |");
+  console.log("|---|---|---|---|---|---|---|---|---|---|");
 
   const mt = {}; for (const rt of ORDER) mt[rt] = throughput(bench.results?.[rt]);
   const py = mt.python, nd = mt.nodejs;
 
-  for (const rt of ORDER) {
+  // Sort by throughput descending — fastest runtime first
+  const ranked = ORDER
+    .filter(rt => bench.results?.[rt] && !bench.results[rt].error && mt[rt] !== null)
+    .sort((a, b) => (mt[b] ?? 0) - (mt[a] ?? 0));
+
+  // Traffic light reference: Node.js as the fair "production baseline"
+  // This makes Rust show 🟢 (faster than Node), Python show 🔴 (slower),
+  // WASM show 🟢 (usually faster), and LogicN tree-walker show its real position.
+  // If Node.js has no result for this benchmark, fall back to best performer.
+  const nodeRef = mt.nodejs ?? (ranked.length > 0 ? mt[ranked[0]] : null);
+
+  ranked.forEach((rt, idx) => {
     const r = bench.results?.[rt];
-    if (!r || r.error) continue;
+    if (!r || r.error) return;
     const t = mt[rt];
-    console.log(`| ${LABEL[rt]} | ${fmtT(t)} | ${fmtMs(wallMs(r))} | ${fmtMs(cpuMs(r))} | ${fmtB(rssBytes(r))} | ${fmtB(heapUsed(r))} | ${ratio(t,py)} | ${ratio(t,nd)} |`);
-  }
+    const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx + 1}`;
+    const light = trafficLight(t, nodeRef);
+    console.log(`| ${medal} | ${light} | ${LABEL[rt]} | ${fmtT(t)} | ${fmtMs(wallMs(r))} | ${fmtMs(cpuMs(r))} | ${fmtB(rssBytes(r))} | ${fmtB(heapUsed(r))} | ${ratio(t,py)} | ${ratio(t,nd)} |`);
+  });
   console.log();
 }
 

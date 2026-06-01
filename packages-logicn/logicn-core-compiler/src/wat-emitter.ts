@@ -380,23 +380,261 @@ export function emitWATExpr(node: AstNode, vars: ReadonlyMap<string, string>): s
 }
 
 /**
- * Phase 25: Emits the full WAT function body (local decls + instructions)
- * by walking the AST body of a pure flow.
+ * Phase 26: Negates a WAT condition expression.
+ * Used by whileStmt to convert "while cond" to "br_if $exit when NOT cond".
  *
- * The returned string is ready to be used as `WATFunction.body` — the
- * renderWAT renderer splits it on newlines and indents each line.
+ * "while i <= n" → loop exits when "i > n", i.e. (i32.gt_s i n).
+ * Inversion: flip lt_s↔gt_s, le_s↔ge_s, eq↔ne.
+ * Unknown ops: wrap in (i32.eqz ...)
+ */
+function negateBinaryOp(op: string): string | null {
+  const NEG: ReadonlyMap<string, string> = new Map([
+    ["<",  "i32.ge_s"],
+    [">",  "i32.le_s"],
+    ["<=", "i32.gt_s"],
+    [">=", "i32.lt_s"],
+    ["==", "i32.ne"],
+    ["!=", "i32.eq"],
+  ]);
+  return NEG.get(op) ?? null;
+}
+
+/**
+ * Phase 26: Emits the last "value expression" of a block for WAT.
+ * Used for the (then ...) and (else ...) branches of a value-producing if.
+ *
+ * Finds the last statement in the block that produces a value and returns
+ * its WAT expression string (without the surrounding WAT block structure).
+ */
+function emitBlockLastExpr(
+  blockNode: AstNode,
+  vars: ReadonlyMap<string, string>,
+): string {
+  const stmts = blockNode.children ?? [];
+  const last = stmts[stmts.length - 1];
+  if (last === undefined) return "(i32.const 0)";
+  if (last.kind === "returnStmt") {
+    return last.children?.[0] ? emitWATExpr(last.children[0], vars) : "(i32.const 0)";
+  }
+  if (last.kind === "binaryExpr" || last.kind === "callExpr" ||
+      last.kind === "identifier"  || last.kind === "numberLiteral") {
+    return emitWATExpr(last, vars);
+  }
+  return "(i32.const 0) ;; unresolved block expr";
+}
+
+/**
+ * Phase 25/26: Emits WAT statements for a block of LogicN statements.
+ *
+ * Mutates `localDecls` (appends new local declarations at the TOP of the function)
+ * and `bodyLines` (appends WAT instructions in order).
+ * Uses a shared `labelCounter` object for unique block/loop label names.
  *
  * Handles:
+ *   Phase 25: letDecl (new + rebind), returnStmt, callExpr
+ *   Phase 26: ifStmt (with and without else), whileStmt (bounded + unbounded)
+ */
+function emitBlockStatements(
+  blockNode: AstNode,
+  vars: Map<string, string>,
+  localDecls: string[],
+  bodyLines:  string[],
+  labelCounter: { n: number },
+  /** Phase 27B: when true, emit (return <expr>) for returnStmt instead of bare expr.
+   *  Used inside nested blocks (if/while bodies) where implicit stack return is invalid. */
+  nested = false,
+): void {
+  const stmts: readonly AstNode[] = blockNode.children ?? [];
+
+  for (let si = 0; si < stmts.length; si++) {
+    const stmt = stmts[si] as AstNode;  // guaranteed by bounds check
+    const isLast = si === stmts.length - 1;
+
+    switch (stmt.kind) {
+      case "mutDecl":
+      case "letDecl": {
+        // mutDecl has value like "total: Int" — strip the type annotation
+        const rawName  = stmt.value ?? `_anon${localDecls.length}`;
+        const varName  = rawName.split(":")[0]?.trim() ?? rawName;
+        const watLocal = `$${varName}`;
+        const initNode = stmt.children?.[0];
+        const initExpr = initNode ? emitWATExpr(initNode, vars) : "(i32.const 0)";
+
+        if (vars.has(varName)) {
+          // Variable already declared — this is a mutation (e.g. let x = x + 1 inside a loop).
+          // Do NOT add a second (local $x) declaration — just set the existing one.
+          bodyLines.push(`(local.set ${watLocal} ${initExpr})`);
+        } else {
+          // New variable: declare at function top + initialise inline.
+          vars.set(varName, watLocal);
+          localDecls.push(`(local ${watLocal} i32)`);
+          bodyLines.push(`(local.set ${watLocal} ${initExpr})`);
+        }
+        break;
+      }
+
+      case "assignStmt": {
+        // total = total + i  →  (local.set $total <expr>)
+        // The assigned variable must already be in scope (declared by mutDecl or letDecl).
+        const varName  = (stmt.value ?? "").trim();
+        const watLocal = vars.get(varName) ?? `$${varName}`;
+        const exprNode = stmt.children?.[0];
+        const exprStr  = exprNode ? emitWATExpr(exprNode, vars) : "(i32.const 0)";
+        if (!vars.has(varName)) {
+          // Declare it now if somehow not in scope (defensive)
+          vars.set(varName, watLocal);
+          localDecls.push(`(local ${watLocal} i32)`);
+        }
+        bodyLines.push(`(local.set ${watLocal} ${exprStr})`);
+        break;
+      }
+
+      case "returnStmt": {
+        const exprNode = stmt.children?.[0];
+        const exprStr  = exprNode !== undefined
+          ? emitWATExpr(exprNode, vars)
+          : "(i32.const 0) ;; return void";
+        // Inside nested blocks (if/while body), use explicit (return <expr>)
+        // so the value is returned from the FUNCTION, not just pushed to the block stack.
+        // At top-level function body, the last expr is the implicit function return.
+        if (nested) {
+          bodyLines.push(`(return ${exprStr})`);
+        } else {
+          bodyLines.push(exprStr);
+        }
+        break;
+      }
+
+      case "ifStmt": {
+        // ifStmt children: [condition, thenBlock, elseBlock?]
+        const [condNode, thenBlock, elseBlock] = stmt.children ?? [];
+        const condExpr = condNode ? emitWATExpr(condNode, vars) : "(i32.const 1)";
+
+        // Value-producing if/else: ONLY when isLast AND both branches end with returnStmt.
+        // An if block whose branches contain assignStmt is NOT value-producing.
+        const thenEndsWithReturn = (thenBlock?.children ?? []).some(c => c.kind === "returnStmt");
+        const elseEndsWithReturn = elseBlock !== undefined
+          && elseBlock.kind !== "ifStmt"
+          && (elseBlock.children ?? []).some(c => c.kind === "returnStmt");
+        const isValueProducing = thenBlock !== undefined && elseBlock !== undefined
+          && isLast && thenEndsWithReturn && elseEndsWithReturn;
+
+        if (isValueProducing) {
+          // Value-producing if/else (last stmt → the if provides the function's return value).
+          // Emit: (if (result i32) COND (then THEN_EXPR) (else ELSE_EXPR))
+          const thenExpr = emitBlockLastExpr(thenBlock!, vars);
+          const elseExpr = emitBlockLastExpr(elseBlock!, vars);
+          bodyLines.push(`(if (result i32) ${condExpr}`);
+          bodyLines.push(`  (then ${thenExpr})`);
+          bodyLines.push(`  (else ${elseExpr})`);
+          bodyLines.push(`)`);
+        } else {
+          // Statement if: may have side effects but leaves nothing on the stack.
+          // Emit: (if COND (then BODY) (else BODY)?)
+          //
+          // Special case: `else if` chains have an ifStmt (not a block) as elseBlock.
+          // We normalise by wrapping it in a synthetic block for the else emitter.
+          if (thenBlock !== undefined) {
+            bodyLines.push(`(if ${condExpr}`);
+            bodyLines.push(`  (then`);
+            const thenLines: string[] = [];
+            emitBlockStatements(thenBlock, vars, localDecls, thenLines, labelCounter, true);
+            for (const line of thenLines) bodyLines.push(`    ${line}`);
+            bodyLines.push(`  )`);
+            if (elseBlock !== undefined) {
+              bodyLines.push(`  (else`);
+              const elseLines: string[] = [];
+              if (elseBlock.kind === "ifStmt") {
+                // else if: wrap the ifStmt in a synthetic block
+                const synthBlock: AstNode = {
+                kind: "block",
+                children: [elseBlock],
+                ...(elseBlock.location !== undefined ? { location: elseBlock.location } : {}),
+              };
+                emitBlockStatements(synthBlock, vars, localDecls, elseLines, labelCounter, true);
+              } else {
+                emitBlockStatements(elseBlock, vars, localDecls, elseLines, labelCounter, true);
+              }
+              for (const line of elseLines) bodyLines.push(`    ${line}`);
+              bodyLines.push(`  )`);
+            }
+            bodyLines.push(`)`);
+          }
+        }
+        break;
+      }
+
+      case "whileStmt": {
+        // whileStmt children: [condition, bodyBlock]
+        // WAT pattern: (block $exit_N (loop $loop_N (br_if $exit_N NOT_COND) BODY (br $loop_N)))
+        const [condNode, bodyBlock] = stmt.children ?? [];
+        const labelN = labelCounter.n++;
+        const exitLabel = `$while_exit_${labelN}`;
+        const loopLabel = `$while_loop_${labelN}`;
+
+        // Negate condition for the exit branch:
+        // "while i <= n" → exit when (i32.gt_s i n)
+        let exitCondExpr: string;
+        if (condNode?.kind === "binaryExpr") {
+          const negOp = negateBinaryOp(condNode.value ?? "");
+          if (negOp !== null) {
+            const left  = condNode.children?.[0] ? emitWATExpr(condNode.children[0], vars) : "(i32.const 0)";
+            const right = condNode.children?.[1] ? emitWATExpr(condNode.children[1], vars) : "(i32.const 0)";
+            exitCondExpr = `(${negOp} ${left} ${right})`;
+          } else {
+            exitCondExpr = `(i32.eqz ${condNode ? emitWATExpr(condNode, vars) : "(i32.const 1)"})`;
+          }
+        } else {
+          exitCondExpr = `(i32.eqz ${condNode ? emitWATExpr(condNode, vars) : "(i32.const 1)"})`;
+        }
+
+        bodyLines.push(`(block ${exitLabel}`);
+        bodyLines.push(`  (loop ${loopLabel}`);
+        bodyLines.push(`    (br_if ${exitLabel} ${exitCondExpr})`);
+
+        if (bodyBlock !== undefined) {
+          const loopLines: string[] = [];
+          emitBlockStatements(bodyBlock, vars, localDecls, loopLines, labelCounter, true);
+          for (const line of loopLines) bodyLines.push(`    ${line}`);
+        }
+
+        bodyLines.push(`    (br ${loopLabel})`);
+        bodyLines.push(`  )`);
+        bodyLines.push(`)`);
+        break;
+      }
+
+      case "callExpr": {
+        const callExpr = emitWATExpr(stmt, vars);
+        bodyLines.push(`(drop ${callExpr})`);
+        break;
+      }
+
+      default:
+        bodyLines.push(`(i32.const 0) ;; unhandled stmt: ${stmt.kind}`);
+        break;
+    }
+  }
+}
+
+/**
+ * Phase 25/26: Emits the full WAT function body (local decls + instructions)
+ * by walking the AST body of a pure flow.
+ *
+ * Handles (Phase 25):
  *   - Integer arithmetic and comparison (i32.add / lt_s / etc.)
  *   - Integer and float literals (i32.const / f64.const)
  *   - Parameter references (local.get $p0, $p1, …)
- *   - Let-binding (local declarations + local.set)
+ *   - Let-binding — new variables and loop-variable mutation
  *   - Return statements
- *   - Intra-module flow calls (call $flowName)
+ *   - Intra-module flow calls
  *
- * Phase 26 will add: if/else, loops, string ops, float promotion.
+ * Handles (Phase 26):
+ *   - if/else with value (last stmt in block → result i32)
+ *   - if/else without value (statements with side effects)
+ *   - while loops (block + loop + br_if + br pattern)
  *
- * @param flowNode  - The pureFlowDecl / flowDecl AstNode for this flow.
+ * @param flowNode   - The pureFlowDecl / flowDecl AstNode for this flow.
  * @param paramNames - Ordered parameter names extracted from paramDecl children.
  * @returns WAT body string, or null if the body cannot be lowered.
  */
@@ -404,58 +642,22 @@ export function emitWATFromFlowAST(
   flowNode: AstNode,
   paramNames: readonly string[],
 ): string | null {
-  // Build variable map: LogicN name → WAT local name
+  // Build variable map: LogicN name → WAT local name.
+  // Params are $p0, $p1, … — immutable (parameters are passed by value in WAT).
   const vars = new Map<string, string>();
   paramNames.forEach((name, i) => {
     vars.set(name, `$p${i}`);
   });
 
-  // Find the block body of the flow
+  // Find the block body of the flow.
   const blockNode = (flowNode.children ?? []).find((c) => c.kind === "block");
   if (blockNode === undefined) return null;
 
   const localDecls: string[] = [];
   const bodyLines:  string[] = [];
+  const labelCounter = { n: 0 };
 
-  for (const stmt of blockNode.children ?? []) {
-    switch (stmt.kind) {
-      case "letDecl": {
-        // let x = <expr>  →  (local $x i32) + (local.set $x <expr>)
-        const varName  = stmt.value ?? `_anon${localDecls.length}`;
-        const watLocal = `$${varName}`;
-        vars.set(varName, watLocal);
-        localDecls.push(`(local ${watLocal} i32)`);
-        const initNode = stmt.children?.[0];
-        const initExpr = initNode ? emitWATExpr(initNode, vars) : "(i32.const 0)";
-        bodyLines.push(`(local.set ${watLocal} ${initExpr})`);
-        break;
-      }
-
-      case "returnStmt": {
-        // return <expr>  →  <expr>   (WAT: last value on stack is the return value)
-        const exprNode = stmt.children?.[0];
-        if (exprNode !== undefined) {
-          bodyLines.push(emitWATExpr(exprNode, vars));
-        } else {
-          bodyLines.push("(i32.const 0) ;; return void");
-        }
-        break;
-      }
-
-      case "callExpr": {
-        // Standalone call expression (side effect in a pure flow — unusual).
-        // Emit with drop since pure flows don't have meaningful side effects.
-        const callExpr = emitWATExpr(stmt, vars);
-        bodyLines.push(`(drop ${callExpr})`);
-        break;
-      }
-
-      default:
-        // Unknown statement kind — emit a comment and continue.
-        bodyLines.push(`(i32.const 0) ;; unhandled stmt: ${stmt.kind}`);
-        break;
-    }
-  }
+  emitBlockStatements(blockNode, vars, localDecls, bodyLines, labelCounter);
 
   if (localDecls.length === 0 && bodyLines.length === 0) return null;
   return [...localDecls, ...bodyLines].join("\n");
@@ -620,6 +822,12 @@ export interface WATGIRInput {
    * When absent, the emitter falls back to Phase 24A identity bodies.
    */
   readonly ast?: AstNode;
+  /**
+   * Phase 27: when true, export all pure flows (not just entryPoints).
+   * Enables WebAssembly.instantiate callers to invoke any pure flow by name.
+   * Default: false (only entryPoints are exported).
+   */
+  readonly exportAllPure?: boolean;
 }
 
 /**
@@ -712,7 +920,10 @@ export function buildWATModule(
   // Build function definitions.
   // Pure flows (qualifier === "pure", no declaredEffects) get real WAT bodies via emitWATBody.
   // All other flows get "unreachable" stub bodies (Phase 22 effectful emission TBD).
-  const entrySet = new Set(gir.entryPoints);
+  // Phase 27: when exportAllPure is set, all pure flows are entry points for export.
+  const entrySet = gir.exportAllPure === true
+    ? new Set(gir.flows.filter(f => f.qualifier === "pure").map(f => f.name))
+    : new Set(gir.entryPoints);
   const functions: WATFunction[] = gir.flows.map((flow) => {
     const flowDeclaredEffects = getFlowEffects(flow);
     const isPureFlow = flow.qualifier === "pure" && flowDeclaredEffects.length === 0;
@@ -803,8 +1014,13 @@ export function buildWATModule(
   });
 
   // Build exports from entryPoints, mapped to function indices.
+  // Phase 27: when gir.exportAllPure is true (WASM instantiation mode),
+  // export every pure flow so callers can invoke any function by name.
   const flowIndexMap = new Map(gir.flows.map((f, i) => [f.name, i]));
-  const exports: WATExport[] = gir.entryPoints
+  const exportedNames = gir.exportAllPure === true
+    ? gir.flows.filter(f => f.qualifier === "pure").map(f => f.name)
+    : gir.entryPoints;
+  const exports: WATExport[] = exportedNames
     .map((name) => {
       const idx = flowIndexMap.get(name);
       return idx !== undefined ? { name, index: idx } : null;
@@ -868,6 +1084,8 @@ export function buildWATModuleFromGIR(
   target: "wasm-standalone" | "wasm-hybrid" = "wasm-standalone",
   /** Phase 25: original program AST for real arithmetic body emission. */
   ast?: AstNode,
+  /** Phase 27: export all pure flows for WebAssembly.instantiate callers. */
+  exportAllPure?: boolean,
 ): WATModule {
   const watInput: WATGIRInput = {
     flows: gir.flows.map((f) => {
@@ -887,6 +1105,7 @@ export function buildWATModuleFromGIR(
     ...(gir.girHash !== undefined ? { girHash: gir.girHash } : {}),
     ...(gir.sourceHash !== undefined ? { sourceHash: gir.sourceHash } : {}),
     ...(ast !== undefined ? { ast } : {}),
+    ...(exportAllPure === true ? { exportAllPure: true } : {}),
   };
   return buildWATModule(watInput, capabilityMap, target);
 }

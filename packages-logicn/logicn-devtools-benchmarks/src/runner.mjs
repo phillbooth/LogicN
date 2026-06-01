@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const benchDir   = join(__dirname, "..", "benchmarks");
@@ -85,7 +85,8 @@ async function runBenchmark(bench) {
   const wasmRunner = join(dir, "bench-wasm.mjs");
   if (existsSync(wasmRunner)) {
     console.log(`  wasm...`);
-    try { res.wasm = await (await import(wasmRunner)).runWasmBenchmark(); }
+    // pathToFileURL converts Windows backslash paths to file:// URLs for ESM import()
+    try { res.wasm = await (await import(pathToFileURL(wasmRunner).href)).runWasmBenchmark(); }
     catch(e) { res.wasm = { error: true, reason: String(e), runtime: "wasm" }; }
   }
 
