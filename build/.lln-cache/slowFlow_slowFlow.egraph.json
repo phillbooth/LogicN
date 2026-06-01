@@ -1,0 +1,1 @@
+{"flowName":"slowFlow","qualifier":"pure","nodes":[{"op":0,"dest":0,"src1":-1,"src2":-1,"imm":0,"opName":"","callName":""},{"op":8,"dest":-1,"src1":0,"src2":-1,"imm":0,"opName":"","callName":""}],"constants":[1],"slotCount":1,"slotNames":[],"isPure":true,"effectMask":0}

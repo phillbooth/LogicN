@@ -24,7 +24,8 @@ fn run_batch(mut seed: u32, mut checksum: u32, batch_size: usize) -> (u32, u32) 
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let mut target_ms = 30000u128; let mut warmup_ms = 3000u128; let mut batch_size = 50000usize;
+    // 5s default — accurate enough for throughput measurement. Use --target-ms 30000 for publication.
+    let mut target_ms = 5000u128; let mut warmup_ms = 1000u128; let mut batch_size = 50000usize;
     let seed0: u32 = 123456789;
     let mut i = 1;
     while i + 1 < args.len() {

@@ -14,7 +14,30 @@ export type ProjectGraphNodeKind =
   | "RuntimeRule"
   | "SecurityRule"
   | "ComputeFeature"
-  | "Decision";
+  | "Decision"
+  // ── Governance Architecture (Phase 25+) ─────────────────────────────────
+  /** A flow-level governance proof and compliance certificate. */
+  | "ProofGraph"
+  /** Per-flow governance rules, flags, and mandate bitmask. */
+  | "GovernanceGraph"
+  /** Economic routing evaluation: expected_cost = compute + breach_probability × breach_loss. */
+  | "CostGraph"
+  /** Risk-adjusted value classification: safety_critical / mission_critical / etc. */
+  | "ValueGraph"
+  /** Hardware dispatch plan: CPU / GPU / NPU / APU / WASM targeting. */
+  | "ExecutionGraph"
+  /** Diagnostic code definition: LLN-* series. */
+  | "DiagnosticCode"
+  /** Runtime profile definition: strict / high_integrity / deterministic. */
+  | "RuntimeProfile"
+  /** Hardware capability: P-core / E-core / AVX2 / AVX-512 / WASM SIMD. */
+  | "HardwareCapability"
+  /** Economic constraint or budget rule inside contract.economics. */
+  | "EconomicConstraint"
+  /** Safety classification requirement inside contract.safety. */
+  | "SafetyConstraint"
+  /** Governance marketplace entry: reusable governance shape. */
+  | "GovernanceShape";
 
 export type ProjectGraphEdgeKind =
   | "owns"
@@ -28,7 +51,22 @@ export type ProjectGraphEdgeKind =
   | "maps_to"
   | "classified_as"
   | "depends_on"
-  | "explains";
+  | "explains"
+  // ── Governance Architecture edges ───────────────────────────────────────
+  /** A layer verifies another before it can proceed. */
+  | "verifies_before"
+  /** A component routes execution to a target based on rules. */
+  | "routes_to"
+  /** A graph is a projection/view of another (GovernanceGraph → CostGraph). */
+  | "projects_from"
+  /** A flow produces a proof graph as evidence of compliance. */
+  | "produces_proof"
+  /** An economic constraint operates within a governance boundary. */
+  | "constrained_by"
+  /** A hardware capability accelerates a computation target. */
+  | "accelerated_by"
+  /** A profile restricts a language feature or runtime behaviour. */
+  | "restricts";
 
 export type ProjectGraphConfidence = "EXTRACTED" | "INFERRED" | "AMBIGUOUS";
 

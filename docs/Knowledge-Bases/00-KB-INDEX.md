@@ -307,6 +307,9 @@ Non-`.md` files (YAML, EBNF) are listed separately at the end.
 - logicn-value-state-checker-architecture.md — value-state: ValueStateFlags, SINK_REQUIREMENTS, LLN-GATE-001
 - logicn-cli-current.md — current CLI spec: all modes including --target wasm-standalone/hybrid
 - logicn-hybrid-wasm-native-architecture-v1.md — **v1.0 canonical** hybrid WASM-native architecture (Snapdragon/NPU vision + governance model, 2026-05-31)
+- logicn-governance-hierarchy.md — **Foundational** Governance First, Economics Second, Performance Third — the inviolable stack, the test for every future proposal
+- logicn-governance-scope.md — **Foundational** Governance for High Consequence Systems (not just PII) — aerospace, defence, space, AI, critical infrastructure
+- logicn-execution-graph-kernel-architecture.md — 8 architectural suggestions: ProofGraph, ControlNode/DataNode, Capability Routing, Execution Signatures, Graph Fingerprints, Governance Fabric
 - logicn-hybrid-wasm-architecture.md — detailed EDA model, WAT assembler decision, crash recovery, 8 native governance rules
 - logicn-security-anti-abuse.md — anti-botnet architecture: process.spawn/worker.spawn/event.schedule effects (✅ Phase R4), network destination policy, LLN-NET-001/002, rate limit enforcement, DNS rebinding defence, getAntiAbuseReport() devtools (✅ Phase R4)
 

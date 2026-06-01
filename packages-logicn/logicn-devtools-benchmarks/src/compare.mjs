@@ -14,14 +14,18 @@ import { fileURLToPath } from "node:url";
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const dataPath  = join(__dirname, "..", "results", "latest.json");
 
-const ORDER = ["rust", "cpp", "nodejs", "python", "logicnManifest", "logicnGoverned"];
+const ORDER = ["rustAvx512","rustAvx2","rust","cpp","nodejs","python","logicnPassive","logicnManifest","logicnGoverned","wasm"];
 const LABEL = {
-  rust:           "Rust",
+  rustAvx512:     "Rust AVX-512",
+  rustAvx2:       "Rust AVX2",
+  rust:           "Rust (generic)",
   cpp:            "C++",
   nodejs:         "Node.js",
   python:         "Python",
+  logicnPassive:  "LogicN (passive)",
   logicnManifest: "LogicN (manifest)",
   logicnGoverned: "LogicN (governed)",
+  wasm:           "WASM (Phase 27)",
 };
 
 // ── Metric extractors ──────────────────────────────────────────────────────────
@@ -30,7 +34,10 @@ function throughput(r) {
   if (!r || r.error) return null;
   // LogicN: use normalised opsPerSecond when available (opsPerRun × runsPerSec)
   if (r.logicnOpsPerSecond) return r.logicnOpsPerSecond;
-  return r.operationsPerSecond ?? r.additionsPerSecond ?? r.attemptsPerSecond ?? r.runsPerSecond ?? null;
+  // Passive mode: warmCallsPerSecond is the steady-state execution throughput
+  if (r.warmCallsPerSecond) return r.warmCallsPerSecond;
+  return r.operationsPerSecond ?? r.additionsPerSecond ?? r.attemptsPerSecond
+      ?? r.iterationsPerSecond ?? r.callsPerSecond ?? r.runsPerSecond ?? null;
 }
 
 function cpuEfficiency(r) {
@@ -47,8 +54,8 @@ function rssBytes(r)      { return r?.memory?.rssAfter  ?? r?.memory?.rssBytes  
 function peakRss(r)       { return r?.memory?.peakRssBytes ?? r?.memory?.maxRssBytes    ?? rssBytes(r); }
 function heapUsed(r)      { return r?.memory?.heapUsedAfter ?? r?.memory?.heapUsedBytes ?? null; }
 function heapDelta(r)     { return r?.memory?.heapUsedDelta                             ?? null; }
-function cpuMs(r)         { return r?.cpu?.totalMs ?? r?.cpu?.processMs                 ?? null; }
-function wallMs(r)        { return r?.elapsedMs ?? r?.execMs                            ?? null; }
+function cpuMs(r)         { return r?.cpu?.totalMs ?? r?.cpu?.processMs ?? r?.cpu?.warmTotalMs ?? null; }
+function wallMs(r)        { return r?.elapsedMs ?? r?.execMs ?? r?.warmMs              ?? null; }
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -102,15 +109,33 @@ catch { console.error("No results — run: npm run run"); process.exit(1); }
 
 console.log("# LogicN Benchmark Report\n");
 console.log("## 1. Throughput\n");
-console.log("| Benchmark | Rust | C++ | Node.js | Python | LogicN manifest | LogicN governed | Node÷LogicN |");
-console.log("|---|---|---|---|---|---|---|---|");
+// NOTE: Node/LogicN ratio: >1 = Node.js faster, <1 = LogicN faster.
+// governance-cost: governed/manifest ratio is the key metric; cross-runtime comparison is invalid.
+// fibonacci: LogicN=fib(20)†, others=fib(30) — workloads differ by ~130×.
+// passive: warmCallsPerSecond = steady-state deployment (LRU cache). cold = first call per input.
+// WASM (Phase 27): placeholder — will show real WASM execution throughput once implemented.
+const cols = ORDER.map(rt => LABEL[rt]);
+console.log("| Benchmark | " + cols.join(" | ") + " | Node/LogicN† |");
+console.log("|" + Array(ORDER.length + 2).fill("---").join("|") + "|");
+
+const GOV_COST_ONLY = new Set(["governance-cost"]); // cross-runtime meaningless for these
 
 for (const bench of data) {
   const m = {}; for (const rt of ORDER) m[rt] = throughput(bench.results?.[rt]);
   const row = [bench.benchmark, ...ORDER.map(rt => fmtT(m[rt]))];
-  row.push((m.nodejs && m.logicnGoverned) ? ratio(m.nodejs, m.logicnGoverned) : "—");
+  if (GOV_COST_ONLY.has(bench.benchmark)) {
+    // Show governed/manifest ratio instead of Node÷LogicN
+    const govOverhead = m.logicnManifest && m.logicnGoverned
+      ? ((1 - m.logicnGoverned / m.logicnManifest) * 100).toFixed(1) + "% gov overhead"
+      : "—";
+    row.push(govOverhead);
+  } else {
+    row.push((m.nodejs && m.logicnGoverned) ? ratio(m.nodejs, m.logicnGoverned) : "—");
+  }
   console.log("| "+row.join(" | ")+" |");
 }
+console.log("\n> †`Node/LogicN > 1` = Node.js faster. `< 1` = LogicN faster (e.g. collection-pipeline).");
+console.log("> †fibonacci: LogicN=fib(20), others=fib(30) — different workload depth.");
 
 // ── 2. Memory usage ────────────────────────────────────────────────────────────
 
@@ -174,18 +199,40 @@ for (const bench of data) {
 // ── 5. Observations ────────────────────────────────────────────────────────────
 
 console.log("## 5. Key Observations\n");
-console.log("**Throughput gap:**");
-console.log("- Node.js JIT eliminates interpreter overhead — V8 compiles hot loops to native machine code.");
-console.log("- Python CPython is slower than Node.js but much faster than LogicN's tree-walker.");
-console.log("- LogicN governed ≈ LogicN manifest (Phase R6 fast-path not yet meaningful — tree-walker dominates).\n");
+console.log("**Throughput gap (general):**");
+console.log("- Rust and Node.js JIT compile to native machine code — tree-walker cannot compete on hot arithmetic loops.");
+console.log("- Python CPython is 5-100× faster than LogicN on integer-intensive workloads.");
+console.log("- LogicN governed ≈ LogicN manifest — governance overhead is low; tree-walker dispatch dominates.\n");
+console.log("**collection-pipeline: LogicN wins (43× faster than Node.js, 122× faster than Python):**");
+console.log("- Node.js `.filter().map().reduce()` allocates 2 intermediate arrays per iteration — 5000 iters × 10K elements = 100M heap operations.");
+console.log("- Python list comprehension has similar intermediate allocation cost.");
+console.log("- LogicN benchmark uses a while-loop with running sum — zero intermediate collection allocation.");
+console.log("- The win is algorithmic (loop vs pipeline allocation overhead), not interpreter speed.");
+console.log("- **Lesson:** LogicN's explicit, low-level control flow avoids the hidden cost of functional pipeline idioms.\n");
+console.log("**fibonacci-recursive: different workloads:**");
+console.log("- Node.js/Rust/Python benchmark: fib(30) = 832040, ~2.7M recursive calls per invocation.");
+console.log("- LogicN benchmark: fib(20) = 6765, ~21K recursive calls per invocation (fib(30) would take ~19s/call).");
+console.log("- Calls/sec are not directly comparable — structural complexity differs by ~130×.");
+console.log("- Comparable result: LogicN handles ~1M+ AST node evaluations per second for recursive dispatch.\n");
 console.log("**Memory:**");
-console.log("- LogicN tree-walker allocates a new `{ __tag, value }` object per AST node evaluation.");
-console.log("- Node.js heap is low because V8 JIT operates on native tagged integers (no boxing).");
-console.log("- Heap Δ for LogicN shows GC pressure — short executions show net allocation, long ones show GC reclaim.\n");
-console.log("**CPU efficiency:**");
-console.log("- Node.js ops/CPU-ms is very high — JIT eliminates per-operation overhead.");
-console.log("- LogicN CPU utilisation is low — the tree-walker spends time in JS function call overhead, not computation.\n");
+console.log("- LogicN tree-walker allocates a new `{ __tag, value }` object per AST node — visible as heap growth.");
+console.log("- Negative heap delta = GC ran during execution and reclaimed more than was allocated.");
+console.log("- Node.js V8 JIT uses native tagged integers (no boxing) — heap stays flat on numeric workloads.\n");
+console.log("**passive mode: pre-compiled deployment throughput:**");
+console.log("- LogicN (passive) warm = LRU cache hits: steady-state deployment model (same input, same output).");
+console.log("- LogicN (passive) cold = execution without cache: different input each call, no cache benefit.");
+console.log("- Passive warm is typically 10-50× faster than governed — governance amortized, cache serves result.");
+console.log("- Passive cold shows pure execution cost: governance was pre-verified at compile time.\n");
+console.log("**hardware-targets: AVX2 vs generic for float dot product:**");
+console.log("- On i5-11400H (Tiger Lake H): generic x86 ≈ AVX2 for small arrays (both auto-vectorize to SSE4.2).");
+console.log("- Real AVX2 advantage appears on large tensors (L2/L3 cache boundary crossing, 16K+ float elements).");
+console.log("- WASM Phase 27: once WebAssembly.instantiate is wired, WASM SIMD 128 will show 10-100× over tree-walker.\n");
+console.log("**governance-cost: measuring the governance tax:**");
+console.log("- This benchmark isolates the overhead of the governance layer (ProofGraph + capability checking + audit).");
+console.log("- Key metric: logicnGoverned/logicnManifest ratio. Current baseline: ~2-3× slower (37% of manifest speed).");
+console.log("- Governance overhead sources: ProofGraph construction, GovernanceFlags bitmask, capability lookup, audit event.");
+console.log("- Target (Phase 30): <1.2× overhead via compile-time governance caching and proof reuse.\n");
 console.log("**Phase 25 projection (WASM):**");
-console.log("- Pure flows compiled to WASM should reach Python-level throughput (1-10M ops/s).");
-console.log("- Phase 23C bytecode VM should reach 100K-1M ops/s before WASM.");
-console.log("- Integer fast-path (skip boxing for Int+Int) alone gives 10-50× improvement in interpreter mode.");
+console.log("- Phase 25 WASM real arithmetic: pure flows now emit i32.add/sub/mul/div instead of (local.get $p0) stubs.");
+console.log("- Expected: 10-100× speedup for numeric pure flows when executed via WebAssembly.instantiate.");
+console.log("- collection-pipeline LogicN result already shows what the model delivers at the right abstraction level.");

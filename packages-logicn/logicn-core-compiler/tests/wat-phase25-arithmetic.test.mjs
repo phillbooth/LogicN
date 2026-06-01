@@ -1,0 +1,301 @@
+/**
+ * Phase 25A — WAT Real Arithmetic Body Emission Tests
+ *
+ * Verifies that buildWATModuleFromGIR(gir, cap, target, ast) emits
+ * real i32.add/sub/mul/div instructions for pure flows instead of
+ * (local.get $p0) identity stubs (Phase 24A).
+ */
+
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  parseProgram, checkEffects, emitGIR,
+  buildWATModuleFromGIR, renderWAT,
+  emitWATExpr, extractFlowParamNames,
+  findFlowNodeInAST,
+} from "../dist/index.js";
+
+// ---------------------------------------------------------------------------
+// Helper
+// ---------------------------------------------------------------------------
+
+function compileToWAT(src) {
+  const prog = parseProgram(src, "test.lln");
+  const errs = (prog.diagnostics ?? []).filter(d => d.severity === "error");
+  if (errs.length > 0) throw new Error("Parse error: " + errs.map(d => d.message).join("; "));
+  const fx = checkEffects(prog.flows, prog.ast);
+  const { gir } = emitGIR(prog.ast, prog.flows, fx);
+  return renderWAT(buildWATModuleFromGIR(gir, undefined, "wasm-standalone", prog.ast));
+}
+
+// ---------------------------------------------------------------------------
+// emitWATExpr unit tests
+// ---------------------------------------------------------------------------
+
+describe("emitWATExpr: integer literal", () => {
+  it("emits i32.const for integer", () => {
+    assert.equal(
+      emitWATExpr({ kind: "numberLiteral", value: "42" }, new Map()),
+      "(i32.const 42)"
+    );
+  });
+
+  it("emits f64.const for float", () => {
+    assert.equal(
+      emitWATExpr({ kind: "numberLiteral", value: "3.14" }, new Map()),
+      "(f64.const 3.14)"
+    );
+  });
+});
+
+describe("emitWATExpr: identifier", () => {
+  it("resolves param via vars map", () => {
+    const vars = new Map([["x", "$p0"]]);
+    assert.equal(
+      emitWATExpr({ kind: "identifier", value: "x" }, vars),
+      "(local.get $p0)"
+    );
+  });
+
+  it("emits i32.const 0 with comment for unknown identifier", () => {
+    const result = emitWATExpr({ kind: "identifier", value: "missing" }, new Map());
+    assert.ok(result.includes("i32.const 0"));
+    assert.ok(result.includes("missing"));
+  });
+});
+
+describe("emitWATExpr: binary operations", () => {
+  it("+ → i32.add", () => {
+    const vars = new Map([["a", "$p0"], ["b", "$p1"]]);
+    const node = {
+      kind: "binaryExpr", value: "+",
+      children: [{ kind: "identifier", value: "a" }, { kind: "identifier", value: "b" }],
+    };
+    assert.equal(emitWATExpr(node, vars), "(i32.add (local.get $p0) (local.get $p1))");
+  });
+
+  it("- → i32.sub", () => {
+    const vars = new Map([["a", "$p0"], ["b", "$p1"]]);
+    const node = {
+      kind: "binaryExpr", value: "-",
+      children: [{ kind: "identifier", value: "a" }, { kind: "identifier", value: "b" }],
+    };
+    assert.equal(emitWATExpr(node, vars), "(i32.sub (local.get $p0) (local.get $p1))");
+  });
+
+  it("* → i32.mul", () => {
+    const vars = new Map([["a", "$p0"], ["b", "$p1"]]);
+    const node = {
+      kind: "binaryExpr", value: "*",
+      children: [{ kind: "identifier", value: "a" }, { kind: "identifier", value: "b" }],
+    };
+    assert.equal(emitWATExpr(node, vars), "(i32.mul (local.get $p0) (local.get $p1))");
+  });
+
+  it("< → i32.lt_s", () => {
+    const vars = new Map([["n", "$p0"]]);
+    const node = {
+      kind: "binaryExpr", value: "<",
+      children: [{ kind: "identifier", value: "n" }, { kind: "numberLiteral", value: "10" }],
+    };
+    assert.equal(emitWATExpr(node, vars), "(i32.lt_s (local.get $p0) (i32.const 10))");
+  });
+
+  it("== → i32.eq", () => {
+    const vars = new Map([["x", "$p0"]]);
+    const node = {
+      kind: "binaryExpr", value: "==",
+      children: [{ kind: "identifier", value: "x" }, { kind: "numberLiteral", value: "0" }],
+    };
+    assert.equal(emitWATExpr(node, vars), "(i32.eq (local.get $p0) (i32.const 0))");
+  });
+
+  it("nested: (a + b) * c", () => {
+    const vars = new Map([["a", "$p0"], ["b", "$p1"], ["c", "$p2"]]);
+    const node = {
+      kind: "binaryExpr", value: "*",
+      children: [
+        {
+          kind: "binaryExpr", value: "+",
+          children: [{ kind: "identifier", value: "a" }, { kind: "identifier", value: "b" }],
+        },
+        { kind: "identifier", value: "c" },
+      ],
+    };
+    assert.equal(
+      emitWATExpr(node, vars),
+      "(i32.mul (i32.add (local.get $p0) (local.get $p1)) (local.get $p2))"
+    );
+  });
+});
+
+describe("emitWATExpr: unary operations", () => {
+  it("unary - → i32.sub 0 x", () => {
+    const vars = new Map([["x", "$p0"]]);
+    const node = {
+      kind: "unaryExpr", value: "-",
+      children: [{ kind: "identifier", value: "x" }],
+    };
+    assert.equal(emitWATExpr(node, vars), "(i32.sub (i32.const 0) (local.get $p0))");
+  });
+
+  it("unary ! → i32.eqz", () => {
+    const vars = new Map([["b", "$p0"]]);
+    const node = {
+      kind: "unaryExpr", value: "!",
+      children: [{ kind: "identifier", value: "b" }],
+    };
+    assert.equal(emitWATExpr(node, vars), "(i32.eqz (local.get $p0))");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// extractFlowParamNames
+// ---------------------------------------------------------------------------
+
+describe("extractFlowParamNames", () => {
+  it("extracts names from paramDecl nodes", () => {
+    const prog = parseProgram(
+      "pure flow add(a: Int, b: Int) -> Int contract { effects {} } { return a + b }",
+      "test.lln"
+    );
+    const flowNode = prog.ast.children?.find(c => c.kind === "pureFlowDecl");
+    assert.deepEqual(extractFlowParamNames(flowNode), ["a", "b"]);
+  });
+
+  it("returns empty array for no-param flow", () => {
+    const prog = parseProgram(
+      "pure flow zero() -> Int contract { effects {} } { return 0 }",
+      "test.lln"
+    );
+    const flowNode = prog.ast.children?.find(c => c.kind === "pureFlowDecl");
+    assert.deepEqual(extractFlowParamNames(flowNode), []);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// findFlowNodeInAST
+// ---------------------------------------------------------------------------
+
+describe("findFlowNodeInAST", () => {
+  it("finds a named pure flow", () => {
+    const prog = parseProgram(
+      "pure flow add(a: Int, b: Int) -> Int contract { effects {} } { return a + b }",
+      "test.lln"
+    );
+    const node = findFlowNodeInAST(prog.ast, "add");
+    assert.ok(node !== undefined, "must find the add flow");
+    assert.equal(node.kind, "pureFlowDecl");
+    assert.equal(node.value, "add");
+  });
+
+  it("returns undefined for unknown flow name", () => {
+    const prog = parseProgram(
+      "pure flow add(a: Int, b: Int) -> Int contract { effects {} } { return a + b }",
+      "test.lln"
+    );
+    assert.equal(findFlowNodeInAST(prog.ast, "notHere"), undefined);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 25 integration — real WAT arithmetic
+// ---------------------------------------------------------------------------
+
+describe("Phase 25 integration: real WAT arithmetic", () => {
+  it("add(a,b) → i32.add (not identity stub)", () => {
+    const wat = compileToWAT(
+      "pure flow add(a: Int, b: Int) -> Int contract { effects {} } { return a + b }"
+    );
+    assert.ok(wat.includes("i32.add"), `expected i32.add in:\n${wat}`);
+    assert.ok(wat.includes("local.get $p0"));
+    assert.ok(wat.includes("local.get $p1"));
+    assert.ok(!wat.includes("unreachable"), "must not use unreachable");
+  });
+
+  it("sub(a,b) → i32.sub", () => {
+    const wat = compileToWAT(
+      "pure flow sub(a: Int, b: Int) -> Int contract { effects {} } { return a - b }"
+    );
+    assert.ok(wat.includes("i32.sub"));
+    assert.ok(!wat.includes("unreachable"));
+  });
+
+  it("mul(a,b) → i32.mul", () => {
+    const wat = compileToWAT(
+      "pure flow mul(a: Int, b: Int) -> Int contract { effects {} } { return a * b }"
+    );
+    assert.ok(wat.includes("i32.mul"));
+    assert.ok(!wat.includes("unreachable"));
+  });
+
+  it("constant 42 → i32.const 42", () => {
+    const wat = compileToWAT(
+      "pure flow fortytwo() -> Int contract { effects {} } { return 42 }"
+    );
+    assert.ok(wat.includes("i32.const 42"));
+    assert.ok(!wat.includes("unreachable"));
+  });
+
+  it("identity(x) → local.get $p0", () => {
+    const wat = compileToWAT(
+      "pure flow identity(x: Int) -> Int contract { effects {} } { return x }"
+    );
+    assert.ok(wat.includes("local.get $p0"));
+    assert.ok(!wat.includes("unreachable"));
+  });
+
+  it("let binding emits (local ...) + local.set", () => {
+    const wat = compileToWAT([
+      "pure flow product(a: Int, b: Int) -> Int",
+      "contract { effects {} }",
+      "{ let result = a * b",
+      "  return result }",
+    ].join("\n"));
+    assert.ok(wat.includes("(local $result i32)"), `expected local decl:\n${wat}`);
+    assert.ok(wat.includes("local.set $result"));
+    assert.ok(wat.includes("i32.mul"));
+    assert.ok(!wat.includes("unreachable"));
+  });
+
+  it("multiple let bindings in correct order", () => {
+    const wat = compileToWAT([
+      "pure flow multiStep(a: Int, b: Int) -> Int",
+      "contract { effects {} }",
+      "{ let sumVal = a + b",
+      "  let doubled = sumVal * 2",
+      "  return doubled }",
+    ].join("\n"));
+    const sumPos  = wat.indexOf("$sumVal");
+    const dblPos  = wat.indexOf("$doubled");
+    assert.ok(sumPos !== -1  && dblPos !== -1);
+    assert.ok(sumPos < dblPos, "sumVal declaration must precede doubled");
+    assert.ok(wat.includes("i32.add") && wat.includes("i32.mul"));
+    assert.ok(!wat.includes("unreachable"));
+  });
+
+  it("Phase 24A fallback (no ast) still avoids unreachable", () => {
+    const prog = parseProgram(
+      "pure flow add(a: Int, b: Int) -> Int contract { effects {} } { return a + b }",
+      "test.lln"
+    );
+    const fx = checkEffects(prog.flows, prog.ast);
+    const { gir } = emitGIR(prog.ast, prog.flows, fx);
+    // Call WITHOUT ast — falls back to Phase 24A
+    const wat = renderWAT(buildWATModuleFromGIR(gir, undefined, "wasm-standalone"));
+    assert.ok(!wat.includes("unreachable"), "Phase 24A must not use unreachable");
+    assert.ok(wat.includes("local.get"), "Phase 24A uses local.get for identity");
+  });
+
+  it("generated WAT has correct module structure", () => {
+    const wat = compileToWAT(
+      "pure flow inc(x: Int) -> Int contract { effects {} } { return x + 1 }"
+    );
+    assert.ok(wat.startsWith("(module"), "must start with (module");
+    assert.ok(wat.includes("(memory"), "must declare memory");
+    assert.ok(wat.includes("(func $inc"), "must have func $inc");
+    assert.ok(wat.includes("i32.add"), "must have real arithmetic");
+    assert.ok(wat.includes("i32.const 1"), "must have constant 1");
+  });
+});

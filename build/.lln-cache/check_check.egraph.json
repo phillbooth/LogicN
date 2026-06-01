@@ -1,0 +1,1 @@
+{"flowName":"check","qualifier":"pure","nodes":[{"op":12,"dest":-1,"src1":-1,"src2":-1,"imm":0,"opName":"","callName":"ifStmt"},{"op":0,"dest":1,"src1":-1,"src2":-1,"imm":0,"opName":"","callName":""},{"op":8,"dest":-1,"src1":1,"src2":-1,"imm":0,"opName":"","callName":""}],"constants":["\"nonzero\""],"slotCount":2,"slotNames":[["x",0]],"isPure":true,"effectMask":0}

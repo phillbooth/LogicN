@@ -6,12 +6,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "run":               "node src/runner.mjs",
-    "run:compute-mix":   "node src/runner.mjs --benchmark compute-mix",
-    "run:arithmetic":    "node src/runner.mjs --benchmark arithmetic-threshold",
-    "run:guess":         "node src/runner.mjs --benchmark six-digit-guess",
-    "compare":           "node src/compare.mjs",
-    "build:native":      "node src/build-native.mjs"
+    "run":                    "node src/runner.mjs",
+    "run:quick":              "node src/runner.mjs --quick",
+    "run:compute-mix":        "node src/runner.mjs --benchmark compute-mix",
+    "run:arithmetic":         "node src/runner.mjs --benchmark arithmetic-threshold",
+    "run:guess":              "node src/runner.mjs --benchmark six-digit-guess",
+    "run:hardware-targets":   "node src/runner.mjs --benchmark hardware-targets",
+    "run:governance-cost":    "node src/runner.mjs --benchmark governance-cost",
+    "run:passive":            "node src/runner.mjs --benchmark hardware-targets",
+    "compare":                "node src/compare.mjs",
+    "build:native":           "node src/build-native.mjs",
+    "bench":                  "node src/runner.mjs --quick && node src/compare.mjs"
   },
   "dependencies": {
     "@logicn/core-compiler": "file:../logicn-core-compiler"

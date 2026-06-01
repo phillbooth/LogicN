@@ -34,6 +34,7 @@ import {
   setCachedPureFlow,
   clearPureFlowCache,
   pureFlowCacheKey,
+  generateROIReport,
 } from "../../dist/index.js";
 
 // ---------------------------------------------------------------------------
@@ -576,5 +577,55 @@ pure flow double(x: Int) -> Int {
     clearPureFlowCache();
     const afterClear = getCachedPureFlow("flow:abc");
     assert.equal(afterClear, undefined, "getCachedPureFlow must return undefined after clearPureFlowCache");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ProofGraph wired in governance verifier
+// ---------------------------------------------------------------------------
+
+describe("ProofGraph wired in governance verifier", () => {
+  it("verifyGovernance result has proofGraphs Map", () => {
+    const result = verifySource(`pure flow add(a: Int, b: Int) -> Int { return a }`);
+    assert.ok(result.proofGraphs instanceof Map,
+      "proofGraphs must be a Map");
+    assert.ok(result.proofGraphs.has("add"),
+      "proofGraphs must contain an entry for the verified flow");
+  });
+
+  it("a secure flow with effects and contract produces a ProofGraph with verified: true", () => {
+    const result = verifySource(`
+secure flow createUser(readonly request: Request) -> Response
+contract {
+  intent { "Create a new user account." }
+  effects { database.write audit.write }
+}
+{
+  return Response.ok({})
+}
+`);
+    const pg = result.proofGraphs.get("createUser");
+    assert.ok(pg !== undefined, "ProofGraph must exist for createUser");
+    assert.equal(pg.schemaVersion, "lln.proof.v1",
+      "ProofGraph schemaVersion must be lln.proof.v1");
+    assert.ok(pg.verified === true,
+      "ProofGraph must be verified: true for a secure flow with effects and contract");
+  });
+
+  it("generateROIReport returns correct schemaVersion", () => {
+    const result = verifySource(`
+guarded flow save(data: String) -> Void
+contract { effects { database.write audit.write } }
+{
+  return
+}
+`);
+    const report = generateROIReport(result.proofGraphs);
+    assert.equal(report.schemaVersion, "lln.roi.v1",
+      "GovernanceROIReport schemaVersion must be lln.roi.v1");
+    assert.ok(typeof report.flowCount === "number",
+      "report.flowCount must be a number");
+    assert.ok(report.notes.length > 0,
+      "report.notes must be non-empty");
   });
 });

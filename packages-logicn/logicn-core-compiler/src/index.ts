@@ -107,6 +107,23 @@ export {
   type EffectCheckerMode,
 } from "./effect-checker.js";
 
+// Execution Graph Kernel — ProofGraph, ExecutionSignature, GraphFingerprint
+export {
+  computeExecutionSignature,
+  executionSignatureHash,
+  buildProofGraph,
+  sharesGovernanceShape,
+  diffFingerprints,
+  generateROIReport,
+  type ExecutionSignature,
+  type ProofGraph,
+  type ProofObligation,
+  type ProofObligationKind,
+  type ProofEvidence,
+  type GraphFingerprint,
+  type GovernanceROIReport,
+} from "./proof-graph.js";
+
 // Phase 18D / 18E / 18F / Hybrid WASM — Type Registry
 export {
   TypeId,
@@ -472,6 +489,10 @@ export {
   buildWATModule,
   buildWATModuleFromGIR,
   emitWATBody,
+  emitWATFromFlowAST,
+  emitWATExpr,
+  extractFlowParamNames,
+  findFlowNodeInAST,
   getWATImportsForEffects,
   logicNTypeToWAT,
   DEFAULT_WAT_MEMORY,
@@ -594,6 +615,10 @@ export {
   extractArenaLimitMB,
   LLN_GOV_003,
   LLN_GOV_013,
+  LLN_VAL_001,
+  LLN_VAL_002,
+  LLN_VAL_003,
+  RECOGNISED_VALUE_CLASSIFICATIONS,
   LLN_CONTEXT_001,
   LLN_GOV_011,
   LLN_GOV_012,
@@ -601,6 +626,40 @@ export {
   type GovernanceVerifyResult,
   type DeploymentProfile,
 } from "./governance-verifier.js";
+
+// ---------------------------------------------------------------------------
+// Economics / Lineage / AI governance diagnostics — LLN-ECON-001..003
+// ---------------------------------------------------------------------------
+
+/** LLN-ECON-001: Flow execution may exceed the declared economic budget. */
+export const LLN_ECON_001 = {
+  code: "LLN-ECON-001",
+  name: "BudgetExceeded",
+  severity: "warning" as const,
+  message: "Flow execution may exceed the declared economic budget.",
+  why: "Economic contracts enable cost-aware scheduling. When actual cost exceeds declared targets, the runtime can route to cheaper alternatives or alert before money is spent.",
+  suggestedFix: "Increase the target_cost in contract.economics, or declare preferred_execution wasm to reduce compute cost.",
+} as const;
+
+/** LLN-ECON-002: Protected data binding has no lineage declaration. */
+export const LLN_ECON_002 = {
+  code: "LLN-ECON-002",
+  name: "LineageMissing",
+  severity: "info" as const,
+  message: "Protected data binding has no lineage declaration.",
+  why: "Data lineage tracking enables automated regulatory reporting (GDPR Article 30, CCPA). Without lineage, organisations must manually trace data origins during audits.",
+  suggestedFix: "Add lineage { source origin owner Team retention duration } to the contract.",
+} as const;
+
+/** LLN-ECON-003: AI model call uses a model not in the contract's approved_models list. */
+export const LLN_ECON_003 = {
+  code: "LLN-ECON-003",
+  name: "AiModelUnapproved",
+  severity: "error" as const,
+  message: "AI model call uses a model not in the contract's approved_models list.",
+  why: "Unapproved AI models can incur unexpected costs, produce unaudited outputs, or violate data processing agreements with vendors.",
+  suggestedFix: "Add the model to contract.ai.approved_models, or remove the call.",
+} as const;
 
 /** LLN-GOV-014: Flow declares compute targets with prefer [...] but no fallback target is declared. */
 export const LLN_GOV_014 = {

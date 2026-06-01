@@ -20,8 +20,8 @@ except ModuleNotFoundError:
     resource = None
 
 
-DEFAULT_TARGET_MS = 30_000
-DEFAULT_WARMUP_MS = 3_000
+DEFAULT_TARGET_MS = 5_000   # 5s is accurate enough; use --target-ms 30000 for publication numbers
+DEFAULT_WARMUP_MS = 1_000
 DEFAULT_BATCH_SIZE = 50_000
 DEFAULT_SEED = 123_456_789
 UINT32_MASK = 0xFFFF_FFFF
@@ -54,8 +54,8 @@ def elapsed_ms(started_at):
 
 
 def validate_config(args):
-    if args.operations is None and not 10_000 <= args.target_ms <= 30_000:
-        raise ValueError("--target-ms must be between 10000 and 30000 unless --operations is used")
+    if args.operations is None and not 1_000 <= args.target_ms <= 120_000:
+        raise ValueError("--target-ms must be between 1000 and 120000 unless --operations is used")
     if args.warmup_ms < 0:
         raise ValueError("--warmup-ms must be 0 or greater")
     if args.batch_size <= 0:

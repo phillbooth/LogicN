@@ -22,6 +22,7 @@
 // =============================================================================
 
 import { STDLIB_CAPABILITY_MAP } from "./stdlib-registry.js";
+import type { AstNode } from "./parser.js";
 
 // ---------------------------------------------------------------------------
 // Phase 22A — WASM SIMD capability types
@@ -293,6 +294,203 @@ export function renderWAT(module: WATModule): string {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 25 — AST-based WAT code generator for pure flows
+// ---------------------------------------------------------------------------
+
+/**
+ * Maps a binary operator string to its WAT i32 instruction.
+ * Arithmetic, comparison, and bitwise ops — all operating on i32.
+ */
+const BINARY_OP_TO_WAT: ReadonlyMap<string, string> = new Map([
+  ["+",  "i32.add"],
+  ["-",  "i32.sub"],
+  ["*",  "i32.mul"],
+  ["/",  "i32.div_s"],
+  ["%",  "i32.rem_s"],
+  ["<",  "i32.lt_s"],
+  [">",  "i32.gt_s"],
+  ["<=", "i32.le_s"],
+  [">=", "i32.ge_s"],
+  ["==", "i32.eq"],
+  ["!=", "i32.ne"],
+  ["&&", "i32.and"],
+  ["||", "i32.or"],
+  ["&",  "i32.and"],
+  ["|",  "i32.or"],
+  ["^",  "i32.xor"],
+  ["<<", "i32.shl"],
+  [">>", "i32.shr_s"],
+]);
+
+/**
+ * Emits a single WAT s-expression for an AST expression node.
+ *
+ * @param node - The AST expression node.
+ * @param vars - Map from LogicN variable/param name → WAT local name ($p0, $x, etc.)
+ */
+export function emitWATExpr(node: AstNode, vars: ReadonlyMap<string, string>): string {
+  switch (node.kind) {
+    case "identifier": {
+      const name = node.value ?? "";
+      const watName = vars.get(name);
+      if (watName !== undefined) return `(local.get ${watName})`;
+      // Unknown identifier — emit with comment for diagnostics.
+      return `(i32.const 0) ;; unresolved: ${name}`;
+    }
+
+    case "numberLiteral": {
+      const raw = node.value ?? "0";
+      const isFloat = raw.includes(".") || raw.includes("e") || raw.includes("E");
+      if (isFloat) {
+        return `(f64.const ${raw})`;
+      }
+      return `(i32.const ${raw})`;
+    }
+
+    case "binaryExpr": {
+      const op = node.value ?? "";
+      const watOp = BINARY_OP_TO_WAT.get(op);
+      const children = node.children ?? [];
+      const left  = children[0] ? emitWATExpr(children[0], vars) : "(i32.const 0)";
+      const right = children[1] ? emitWATExpr(children[1], vars) : "(i32.const 0)";
+      if (watOp !== undefined) {
+        return `(${watOp} ${left} ${right})`;
+      }
+      return `(i32.const 0) ;; unknown op: ${op}`;
+    }
+
+    case "unaryExpr": {
+      const op = node.value ?? "";
+      const operand = node.children?.[0] ? emitWATExpr(node.children[0], vars) : "(i32.const 0)";
+      if (op === "-") return `(i32.sub (i32.const 0) ${operand})`;
+      if (op === "!")  return `(i32.eqz ${operand})`;
+      return `(i32.const 0) ;; unknown unary: ${op}`;
+    }
+
+    case "callExpr": {
+      // Flow-to-flow calls within pure flows.
+      const name = node.value ?? "";
+      const args = (node.children ?? []).map((c) => emitWATExpr(c, vars));
+      return `(call $${name} ${args.join(" ")})`.trimEnd();
+    }
+
+    default:
+      return `(i32.const 0) ;; unhandled: ${node.kind}`;
+  }
+}
+
+/**
+ * Phase 25: Emits the full WAT function body (local decls + instructions)
+ * by walking the AST body of a pure flow.
+ *
+ * The returned string is ready to be used as `WATFunction.body` — the
+ * renderWAT renderer splits it on newlines and indents each line.
+ *
+ * Handles:
+ *   - Integer arithmetic and comparison (i32.add / lt_s / etc.)
+ *   - Integer and float literals (i32.const / f64.const)
+ *   - Parameter references (local.get $p0, $p1, …)
+ *   - Let-binding (local declarations + local.set)
+ *   - Return statements
+ *   - Intra-module flow calls (call $flowName)
+ *
+ * Phase 26 will add: if/else, loops, string ops, float promotion.
+ *
+ * @param flowNode  - The pureFlowDecl / flowDecl AstNode for this flow.
+ * @param paramNames - Ordered parameter names extracted from paramDecl children.
+ * @returns WAT body string, or null if the body cannot be lowered.
+ */
+export function emitWATFromFlowAST(
+  flowNode: AstNode,
+  paramNames: readonly string[],
+): string | null {
+  // Build variable map: LogicN name → WAT local name
+  const vars = new Map<string, string>();
+  paramNames.forEach((name, i) => {
+    vars.set(name, `$p${i}`);
+  });
+
+  // Find the block body of the flow
+  const blockNode = (flowNode.children ?? []).find((c) => c.kind === "block");
+  if (blockNode === undefined) return null;
+
+  const localDecls: string[] = [];
+  const bodyLines:  string[] = [];
+
+  for (const stmt of blockNode.children ?? []) {
+    switch (stmt.kind) {
+      case "letDecl": {
+        // let x = <expr>  →  (local $x i32) + (local.set $x <expr>)
+        const varName  = stmt.value ?? `_anon${localDecls.length}`;
+        const watLocal = `$${varName}`;
+        vars.set(varName, watLocal);
+        localDecls.push(`(local ${watLocal} i32)`);
+        const initNode = stmt.children?.[0];
+        const initExpr = initNode ? emitWATExpr(initNode, vars) : "(i32.const 0)";
+        bodyLines.push(`(local.set ${watLocal} ${initExpr})`);
+        break;
+      }
+
+      case "returnStmt": {
+        // return <expr>  →  <expr>   (WAT: last value on stack is the return value)
+        const exprNode = stmt.children?.[0];
+        if (exprNode !== undefined) {
+          bodyLines.push(emitWATExpr(exprNode, vars));
+        } else {
+          bodyLines.push("(i32.const 0) ;; return void");
+        }
+        break;
+      }
+
+      case "callExpr": {
+        // Standalone call expression (side effect in a pure flow — unusual).
+        // Emit with drop since pure flows don't have meaningful side effects.
+        const callExpr = emitWATExpr(stmt, vars);
+        bodyLines.push(`(drop ${callExpr})`);
+        break;
+      }
+
+      default:
+        // Unknown statement kind — emit a comment and continue.
+        bodyLines.push(`(i32.const 0) ;; unhandled stmt: ${stmt.kind}`);
+        break;
+    }
+  }
+
+  if (localDecls.length === 0 && bodyLines.length === 0) return null;
+  return [...localDecls, ...bodyLines].join("\n");
+}
+
+/**
+ * Extracts ordered parameter names from a flow's paramDecl children.
+ *
+ * `paramDecl` nodes have `value` like `"a: Int"` — we split on ":" and trim.
+ * Returns e.g. ["a", "b"] for `flow add(a: Int, b: Int)`.
+ */
+export function extractFlowParamNames(flowNode: AstNode): string[] {
+  return (flowNode.children ?? [])
+    .filter((c) => c.kind === "paramDecl")
+    .map((c) => ((c.value ?? "").split(":")[0] ?? "").trim())
+    .filter((name) => name.length > 0);
+}
+
+/**
+ * Finds a top-level flow node in the program AST by name.
+ * Matches pureFlowDecl, flowDecl, secureFlowDecl, guardedFlowDecl.
+ */
+export function findFlowNodeInAST(ast: AstNode, flowName: string): AstNode | undefined {
+  const FLOW_KINDS = new Set([
+    "pureFlowDecl", "flowDecl", "secureFlowDecl", "guardedFlowDecl",
+  ]);
+  for (const child of ast.children ?? []) {
+    if (FLOW_KINDS.has(child.kind) && child.value === flowName) {
+      return child;
+    }
+  }
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
 // Pure-flow WAT body emitter (Phase 22)
 // ---------------------------------------------------------------------------
 
@@ -416,6 +614,12 @@ export interface WATGIRInput {
   readonly entryPoints: readonly string[];
   readonly girHash?: string;
   readonly sourceHash?: string;
+  /**
+   * Phase 25: original program AST, used by emitWATFromFlowAST to generate
+   * real arithmetic bodies for pure flows.
+   * When absent, the emitter falls back to Phase 24A identity bodies.
+   */
+  readonly ast?: AstNode;
 }
 
 /**
@@ -524,25 +728,43 @@ export function buildWATModule(
 
     // Emit a real body for pure flows.
     //
-    // Phase 24A progression:
-    //   1. executionPlan present → real body from PassiveExecutionPlan steps
-    //   2. paramTypes present (WATFlowInput.paramTypes) → identity body (local.get $p0)
-    //   3. No params known → minimal valid body (i32.const 0 or nop for void)
-    //      This is the Phase 24A foundation: real WAT, not unreachable.
-    //      Phase 25: replace with execution-plan-derived bodies once paramTypes flow through GIR.
+    // Phase 25 progression (AST-based emission):
+    //   1. gir.ast present → Phase 25 real emission from AST body (arithmetic, let, return)
+    //   2. executionPlan present → Phase 24A identity body from PassiveExecutionPlan steps
+    //   3. paramTypes present → identity body (local.get $p0)
+    //   4. No info available → minimal constant body (i32.const 0)
     //
     // Non-pure flows stay as unreachable until Phase 22 effectful emission.
     let body = "unreachable";
-    if (isPureFlow && flow.executionPlan !== undefined) {
+    if (isPureFlow && gir.ast !== undefined) {
+      // Phase 25: find the flow's AST node and emit real arithmetic instructions.
+      const flowAstNode = findFlowNodeInAST(gir.ast, flow.name);
+      if (flowAstNode !== undefined) {
+        const paramNames = extractFlowParamNames(flowAstNode);
+        const phase25Body = emitWATFromFlowAST(flowAstNode, paramNames);
+        if (phase25Body !== null) {
+          body = phase25Body;
+        } else if (flow.executionPlan !== undefined) {
+          body = emitWATBody(flow.executionPlan, namedParams.length);
+        } else {
+          body = "(i32.const 0) ;; Phase 25: empty body";
+        }
+      } else if (flow.executionPlan !== undefined) {
+        body = emitWATBody(flow.executionPlan, namedParams.length);
+      } else if (rawParamTypes.length > 0) {
+        body = emitWATBody({ steps: [{ kind: "return" }] }, namedParams.length);
+      } else {
+        body = "(i32.const 0) ;; Phase 25: no AST node found";
+      }
+    } else if (isPureFlow && flow.executionPlan !== undefined) {
+      // Phase 24A: use PassiveExecutionPlan steps (identity body)
       body = emitWATBody(flow.executionPlan, namedParams.length);
     } else if (isPureFlow && rawParamTypes.length > 0) {
-      // WATFlowInput.paramTypes was supplied — emit identity body (return first param)
+      // Phase 24A: paramTypes supplied — emit identity body (return first param)
       body = emitWATBody({ steps: [{ kind: "return" }] }, namedParams.length);
     } else if (isPureFlow) {
-      // No param info available — emit a minimal constant body.
-      // This is real WAT (not unreachable). Phase 25 will replace with real semantics
-      // once parameter types flow through the GIR pipeline.
-      body = "(i32.const 0) ;; Phase 25: replace with passiveExecutionPlan-derived body";
+      // Fallback: no param info.
+      body = "(i32.const 0) ;; Phase 25: no body info available";
     }
 
     // Phase 27C — TypedArray lowering hints for Float32 tensor flows.
@@ -644,6 +866,8 @@ export function buildWATModuleFromGIR(
   },
   capabilityMap: ReadonlyMap<string, { readonly wasmImport?: string; readonly requiredEffects: readonly string[] }>,
   target: "wasm-standalone" | "wasm-hybrid" = "wasm-standalone",
+  /** Phase 25: original program AST for real arithmetic body emission. */
+  ast?: AstNode,
 ): WATModule {
   const watInput: WATGIRInput = {
     flows: gir.flows.map((f) => {
@@ -662,6 +886,7 @@ export function buildWATModuleFromGIR(
     entryPoints: gir.entryPoints,
     ...(gir.girHash !== undefined ? { girHash: gir.girHash } : {}),
     ...(gir.sourceHash !== undefined ? { sourceHash: gir.sourceHash } : {}),
+    ...(ast !== undefined ? { ast } : {}),
   };
   return buildWATModule(watInput, capabilityMap, target);
 }

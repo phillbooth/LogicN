@@ -1,0 +1,32 @@
+/// governance-cost — Measures governed vs manifest execution overhead
+///
+/// Purpose: Demonstrate the cost of governance (capability checking, audit
+/// preparation, proof graph building) vs pure computation.
+///
+/// The governed and manifest runs execute the same recursive algorithm
+/// (sum 1 to N via tail-recursive accumulator). The ratio govSpeed/manifestSpeed
+/// is the governance cost factor:
+///   ratio ≈ 1.0 → near-zero overhead (governance is free)
+///   ratio ≈ 0.9 → 10% overhead (excellent)
+///   ratio ≈ 0.5 → 100% overhead (needs optimisation)
+
+pure flow sumHelper(n: Int, acc: Int) -> Int
+contract { effects {} }
+{
+  if n <= 0 {
+    return acc
+  }
+  return sumHelper(n - 1, acc + n)
+}
+
+pure flow triangleNumber(n: Int) -> Int
+contract { effects {} }
+{
+  return sumHelper(n, 0)
+}
+
+pure flow main() -> Int
+contract { effects {} }
+{
+  return triangleNumber(100)
+}

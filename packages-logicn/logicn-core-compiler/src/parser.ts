@@ -2569,6 +2569,48 @@ class Parser {
         continue;
       }
 
+      // `economics { target_latency target_cost max_compute_budget preferred_execution ... }`
+      // Cost-aware scheduling contract. Feeds: CostGraph (Phase 30), runtime scheduler.
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "economics") {
+        children.push(this.parseContractSubBlock("economics"));
+        this.skipNewlines();
+        continue;
+      }
+
+      // `lineage { source owner retention }` — data lineage declaration.
+      // Enables automated regulatory reporting (GDPR Article 30, CCPA).
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "lineage") {
+        children.push(this.parseContractSubBlock("lineage"));
+        this.skipNewlines();
+        continue;
+      }
+
+      // `ai { max_token_cost max_model_calls approved_models }` — AI governance.
+      // Governs which AI models may be called and at what cost ceiling.
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "ai") {
+        children.push(this.parseContractSubBlock("ai"));
+        this.skipNewlines();
+        continue;
+      }
+
+      // `value { classification safety_critical domain aerospace estimated_loss_per_incident ... }`
+      // Asset consequence classification for High Consequence Systems (aerospace, defence, space, etc.)
+      // Governance scope extends beyond PII to any system where failure has significant consequence.
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "value") {
+        children.push(this.parseContractSubBlock("value"));
+        this.skipNewlines();
+        continue;
+      }
+
+      // `safety { require deterministic_execution require bounded_runtime require fallback ... }`
+      // Safety requirements for safety_critical and mission_critical systems.
+      // Applies: aerospace, industrial control, medical devices, infrastructure.
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "safety") {
+        children.push(this.parseContractSubBlock("safety"));
+        this.skipNewlines();
+        continue;
+      }
+
       // Skip unrecognised content gracefully
       if (this.currentIs("symbol", "{")) {
         this.skipBalancedBraces();
@@ -3483,7 +3525,12 @@ class Parser {
       "intent", "effects", "request", "response", "context", "model",
       "timeouts", "retries", "limits", "privacy", "errors", "rules",
       "observability", "events", "audit", "types", "targets", "governance", "use",
-      "memory",  // contract.memory { arena 8.mb } — explicit memory budget
+      "memory",    // contract.memory { arena 8.mb } — explicit memory budget
+      "economics", // contract.economics { target_cost max_compute_budget preferred_execution }
+      "lineage",   // contract.lineage { source owner retention } — data lineage
+      "ai",        // contract.ai { max_token_cost approved_models }
+      "value",     // contract.value { classification safety_critical domain aerospace }
+      "safety",    // contract.safety { require deterministic_execution }
     ]);
     while (!this.isEof()) {
       if (this.currentIs("symbol", "}")) break;

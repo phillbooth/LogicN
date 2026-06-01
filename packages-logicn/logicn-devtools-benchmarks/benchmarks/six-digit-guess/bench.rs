@@ -2,6 +2,7 @@
 // Compile: rustc -O -o bench-guess bench.rs
 use std::time::Instant;
 use std::env;
+use std::convert::TryInto;
 const CODE_LEN:usize=6;
 fn bulls_and_cows(cand:&[u8;CODE_LEN],tgt:&[u8;CODE_LEN])->(i32,i32) {
     let mut bulls=0i32; let mut ca=[0i32;10]; let mut ta=[0i32;10];

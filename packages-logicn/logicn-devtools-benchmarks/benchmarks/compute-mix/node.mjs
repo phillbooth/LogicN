@@ -4,8 +4,10 @@
 // This exercises integer, float, and branch prediction together.
 // Checksum must match Python version byte-for-byte.
 
-const DEFAULT_TARGET_MS = 30000;
-const DEFAULT_WARMUP_MS = 3000;
+// DEFAULT: 5s run + 1s warmup — accurate enough, 6× faster than 30s+3s.
+// Use --target-ms 30000 --warmup-ms 3000 for publication-quality numbers.
+const DEFAULT_TARGET_MS = 5000;
+const DEFAULT_WARMUP_MS = 1000;
 const DEFAULT_BATCH_SIZE = 50000;
 const DEFAULT_SEED = 123456789;
 
@@ -64,8 +66,8 @@ function elapsedMsSince(startedAt) {
 }
 
 function validateConfig(config) {
-  if (config.operations === null && (config.targetMs < 10000 || config.targetMs > 30000)) {
-    throw new Error("--target-ms must be between 10000 and 30000 unless --operations is used");
+  if (config.operations === null && (config.targetMs < 1000 || config.targetMs > 120000)) {
+    throw new Error("--target-ms must be between 1000 and 120000 unless --operations is used");
   }
   if (config.warmupMs < 0) {
     throw new Error("--warmup-ms must be 0 or greater");

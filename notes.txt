@@ -1,3 +1,4 @@
 cd C:\laragon\www\LO\packages-logicn\logicn-devtools-benchmarks
 npm run run
 npm run compare
+
