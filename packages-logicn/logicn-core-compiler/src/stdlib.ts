@@ -14,6 +14,9 @@
 
 import { LLN_NONE, LLN_VOID, type LogicNValue } from "./interpreter.js";
 import { createHash as _nodeCryptoCreateHash, timingSafeEqual as _nodeCryptoTimingSafeEqual } from "node:crypto";
+// process is globally available in Node.js — cast to any to access Node-specific methods
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const _proc = process as any;
 
 // =============================================================================
 // BigInt-based decimal arithmetic helpers (Phase 9A-3)
@@ -1274,6 +1277,50 @@ export async function callStdlib(
   if (receiver === undefined) {
     if (fullName === "format") return formatString(args);
     if (fullName === "Decimal") return decimalConstructor(args);
+
+    // Runtime.cpuUsage() / Runtime.memoryUsage() — for benchmark resource reporting
+    if (fullName === "Runtime.cpuUsage" || fullName === "cpuUsage") {
+      const cpu = _proc.cpuUsage();
+      return {
+        __tag: "record",
+        fields: new Map([
+          ["userMs",   { __tag: "float", value: cpu.user   / 1000 }],
+          ["systemMs", { __tag: "float", value: cpu.system / 1000 }],
+        ]),
+      } as LogicNValue;
+    }
+    if (fullName === "Runtime.cpuUsageSince" || fullName === "cpuUsageSince") {
+      const baseline = args[0];
+      const userBase   = baseline?.__tag === "record" ? (numVal(baseline.fields?.get("userMs")   ?? { __tag: "int", value: 0 }) * 1000) : 0;
+      const systemBase = baseline?.__tag === "record" ? (numVal(baseline.fields?.get("systemMs") ?? { __tag: "int", value: 0 }) * 1000) : 0;
+      const cpu = _proc.cpuUsage({ user: Math.round(userBase), system: Math.round(systemBase) });
+      return {
+        __tag: "record",
+        fields: new Map([
+          ["userMs",   { __tag: "float", value: cpu.user   / 1000 }],
+          ["systemMs", { __tag: "float", value: cpu.system / 1000 }],
+        ]),
+      } as LogicNValue;
+    }
+    if (fullName === "Runtime.memoryUsage" || fullName === "memoryUsage") {
+      const mem = _proc.memoryUsage();
+      return {
+        __tag: "record",
+        fields: new Map([
+          ["rssBytes",       { __tag: "int", value: mem.rss }],
+          ["heapUsedBytes",  { __tag: "int", value: mem.heapUsed }],
+          ["heapTotalBytes", { __tag: "int", value: mem.heapTotal }],
+        ]),
+      } as LogicNValue;
+    }
+
+    // Time.nowMs() — high-resolution wall-clock milliseconds (for benchmarks and timing)
+    // Used by: compute-mix-throughput-benchmark.lln and other timed flows
+    if (fullName === "Time.nowMs" || fullName === "nowMs") {
+      // Use hrtime for high-resolution timing (available in all Node.js environments)
+      const [sec, ns] = _proc.hrtime();
+      return { __tag: "float", value: sec * 1000 + ns / 1_000_000 };
+    }
 
     // Timestamp.now() and Timestamp.fromMs(n)
     if (fullName === "Timestamp.now") return makeTimestamp(Date.now());

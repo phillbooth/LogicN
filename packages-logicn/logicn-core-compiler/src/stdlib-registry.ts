@@ -85,11 +85,18 @@ export const STDLIB_CAPABILITY_MAP: ReadonlyMap<string, StdlibCapabilityEntry> =
   ["Model.run",            { requiredEffects: ["ai.inference"],  wasmImport: "host:model.run",     description: "Run ML model." }],
   ["Classifier.classify",  { requiredEffects: ["ai.inference"],  wasmImport: "host:classifier.run",description: "Run classifier." }],
 
-  // ── Crypto (pure — no effects required) ───────────────────────────────────
+  // ── Crypto ─────────────────────────────────────────────────────────────────
   // Note: constantTimeEquals is pure but has special security semantics (LLN-TYPE-013)
   ["Crypto.constantTimeEquals", { requiredEffects: [], description: "Constant-time equality for secrets. Never use == on SecureString." }],
   ["Hash.sha256",               { requiredEffects: [], description: "SHA-256 hash (pure computation)." }],
   ["Hash.sha512",               { requiredEffects: [], description: "SHA-512 hash (pure computation)." }],
+  // crypto.verify — requires an explicit effect because signature verification
+  // may call into a native hardware security module (HSM/TPM) on some targets.
+  // Phase 25: wired to host:crypto.verify import in WASM standalone mode.
+  ["Crypto.verify",             { requiredEffects: ["crypto.verify"], wasmImport: "host:crypto.verify",  description: "Verify a cryptographic signature (HMAC, Ed25519, etc.). Requires crypto.verify effect." }],
+  ["crypto.verify",             { requiredEffects: ["crypto.verify"], wasmImport: "host:crypto.verify",  description: "Verify a cryptographic signature (short form). Requires crypto.verify effect." }],
+  ["Crypto.sign",               { requiredEffects: ["crypto.sign"],   wasmImport: "host:crypto.sign",    description: "Sign data with a private key. Requires crypto.sign effect." }],
+  ["crypto.sign",               { requiredEffects: ["crypto.sign"],   wasmImport: "host:crypto.sign",    description: "Sign data (short form). Requires crypto.sign effect." }],
 
   // ── Random (requires effect) ───────────────────────────────────────────────
   ["Random.secureBytes",   { requiredEffects: ["random.generate"], wasmImport: "host:random.bytes", description: "Generate cryptographically secure random bytes." }],

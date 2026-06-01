@@ -110,6 +110,13 @@ export interface GIRFlow {
   readonly allowedEffectsMask: number;
   /** Phase 21A: TypedArray lowering plan for all tensor bindings. Absent when no tensors present. */
   readonly typedArrayLoweringPlan?: TypedArrayLoweringPlan;
+  /**
+   * Phase 24: Parameter type names in declaration order, e.g. ["Int", "String"].
+   * Used by the WAT emitter to build named WAT params ($p0, $p1, …) and to
+   * emit real instruction bodies (local.get $p0) instead of unreachable stubs.
+   * Absent when no parameters are declared.
+   */
+  readonly paramTypes?: readonly string[];
 }
 
 export interface GIRProgram {
@@ -279,6 +286,9 @@ export function emitGIR(
 
     const allowedEffectsMask = effectsToFlags(flow.declaredEffects);
 
+    // Phase 24: extract parameter types in declaration order for WAT emission.
+    const paramTypes = flowNode === undefined ? undefined : extractParamTypes(flowNode);
+
     const flowGIR: GIRFlow = {
       name: flow.name,
       qualifier: flow.qualifier,
@@ -294,6 +304,7 @@ export function emitGIR(
       ...(contractMeta !== undefined ? { contract: contractMeta } : {}),
       allowedEffectsMask,
       ...(loweringPlan.entries.length > 0 ? { typedArrayLoweringPlan: loweringPlan } : {}),
+      ...(paramTypes !== undefined && paramTypes.length > 0 ? { paramTypes } : {}),
     };
     return flowGIR;
   });
@@ -333,6 +344,20 @@ function findFlowNode(ast: AstNode, name: string): AstNode | undefined {
   }
 
   return walk(ast);
+}
+
+/**
+ * Extracts parameter type names from a flow node in declaration order.
+ * Returns e.g. ["Int", "String"] for `pure flow add(a: Int, b: String)`.
+ * Phase 24: used by WAT emitter to build named WAT params and real instruction bodies.
+ */
+function extractParamTypes(flowNode: AstNode): string[] {
+  return findNodes(flowNode, "paramDecl").map((decl) => {
+    const raw = decl.value ?? "";
+    const colon = raw.indexOf(":");
+    if (colon < 0) return "Int"; // fallback
+    return raw.slice(colon + 1).trim();
+  });
 }
 
 function extractIntent(flowNode: AstNode): string | null {

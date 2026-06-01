@@ -93,6 +93,23 @@ export const EFFECT_REGISTRY: Readonly<Record<string, readonly string[]>> = {
 
   // R4B: Anti-abuse — background execution
   "process.spawn": ["process.spawn"],
+
+  // Phase 25: Crypto effects — signature verification and signing
+  "Crypto.verify": ["crypto.verify"],
+  "crypto.verify": ["crypto.verify"],
+  "Crypto.sign": ["crypto.sign"],
+  "crypto.sign": ["crypto.sign"],
+
+  // Phase 25: Secret / Vault reads
+  "Secrets.get": ["secret.read"],
+  "vault.secret": ["secret.read"],
+
+  // Phase 25: Random generation
+  "Random.secureBytes": ["random.generate"],
+  "Random.bytes": ["random.generate"],
+
+  // Phase 25: Clock — non-deterministic
+  "Clock.now": ["clock.read"],
 };
 
 /**
@@ -240,6 +257,12 @@ const CANONICAL_EFFECTS = new Set([
   "process.spawn",
   "worker.spawn",
   "event.schedule",
+  // Phase 25: crypto effects — HSM/TPM signature ops require explicit declaration
+  "crypto.verify",
+  "crypto.sign",
+  // Phase 25: random/clock non-deterministic effects
+  "random.generate",
+  "clock.read",
 ]);
 
 const EFFECT_NAME_ALIASES: ReadonlyMap<string, string> = new Map([

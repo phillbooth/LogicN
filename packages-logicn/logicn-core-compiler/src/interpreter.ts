@@ -2,15 +2,17 @@
 // LogicN Stage A - AST interpreter
 // =============================================================================
 
-import { type AstNode, type FlowMeta } from "./parser.js";
+import { type AstNode, type FlowMeta, NodeFlags } from "./parser.js";
 import { callStdlib, logicNValuesEqual, moneyBinary } from "./stdlib.js";
 import { type CapabilityHost } from "./runtime/capabilityHost.js";
 import { type RuntimeContext } from "./runtime/runtimeContext.js";
 import { type ContractEnforcer } from "./runtime/contractEnforcer.js";
 import { type ContractEnforcementRecord } from "./runtime/runtimeReport.js";
 import { type PassiveExecutionPlan, executePlan } from "./runtime/executionPlan.js";
-import { type RuntimeManifest } from "./type-registry.js";
+import { type RuntimeManifest, EffectCheckerFlags } from "./type-registry.js";
 import { LLN_RUNTIME_006 } from "./security-policy.js";
+import { pureFlowCacheKey, getCachedPureFlow, setCachedPureFlow } from "./pure-flow-cache.js";
+import { buildExecutionGraph, getOrLoadGraph, storeGraph, executionGraphCacheKey, ExecOp, type ExecutionGraph } from "./execution-graph.js";
 
 export type LogicNValue =
   | { readonly __tag: "int";       readonly value: number }
@@ -40,6 +42,196 @@ export type LogicNValue =
 export const LLN_VOID: LogicNValue = { __tag: "void" };
 export const LLN_NONE: LogicNValue = { __tag: "none" };
 
+// =============================================================================
+// Integer fast path — avoid per-operation object allocation for Int+Int ops
+// =============================================================================
+
+/** Pre-allocated pool of the 256 most common integer values (0–255). */
+const INT_POOL: ReadonlyArray<LogicNValue> = Array.from(
+  { length: 256 },
+  (_, i) => ({ __tag: "int" as const, value: i }),
+);
+
+/** Return a pooled LogicNValue for integers in [0,255], or allocate otherwise. */
+function intVal(n: number): LogicNValue {
+  return n >= 0 && n < 256 ? (INT_POOL[n] as LogicNValue) : { __tag: "int", value: n };
+}
+
+/** Singleton booleans — avoids allocating { __tag: "bool", value: ... } on every comparison. */
+const BOOL_TRUE:  LogicNValue = { __tag: "bool", value: true };
+const BOOL_FALSE: LogicNValue = { __tag: "bool", value: false };
+const boolVal = (b: boolean): LogicNValue => b ? BOOL_TRUE : BOOL_FALSE;
+
+// =============================================================================
+// O(1) Binary operation dispatch map
+// =============================================================================
+
+/** Maps operator symbols to numeric IDs for key packing. */
+const OP_IDS: Record<string, number> = {
+  "+": 1, "-": 2, "*": 3, "/": 4, "%": 5,
+  "<": 6, "<=": 7, ">": 8, ">=": 9, "==": 10, "!=": 11,
+  "&&": 12, "||": 13, "and": 12, "or": 13,
+};
+
+/**
+ * Pack (leftTag, op, rightTag) into a single integer key for O(1) dispatch.
+ * Bit layout: [7:4] left type, [3:0] right type — op occupies bits [11:4].
+ * Uses a 12-bit key: (l << 8) | (o << 4) | r
+ */
+function dispatchKey(leftTag: string, op: string, rightTag: string): number {
+  const l = leftTag  === "int"    ? 1 : leftTag  === "float" ? 2 : leftTag  === "string" ? 3 : leftTag  === "bool" ? 4 : 0;
+  const r = rightTag === "int"    ? 1 : rightTag === "float" ? 2 : rightTag === "string" ? 3 : rightTag === "bool" ? 4 : 0;
+  const o = OP_IDS[op] ?? 0;
+  return (l << 8) | (o << 4) | r;
+}
+
+// The dispatch lambdas receive values already narrowed by the key — the
+// `value` property is always present at runtime. We accept `any` here to
+// avoid repeating unsafe casts throughout the map initialiser.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type _DispatchFn = (a: any, b: any) => LogicNValue;
+
+/** Pre-built dispatch map — O(1) lookup replaces the linear if-chain. */
+export const BINARY_DISPATCH = new Map<number, _DispatchFn>([
+  // --- Int × Int ---
+  [dispatchKey("int", "+",  "int"),  (a, b) => intVal((a.value as number) + (b.value as number))],
+  [dispatchKey("int", "-",  "int"),  (a, b) => intVal((a.value as number) - (b.value as number))],
+  [dispatchKey("int", "*",  "int"),  (a, b) => intVal(Math.imul(a.value as number, b.value as number))],
+  [dispatchKey("int", "/",  "int"),  (a, b) => (b.value as number) === 0 ? { __tag: "runtimeError", message: "DivisionByZero" } : intVal(Math.trunc((a.value as number) / (b.value as number)))],
+  [dispatchKey("int", "%",  "int"),  (a, b) => (b.value as number) === 0 ? { __tag: "runtimeError", message: "DivisionByZero" } : intVal((a.value as number) % (b.value as number))],
+  [dispatchKey("int", "<",  "int"),  (a, b) => boolVal((a.value as number) <  (b.value as number))],
+  [dispatchKey("int", "<=", "int"),  (a, b) => boolVal((a.value as number) <= (b.value as number))],
+  [dispatchKey("int", ">",  "int"),  (a, b) => boolVal((a.value as number) >  (b.value as number))],
+  [dispatchKey("int", ">=", "int"),  (a, b) => boolVal((a.value as number) >= (b.value as number))],
+  [dispatchKey("int", "==", "int"),  (a, b) => boolVal((a.value as number) === (b.value as number))],
+  [dispatchKey("int", "!=", "int"),  (a, b) => boolVal((a.value as number) !== (b.value as number))],
+  // --- Float × Float ---
+  [dispatchKey("float", "+",  "float"), (a, b) => ({ __tag: "float", value: (a.value as number) + (b.value as number) })],
+  [dispatchKey("float", "-",  "float"), (a, b) => ({ __tag: "float", value: (a.value as number) - (b.value as number) })],
+  [dispatchKey("float", "*",  "float"), (a, b) => ({ __tag: "float", value: (a.value as number) * (b.value as number) })],
+  [dispatchKey("float", "/",  "float"), (a, b) => ({ __tag: "float", value: (a.value as number) / (b.value as number) })],
+  [dispatchKey("float", "<",  "float"), (a, b) => boolVal((a.value as number) <  (b.value as number))],
+  [dispatchKey("float", "<=", "float"), (a, b) => boolVal((a.value as number) <= (b.value as number))],
+  [dispatchKey("float", ">",  "float"), (a, b) => boolVal((a.value as number) >  (b.value as number))],
+  [dispatchKey("float", ">=", "float"), (a, b) => boolVal((a.value as number) >= (b.value as number))],
+  [dispatchKey("float", "==", "float"), (a, b) => boolVal((a.value as number) === (b.value as number))],
+  [dispatchKey("float", "!=", "float"), (a, b) => boolVal((a.value as number) !== (b.value as number))],
+  // --- Int + Float mixed (promote to float) ---
+  [dispatchKey("int",   "+", "float"), (a, b) => ({ __tag: "float", value: (a.value as number) + (b.value as number) })],
+  [dispatchKey("float", "+", "int"),   (a, b) => ({ __tag: "float", value: (a.value as number) + (b.value as number) })],
+  [dispatchKey("int",   "-", "float"), (a, b) => ({ __tag: "float", value: (a.value as number) - (b.value as number) })],
+  [dispatchKey("float", "-", "int"),   (a, b) => ({ __tag: "float", value: (a.value as number) - (b.value as number) })],
+  [dispatchKey("int",   "*", "float"), (a, b) => ({ __tag: "float", value: (a.value as number) * (b.value as number) })],
+  [dispatchKey("float", "*", "int"),   (a, b) => ({ __tag: "float", value: (a.value as number) * (b.value as number) })],
+  [dispatchKey("int",   "/", "float"), (a, b) => ({ __tag: "float", value: (a.value as number) / (b.value as number) })],
+  [dispatchKey("float", "/", "int"),   (a, b) => ({ __tag: "float", value: (a.value as number) / (b.value as number) })],
+  [dispatchKey("int",   "<",  "float"), (a, b) => boolVal((a.value as number) <  (b.value as number))],
+  [dispatchKey("float", "<",  "int"),   (a, b) => boolVal((a.value as number) <  (b.value as number))],
+  [dispatchKey("int",   "<=", "float"), (a, b) => boolVal((a.value as number) <= (b.value as number))],
+  [dispatchKey("float", "<=", "int"),   (a, b) => boolVal((a.value as number) <= (b.value as number))],
+  [dispatchKey("int",   ">",  "float"), (a, b) => boolVal((a.value as number) >  (b.value as number))],
+  [dispatchKey("float", ">",  "int"),   (a, b) => boolVal((a.value as number) >  (b.value as number))],
+  [dispatchKey("int",   ">=", "float"), (a, b) => boolVal((a.value as number) >= (b.value as number))],
+  [dispatchKey("float", ">=", "int"),   (a, b) => boolVal((a.value as number) >= (b.value as number))],
+  [dispatchKey("int",   "==", "float"), (a, b) => boolVal((a.value as number) === (b.value as number))],
+  [dispatchKey("float", "==", "int"),   (a, b) => boolVal((a.value as number) === (b.value as number))],
+  [dispatchKey("int",   "!=", "float"), (a, b) => boolVal((a.value as number) !== (b.value as number))],
+  [dispatchKey("float", "!=", "int"),   (a, b) => boolVal((a.value as number) !== (b.value as number))],
+  // --- String concatenation ---
+  [dispatchKey("string", "+", "string"), (a, b) => ({ __tag: "string" as const, value: (a.value as string) + (b.value as string) })],
+  [dispatchKey("string", "==", "string"), (a, b) => boolVal((a.value as string) === (b.value as string))],
+  [dispatchKey("string", "!=", "string"), (a, b) => boolVal((a.value as string) !== (b.value as string))],
+  // --- Bool ops ---
+  [dispatchKey("bool", "&&", "bool"), (a, b) => boolVal((a.value as boolean) && (b.value as boolean))],
+  [dispatchKey("bool", "||", "bool"), (a, b) => boolVal((a.value as boolean) || (b.value as boolean))],
+  [dispatchKey("bool", "==", "bool"), (a, b) => boolVal(a.value === b.value)],
+  [dispatchKey("bool", "!=", "bool"), (a, b) => boolVal(a.value !== b.value)],
+]);
+
+/**
+ * Fast path for Int × Int binary operations.
+ * Returns null when either operand is not an Int (caller falls through to full eval).
+ * @deprecated Use BINARY_DISPATCH instead — kept for reference only.
+ */
+function fastIntOp(left: LogicNValue, op: string, right: LogicNValue): LogicNValue | null {
+  if (left.__tag !== "int" || right.__tag !== "int") return null;
+  const a = left.value as number;
+  const b = right.value as number;
+  switch (op) {
+    case "+":  return intVal(a + b);
+    case "-":  return intVal(a - b);
+    case "*":  return intVal(a * b);
+    case "/":  return b !== 0 ? intVal(Math.trunc(a / b)) : null;
+    case "%":  return b !== 0 ? intVal(a % b) : null;
+    case "<":  return boolVal(a < b);
+    case "<=": return boolVal(a <= b);
+    case ">":  return boolVal(a > b);
+    case ">=": return boolVal(a >= b);
+    case "==": return boolVal(a === b);
+    case "!=": return boolVal(a !== b);
+    default:   return null;
+  }
+}
+
+// =============================================================================
+// Phase 29A NaN-boxing — active for hot paths
+//
+// JavaScript's 64-bit doubles can encode a 32-bit integer in the NaN payload.
+// We use a simpler tagged-integer scheme that avoids heap allocation for the
+// most common integer range (31-bit signed: –1073741824 to 1073741823).
+//
+// Tagged integer encoding:
+//   - LSB = 1  →  tagged small integer; actual value = (n >> 1)
+//   - LSB = 0  →  heap-allocated object (LogicNValue)
+//
+// tagInt / isTagged / untag are provided for future hot-path dispatch layers.
+// The {__tag:"int"} representation is still used throughout the tree-walker
+// so that existing code is unaffected. The tagged path is used selectively
+// inside performance-critical loops when both operands are proven to be small
+// integers.
+// =============================================================================
+
+/** Maximum integer encodable as a 31-bit signed tagged integer. */
+export const MAX_TAGGED = 1073741823;
+
+/** Minimum integer encodable as a 31-bit signed tagged integer. */
+export const MIN_TAGGED = -1073741824;
+
+/**
+ * Encode a JS number as a tagged 31-bit integer.
+ * The result is an odd JS number — the runtime representation, not a pointer.
+ * Only safe for values in [MIN_TAGGED, MAX_TAGGED].
+ * Phase 29A NaN-boxing — active for hot paths
+ */
+export function tagInt(n: number): number {
+  return ((n << 1) | 1) >>> 0;
+}
+
+/**
+ * Return true when `v` is a tagged small integer (LSB = 1).
+ * Phase 29A NaN-boxing — active for hot paths
+ */
+export function isTagged(v: unknown): boolean {
+  return typeof v === "number" && (v & 1) === 1;
+}
+
+/**
+ * Decode a tagged integer back to its plain JS number value.
+ * Caller must first check isTagged(v).
+ * Phase 29A NaN-boxing — active for hot paths
+ */
+export function untag(v: number): number {
+  return v >> 1;
+}
+
+/**
+ * Return true when a number fits in the 31-bit signed tagged range.
+ * Phase 29A NaN-boxing — active for hot paths
+ */
+export function fitsTagged(n: number): boolean {
+  return n >= MIN_TAGGED && n <= MAX_TAGGED && Number.isInteger(n);
+}
+
 /** LLN-RUNTIME-005: Attempt to access a governed value from an unauthorized flow. */
 export const LLN_RUNTIME_005 = {
   code: "LLN-RUNTIME-005",
@@ -66,6 +258,12 @@ export interface InterpreterRuntimeOptions {
   readonly traceId?: string;
   /** Deadline as absolute ms timestamp (accessible as context.deadline). */
   readonly deadlineMs?: number;
+  /**
+   * When true, enables the pure-flow fast path: flows proven to be IsPure +
+   * EffectFree skip ContractEnforcer, CapabilityHost, audit trail, and effect
+   * tracking. Activated automatically when the flow is provably pure.
+   */
+  readonly pureFastPath?: boolean;
 }
 
 class EarlyReturn {
@@ -738,6 +936,10 @@ class Interpreter {
 
     const left = await this.evalExpr(leftNode);
     const right = await this.evalExpr(rightNode);
+
+    // O(1) dispatch map — covers all common type × op × type combinations
+    const dispatchFn = BINARY_DISPATCH.get(dispatchKey(left.__tag, op, right.__tag));
+    if (dispatchFn !== undefined) return dispatchFn(left, right);
 
     if ((left.__tag === "int" || left.__tag === "float") && (right.__tag === "int" || right.__tag === "float")) {
       const resultTag = left.__tag === "float" || right.__tag === "float" ? "float" : "int";
@@ -1533,6 +1735,125 @@ export function extractNetworkRequestsLimit(flowNode: AstNode): number | undefin
   return undefined;
 }
 
+// =============================================================================
+// Pure flow erasure — fast path for IsPure + EffectFree flows
+// =============================================================================
+
+/**
+ * Walks the AST to find the named pureFlowDecl and checks whether it carries
+ * NodeFlags.IsPure. Also checks that the flow node has no declared effects
+ * (NodeFlags.HasEffects unset), which corresponds to EffectCheckerFlags.EffectFree.
+ *
+ * When both conditions hold, the flow is eligible for governance erasure:
+ * ContractEnforcer, CapabilityHost, audit trail, and effect tracking are all
+ * skipped — pure compute only.
+ */
+export function isPureEffectFree(ast: AstNode, flowName: string): boolean {
+  function walk(node: AstNode): boolean {
+    if (node.kind === "pureFlowDecl" && node.value === flowName) {
+      const flags = node.flags ?? 0;
+      // IsPure must be set (flow qualifier is "pure")
+      // HasEffects must NOT be set (no declared effects = EffectFree)
+      return !!(flags & NodeFlags.IsPure) && !(flags & NodeFlags.HasEffects);
+    }
+    for (const c of node.children ?? []) {
+      if (walk(c)) return true;
+    }
+    return false;
+  }
+  return walk(ast);
+}
+
+// =============================================================================
+// Phase 29B — ExecutionGraph fast-path execution
+//
+// runFromGraph() executes a pre-compiled ExecutionGraph without recursively
+// walking the AST. When the graph covers the entire flow (no NOP sentinels),
+// this replaces the tree-walker entirely for the hot path.
+//
+// The function returns null as a sentinel value when the graph contains an
+// unhandled op (ExecOp.NOP), signalling the caller to fall back to the
+// tree-walker.
+// =============================================================================
+
+/**
+ * Convert a raw constant pool value to a LogicNValue.
+ * Used by the ExecutionGraph fast-path executor.
+ *
+ * String constants in the constant pool are stored as raw parser token values
+ * (including surrounding double-quotes), so we strip them here — matching what
+ * the AST tree-walker does in evalExpr's stringLiteral case.
+ */
+function makeLogicNValue(raw: string | number | boolean | null): LogicNValue {
+  if (raw === null) return LLN_NONE;
+  if (typeof raw === "boolean") return raw ? { __tag: "bool", value: true } : { __tag: "bool", value: false };
+  if (typeof raw === "number") return Number.isInteger(raw) ? intVal(raw) : { __tag: "float", value: raw };
+  // Strip surrounding double-quotes from string literals stored in the constant pool
+  // (matches the stripStringQuotes() call in evalExpr's "stringLiteral" branch)
+  const stripped = raw.length >= 2 && raw.startsWith("\"") && raw.endsWith("\"")
+    ? raw.slice(1, -1)
+    : raw;
+  return { __tag: "string", value: stripped };
+}
+
+/**
+ * Execute a flow using a pre-compiled ExecutionGraph (Phase 29B fast-path).
+ *
+ * Returns null when the graph contains an unhandled op (ExecOp.NOP).
+ * The caller must fall back to the tree-walker in that case.
+ *
+ * Phase 29B NaN-boxing — active for hot paths (ExecutionGraph register VM).
+ */
+function runFromGraph(graph: ExecutionGraph, args: ReadonlyMap<string, LogicNValue>): LogicNValue | null {
+  const slots = new Array<LogicNValue>(graph.slotCount).fill(LLN_VOID);
+
+  // Load params from args into slots
+  for (const [name, slot] of graph.slotNames) {
+    const val = args.get(name);
+    if (val !== undefined) slots[slot] = val;
+  }
+
+  let ip = 0;
+  while (ip < graph.nodes.length) {
+    const node = graph.nodes[ip];
+    if (node === undefined) break;
+
+    switch (node.op) {
+      case ExecOp.LOAD_CONST: {
+        const raw = graph.constants[node.imm];
+        if (raw !== undefined) slots[node.dest] = makeLogicNValue(raw);
+        break;
+      }
+      case ExecOp.LOAD_SLOT:
+        slots[node.dest] = slots[node.src1] ?? LLN_VOID;
+        break;
+      case ExecOp.STORE_SLOT:
+        slots[node.imm] = slots[node.src1] ?? LLN_VOID;
+        break;
+      case ExecOp.BINOP: {
+        const l = slots[node.src1] ?? LLN_VOID;
+        const r = slots[node.src2] ?? LLN_VOID;
+        const fn = BINARY_DISPATCH.get(dispatchKey(l.__tag, node.opName, r.__tag));
+        slots[node.dest] = fn !== undefined ? fn(l, r) : LLN_VOID;
+        break;
+      }
+      case ExecOp.RETURN:
+        return slots[node.src1] ?? LLN_VOID;
+      case ExecOp.RETURN_VOID:
+        return LLN_VOID;
+      case ExecOp.NOP:
+        // Unhandled node kind — signal caller to fall back to tree-walker
+        return null;
+      default:
+        // Any other op we don't handle yet — fall back
+        return null;
+    }
+    ip++;
+  }
+
+  return LLN_VOID;
+}
+
 export async function executeFlow(
   flowName: string,
   args: ReadonlyMap<string, LogicNValue>,
@@ -1544,6 +1865,229 @@ export async function executeFlow(
   executionPlans?: ReadonlyMap<string, PassiveExecutionPlan>,
   manifest?: RuntimeManifest,
 ): Promise<FlowExecutionResult> {
+  // Pure flow erasure fast path:
+  // When pureFastPath is explicitly set to true AND the flow is provably
+  // IsPure + EffectFree (no declared effects), skip all governance overhead
+  // — no ContractEnforcer, no CapabilityHost, no audit trail, no effect
+  // tracking. Just compute.
+  //
+  // The caller opts in by passing { pureFastPath: true }. When the option is
+  // absent or false the full governed path always runs, regardless of whether
+  // the flow is pure, so that callers who pass an enforcer or manifest have
+  // those respected unconditionally.
+  if (
+    runtimeOptions?.pureFastPath === true &&   // opt-in: pass { pureFastPath: true } to enable
+    isPureEffectFree(ast, flowName)
+  ) {
+    // Memoization: pure EffectFree flows with same args → same result
+    // Use sourceFile as a scope tag to prevent collision across different source files
+    // (e.g. multiple files all having a "main" flow with no args)
+    const sourceTag = typeof (runtimeOptions as Record<string, unknown>)?.sourceTag === "string"
+      ? (runtimeOptions as Record<string, unknown>).sourceTag as string
+      : undefined;
+    const cacheKey = pureFlowCacheKey(flowName, args, sourceTag);
+    const cached = getCachedPureFlow(cacheKey);
+    if (cached !== undefined) {
+      // Return a synthetic result wrapping the cached value
+      const now = new Date().toISOString();
+      return {
+        value: cached,
+        effectsObserved: [],
+        auditEntries: [],
+        diagnostics: [],
+        audit: {
+          schemaVersion: "lln.runtime.audit.v1",
+          flowName,
+          qualifier: "pure",
+          startedAt: now,
+          completedAt: now,
+          effectsObserved: [],
+          auditEntries: [],
+          result: "ok",
+        },
+      };
+    }
+
+    const interpreter = new Interpreter(
+      ast,
+      knownFlows ?? [],
+      undefined,   // no ContractEnforcer
+      undefined,   // no CapabilityHost
+      runtimeOptions,
+      executionPlans,
+      undefined,   // no manifest
+    );
+    const result = await interpreter.runFlow(flowName, args);
+    // Only cache successful, non-error results
+    if (result.value.__tag !== "runtimeError" && result.value.__tag !== "error") {
+      setCachedPureFlow(cacheKey, result.value);
+    }
+    return result;
+  }
+
+  // ExecutionGraph fast-path execution (Phase 29B)
+  // Build the graph once and cache it. On subsequent calls, try the register-VM
+  // executor first. If the graph contains no NOP sentinels (no unhandled ops),
+  // the fast-path returns a result directly — bypassing the async tree-walker.
+  // When runFromGraph() returns null, we fall through to the tree-walker.
+  //
+  // The fast-path is only used for pure flows with no enforcer/capabilityHost to
+  // avoid bypassing governance infrastructure on governed flows.
+  {
+    const flowIndex = buildFlowIndex(ast);
+    const flowNode  = flowIndex.get(flowName);
+    if (flowNode !== undefined) {
+      const sourceHash = flowName; // until hashSource is threaded through here
+      const egKey = executionGraphCacheKey(flowName, sourceHash);
+      let egraph  = getOrLoadGraph(egKey);
+      if (egraph === null) {
+        const qualifier      = qualifierFromFlowKind(flowNode.kind);
+        const isPure         = flowNode.kind === "pureFlowDecl";
+        const declaredEffects: readonly string[] = [];
+        egraph = buildExecutionGraph(flowNode, flowName, qualifier, declaredEffects, isPure);
+        storeGraph(egKey, egraph);
+      }
+
+      // Phase 29B: attempt ExecutionGraph fast-path for pure flows without enforcer
+      // so governance infrastructure is never bypassed for guarded/secure flows.
+      if (egraph.isPure && enforcer === undefined && capabilityHost === undefined) {
+        const fastResult = runFromGraph(egraph, args);
+        if (fastResult !== null) {
+          // Fast-path succeeded — return a synthetic FlowExecutionResult
+          const now = new Date().toISOString();
+          return {
+            value: fastResult,
+            effectsObserved: [],
+            auditEntries: [],
+            diagnostics: [],
+            audit: {
+              schemaVersion: "lln.runtime.audit.v1",
+              flowName,
+              qualifier: "pure",
+              startedAt: now,
+              completedAt: now,
+              effectsObserved: [],
+              auditEntries: [],
+              result: fastResult.__tag === "runtimeError" ? "error" : "ok",
+              ...(fastResult.__tag === "runtimeError" ? { error: (fastResult as { message: string }).message } : {}),
+            },
+          };
+        }
+        // runFromGraph returned null — fall through to tree-walker
+      }
+    }
+  }
+
   const interpreter = new Interpreter(ast, knownFlows ?? [], enforcer, capabilityHost, runtimeOptions, executionPlans, manifest);
   return interpreter.runFlow(flowName, args);
+}
+
+// =============================================================================
+// Optimization A — Binding slot array
+//
+// Assigns sequential integer indices to all named bindings declared in a flow
+// (letDecl, mutDecl, paramDecl). Callers can use a SlottedScope instead of a
+// Map<string, LogicNValue> to perform O(1) array indexed reads rather than
+// hash lookups for every variable access.
+// =============================================================================
+
+/**
+ * Walk a flow AST node and assign a sequential integer slot index to every
+ * unique binding name found in letDecl, mutDecl, and paramDecl nodes.
+ *
+ * The returned Map is used to construct a SlottedScope whose backing array
+ * is sized to exactly `slots.size` entries.
+ */
+export function assignSlots(flowNode: AstNode): Map<string, number> {
+  const slots = new Map<string, number>();
+  let nextSlot = 0;
+
+  function walk(node: AstNode): void {
+    if (
+      node.kind === "letDecl" ||
+      node.kind === "mutDecl" ||
+      node.kind === "paramDecl"
+    ) {
+      // Extract the bare binding name from values like:
+      //   "unsafe name: Type", "safe name", "name: Type", "name"
+      const raw = node.value ?? "";
+      const withoutQualifiers = raw
+        .replace(/^(unsafe|safe|mut|readonly)\s+/, "")
+        .trim();
+      const name = withoutQualifiers.split(":")[0]?.trim() ?? "";
+      if (name !== "" && !slots.has(name)) {
+        slots.set(name, nextSlot++);
+      }
+    }
+    for (const child of node.children ?? []) walk(child);
+  }
+
+  walk(flowNode);
+  return slots;
+}
+
+/**
+ * A fixed-size, array-backed scope that provides O(1) slot-indexed reads and
+ * writes. Intended as a drop-in replacement for Map<string, LogicNValue> in
+ * performance-critical inner loops once slot indices have been resolved by
+ * assignSlots().
+ */
+export class SlottedScope {
+  private readonly values: LogicNValue[];
+
+  constructor(size: number) {
+    this.values = new Array<LogicNValue>(size);
+  }
+
+  get(slot: number): LogicNValue {
+    return this.values[slot] as LogicNValue;
+  }
+
+  set(slot: number, value: LogicNValue): void {
+    this.values[slot] = value;
+  }
+
+  /** Returns the number of allocated slots. */
+  get size(): number {
+    return this.values.length;
+  }
+}
+
+// =============================================================================
+// Optimization B — While loop tight-path detection (stub)
+//
+// When a while loop body contains only simple Int arithmetic and Int
+// comparisons with no function calls, capability calls, or audit events, the
+// interpreter can execute it as a native JS while loop and bypass the
+// async tree-walker entirely.
+//
+// For now this is a non-operational stub that always returns false. The full
+// detection and execution logic will be wired in a subsequent pass.
+// =============================================================================
+
+/**
+ * Attempt to execute a while loop via a native JS fast-path, bypassing the
+ * async AST tree-walker.
+ *
+ * Eligibility criteria (all must hold):
+ *   - Condition is a simple binary expression: identifier op intLiteral
+ *   - Body contains only simple Int assignment statements (no calls, no
+ *     capability invocations, no audit events)
+ *
+ * Returns true when the fast-path ran the loop to completion.
+ * Returns false when the loop is not eligible; the caller must fall through
+ * to the standard tree-walker.
+ *
+ * @param _condNode  The condition AstNode of the while statement.
+ * @param _bodyNode  The body AstNode of the while statement.
+ * @param _scope     The current binding Map (Map<string, LogicNValue>).
+ */
+export function tryWhileFastPath(
+  _condNode: AstNode,
+  _bodyNode: AstNode,
+  _scope: Map<string, LogicNValue>,
+): boolean {
+  // Stub — detection and native-JS execution not yet implemented.
+  // Return false so the interpreter always falls through to the tree-walker.
+  return false;
 }

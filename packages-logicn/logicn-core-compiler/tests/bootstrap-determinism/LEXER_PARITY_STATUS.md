@@ -1,9 +1,24 @@
 # Stage B Lexer Parity Status
 
 **Source under test:** `pure flow add(a: Int, b: Int) -> Int { return a }`
-**Date assessed:** 2026-05-31
-**Phase:** R7A
+**Date assessed:** 2026-06-01 (updated Phase 25)
+**Phase:** Phase 25 / R7A
 **PARITY_ACHIEVED flag:** `true`
+
+---
+
+## Phase 25 Update (2026-06-01)
+
+No regression. Parity status unchanged from R7A final:
+
+- `PARITY_ACHIEVED = true` — all parity tests are hard assertions.
+- All 19 token positions continue to match for the canonical test source.
+- The lexer-parity test suite (`lexer-parity.test.mjs`) runs in the standard `npm test` pass.
+- **No new token types tested in Phase 25** — Phase 25 focus was WASM auth scaffold (25A/25B).
+
+Remaining gaps (Gaps 2–5, tracked below) are deferred to Phase 26 (parser.lln parity work).
+
+---
 
 ---
 

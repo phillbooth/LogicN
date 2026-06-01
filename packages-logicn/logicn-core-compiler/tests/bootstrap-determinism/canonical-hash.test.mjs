@@ -25,7 +25,17 @@ import {
   parseProgram,
   buildSemanticGraph,
   buildExecutionPlan,
+  buildExecutionGraph,
+  storeGraph,
+  getOrLoadGraph,
+  executionGraphCacheKey,
+  getGraphCacheStats,
 } from "../../dist/index.js";
+
+// ExecOp.BINOP = 3 (const enum inlined at compile time)
+const EXEC_OP_BINOP       = 3;
+const EXEC_OP_RETURN      = 8;
+const EXEC_OP_RETURN_VOID = 9;
 
 // ---------------------------------------------------------------------------
 // Nested object key-order independence
@@ -274,5 +284,101 @@ describe("canonical-hash: null and undefined stability", () => {
     const h1 = canonicalHash([]);
     const h2 = canonicalHash([]);
     assert.equal(h1, h2, "empty array must hash deterministically");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ExecutionGraph: build and cache
+// ---------------------------------------------------------------------------
+
+describe("ExecutionGraph: build and cache", () => {
+  // Build a minimal pureFlowDecl AST node for "add(a, b) { return a + b }"
+  function makeAddFlowNode() {
+    return {
+      kind: "pureFlowDecl",
+      value: "add",
+      children: [
+        { kind: "paramDecl", value: "a: Int", children: [] },
+        { kind: "paramDecl", value: "b: Int", children: [] },
+        {
+          kind: "block",
+          value: undefined,
+          children: [
+            {
+              kind: "returnStmt",
+              value: undefined,
+              children: [
+                {
+                  kind: "binaryExpr",
+                  value: "+",
+                  children: [
+                    { kind: "identifier", value: "a", children: [] },
+                    { kind: "identifier", value: "b", children: [] },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  it("buildExecutionGraph for 'pure flow add' produces nodes with BINOP", () => {
+    const flowNode = makeAddFlowNode();
+    const graph = buildExecutionGraph(flowNode, "add", "pure", [], true);
+
+    assert.equal(graph.flowName, "add", "flowName must match");
+    assert.equal(graph.isPure, true, "isPure must be true");
+    assert.ok(graph.nodes.length > 0, "must have at least one node");
+
+    // There must be at least one BINOP node (op === EXEC_OP_BINOP === 3)
+    const hasBinop = graph.nodes.some((n) => n.op === EXEC_OP_BINOP);
+    assert.ok(hasBinop, `Expected a BINOP node (op=${EXEC_OP_BINOP}) in: ${JSON.stringify(graph.nodes.map(n => n.op))}`);
+
+    // Must have a RETURN or RETURN_VOID at the end
+    const lastOp = graph.nodes[graph.nodes.length - 1]?.op;
+    const hasReturn = lastOp === EXEC_OP_RETURN || lastOp === EXEC_OP_RETURN_VOID;
+    assert.ok(hasReturn, `Last node must be RETURN/RETURN_VOID, got op=${lastOp}`);
+  });
+
+  it("storeGraph + getOrLoadGraph returns same graph", () => {
+    const flowNode = makeAddFlowNode();
+    const graph = buildExecutionGraph(flowNode, "addCacheTest", "pure", [], true);
+    const key = executionGraphCacheKey("addCacheTest", "testhash1");
+
+    storeGraph(key, graph);
+    const loaded = getOrLoadGraph(key);
+
+    assert.ok(loaded !== null, "getOrLoadGraph must return a graph after storeGraph");
+    assert.equal(loaded.flowName, graph.flowName, "flowName must round-trip");
+    assert.equal(loaded.slotCount, graph.slotCount, "slotCount must round-trip");
+    assert.equal(loaded.nodes.length, graph.nodes.length, "nodes.length must round-trip");
+    assert.equal(loaded.isPure, graph.isPure, "isPure must round-trip");
+  });
+
+  it("executionGraphCacheKey is deterministic", () => {
+    const k1 = executionGraphCacheKey("myFlow", "abc123");
+    const k2 = executionGraphCacheKey("myFlow", "abc123");
+    assert.equal(k1, k2, "Same inputs must produce same cache key");
+    assert.ok(k1.includes("myFlow"), "Cache key must contain flowName");
+    assert.ok(k1.includes("abc123"), "Cache key must contain sourceHash");
+
+    const k3 = executionGraphCacheKey("otherFlow", "abc123");
+    assert.notEqual(k1, k3, "Different flowName must produce different cache key");
+  });
+
+  it("memory cache stats shows correct entry count", () => {
+    const before = getGraphCacheStats();
+    const flowNode = makeAddFlowNode();
+    const graph = buildExecutionGraph(flowNode, "statsTestFlow", "pure", [], true);
+    const key = executionGraphCacheKey("statsTestFlow", "statshash99");
+    storeGraph(key, graph);
+    const after = getGraphCacheStats();
+
+    assert.ok(
+      after.memoryEntries >= before.memoryEntries + 1,
+      `memoryEntries must increase after storeGraph (before=${before.memoryEntries}, after=${after.memoryEntries})`,
+    );
   });
 });

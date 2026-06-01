@@ -12,6 +12,7 @@ import { describe, it } from "node:test";
 
 import { TypeId, resolveTypeId } from "../../dist/index.js";
 import { parseProgram, checkTypes } from "../../dist/index.js";
+import { SoANodeArena } from "../../dist/index.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -173,5 +174,60 @@ pure flow addTwo(a: Int, b: Int) -> Int {
       0,
       `Int + Int must not fire LLN-TYPE-004. Got: ${type004Diags.map((d) => d.message).join("; ")}`,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SoA NodeArena: flat typed arrays
+// ---------------------------------------------------------------------------
+
+describe("SoA NodeArena: flat typed arrays", () => {
+  // Test 1: allocate() returns sequential IDs
+  it("allocate() returns sequential IDs starting from 0", () => {
+    const arena = new SoANodeArena();
+    const id0 = arena.allocate();
+    const id1 = arena.allocate();
+    const id2 = arena.allocate();
+    assert.equal(id0, 0, "First allocation must be 0");
+    assert.equal(id1, 1, "Second allocation must be 1");
+    assert.equal(id2, 2, "Third allocation must be 2");
+    assert.equal(arena.size, 3, "Size must equal allocation count");
+  });
+
+  // Test 2: scanByKind finds nodes of given kind in O(n)
+  it("scanByKind finds nodes of given kind", () => {
+    const arena = new SoANodeArena();
+    const a = arena.allocate();
+    const b = arena.allocate();
+    const c = arena.allocate();
+    const d = arena.allocate();
+    arena.kinds[a] = 10;
+    arena.kinds[b] = 20;
+    arena.kinds[c] = 10;
+    arena.kinds[d] = 30;
+    const found10 = arena.scanByKind(10);
+    const found20 = arena.scanByKind(20);
+    const found99 = arena.scanByKind(99);
+    assert.deepEqual(found10, [a, c], "scanByKind(10) must return nodes a and c");
+    assert.deepEqual(found20, [b],    "scanByKind(20) must return node b");
+    assert.deepEqual(found99, [],     "scanByKind(99) must return empty array");
+  });
+
+  // Test 3: scanByEffectFlag finds nodes with effect bits set
+  it("scanByEffectFlag finds nodes with effect bits set", () => {
+    const arena = new SoANodeArena();
+    const a = arena.allocate();
+    const b = arena.allocate();
+    const c = arena.allocate();
+    // EffectFlags.DatabaseRead is 1, EffectFlags.AuditWrite is 8
+    arena.effectMasks[a] = 0b0001; // DatabaseRead
+    arena.effectMasks[b] = 0b1000; // AuditWrite
+    arena.effectMasks[c] = 0b1001; // Both
+    const dbRead  = arena.scanByEffectFlag(0b0001);
+    const audit   = arena.scanByEffectFlag(0b1000);
+    const network = arena.scanByEffectFlag(0b0100);
+    assert.deepEqual(dbRead,  [a, c], "DatabaseRead flag must match nodes a and c");
+    assert.deepEqual(audit,   [b, c], "AuditWrite flag must match nodes b and c");
+    assert.deepEqual(network, [],     "Network flag must match no nodes");
   });
 });

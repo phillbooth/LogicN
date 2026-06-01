@@ -399,17 +399,57 @@ export {
 // Stage A - AST Interpreter
 export {
   executeFlow,
+  BINARY_DISPATCH,
+  isPureEffectFree,
   extractRequestTimeMs,
   extractNetworkRequestsLimit,
   LLN_VOID,
   LLN_NONE,
   LLN_RUNTIME_005,
+  // Optimization A: binding slot array
+  assignSlots,
+  SlottedScope,
+  // Optimization B: while loop fast-path stub
+  tryWhileFastPath,
+  // Phase 29A: NaN-boxing helpers
+  tagInt,
+  isTagged,
+  untag,
+  fitsTagged,
+  MAX_TAGGED,
+  MIN_TAGGED,
   type LogicNValue,
   type ExecutionResult,
   type ExecutionAuditRecord,
   type FlowExecutionResult,
   type RuntimeAuditEntry,
+  type InterpreterRuntimeOptions,
 } from "./interpreter.js";
+
+// Phase 29C — Production Readiness Check
+export { checkProductionReadiness } from "./production-check.js";
+
+// Pure Flow LRU Memoization Cache
+export {
+  pureFlowCacheKey,
+  getCachedPureFlow,
+  setCachedPureFlow,
+  clearPureFlowCache,
+  getPureFlowCacheStats,
+} from "./pure-flow-cache.js";
+
+// Phase 23C — ExecutionGraph build-once-run-many cache
+export {
+  buildExecutionGraph,
+  executionGraphCacheKey,
+  getGraphCacheStats,
+  getCachedGraph,
+  getOrLoadGraph,
+  storeGraph,
+  ExecOp,
+  type ExecNode,
+  type ExecutionGraph,
+} from "./execution-graph.js";
 
 // Stage A - Audit Writer
 export {
@@ -425,7 +465,7 @@ export {
   type WATAssemblerResult,
 } from "./wat-assembler.js";
 
-// Phase 19 / 22A / 22 — WAT Emitter (WebAssembly Text Format) — skeleton + SIMD types + pure bodies
+// Phase 19 / 22A / 22 / 27D — WAT Emitter (WebAssembly Text Format) — skeleton + SIMD types + pure bodies + SIMD ops
 export {
   emitWAT,
   renderWAT,
@@ -436,6 +476,7 @@ export {
   logicNTypeToWAT,
   DEFAULT_WAT_MEMORY,
   DEFAULT_WASM_SIMD,
+  WAT_SIMD_OPS,
   type WATModule,
   type WATEmitResult,
   type WATFunction,
@@ -747,6 +788,36 @@ export interface SourceLocation {
   readonly line: number;
   readonly column: number;
 }
+
+// Unified Annotation Pass — single-pass type+value-state+effect+governance annotation
+export {
+  annotate,
+  type NodeId,
+  type NodeAnnotation,
+  type AnnotationMap,
+} from "./unified-annotator.js";
+
+// Phase 24/25 — Fused compiler + SoA internals (data-oriented, WASM-ready)
+export { SoANodeArena, MAX_NODES } from "./soa-arena.js";
+export {
+  toFlatTokenStream,
+  tokenStreamKind,
+  tokenStreamStart,
+  tokenStreamEnd,
+  tokenStreamValue,
+  TOKEN_STRIDE,
+  type FlatTokenStream,
+} from "./flat-token-stream.js";
+export {
+  fusedCompile,
+  packOpcode,
+  unpackOp,
+  unpackTypeId,
+  unpackEffectMask,
+  unpackFlags,
+  GIR_OP,
+  type FusedPassResult,
+} from "./fused-pass.js";
 
 export interface CompilerDiagnostic {
   readonly code: string;

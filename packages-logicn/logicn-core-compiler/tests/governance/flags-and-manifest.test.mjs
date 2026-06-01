@@ -30,6 +30,10 @@ import {
   LLN_ANTI_ABUSE_001,
   createCapabilityHost,
   createContractEnforcer,
+  getCachedPureFlow,
+  setCachedPureFlow,
+  clearPureFlowCache,
+  pureFlowCacheKey,
 } from "../../dist/index.js";
 
 // ---------------------------------------------------------------------------
@@ -515,5 +519,62 @@ contract { effects { process.spawn } }
     assert.equal(LLN_ANTI_ABUSE_001.severity, "error");
     assert.ok(typeof LLN_ANTI_ABUSE_001.message === "string" && LLN_ANTI_ABUSE_001.message.length > 0,
       "LLN_ANTI_ABUSE_001.message must be non-empty");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Pure flow LRU memoization
+// ---------------------------------------------------------------------------
+
+describe("Pure flow LRU memoization", () => {
+  it("same pure flow called twice → second call is cache hit", async () => {
+    const source = `
+pure flow double(x: Int) -> Int {
+  return x
+}
+`;
+    const parsed = parseProgram(source, "test-memo-1.lln");
+    const args = new Map([["x", { __tag: "int", value: 42 }]]);
+
+    // Clear cache to ensure a clean state
+    clearPureFlowCache();
+
+    // First call — cache miss, runs the flow
+    const result1 = await executeFlow("double", args, parsed.ast, parsed.flows, undefined, undefined, { pureFastPath: true });
+    assert.ok(result1.value.__tag !== "runtimeError", "First call must not error");
+
+    // Second call — same args, must hit the cache (value is identical)
+    const result2 = await executeFlow("double", args, parsed.ast, parsed.flows, undefined, undefined, { pureFastPath: true });
+    assert.ok(result2.value.__tag !== "runtimeError", "Second call must not error");
+
+    // Both calls must return the same value
+    assert.equal(result1.value.__tag, result2.value.__tag);
+    if (result1.value.__tag === "int" && result2.value.__tag === "int") {
+      assert.equal(result1.value.value, result2.value.value);
+    }
+
+    // The second result came from the cache — effectsObserved is empty
+    assert.deepEqual([...result2.effectsObserved], [],
+      "Cached result must report no effects");
+  });
+
+  it("getCachedPureFlow returns correct value after setCachedPureFlow", () => {
+    clearPureFlowCache();
+    const value = { __tag: "int", value: 99 };
+    setCachedPureFlow("test:key123", value);
+    const retrieved = getCachedPureFlow("test:key123");
+    assert.ok(retrieved !== undefined, "getCachedPureFlow must return the stored value");
+    assert.deepEqual(retrieved, value, "Retrieved value must equal the stored value");
+  });
+
+  it("clearPureFlowCache empties the cache", () => {
+    // Seed the cache with a value
+    setCachedPureFlow("flow:abc", { __tag: "string", value: "hello" });
+    assert.ok(getCachedPureFlow("flow:abc") !== undefined, "Value must be present before clear");
+
+    // Clear and verify it is gone
+    clearPureFlowCache();
+    const afterClear = getCachedPureFlow("flow:abc");
+    assert.equal(afterClear, undefined, "getCachedPureFlow must return undefined after clearPureFlowCache");
   });
 });

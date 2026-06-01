@@ -127,11 +127,150 @@ export async function assembleWAT(
 // encodeMinimalWASM — internal binary encoder
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// WAT value-type string → WASM type byte
+// ---------------------------------------------------------------------------
+
+/**
+ * Maps a WAT value type string to its WASM binary type byte.
+ *   i32       → 0x7f
+ *   i64       → 0x7e
+ *   f32       → 0x7d
+ *   f64       → 0x7c
+ *   externref → 0x6f
+ *   funcref   → 0x70
+ */
+function watTypeToByte(t: string): number {
+  switch (t.trim()) {
+    case "i32":       return 0x7f;
+    case "i64":       return 0x7e;
+    case "f32":       return 0x7d;
+    case "f64":       return 0x7c;
+    case "externref": return 0x6f;
+    case "funcref":   return 0x70;
+    default:          return 0x7f; // fallback: i32
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Parse function signatures from WAT text
+// ---------------------------------------------------------------------------
+
+interface WATFuncSignature {
+  readonly name: string;
+  /** Param type bytes in order (empty for zero-param functions). */
+  readonly paramTypes: readonly number[];
+  /** Result type bytes (we always emit i32 as the single result). */
+  readonly resultTypes: readonly number[];
+  /** True when the body uses local.get $p0 (return-first-param pattern). */
+  readonly usesLocalGet: boolean;
+}
+
+/**
+ * Parses function signatures from WAT text.
+ *
+ * Matches WAT function blocks of the form:
+ *   (func $name (param $p0 i32) (param $p1 externref) (result i32)
+ *     (local.get $p0)
+ *   )
+ *
+ * For Phase 24/25, we support the patterns emitted by renderWAT:
+ *   - Zero params + (i32.const 0) body
+ *   - One or more params + (local.get $p0) body
+ *   - unreachable body
+ */
+function parseFuncSignatures(wat: string): WATFuncSignature[] {
+  const signatures: WATFuncSignature[] = [];
+
+  // Match each "(func $name ..." block.  We use a simple line-by-line scan
+  // rather than a full parser — sufficient for the patterns renderWAT emits.
+  const lines = wat.split("\n");
+  let currentFunc: {
+    name: string;
+    paramTypes: number[];
+    resultTypes: number[];
+    bodyLines: string[];
+  } | undefined;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Detect func declaration line: "  (func $name (param ...) (result ...)".
+    // Exclude export-reference lines like "(export "x" (func $x))".
+    const funcMatch = trimmed.match(/^\(func \$([\w_]+)(.*)/);
+    if (funcMatch !== null && !trimmed.includes("(export")) {
+      if (currentFunc !== undefined) {
+        signatures.push(finaliseFunc(currentFunc));
+      }
+      const name = funcMatch[1] ?? "unknown";
+      const rest = funcMatch[2] ?? "";
+
+      // Parse (param $px TYPE) entries from the rest of the signature line.
+      const paramTypes: number[] = [];
+      for (const paramMatch of rest.matchAll(/\(param\s+\$\w+\s+([\w]+)\)/g)) {
+        paramTypes.push(watTypeToByte(paramMatch[1] ?? "i32"));
+      }
+
+      // Parse (result TYPE) entry.
+      const resultTypes: number[] = [];
+      const resultMatch = rest.match(/\(result\s+([\w]+)\)/);
+      if (resultMatch?.[1] !== undefined) {
+        resultTypes.push(watTypeToByte(resultMatch[1]));
+      } else {
+        resultTypes.push(0x7f); // default result: i32
+      }
+
+      currentFunc = { name, paramTypes, resultTypes, bodyLines: [] };
+      continue;
+    }
+
+    // Accumulate body lines for the current function.
+    if (currentFunc !== undefined) {
+      // Detect end of function block (closing paren at func indentation level).
+      if (trimmed === ")" || trimmed.startsWith(";; ") === false && trimmed === ")") {
+        signatures.push(finaliseFunc(currentFunc));
+        currentFunc = undefined;
+      } else {
+        currentFunc.bodyLines.push(trimmed);
+      }
+    }
+  }
+
+  if (currentFunc !== undefined) {
+    signatures.push(finaliseFunc(currentFunc));
+  }
+
+  return signatures;
+}
+
+function finaliseFunc(f: {
+  name: string;
+  paramTypes: number[];
+  resultTypes: number[];
+  bodyLines: string[];
+}): WATFuncSignature {
+  // Detect local.get pattern in body lines (ignoring comment-only lines).
+  const usesLocalGet = f.bodyLines.some(
+    (l) => l.includes("local.get") && !l.startsWith(";;"),
+  );
+  return {
+    name: f.name,
+    paramTypes: f.paramTypes,
+    resultTypes: f.resultTypes,
+    usesLocalGet,
+  };
+}
+
 /**
  * Encodes a minimal WASM binary for a module with:
  *   - one memory (min=2, max=2048)
- *   - one function per "func $name" declaration with i32.const 0 body
+ *   - one function per "func $name" declaration
+ *   - correct type section entries (supports params and results)
+ *   - real body: local.get 0 when usesLocalGet, else i32.const 0
  *   - exports for memory and each function
+ *
+ * Phase 24: handles the parameter patterns emitted by emitWATBody —
+ *   "(local.get $p0) ;; return first param" and "(i32.const 0) ;; default return".
  *
  * Returns an 8-byte module (magic + version only) for "(module)" with no funcs.
  */
@@ -141,28 +280,52 @@ function encodeMinimalWASM(wat: string): Uint8Array {
   // Magic + version
   bytes.push(0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00);
 
-  // Parse function definitions from WAT.
-  // Match "(func $name" only when followed by whitespace or "(", not ")" —
-  // this excludes export references like "(func $name)" used in export lines.
-  const funcNames = [...wat.matchAll(/\(func \$([\w_]+)(?=[\s(])/g)].map((m) => m[1] ?? "unknown");
+  // Parse function signatures from WAT.
+  const funcs = parseFuncSignatures(wat);
 
-  if (funcNames.length === 0) {
+  if (funcs.length === 0) {
     return new Uint8Array(bytes); // Minimal module — magic + version only
   }
 
-  // Type section: all functions are () -> i32
-  const typeSection: number[] = [
-    0x01,       // count = 1 type
-    0x60,       // func
-    0x00,       // 0 params
-    0x01, 0x7f, // 1 result: i32
-  ];
+  // ---------------------------------------------------------------------------
+  // Type section
+  //
+  // We build one type entry per unique signature (paramTypes + resultTypes).
+  // For simple WAT modules each function may have a unique type.
+  // We map each function to a type index.
+  // ---------------------------------------------------------------------------
+  const typeEntries: { paramTypes: readonly number[]; resultTypes: readonly number[] }[] = [];
+  const funcTypeIndices: number[] = [];
+
+  for (const f of funcs) {
+    // Find or create a matching type entry.
+    let typeIdx = typeEntries.findIndex(
+      (t) =>
+        t.paramTypes.length === f.paramTypes.length &&
+        t.resultTypes.length === f.resultTypes.length &&
+        t.paramTypes.every((p, i) => p === f.paramTypes[i]) &&
+        t.resultTypes.every((r, i) => r === f.resultTypes[i]),
+    );
+    if (typeIdx === -1) {
+      typeIdx = typeEntries.length;
+      typeEntries.push({ paramTypes: f.paramTypes, resultTypes: f.resultTypes });
+    }
+    funcTypeIndices.push(typeIdx);
+  }
+
+  const typeSection: number[] = [typeEntries.length];
+  for (const t of typeEntries) {
+    typeSection.push(0x60); // func type
+    typeSection.push(t.paramTypes.length, ...t.paramTypes);
+    typeSection.push(t.resultTypes.length, ...t.resultTypes);
+  }
+
   bytes.push(0x01); // section id: type
   pushLEB128Length(bytes, typeSection);
   bytes.push(...typeSection);
 
-  // Function section: N functions all using type index 0
-  const funcSection: number[] = [funcNames.length, ...funcNames.map(() => 0x00)];
+  // Function section: N functions, each pointing to its type index.
+  const funcSection: number[] = [funcs.length, ...funcTypeIndices];
   bytes.push(0x03); // section id: function
   pushLEB128Length(bytes, funcSection);
   bytes.push(...funcSection);
@@ -175,30 +338,47 @@ function encodeMinimalWASM(wat: string): Uint8Array {
   bytes.push(...memSection);
 
   // Export section: memory + each function
-  const exports: number[] = [];
-  const exportCount = 1 + funcNames.length;
-  exports.push(exportCount);
+  const exportBytes: number[] = [];
+  const exportCount = 1 + funcs.length;
+  exportBytes.push(exportCount);
 
   // Export "memory"
   const memStr = encodeString("memory");
-  exports.push(...memStr, 0x02, 0x00); // extern kind: memory (0x02), index 0
+  exportBytes.push(...memStr, 0x02, 0x00); // extern kind: memory (0x02), index 0
 
   // Export each function
-  funcNames.forEach((name, i) => {
-    const nameBytes = encodeString(name);
-    exports.push(...nameBytes, 0x00, i); // extern kind: func (0x00), index i
+  funcs.forEach((f, i) => {
+    const nameBytes = encodeString(f.name);
+    exportBytes.push(...nameBytes, 0x00, i); // extern kind: func (0x00), index i
   });
 
   bytes.push(0x07); // section id: export
-  pushLEB128Length(bytes, exports);
-  bytes.push(...exports);
+  pushLEB128Length(bytes, exportBytes);
+  bytes.push(...exportBytes);
 
-  // Code section: each function body = { 0 locals; i32.const 0; end }
-  // funcBody: [body_size=4, local_count=0, i32.const(0x41) 0, end(0x0b)]
-  // Body size counts everything after the size byte: local_count + instructions + end = 4 bytes.
-  const funcBody = [0x04, 0x00, 0x41, 0x00, 0x0b];
-  const codeEntries: number[] = [funcNames.length];
-  funcNames.forEach(() => codeEntries.push(...funcBody));
+  // ---------------------------------------------------------------------------
+  // Code section
+  //
+  // For each function:
+  //   - usesLocalGet=true  → body: local.get 0 (0x20 0x00) + end (0x0b)
+  //   - usesLocalGet=false → body: i32.const 0 (0x41 0x00) + end (0x0b)
+  //
+  // Body encoding: [body_size (LEB128), local_decl_count=0, ...instructions, end]
+  // ---------------------------------------------------------------------------
+  const codeEntries: number[] = [funcs.length];
+  for (const f of funcs) {
+    // Instructions: either local.get 0 or i32.const 0, then end.
+    const instructions: number[] = f.usesLocalGet
+      ? [0x20, 0x00]  // local.get 0
+      : [0x41, 0x00]; // i32.const 0
+
+    // Body = [local_decl_count=0, ...instructions, end]
+    const bodyContent = [0x00, ...instructions, 0x0b];
+    // Encode body size as LEB128, then the body itself.
+    const bodyLeb: number[] = [];
+    pushLEB128Value(bodyLeb, bodyContent.length);
+    codeEntries.push(...bodyLeb, ...bodyContent);
+  }
 
   bytes.push(0x0a); // section id: code
   pushLEB128Length(bytes, codeEntries);
@@ -219,17 +399,24 @@ function encodeString(s: string): number[] {
 
 /**
  * Push the byte-length of `section` into `bytes` as a LEB128 unsigned integer.
- * Simplified: supports section payloads up to 16383 bytes (two-byte LEB128).
- * For the simple WAT patterns we emit, this is always sufficient.
+ * Supports section payloads of any size.
  */
 function pushLEB128Length(bytes: number[], section: number[]): void {
-  let len = section.length;
+  pushLEB128Value(bytes, section.length);
+}
+
+/**
+ * Push an unsigned integer value into `bytes` as a LEB128-encoded sequence.
+ * Handles values of any magnitude (not limited to two bytes).
+ */
+function pushLEB128Value(bytes: number[], value: number): void {
+  let v = value;
   do {
-    let byte = len & 0x7f;
-    len >>= 7;
-    if (len !== 0) {
+    let byte = v & 0x7f;
+    v >>>= 7;
+    if (v !== 0) {
       byte |= 0x80; // more bytes follow
     }
     bytes.push(byte);
-  } while (len !== 0);
+  } while (v !== 0);
 }

@@ -62,6 +62,38 @@ export type WATSIMDInstruction =
   | "v128.store";
 
 // ---------------------------------------------------------------------------
+// Phase 27D — WASM SIMD opcode string constants
+//
+// Typed map of the WASM SIMD instructions emitted for Tensor.dot and related
+// Float32 tensor operations. Used by the kernel-fusion emitter and the WAT
+// renderer to ensure instruction strings are spelled correctly and never
+// hand-edited as bare strings.
+//
+// Architecture rule: WASM governs, native accelerates.
+// These opcodes are emitted only for the WASM-side fast path (wasm-hybrid
+// target, SIMD capability confirmed). The native path goes through
+// NativeCapabilityId.NpuInference ("host.npu.inference").
+// ---------------------------------------------------------------------------
+
+/**
+ * WASM SIMD instruction strings for Float32 tensor operations.
+ *
+ * Phase 27: used by the TypedArray lowering path and the WAT body emitter.
+ * Phase 28+: kernel fusion emitter will select from this map per flow.
+ *
+ * All values are valid WASM SIMD text-format instructions (WASM SIMD MVP,
+ * standardised in the WASM 2.0 spec).
+ */
+export const WAT_SIMD_OPS = {
+  f32x4_add:   "f32x4.add",
+  f32x4_mul:   "f32x4.mul",
+  v128_load:   "v128.load",
+  v128_store:  "v128.store",
+} as const;
+
+export type WAT_SIMD_OPS = typeof WAT_SIMD_OPS;
+
+// ---------------------------------------------------------------------------
 // WAT module types
 // ---------------------------------------------------------------------------
 
@@ -300,21 +332,30 @@ export function emitWATBody(
     (s) => s.kind === "return" || s.kind === "response",
   );
 
-  const hasCapabilityCall = plan.steps.some((s) => s.kind === "capability_call");
+  // Accept both spellings: "capability_call" (snake_case) and "capabilityCall" (camelCase).
+  const hasCapabilityCall = plan.steps.some(
+    (s) => s.kind === "capability_call" || s.kind === "capabilityCall",
+  );
+
+  // "validateParam" and "validate_param" steps are compile-time proofs —
+  // they are no-ops at the WAT level and generate no instructions.
+  // "validateContext" / "validate_context" are similarly erased.
+  // "emitEvent" / "emit_event" are erased in pure flows (no I/O).
 
   if (hasCapabilityCall) {
     // Capability calls must not appear in pure flows — guard with unreachable.
-    instructions.push("unreachable");
+    // Phase 25: real capability dispatch via WASM imports.
+    instructions.push("unreachable ;; capability call — Phase 25");
     return instructions.join("\n");
   }
 
   if (hasReturn && paramCount > 0) {
     // Identity-return: get the first parameter and return it.
     // Phase 22B: full expression lowering replaces this with the actual body.
-    instructions.push("(local.get $p0)");
+    instructions.push("(local.get $p0) ;; return first param");
   } else if (hasReturn && paramCount === 0) {
     // Return a constant i32 zero when there are no parameters.
-    instructions.push("(i32.const 0)");
+    instructions.push("(i32.const 0) ;; default return");
   } else {
     // No return step — unreachable (should not happen for well-formed plans).
     instructions.push("unreachable");
@@ -358,6 +399,12 @@ export interface WATFlowInput {
    * When absent, the body falls back to "unreachable".
    */
   readonly executionPlan?: { readonly steps: ReadonlyArray<{ readonly kind: string }> };
+  /**
+   * Tensor binding metadata from GIRFlow.tensors.
+   * Phase 27: used by buildWATModule to detect Float32 tensor flows and emit
+   * TypedArray lowering comments and Tensor.dot memory region hints.
+   */
+  readonly tensors?: readonly { readonly elementType: string }[];
 }
 
 /**
@@ -498,6 +545,31 @@ export function buildWATModule(
       body = "(i32.const 0) ;; Phase 25: replace with passiveExecutionPlan-derived body";
     }
 
+    // Phase 27C — TypedArray lowering hints for Float32 tensor flows.
+    //
+    // When a flow carries GIRTensorInfo entries whose elementType is "Float32",
+    // prepend WAT comments that annotate the TypedArray lowering decision and the
+    // Tensor.dot memory region. These comments are consumed by:
+    //   - the WAT renderer (rendered verbatim inside the function body)
+    //   - downstream tooling that inspects WAT text for memory layout decisions
+    //   - the Phase 28 kernel fusion emitter, which will replace them with real
+    //     v128.load / f32x4.mul / v128.store instruction sequences.
+    //
+    // The runtime selects: host.npu.inference (NPU) → host.gpu.compute (GPU) →
+    // WASM SIMD (wasm-hybrid) → scalar CPU — in order of availability.
+    // This comment block is emitted regardless of chosen target: the WAT module
+    // always describes the WASM data-plane layout even when the hot path is native.
+    const flowTensors = flow.tensors ?? [];
+    const hasFloat32Tensors = flowTensors.some((t) => t.elementType === "Float32");
+    if (hasFloat32Tensors) {
+      const tensorHints = [
+        ";; TypedArray lowering: Float32Array for Tensor<Float32,...>",
+        ";; Phase 27: Tensor.dot maps to f32 memory region",
+        body,
+      ].filter((line) => line.trim().length > 0).join("\n");
+      body = tensorHints;
+    }
+
     return {
       name: flow.name,
       isPure: flow.qualifier === "pure",
@@ -558,6 +630,13 @@ export function buildWATModuleFromGIR(
       readonly qualifier: string;
       readonly effects: { readonly declared: readonly string[] };
       readonly executionPlan?: { readonly steps: ReadonlyArray<{ readonly kind: string }> };
+      /** Phase 24: parameter type names from the AST. */
+      readonly paramTypes?: readonly string[];
+      /**
+       * Phase 27: tensor binding metadata from GIRFlow.tensors.
+       * When present, buildWATModule emits TypedArray lowering hints for Float32 flows.
+       */
+      readonly tensors?: readonly { readonly elementType: string }[];
     }>;
     readonly entryPoints: readonly string[];
     readonly girHash?: string;
@@ -572,6 +651,8 @@ export function buildWATModuleFromGIR(
         name: f.name,
         qualifier: f.qualifier,
         declaredEffects: f.effects.declared,
+        ...(f.paramTypes !== undefined && f.paramTypes.length > 0 ? { paramTypes: f.paramTypes } : {}),
+        ...(f.tensors !== undefined && f.tensors.length > 0 ? { tensors: f.tensors } : {}),
       };
       if (f.executionPlan !== undefined) {
         return { ...base, executionPlan: f.executionPlan };

@@ -13,26 +13,26 @@
         "warmupMs": 3000,
         "batchSize": 50000,
         "seed": 123456789,
-        "elapsedMs": 30000.463,
-        "operations": 3018750000,
-        "operationsPerSecond": 100623447.38,
-        "operationsPerCpuMs": 106331.45,
-        "checksum": 1681031242,
+        "elapsedMs": 30000.218,
+        "operations": 3616600000,
+        "operationsPerSecond": 120552455.31,
+        "operationsPerCpuMs": 120932.25,
+        "checksum": 964640885,
         "cpu": {
-          "userMs": 28218,
-          "systemMs": 172,
-          "totalMs": 28390
+          "userMs": 29844,
+          "systemMs": 62,
+          "totalMs": 29906
         },
         "memory": {
-          "rssBytes": 38682624,
+          "rssBytes": 38756352,
           "heapTotalBytes": 6062080,
-          "heapUsedBytes": 4294136,
+          "heapUsedBytes": 4703960,
           "externalBytes": 1493625,
           "arrayBuffersBytes": 10531,
-          "maxRssBytes": 38944768
+          "maxRssBytes": 39219200
         },
         "process": {
-          "pid": 40372,
+          "pid": 18424,
           "node": "v22.14.0",
           "python": null,
           "platform": "win32",
@@ -54,15 +54,15 @@
         "warmupMs": 3000,
         "batchSize": 50000,
         "seed": 123456789,
-        "elapsedMs": 30014.098,
-        "operations": 24250000,
-        "operationsPerSecond": 807953.65,
-        "operationsPerCpuMs": 840.74,
-        "checksum": 3370348027,
+        "elapsedMs": 30042.096,
+        "operations": 36600000,
+        "operationsPerSecond": 1218290.5,
+        "operationsPerCpuMs": 1223.82,
+        "checksum": 2558050012,
         "cpu": {
           "userMs": null,
           "systemMs": null,
-          "totalMs": 28843.75
+          "totalMs": 29906.25
         },
         "memory": {
           "rssBytes": null,
@@ -73,7 +73,7 @@
           "maxRssBytes": null
         },
         "process": {
-          "pid": 23224,
+          "pid": 12228,
           "node": null,
           "python": "3.13.1",
           "platform": "Windows-11-10.0.26200-SP0",
@@ -86,17 +86,65 @@
       },
       "logicnGoverned": {
         "runtime": "logicn-governed",
-        "error": true,
-        "parseErrors": 8,
-        "firstError": "Unexpected token \"{\" in statement position.",
-        "parseMs": 6.55
+        "mode": "governed",
+        "parseMs": 3.51,
+        "execMs": 729.89,
+        "totalMs": 733.4,
+        "result": {
+          "__tag": "int",
+          "value": 91934210936708
+        },
+        "error": false,
+        "runsPerSecond": 1,
+        "cpu": {
+          "userMs": 719,
+          "systemMs": 63,
+          "totalMs": 782
+        },
+        "memory": {
+          "heapUsedBefore": 11151232,
+          "heapUsedAfter": 13477024,
+          "heapUsedDelta": 2325792,
+          "rssBefore": 55218176,
+          "rssAfter": 63619072,
+          "rssDelta": 8400896,
+          "externalBefore": 4424042,
+          "externalAfter": 4405484,
+          "externalDelta": -18558
+        },
+        "logicnOpsPerSecond": 68503,
+        "logicnOpsPerRun": 50000
       },
       "logicnManifest": {
         "runtime": "logicn-manifest",
-        "error": true,
-        "parseErrors": 8,
-        "firstError": "Unexpected token \"{\" in statement position.",
-        "parseMs": 1.95
+        "mode": "manifest",
+        "parseMs": 0.56,
+        "execMs": 0.19,
+        "totalMs": 0.75,
+        "result": {
+          "__tag": "int",
+          "value": 91934210936708
+        },
+        "error": false,
+        "runsPerSecond": 5371,
+        "cpu": {
+          "userMs": 0,
+          "systemMs": 0,
+          "totalMs": 0
+        },
+        "memory": {
+          "heapUsedBefore": 13888872,
+          "heapUsedAfter": 13895448,
+          "heapUsedDelta": 6576,
+          "rssBefore": 63926272,
+          "rssAfter": 63930368,
+          "rssDelta": 4096,
+          "externalBefore": 4405484,
+          "externalAfter": 4405484,
+          "externalDelta": 0
+        },
+        "logicnOpsPerSecond": 263157895,
+        "logicnOpsPerRun": 50000
       }
     }
   },
@@ -113,23 +161,23 @@
         "additions": 20000002,
         "checksum": 1048227940,
         "loopCycles": 10000001,
-        "elapsedMs": 27.034,
-        "additionsPerSecond": 739822886.42,
+        "elapsedMs": 26.147,
+        "additionsPerSecond": 764903258.87,
         "cpu": {
-          "userMs": 0,
-          "systemMs": 16,
-          "totalMs": 16
+          "userMs": 15,
+          "systemMs": 0,
+          "totalMs": 15
         },
         "memory": {
-          "rssBytes": 43880448,
+          "rssBytes": 42229760,
           "heapTotalBytes": 7110656,
-          "heapUsedBytes": 4562312,
+          "heapUsedBytes": 5116456,
           "externalBytes": 1553546,
           "arrayBuffersBytes": 10531,
-          "maxRssBytes": 44032000
+          "maxRssBytes": 42438656
         },
         "process": {
-          "pid": 15676,
+          "pid": 7032,
           "node": "v22.14.0",
           "platform": "win32",
           "arch": "x64"
@@ -148,10 +196,10 @@
         "additions": 20000002,
         "checksum": 1048227940,
         "loopCycles": 10000001,
-        "elapsedMs": 4188.571,
-        "additionsPerSecond": 4774898.42,
+        "elapsedMs": 3305.83,
+        "additionsPerSecond": 6049917.93,
         "cpu": {
-          "processMs": 4125
+          "processMs": 3296.875
         },
         "memory": {
           "tracemallocEnabled": false,
@@ -159,7 +207,7 @@
           "tracemallocPeakBytes": null
         },
         "process": {
-          "pid": 46780,
+          "pid": 3456,
           "python": "3.13.1",
           "platform": "Windows-11-10.0.26200-SP0",
           "arch": "AMD64"
@@ -170,17 +218,65 @@
       },
       "logicnGoverned": {
         "runtime": "logicn-governed",
-        "error": true,
-        "parseErrors": 8,
-        "firstError": "Unexpected token \"{\" in statement position.",
-        "parseMs": 1.5
+        "mode": "governed",
+        "parseMs": 0.7,
+        "execMs": 0.11,
+        "totalMs": 0.81,
+        "result": {
+          "__tag": "int",
+          "value": 91934210936708
+        },
+        "error": false,
+        "runsPerSecond": 9479,
+        "cpu": {
+          "userMs": 0,
+          "systemMs": 0,
+          "totalMs": 0
+        },
+        "memory": {
+          "heapUsedBefore": 14194424,
+          "heapUsedAfter": 14197800,
+          "heapUsedDelta": 3376,
+          "rssBefore": 64221184,
+          "rssAfter": 64311296,
+          "rssDelta": 90112,
+          "externalBefore": 4406936,
+          "externalAfter": 4406936,
+          "externalDelta": 0
+        },
+        "logicnOpsPerSecond": 835765553970072700,
+        "logicnOpsPerRun": 91934210936708
       },
       "logicnManifest": {
         "runtime": "logicn-manifest",
-        "error": true,
-        "parseErrors": 8,
-        "firstError": "Unexpected token \"{\" in statement position.",
-        "parseMs": 0.41
+        "mode": "manifest",
+        "parseMs": 0.52,
+        "execMs": 0.11,
+        "totalMs": 0.63,
+        "result": {
+          "__tag": "int",
+          "value": 91934210936708
+        },
+        "error": false,
+        "runsPerSecond": 8757,
+        "cpu": {
+          "userMs": 0,
+          "systemMs": 0,
+          "totalMs": 0
+        },
+        "memory": {
+          "heapUsedBefore": 14392808,
+          "heapUsedAfter": 14396184,
+          "heapUsedDelta": 3376,
+          "rssBefore": 63860736,
+          "rssAfter": 63860736,
+          "rssDelta": 0,
+          "externalBefore": 4406936,
+          "externalAfter": 4406936,
+          "externalDelta": 0
+        },
+        "logicnOpsPerSecond": 835765553970072700,
+        "logicnOpsPerRun": 91934210936708
       }
     }
   },
@@ -202,23 +298,23 @@
         },
         "totalBulls": 60897,
         "totalCows": 68205,
-        "elapsedMs": 22.562,
-        "attemptsPerSecond": 1864639.66,
+        "elapsedMs": 25.976,
+        "attemptsPerSecond": 1619546.97,
         "cpu": {
-          "userMs": 0,
-          "systemMs": 16,
-          "totalMs": 16
+          "userMs": 15,
+          "systemMs": 0,
+          "totalMs": 15
         },
         "memory": {
-          "rssBytes": 46907392,
+          "rssBytes": 47415296,
           "heapTotalBytes": 10518528,
-          "heapUsedBytes": 6240616,
+          "heapUsedBytes": 6234504,
           "externalBytes": 1917095,
           "arrayBuffersBytes": 16675,
-          "maxRssBytes": 47521792
+          "maxRssBytes": 47972352
         },
         "process": {
-          "pid": 31464,
+          "pid": 6232,
           "node": "v22.14.0",
           "platform": "win32",
           "arch": "x64"
@@ -243,17 +339,17 @@
         },
         "totalBulls": 60897,
         "totalCows": 68205,
-        "elapsedMs": 811.004,
-        "attemptsPerSecond": 51874.01,
+        "elapsedMs": 836.855,
+        "attemptsPerSecond": 50271.53,
         "cpu": {
-          "processMs": 796.875
+          "processMs": 828.125
         },
         "memory": {
           "tracemallocCurrentBytes": 143,
           "tracemallocPeakBytes": 815
         },
         "process": {
-          "pid": 32256,
+          "pid": 1044,
           "python": "3.13.1",
           "platform": "Windows-11-10.0.26200-SP0",
           "arch": "AMD64"
@@ -265,17 +361,65 @@
       },
       "logicnGoverned": {
         "runtime": "logicn-governed",
-        "error": true,
-        "parseErrors": 7,
-        "firstError": "Unexpected token \"{\" in statement position.",
-        "parseMs": 1.01
+        "mode": "governed",
+        "parseMs": 0.95,
+        "execMs": 0.19,
+        "totalMs": 1.14,
+        "result": {
+          "__tag": "int",
+          "value": 91934210936708
+        },
+        "error": false,
+        "runsPerSecond": 5311,
+        "cpu": {
+          "userMs": 0,
+          "systemMs": 0,
+          "totalMs": 0
+        },
+        "memory": {
+          "heapUsedBefore": 14716280,
+          "heapUsedAfter": 14736208,
+          "heapUsedDelta": 19928,
+          "rssBefore": 63991808,
+          "rssAfter": 63995904,
+          "rssDelta": 4096,
+          "externalBefore": 4408591,
+          "externalAfter": 4408591,
+          "externalDelta": 0
+        },
+        "logicnOpsPerSecond": 483864268087936830,
+        "logicnOpsPerRun": 91934210936708
       },
       "logicnManifest": {
         "runtime": "logicn-manifest",
-        "error": true,
-        "parseErrors": 7,
-        "firstError": "Unexpected token \"{\" in statement position.",
-        "parseMs": 0.44
+        "mode": "manifest",
+        "parseMs": 0.41,
+        "execMs": 0.1,
+        "totalMs": 0.5,
+        "result": {
+          "__tag": "int",
+          "value": 91934210936708
+        },
+        "error": false,
+        "runsPerSecond": 10438,
+        "cpu": {
+          "userMs": 0,
+          "systemMs": 0,
+          "totalMs": 0
+        },
+        "memory": {
+          "heapUsedBefore": 15196080,
+          "heapUsedAfter": 15209000,
+          "heapUsedDelta": 12920,
+          "rssBefore": 64040960,
+          "rssAfter": 64040960,
+          "rssDelta": 0,
+          "externalBefore": 4408591,
+          "externalAfter": 4408591,
+          "externalDelta": 0
+        },
+        "logicnOpsPerSecond": 919342109367080000,
+        "logicnOpsPerRun": 91934210936708
       }
     }
   }

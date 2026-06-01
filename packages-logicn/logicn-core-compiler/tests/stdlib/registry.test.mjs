@@ -34,6 +34,16 @@ import {
   parseProgram,
   callStdlib,
   LLN_VOID,
+  toFlatTokenStream,
+  tokenStreamKind,
+  tokenStreamStart,
+  tokenStreamEnd,
+  tokenStreamValue,
+  TOKEN_STRIDE,
+  fusedCompile,
+  GIR_OP,
+  unpackOp,
+  lex,
 } from "../../dist/index.js";
 
 import { assembleWAT } from "../../dist/wat-assembler.js";
@@ -805,5 +815,114 @@ describe("WAT assembler: minimal binary encoder", () => {
     // (This is by design: callers must check valid before using as WASM.)
     assert.equal(typeof result.valid, "boolean", "valid must be a boolean");
     assert.equal(result.sourceWAT, "(module)", "sourceWAT must reflect input");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Flat token stream: Int32Array layout
+// ---------------------------------------------------------------------------
+
+describe("Flat token stream: Int32Array layout", () => {
+  // Test 1: toFlatTokenStream produces correct stride-4 layout
+  it("toFlatTokenStream produces correct stride-4 layout", () => {
+    const source = "flow hello() {}";
+    const { tokens } = lex(source, "test.lln");
+    const ts = toFlatTokenStream(tokens, source);
+    assert.equal(ts.count, tokens.length, "count must match token array length");
+    assert.equal(ts.data.length, tokens.length * TOKEN_STRIDE, "data length must be count * stride");
+    assert.equal(TOKEN_STRIDE, 4, "TOKEN_STRIDE must be 4");
+    // Check that each slot maps to correct token
+    for (let i = 0; i < tokens.length; i++) {
+      assert.equal(tokenStreamStart(ts, i), tokens[i].start, `start[${i}] must match`);
+      assert.equal(tokenStreamEnd(ts, i),   tokens[i].end,   `end[${i}] must match`);
+    }
+  });
+
+  // Test 2: tokenStreamValue correctly slices source
+  it("tokenStreamValue correctly slices source", () => {
+    const source = "flow hello() {}";
+    const { tokens } = lex(source, "test.lln");
+    const ts = toFlatTokenStream(tokens, source);
+    // Find the token with value "flow"
+    let foundFlow = false;
+    for (let i = 0; i < ts.count; i++) {
+      const v = tokenStreamValue(ts, i);
+      if (v === "flow") { foundFlow = true; break; }
+    }
+    assert.ok(foundFlow, "tokenStreamValue must be able to slice 'flow' from source");
+  });
+
+  // Test 3: tokenStreamKind matches original kindId
+  it("tokenStreamKind matches original kindId", () => {
+    const source = "flow hello() {}";
+    const { tokens } = lex(source, "test.lln");
+    const ts = toFlatTokenStream(tokens, source);
+    for (let i = 0; i < ts.count; i++) {
+      assert.equal(
+        tokenStreamKind(ts, i),
+        tokens[i].kindId,
+        `tokenStreamKind(${i}) must equal tokens[${i}].kindId`,
+      );
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fused compiler: single-pass GIR emission
+// ---------------------------------------------------------------------------
+
+describe("Fused compiler: single-pass GIR emission", () => {
+  // Test 1: pure flow produces PURE_ENTER/EXIT opcodes
+  it("pure flow produces PURE_ENTER and PURE_EXIT opcodes", () => {
+    const result = fusedCompile("pure flow add(a: Int, b: Int) -> Int { return a }");
+    assert.ok(result.opcodeCount >= 2, "Must emit at least 2 opcodes for pure flow");
+    let foundEnter = false;
+    let foundExit  = false;
+    for (let i = 0; i < result.opcodeCount; i++) {
+      const op = unpackOp(result.opcodes[i]);
+      if (op === GIR_OP.PURE_ENTER) foundEnter = true;
+      if (op === GIR_OP.PURE_EXIT)  foundExit  = true;
+    }
+    assert.ok(foundEnter, "Must emit PURE_ENTER opcode for 'pure flow'");
+    assert.ok(foundExit,  "Must emit PURE_EXIT opcode for 'pure flow'");
+  });
+
+  // Test 2: secure flow produces FLOW_START/END opcodes
+  it("secure flow produces FLOW_START and FLOW_END opcodes", () => {
+    const result = fusedCompile("secure flow handleRequest(req: Request) -> Response { return req }");
+    assert.ok(result.opcodeCount >= 2, "Must emit at least 2 opcodes for secure flow");
+    let foundStart = false;
+    let foundEnd   = false;
+    for (let i = 0; i < result.opcodeCount; i++) {
+      const op = unpackOp(result.opcodes[i]);
+      if (op === GIR_OP.FLOW_START) foundStart = true;
+      if (op === GIR_OP.FLOW_END)   foundEnd   = true;
+    }
+    assert.ok(foundStart, "Must emit FLOW_START opcode for 'secure flow'");
+    assert.ok(foundEnd,   "Must emit FLOW_END opcode for 'secure flow'");
+  });
+
+  // Test 3: fusedCompile of a simple program returns valid=true
+  it("fusedCompile of a simple program returns valid=true", () => {
+    const result = fusedCompile(`
+// Simple LogicN program
+flow greet(name: String) -> String {
+  return "hello"
+}
+`);
+    assert.equal(result.valid, true, "Simple valid program must return valid=true");
+    assert.equal(result.errors.length, 0, "Simple valid program must have zero errors");
+    assert.ok(result.opcodeCount > 0, "Simple program must emit at least one opcode");
+  });
+
+  // Test 4: GIR_OP constants are distinct uint8 values
+  it("GIR_OP constants are distinct uint8 values", () => {
+    const values = Object.values(GIR_OP);
+    const unique = new Set(values);
+    assert.equal(unique.size, values.length, "All GIR_OP constants must be distinct");
+    for (const v of values) {
+      assert.ok(typeof v === "number", "Each GIR_OP value must be a number");
+      assert.ok(v >= 0 && v <= 0xFF,  "Each GIR_OP value must fit in uint8 (0x00–0xFF)");
+    }
   });
 });

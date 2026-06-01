@@ -7,10 +7,12 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const benchDir   = join(__dirname, "..", "benchmarks");
 const resultsDir  = join(__dirname, "..", "results");
 
+// opsPerRun: how many operations the LogicN .lln benchmark does per flow call.
+// Used to normalise runsPerSecond → ops/second for fair comparison.
 const BENCHMARKS = [
-  { id: "compute-mix",          dir: "compute-mix" },
-  { id: "arithmetic-threshold", dir: "arithmetic-threshold" },
-  { id: "six-digit-guess",      dir: "six-digit-guess" },
+  { id: "compute-mix",          dir: "compute-mix",          logicnOpsPerRun: 50000 },
+  { id: "arithmetic-threshold", dir: "arithmetic-threshold", logicnOpsPerRun: null  }, // extracted from result.value
+  { id: "six-digit-guess",      dir: "six-digit-guess",      logicnOpsPerRun: null  }, // extracted from result.value
 ];
 
 function runProc(cmd, args=[]) {
@@ -50,6 +52,19 @@ async function runBenchmark(bench) {
     res.logicnGoverned = await runLogicN(lln, "governed");
     console.log(`  logicn (manifest)...`);
     res.logicnManifest = await runLogicN(lln, "manifest");
+  }
+
+  // Add normalised throughput for LogicN results
+  // ops/sec = opsPerRun × runsPerSec  OR  result.value (if that IS the op count)
+  for (const key of ["logicnGoverned", "logicnManifest"]) {
+    const r = res[key];
+    if (!r || r.error) continue;
+    const resultValue = r.result?.__tag === "int" ? r.result.value : null;
+    const opsPerRun   = bench.logicnOpsPerRun ?? resultValue ?? null;
+    if (opsPerRun !== null && r.execMs > 0) {
+      r.logicnOpsPerSecond = Math.round((opsPerRun / r.execMs) * 1000);
+      r.logicnOpsPerRun    = opsPerRun;
+    }
   }
 
   return { benchmark: bench.id, results: res };

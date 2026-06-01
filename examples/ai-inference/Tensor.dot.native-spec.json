@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "lln.native-plugin.v1",
+  "name": "logicn-tensor-dot",
+  "capability": "host.npu.inference",
+  "operation": "Tensor.dot",
+  "edaArenaLimitMb": 32,
+  "allowedInputHandles": 2,
+  "allowedOutputHandles": 1,
+  "childProcess": true,
+  "fallback": "cpu",
+  "componentModelABI": "logicn-hardware-npu:execute-dot",
+  "phaseAvailable": 27,
+  "notes": "First native plugin. EDA model. DataHandle protocol. Child process isolation."
+}
