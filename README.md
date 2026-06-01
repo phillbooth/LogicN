@@ -38,8 +38,6 @@ The language is designed from the ground up so that execution intent, capability
 ███████▌░░░░░░░░░░░░░░░░░░░░░░░  25%  (Phase 34 ACHIEVED — verifyPasswordService.lln IS a live governed HTTP service)
 ```
 
-> ℹ️ **What 25% means:** As of Phase 34, the first `.lln` file that IS a runtime service is live: `examples/auth-service/verifyPasswordService.lln` serves real HTTP — `POST /auth/verify` → governance check → `BCrypt.verify` (real bcrypt) → audit → governed JSON response. This is no longer parse-only; the flow *executes* to handle requests. Next milestones: Phase 41 (Stage B compiles Stage A) = 50%; Phase 44 (capability host in LogicN) = 75%; Phase 50 (v1.0) = 100%. Password handling matures across Phases 34–37: bcrypt → Password API → Argon2id → automatic hash migration.
-
 **TypeScript Runtime** — Stage A: compiler pipeline + execution engine running on Node.js
 
 ```
