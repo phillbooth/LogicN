@@ -20,12 +20,12 @@ paths used in prompt bootstrapping and tooling.
 |---|---|---|
 | Language syntax — overview | `core-syntax-keywords.md` | Keywords, declaration forms, operator precedence |
 | Language syntax — bindings | `logicn-core-syntax-bindings-pipeline.md` | `let`, `mut`, `unsafe let`, `safe mut`, binding pipeline |
-| Language syntax — if/match/optional | `logicn-syntax-if-match-optional.md` | `if`, `match`, `Option<T>`, exhaustiveness |
+| Language syntax — if/match/optional | `logicn-syntax-if-match-optional.md` | `if`, `match`, `Option<T>`, exhaustiveness; `when` guard arms; integer/string literal arms |
 | Language syntax — loops | `logicn-syntax-loops-iteration.md` | `for`, `while`, iteration patterns |
 | Language syntax — flow/fn/route | `flow-vs-fn-security-model.md` | Canonical rules for `flow`, `fn`, `route`; what each can and cannot do |
 | Language syntax — guarded flow | `guarded-flow-spec.md` | `guarded flow`, `contract` block, `types`/`effects` sub-blocks |
 | Language syntax — types/enums | `type-and-enum-declarations.md` | `type`, `enum`, branded types, enums |
-| Language syntax — grammar (EBNF) | `logicn-grammar.ebnf` | Authoritative EBNF grammar |
+| Language syntax — grammar (EBNF) | `logicn-grammar.ebnf` | Authoritative EBNF grammar; Phase 41: `when` guards, integer/string literal arms, inline contract, `:` return type, optional `effects {}`, no `else if` |
 | Language syntax — unified syntax | `unified-syntax-architecture.md` | How syntax constructs compose |
 | Effects | `effect-checker-and-boundary-checker.md` | Effect names, propagation rules, boundary checks |
 | Effects — canonical rule for fn vs flow | `flow-vs-fn-security-model.md` | `fn` cannot declare effects (`LLN-SEC-014`); only `flow` variants can |
@@ -48,9 +48,16 @@ paths used in prompt bootstrapping and tooling.
 | Security — value-state | `value-state-annotations.md` | Taint tracking, unsafe/safe transitions |
 | Security — secrets | `logicn-core-security-secret-reference-model.md` | `SecureString`, secret handling rules |
 | Security — taint types | `logicn-security-taint-types.md` | Taint propagation and declassification |
+| Security — post-quantum and hardware trust | `logicn-post-quantum-hardware-security.md` | ML-DSA attestation policy, CHERI/MTE/TEE eligibility constraints, `HardwareTrustProfile`, `LLN-HW-*` diagnostics, proof-chain binding |
 | Hardware targets | `logicn-hardware-targets.md` | CPU, GPU, NPU, WASM, photonic targets |
 | Hardware targets — compatibility | `logicn-hardware-compatibility-matrix.md` | Target compatibility matrix |
 | Hardware targets — WASM architecture | `logicn-hybrid-wasm-architecture.md` | WASM governance and native acceleration model |
+| Bridge plans (Phase 13) | `logicn-phase13-passive-plans-target-bridges.md` | `TargetBridgePlan`, `HardwareTrustProfile`, deterministic bridge selection, capability matrix, `LLN-TARGET-*` diagnostics |
+| Ternary type — compiler contract | `logicn-photonic-ternary-bridge-spec.md` | `Tri` type enforcement, truth tables, match exhaustiveness, `LLN-TYPE-031/032/033`, `GIRTriInfo` |
+| Photonic bridge — compiler contract | `logicn-photonic-ternary-bridge-spec.md` | Photonic eligibility predicate, balanced ternary encoding, `LLN-PHOTONIC-001/002/003/004`, security invariants |
+| Ternary type — runtime logic | `logicn-core-logic-tri-decision-bool.md` | Runtime `TriState`, `Decision`, `decisionToRuntimeBool`, fail-closed rules |
+| Photonic — distinct compute model | `logicn-photonic-distinct-compute-model.md` | Photonic types (`Wavelength`, `Phase`, `OpticalSignal`), IR nodes, noise policy |
+| Photonic — backend architecture | `logicn-core-photonic-backend-architecture.md` | Governance-first photonic runtime architecture, capability model |
 | Economics | `logicn-governance-economics-platform.md` | Economic model for governed compute |
 | Economics — package | `logicn-core-economics-package.md` | Economic package primitives |
 | Compiler pipeline | `logicn-compiler-pipeline.md` | 10-pass pipeline, pass order, status, source files |
@@ -117,6 +124,10 @@ Key disambiguation rules:
 - `Tri` ≠ `Bool` ≠ `Decision` — three distinct types
 - `Auto` ≠ `Any` — `Auto` is compile-time inference; `Any` does not exist in LogicN v1
 - `unsafe let` = boundary input marking; `safe mut` = gate upgrade — not mutation modifiers
+- `->` and `:` are both valid return-type separators; `:` is the modern preferred form
+- `else if` is a **hard error** (LLN-SYNTAX-010) — use `match` or sequential `if`
+- `when expr => body` is a guard arm in `match`; `200 => body` is an integer literal arm
+- `effects {}` is optional for `pure flow` — omission means no effects (pure)
 
 ---
 

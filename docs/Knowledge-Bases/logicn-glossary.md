@@ -34,7 +34,7 @@ version of this file, designed for alias resolution without prose parsing.
 **Aliases:** function, helper function, local function
 
 A `fn` is a local helper routine scoped inside a `flow` body. It does pure
-computation and returns a value. It cannot declare effects, capabilities,
+computation and returns a value. It **cannot** declare effects, capabilities,
 authority, or contracts — those belong in `flow`. It is always synchronous.
 
 A `fn` may only appear inside a `flow` body. Top-level `fn` is a compiler
@@ -51,8 +51,8 @@ fn add(a: Int, b: Int) -> Int {
 }
 
 // Correct — inside a flow body, effect attributed to the containing flow
-pure flow calculateTotal(price: Money<GBP>) -> Money<GBP> {
-  fn calculateVat(value: Money<GBP>) -> Money<GBP> {
+pure flow calculateTotal(price: Money<GBP>) : Money<GBP> {
+  fn calculateVat(value: Money<GBP>) : Money<GBP> {
     return value * Decimal("0.20")
   }
   return price + calculateVat(price)
@@ -60,12 +60,11 @@ pure flow calculateTotal(price: Money<GBP>) -> Money<GBP> {
 
 // WRONG — fn cannot declare effects (LLN-SEC-014):
 // fn fetchUser(id: UserId) -> Result<UserProfile, NetworkError>
-//   effect network
+//   with effects [network.outbound]   // <-- LLN-SYNTAX-LEGACY-001 hard error too
 // { ... }
 // Use a flow instead:
-flow fetchUser(id: UserId) -> Result<UserProfile, NetworkError>
-  effects [network.outbound]
-{
+pure flow fetchUser(id: UserId) : Result<UserProfile, NetworkError> {
+  contract { effects { network.outbound } }
   return http.get("/users/" + id)
 }
 ```
@@ -84,9 +83,9 @@ permissions, effects, and policies. It sits between routes (external entry point
 and fn helpers (computation).
 
 ```logicn
-flow createOrder(request: CreateOrderRequest) -> Result<OrderResponse, ApiError>
-  effects [database.write, audit.write]
-{
+// Modern style: ':' return type, inline contract
+flow createOrder(request: CreateOrderRequest) : Result<OrderResponse, ApiError> {
+  contract { effects { database.write, audit.write } }
   let total = calculateTotal(request.order)   // calls a fn
   let order = db.orders.insert({ ... })?
   return Ok(OrderResponse { id: order.id, total: total })
@@ -152,6 +151,108 @@ route POST "/orders" {
 
 ---
 
+### `when` guard arm — Conditional match arm with a boolean guard
+
+**Aliases:** when arm, guard arm, when expression arm, match guard
+
+A `match` arm that begins with `when expr =>` instead of a pattern. The guard
+expression is a boolean expression that may reference the match subject or any
+in-scope binding. Introduced in Phase 41 (grammar v1.1).
+
+```logicn
+match score {
+  when score >= 90 => return "critical"
+  when score >= 70 => return "high"
+  _               => return "low"
+}
+```
+
+Use `when` guard arms instead of `else if` chains — `else if` is a hard error
+(`LLN-SYNTAX-010`).
+
+**See also:** `logicn-grammar.ebnf` §when_guard_arm, `logicn-syntax-if-match-optional.md`
+
+---
+
+### `match` — Multi-arm pattern/guard dispatch
+
+**Aliases:** match expression, match statement, pattern match, switch
+
+LogicN's multi-branch control construct. All `match` expressions are exhaustive.
+Supported arm forms (Phase 41+):
+
+| Arm form | Example |
+|---|---|
+| `when` guard arm | `when score >= 90 => return "critical"` |
+| Integer literal arm | `200 => return "ok"` |
+| String literal arm | `"admin" => return adminView()` |
+| Enum / qualified enum | `Some(x) =>` / `Status.Active =>` |
+| `Ok(x)` / `Err(e)` | Result arm |
+| Wildcard | `_ => ...` |
+
+Use `match` in place of `else if` chains (which are a hard error: `LLN-SYNTAX-010`).
+
+**See also:** `logicn-grammar.ebnf` §match_expr, `logicn-syntax-if-match-optional.md`
+
+---
+
+### `inline contract` — Contract block as first item inside flow body
+
+**Aliases:** inline contract style, contract inside body
+
+Phase 41 syntax: the `contract {}` block may appear as the **first item** inside
+the flow body `{}`, rather than between the signature and the body. Both
+placements are valid; the inline style is the modern preferred form.
+
+```logicn
+// Modern (inline) style — preferred
+pure flow foo(x: Int) : String {
+  contract {
+    intent { "Return greeting." }
+    effects { }
+  }
+  return "hello " + x
+}
+
+// Traditional (external) style — also valid
+pure flow foo(x: Int) : String
+contract {
+  intent { "Return greeting." }
+}
+{
+  return "hello " + x
+}
+```
+
+**See also:** `logicn-grammar.ebnf` §contract_block, Phase 41 syntax additions
+
+---
+
+### `with effects [...]` — REMOVED (hard error)
+
+**Aliases:** with effects clause, effects list, effect annotation
+
+`with effects [...]` was a pre-v1 syntax for declaring effects on a flow.
+It is now a **hard error** (`LLN-SYNTAX-LEGACY-001`). The v1 parser rejects
+this form immediately.
+
+```logicn
+// WRONG — LLN-SYNTAX-LEGACY-001 hard error:
+// flow foo(x: Int) -> String
+//   with effects [database.read]
+// { ... }
+
+// CORRECT — use contract { effects {} }:
+flow foo(x: Int) : String {
+  contract { effects { database.read } }
+  ...
+}
+```
+
+**See also:** `logicn-grammar.ebnf` §effects_clause (REMOVED note), `LLN-SYNTAX-LEGACY-001`
+
+---
+
 ### `effect` — Declared runtime authority
 
 **Aliases:** side effect, capability, authority, permission effect, runtime authority
@@ -162,7 +263,8 @@ Only `flow` variants declare effects — `fn` cannot declare effects (`LLN-SEC-0
 No declared effects on a flow = pure/local for that flow.
 
 ```logicn
-effects [database.write, audit.write, network.outbound]
+// v1 canonical form — inside contract block
+contract { effects { database.write, audit.write, network.outbound } }
 ```
 
 **See also:** `effect-checker-and-boundary-checker.md`

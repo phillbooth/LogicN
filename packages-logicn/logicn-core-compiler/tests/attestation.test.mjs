@@ -227,9 +227,9 @@ contract {
     assert.equal(errors.length, 0, `Unexpected errors: ${errors.map((e) => e.message).join(", ")}`);
   });
 
-  it("parses contract with effects block", () => {
-    // intentional: testing combined with effects [...] inline header + contract.effects block parser support
-    const src = `guarded flow f() -> Void with effects [database.write]
+  it("parses contract with effects block (canonical form)", () => {
+    // Using canonical form: contract { effects {} } (with effects [...] was removed)
+    const src = `guarded flow f() -> Void
 contract {
   effects {
     database.write

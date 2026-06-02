@@ -5,51 +5,51 @@
 /// Shows the distinction: safety_critical (risk to people/physical systems)
 /// vs mission_critical (risk to mission/asset/strategic objective).
 
-secure flow planSatelliteManeuver(readonly mission: MissionPlan) -> Result<ManeuverPlan, MissionError>
-
-contract {
-  intent {
-    "Generate satellite maneuver plan within mission, fuel, timing and orbital constraints."
-  }
-
-  effects {
-    mission.read
-    orbit.compute
-    propulsion.plan
-    audit.write
-  }
-
-  value {
-    classification mission_critical
-    domain aerospace
-    estimated_loss_per_incident 25000000
-    regulatory_exposure high
-  }
-
-  economics {
-    max_compute_budget 500ms_cpu
-    preferred_execution wasm
-  }
-
-  safety {
-    require deterministic_execution
-    require bounded_runtime
-    require validated_inputs
-    require approved_fallback_plan
-  }
-
-  limits {
-    request_time 500ms
-    memory 32mb
-  }
-
-  audit {
-    require proof_graph
-    require mission_trace
-    require runtime_attestation
-  }
-}
+secure flow planSatelliteManeuver(readonly mission: MissionPlan): Result<ManeuverPlan, MissionError>
 {
+  contract {
+    intent {
+      "Generate satellite maneuver plan within mission, fuel, timing and orbital constraints."
+    }
+
+    effects {
+      mission.read
+      orbit.compute
+      propulsion.plan
+      audit.write
+    }
+
+    value {
+      classification mission_critical
+      domain aerospace
+      estimated_loss_per_incident 25000000
+      regulatory_exposure high
+    }
+
+    economics {
+      max_compute_budget 500ms_cpu
+      preferred_execution wasm
+    }
+
+    safety {
+      require deterministic_execution
+      require bounded_runtime
+      require validated_inputs
+      require approved_fallback_plan
+    }
+
+    limits {
+      request_time 500ms
+      memory 32mb
+    }
+
+    audit {
+      require proof_graph
+      require mission_trace
+      require runtime_attestation
+    }
+  }
+
   let validMission = validate.missionPlan(mission)?
   let maneuver     = Orbit.computeManeuver(validMission)?
   let safeManeuver = MissionConstraints.verify(maneuver)?

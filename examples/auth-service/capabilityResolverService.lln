@@ -1,0 +1,81 @@
+/// @service: capability resolver — resolves runtime capabilities for governed flows
+/// @phase: 51
+/// @runtime-component: HTTP capability host (stub — full in Phase 59)
+
+type CapabilityResolveResult = Result<Response, String>
+
+// Check if a named effect is available in the current deployment
+pure flow isEffectAvailable(effectName: String): Bool
+{
+  contract {
+    intent { "Check if a declared effect capability is available in this deployment." }
+  }
+  match effectName {
+    "network.inbound"    => return true
+    "network.outbound"   => return true
+    "audit.write"        => return true
+    "crypto.verify"      => return true
+    "secret.read"        => return true
+    "database.read"      => return false
+    "database.write"     => return false
+    _                    => return false
+  }
+}
+
+// Return the deployment tier for a given effect (governs where it runs)
+pure flow effectTier(effectName: String): String
+{
+  contract {
+    intent { "Return the execution tier for a given effect. Governance decides. Economics optimises." }
+  }
+  match effectName {
+    "network.inbound"    => return "cpu"
+    "network.outbound"   => return "cpu"
+    "audit.write"        => return "cpu"
+    "crypto.verify"      => return "cpu"
+    "secret.read"        => return "enclave"
+    _                    => return "denied"
+  }
+}
+
+// HTTP endpoint: resolve a capability by name
+secure flow resolveCapability(readonly request: Request): CapabilityResolveResult
+{
+  contract {
+    effects {
+      network.inbound
+      audit.write
+    }
+    intent { "Resolve a runtime capability by name. Returns availability and execution tier. Phase 59 completes full implementation." }
+    response {
+      body {
+        effectName: String
+        available: Bool
+        tier: String
+        phase: Int
+      }
+    }
+  }
+
+  unsafe let rawEffect: String = request.jsonBody.effectName
+
+  let available: Bool = isEffectAvailable(rawEffect)
+  let tier: String = effectTier(rawEffect)
+
+  AuditLog.write({
+    event: "CapabilityResolved",
+    effectName: rawEffect
+  })
+
+  return Ok({
+    effectName: rawEffect
+    available: available
+    tier: tier
+    phase: 51
+  })
+}
+
+route POST "/capability/resolve" {
+  response CapabilityResolveResult
+  flow resolveCapability
+}

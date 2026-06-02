@@ -24,6 +24,7 @@
 import { canonicalHash } from "./runtime/canonicalHash.js";
 import type { EffectFlagsMask, GovernanceFlagsMask, ProofLevelId } from "./type-registry.js";
 import type { ValueStateFlagsMask } from "./value-state-checker.js";
+import { generateKeyPairSync, sign as nodeCryptoSign, verify as nodeCryptoVerify } from "node:crypto";
 
 // ---------------------------------------------------------------------------
 // ExecutionSignature
@@ -273,7 +274,7 @@ export interface ProofGraph {
    * See logicn-governance-signature.md for full spec.
    */
   readonly governanceSignature?: {
-    readonly algorithm: "lln.gov.sig.v1";
+    readonly algorithm: "lln.gov.sig.v1" | "lln.gov.sig.v2";  // v2 = Phase 55 hybrid
     readonly signerKeyId: string;
     readonly signature: string;
     readonly signedAt: string;
@@ -316,6 +317,244 @@ export function buildProofGraph(
  */
 export function sharesGovernanceShape(a: ProofGraph, b: ProofGraph): boolean {
   return a.signatureHash === b.signatureHash;
+}
+
+// =============================================================================
+// Phase 39 — GovernanceSignature (Ed25519, compat mode)
+// Phase 55 — ML-DSA upgrade (NIST FIPS 204 / @noble/post-quantum)
+//
+// Migration profile:
+//   compat      (Phase 39): Ed25519 only  — "lln.gov.sig.v1"
+//   hybrid      (Phase 55): Ed25519 + ML-DSA-65 — both required  — "lln.gov.sig.v2"
+//   pq_strict   (future):   ML-DSA-65 only — "lln.gov.sig.v3"
+//
+// The signed payload is a canonical SHA-256 hash of the deterministic proof
+// graph fields: schemaVersion + flowName + signatureHash + verified + obligations.
+// Mutable fields (generatedAt, evidence) are excluded from the signed payload
+// so that adding new evidence to an existing proof does not invalidate the sig.
+// =============================================================================
+
+export type GovernanceAlgorithm = "ed25519" | "ml-dsa-65" | "hybrid-ed25519-mldsa65";
+
+export interface GovernanceKeyPair {
+  readonly keyId: string;
+  readonly privateKey: Uint8Array;
+  readonly publicKey:  Uint8Array;
+  readonly algorithm:  GovernanceAlgorithm;
+  /** Phase 55: ML-DSA-65 key pair, present when algorithm is hybrid or ml-dsa-65 */
+  readonly mlDsaPrivateKey?: Uint8Array;
+  readonly mlDsaPublicKey?:  Uint8Array;
+}
+
+/** Generate a fresh ephemeral governance key pair (Ed25519 only, compat mode). */
+export function generateGovernanceKeyPair(keyId: string): GovernanceKeyPair {
+  const result = generateKeyPairSync("ed25519", {
+    privateKeyEncoding: { type: "pkcs8", format: "der" },
+    publicKeyEncoding:  { type: "spki",  format: "der" },
+  }) as unknown as { privateKey: Uint8Array; publicKey: Uint8Array };
+  return {
+    keyId,
+    privateKey: new Uint8Array(result.privateKey),
+    publicKey:  new Uint8Array(result.publicKey),
+    algorithm:  "ed25519",
+  };
+}
+
+/**
+ * Phase 55: Generate a hybrid key pair (Ed25519 + ML-DSA-65).
+ * Use for new key generation in production; existing Ed25519 keys remain valid in compat mode.
+ *
+ * Algorithm: "hybrid-ed25519-mldsa65"
+ * Both signatures are required to verify — neither alone is sufficient in hybrid mode.
+ */
+export async function generateHybridGovernanceKeyPair(keyId: string): Promise<GovernanceKeyPair> {
+  // Ed25519 key (existing mechanism)
+  const ed25519Result = generateKeyPairSync("ed25519", {
+    privateKeyEncoding: { type: "pkcs8", format: "der" },
+    publicKeyEncoding:  { type: "spki",  format: "der" },
+  }) as unknown as { privateKey: Uint8Array; publicKey: Uint8Array };
+
+  // ML-DSA-65 key via @noble/post-quantum (NIST FIPS 204)
+  const { ml_dsa65 } = await import("@noble/post-quantum/ml-dsa.js") as {
+    ml_dsa65: {
+      keygen(seed: Uint8Array): { publicKey: Uint8Array; secretKey: Uint8Array };
+      sign(msg: Uint8Array, sk: Uint8Array): Uint8Array;
+      verify(sig: Uint8Array, msg: Uint8Array, pk: Uint8Array): boolean;
+    };
+  };
+  const seed = new Uint8Array(32);
+  (globalThis.crypto as { getRandomValues(b: Uint8Array): Uint8Array }).getRandomValues(seed);
+  const mlKeys = ml_dsa65.keygen(seed);
+
+  return {
+    keyId,
+    privateKey:    new Uint8Array(ed25519Result.privateKey),
+    publicKey:     new Uint8Array(ed25519Result.publicKey),
+    algorithm:     "hybrid-ed25519-mldsa65",
+    mlDsaPrivateKey: mlKeys.secretKey,
+    mlDsaPublicKey:  mlKeys.publicKey,
+  };
+}
+
+/** Deterministic canonical payload for signing — excludes mutable/time fields. */
+function canonicalSigningPayload(pg: ProofGraph): Uint8Array {
+  // Use canonicalHash (already imported) which returns a hex string.
+  // That hex string is encoded to bytes to produce a stable payload for signing.
+  const payloadHex = canonicalHash({
+    schemaVersion: pg.schemaVersion,
+    flowName:      pg.flowName,
+    signatureHash: pg.signatureHash,
+    verified:      pg.verified,
+    obligations:   pg.obligations.map(o => ({ kind: o.kind })),
+  });
+  return new TextEncoder().encode(payloadHex);
+}
+
+/** Convert a Uint8Array to base64url. */
+function toBase64url(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+
+/** Decode base64url to Uint8Array. */
+function fromBase64url(s: string): Uint8Array {
+  const b64 = s.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = b64 + "=".repeat((4 - b64.length % 4) % 4);
+  return Uint8Array.from(atob(padded), c => c.charCodeAt(0));
+}
+
+/**
+ * Sign a ProofGraph with a governance key pair.
+ *
+ * Phase 39 (compat): Ed25519 only  → algorithm: "lln.gov.sig.v1"
+ * Phase 55 (hybrid): Ed25519 + ML-DSA-65 → algorithm: "lln.gov.sig.v2"
+ *
+ * Returns a new ProofGraph with the governanceSignature field populated.
+ * Note: ML-DSA hybrid signing is async — use signProofGraphAsync for Phase 55 keys.
+ */
+export function signProofGraph(pg: ProofGraph, keyPair: GovernanceKeyPair): ProofGraph {
+  const payload = canonicalSigningPayload(pg);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const privKeyObj = { key: keyPair.privateKey, format: "der", type: "pkcs8" } as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sigBuffer = (nodeCryptoSign as any)(null, payload, privKeyObj) as Uint8Array;
+  const signature = toBase64url(sigBuffer);
+
+  return {
+    ...pg,
+    governanceSignature: {
+      algorithm:   "lln.gov.sig.v1",
+      signerKeyId: keyPair.keyId,
+      signature,
+      signedAt:    new Date().toISOString(),
+    },
+  };
+}
+
+/**
+ * Phase 55: Sign a ProofGraph with a hybrid Ed25519 + ML-DSA-65 key pair.
+ * Both signatures are encoded as `sig_ed25519|sig_mldsa65` (pipe-separated base64url).
+ */
+export async function signProofGraphHybrid(pg: ProofGraph, keyPair: GovernanceKeyPair): Promise<ProofGraph> {
+  if (keyPair.algorithm !== "hybrid-ed25519-mldsa65" || !keyPair.mlDsaPrivateKey) {
+    // Fallback to Ed25519 if not a hybrid key
+    return signProofGraph(pg, keyPair);
+  }
+  const payload = canonicalSigningPayload(pg);
+
+  // Ed25519 signature
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const privKeyObj = { key: keyPair.privateKey, format: "der", type: "pkcs8" } as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ed25519Sig = (nodeCryptoSign as any)(null, payload, privKeyObj) as Uint8Array;
+
+  // ML-DSA-65 signature
+  const { ml_dsa65 } = await import("@noble/post-quantum/ml-dsa.js") as {
+    ml_dsa65: {
+      sign(msg: Uint8Array, sk: Uint8Array): Uint8Array;
+    };
+  };
+  const mlDsaSig = ml_dsa65.sign(payload, keyPair.mlDsaPrivateKey);
+
+  // Encode both signatures pipe-separated
+  const signature = `${toBase64url(ed25519Sig)}|${toBase64url(mlDsaSig)}`;
+
+  return {
+    ...pg,
+    governanceSignature: {
+      algorithm:   "lln.gov.sig.v2",   // hybrid
+      signerKeyId: keyPair.keyId,
+      signature,
+      signedAt:    new Date().toISOString(),
+    },
+  };
+}
+
+/**
+ * Verify a GovernanceSignature on a ProofGraph.
+ *
+ * Phase 39 (compat): accepts "lln.gov.sig.v1" (Ed25519)
+ * Phase 55 (hybrid): accepts "lln.gov.sig.v2" (Ed25519 + ML-DSA-65) — async variant below
+ *
+ * Returns true only when the signature is cryptographically valid.
+ */
+export function verifyGovernanceSignature(pg: ProofGraph, publicKey: Uint8Array): boolean {
+  if (!pg.governanceSignature) return false;
+  const alg = pg.governanceSignature.algorithm;
+  if (alg !== "lln.gov.sig.v1" && alg !== "lln.gov.sig.v2") return false;
+  try {
+    const payload = canonicalSigningPayload(pg);
+    const alg = pg.governanceSignature.algorithm;
+
+    // For hybrid (v2), only validate Ed25519 part in the sync path.
+    // The ML-DSA part requires async import — use verifyGovernanceSignatureHybrid for full v2 check.
+    const rawSig = pg.governanceSignature.signature;
+    const ed25519SigStr = alg === "lln.gov.sig.v2" ? (rawSig.split("|")[0] ?? "") : rawSig;
+    const sigBuf = fromBase64url(ed25519SigStr);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pubKeyObj = { key: publicKey, format: "der", type: "spki" } as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (nodeCryptoVerify as any)(null, payload, pubKeyObj, sigBuf) as boolean;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Phase 55: Full hybrid verification (Ed25519 + ML-DSA-65).
+ * Both signatures must pass. Async due to ML-DSA import.
+ */
+export async function verifyGovernanceSignatureHybrid(
+  pg: ProofGraph,
+  ed25519PublicKey: Uint8Array,
+  mlDsaPublicKey: Uint8Array,
+): Promise<boolean> {
+  if (!pg.governanceSignature) return false;
+  if (pg.governanceSignature.algorithm !== "lln.gov.sig.v2") return false;
+  try {
+    const payload = canonicalSigningPayload(pg);
+    const parts = pg.governanceSignature.signature.split("|");
+    if (parts.length !== 2) return false;
+    const [ed25519SigStr, mlDsaSigStr] = parts;
+    if (!ed25519SigStr || !mlDsaSigStr) return false;
+
+    // Ed25519 check
+    const ed25519Sig = fromBase64url(ed25519SigStr);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pubKeyObj = { key: ed25519PublicKey, format: "der", type: "spki" } as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ed25519OK = (nodeCryptoVerify as any)(null, payload, pubKeyObj, ed25519Sig) as boolean;
+    if (!ed25519OK) return false;
+
+    // ML-DSA-65 check
+    const { ml_dsa65 } = await import("@noble/post-quantum/ml-dsa.js") as {
+      ml_dsa65: { verify(pk: Uint8Array, msg: Uint8Array, sig: Uint8Array): boolean };
+    };
+    const mlDsaSig = fromBase64url(mlDsaSigStr);
+    return ml_dsa65.verify(mlDsaSig, payload, mlDsaPublicKey);
+  } catch {
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------------------

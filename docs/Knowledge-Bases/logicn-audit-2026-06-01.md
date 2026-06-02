@@ -1,6 +1,6 @@
 # LogicN — Full Audit 2026-06-01
 
-**Status: 2,715 tests · 0 failures · Phases 25–32 complete**
+**Status: 2,879 tests · 0 failures · Phases 25–40 complete**
 
 ---
 
@@ -8,16 +8,17 @@
 
 | Package | Tests | Pass | Fail |
 |---|---|---|---|
-| logicn-core-compiler | 2,605 | 2,605 | 0 |
+| logicn-core-compiler | 2,737 | 2,737 | 0 |
 | logicn-core-economics | 15 | 15 | 0 |
 | logicn-devtools-graph-algorithms | 95 | 95 | 0 |
-| **TOTAL** | **2,715** | **2,715** | **0** |
+| logicn-core-security | 32 | 32 | 0 |
+| **TOTAL** | **2,879** | **2,879** | **0** |
 
 **CEC:** 223/223 stable (Levels 0–5 all parsing and compiling cleanly)
 
 ---
 
-## Phase Completion (Phases 25–32)
+## Phase Completion (Phases 25–40)
 
 | Phase | Deliverable | Status | Tests |
 |---|---|---|---|
@@ -32,6 +33,14 @@
 | 31 | Bytecode VM — Int32Array opcodes, 14.3× over sync tree-walker | ✅ | +18 |
 | 31B | Bytecode VM auto-wired into executeFlow (220K calls/sec) | ✅ | — |
 | 32 | Governance diff CLI — exit 2 on authority widening | ✅ | +9 |
+| 33A | Tier telemetry — executionTier + fallbackReason on FlowExecutionResult. All 5 tiers tagged: cache/bytecode/sync/egraph/tree | ✅ | — |
+| 34 | verifyPasswordService.lln — live governed HTTP service, POST /auth/verify, BCrypt.verify, audit | ✅ | +13 |
+| 35 | Password.verify/hash/needsMigration — stable API facade over bcrypt/Argon2 | ✅ | — |
+| 36 | Argon2.hash/verify (Argon2id, OWASP preferred). Password.verify auto-routes by hash prefix | ✅ | — |
+| 37 | Password.migrate — verify+rehash bcrypt→Argon2id on successful verify | ✅ | — |
+| 38 | Deno WebGPU GPU benchmark live — RTX 3050 Ti, 3.99M ops/sec, result=1,000,000,000 | ✅ | — |
+| 39 | GovernanceSignature Ed25519 — signProofGraph/verifyGovernanceSignature, tamper-detection verified | ✅ | — |
+| 40 | Stage B executable — compiler.capabilities.lln (8 flows), lexer.lln (makeKeywordTable=40kw, scanWord works). 20 bootstrap tests. | ✅ | +20 |
 
 ---
 
@@ -98,7 +107,7 @@
 | Milestone | Phase | % | Status |
 |---|---|---|---|
 | Foundation complete | 28–32 | 0% → ready | ✅ Phases done |
-| HTTP serving (verifyPassword) | 34 | **25%** | ⏳ Next |
+| HTTP serving (verifyPassword) | 34 | **25%** | ✅ Done |
 | Self-hosting bootstrap | 41 | 50% | ⏳ Planned |
 | Capability host in LogicN | 44 | 75% | ⏳ Planned |
 | v1.0 RC | 50 | 100% | ⏳ Planned |

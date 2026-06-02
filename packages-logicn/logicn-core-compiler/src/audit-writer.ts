@@ -18,6 +18,13 @@ import { appendFileSync } from "node:fs";
 import { type RuntimeAuditEntry } from "./interpreter.js";
 import { type EvidenceRecord, type DenialRecord } from "./proof-chain.js";
 
+// OWASP F6: cryptographically random audit IDs — not Math.random.
+// Web Crypto is available globally in Node 19+ and in the browser.
+function _randomUUID(): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (globalThis as any).crypto.randomUUID() as string;
+}
+
 export interface AuditEvent {
   readonly schemaVersion: "lln.runtime.audit.v1";
   readonly id: string;
@@ -171,7 +178,7 @@ export function createAuditWriter(
 
     recordDenial(reason: string, flowName: string): void {
       denials.push({
-        denialId: `denial_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        denialId: `denial_${_randomUUID()}`,
         reason,
         flowName,
         timestamp: new Date().toISOString(),
@@ -209,7 +216,7 @@ export function buildFlowAuditEvent(
 
   return {
     schemaVersion: "lln.runtime.audit.v1",
-    id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    id: `evt_${_randomUUID()}`,
     timestamp: new Date().toISOString(),
     status,
     eventType: "FunctionExecution",

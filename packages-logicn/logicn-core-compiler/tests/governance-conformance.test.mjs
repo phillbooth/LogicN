@@ -57,7 +57,7 @@ describe("Governance conformance — Suite 1: Capability proof", () => {
     // The effect checker detects the undeclared audit.write call.
     const diags = pipeline(`
 guarded flow readPatient(request: Request) -> Result<Response, Error>
-with effects [database.read]
+contract { effects { database.read } }
 {
   AuditLog.write("accessed")
   return Ok(Response.ok({}))
@@ -91,7 +91,7 @@ pure flow add(a: Int, b: Int) -> Int {
   it("declared network.outbound with http.get produces no EFFECT-001", () => {
     const diags = pipeline(`
 guarded flow fetchRate(currency: String) -> Result<String, Error>
-with effects [network.outbound]
+contract { effects { network.outbound } }
 {
   unsafe let rawResponse = http.get("https://rates.example.com/" + currency)?
   return Ok(rawResponse)

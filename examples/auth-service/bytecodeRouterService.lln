@@ -1,0 +1,49 @@
+/// @service: bytecode router service — tier selection and routing
+/// @phase: 59
+
+type TierResult = Result<Response, String>
+
+// Select the best execution tier for a flow based on its properties
+pure flow selectExecutionTier(qualifier: String, hasEffects: Bool, isIntegerOnly: Bool): String {
+  contract { intent { "Select the optimal execution tier for a flow." } }
+  if qualifier == "pure" {
+    if isIntegerOnly { return "bytecode" }
+    return "wasm"
+  }
+  if hasEffects { return "tree" }
+  return "sync"
+}
+
+// Map tier to a traffic light color for display
+pure flow tierTrafficLight(tier: String): String {
+  contract { intent { "Map an execution tier to a traffic light color." } }
+  match tier {
+    "wasm"     => return "green"
+    "bytecode" => return "green"
+    "sync"     => return "white"
+    "egraph"   => return "white"
+    "tree"     => return "red"
+    _          => return "black"
+  }
+}
+
+secure flow resolveBytecodeRoute(readonly request: Request): TierResult {
+  contract {
+    effects { network.inbound audit.write }
+    intent { "Accept flow metadata and return the optimal execution tier selection." }
+  }
+  unsafe let rawQualifier: String = request.jsonBody.qualifier
+  unsafe let rawHasEffects: String = request.jsonBody.hasEffects
+  unsafe let rawIsIntegerOnly: String = request.jsonBody.isIntegerOnly
+  let hasEffects: Bool = rawHasEffects == "true"
+  let isIntegerOnly: Bool = rawIsIntegerOnly == "true"
+  let tier: String = selectExecutionTier(rawQualifier, hasEffects, isIntegerOnly)
+  let light: String = tierTrafficLight(tier)
+  AuditLog.write({ eventName: "TierSelected" tier: tier })
+  return Ok({ tier: tier trafficLight: light phase: 59 })
+}
+
+route POST "/tier/select" {
+  response TierResult
+  flow resolveBytecodeRoute
+}

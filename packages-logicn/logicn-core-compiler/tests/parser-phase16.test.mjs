@@ -111,7 +111,7 @@ authority share PaymentGateway {
   it("authority block inside a flow declaration is parsed structurally", () => {
     const result = parseOk(`
 secure flow processPayment(req: PaymentRequest) -> Result<Payment, PaymentError>
-  with effects [payment.write audit.write]
+  contract { effects { payment.write audit.write } }
 authority share Payments {
   reason "flow needs payment authority"
 }
@@ -203,7 +203,7 @@ policy {
   it("policy block inside a flow is parsed structurally", () => {
     const result = parseOk(`
 secure flow handleData(req: Request) -> Response
-  with effects [data.read]
+  contract { effects { data.read } }
 policy {
   purpose "data-access"
   allow Request to "read"

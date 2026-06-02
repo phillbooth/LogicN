@@ -20,6 +20,9 @@
   },
   "dependencies": {
     "@logicn/devtools-graph-algorithms": "file:../logicn-devtools-graph-algorithms",
+    "@noble/post-quantum": "^0.6.1",
+    "argon2": "^0.44.0",
+    "bcryptjs": "^3.0.3",
     "wabt": "^1.0.39",
     "wat-wasm": "^1.0.43"
   },

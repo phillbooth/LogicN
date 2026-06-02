@@ -4,7 +4,7 @@
 
 ```
 Phase 10A — Canonical specification
-Sections: types/intent/events/rules/audit/targets/examples implemented; request/response/model/context Phase 10A
+Sections: types/intent/events/rules/audit/economics/targets/examples implemented; request/response/model/context Phase 10A
 Governance enforcement: Phase 10B+
 ```
 
@@ -27,7 +27,8 @@ model    = domain / data model used by the flow
 types    = flow-local type aliases
 intent   = machine-readable purpose
 context  = required execution context fields
-effects  = declared side-effects (alternative to 'with effects [...]')
+effects  = declared side-effects (use contract { effects {} } — canonical form)
+economics = cost/value/SLA constraints for governed execution
 rules    = governance rules and requirements
 events   = events this flow may emit
 audit    = audit and integrity requirements
@@ -39,7 +40,7 @@ alone — without reading the body.
 
 ---
 
-## Canonical Section Order (16 sections)
+## Canonical Section Order (17 sections)
 
 Formatters and code generators must emit contract sections in this order.
 All sections are optional. A section may be omitted if it has no declarations.
@@ -56,6 +57,7 @@ contract {
   model   {}          // Domain model or AI model dependency
 
   effects {}          // Declared external capabilities / side-effects
+  economics {}        // Cost/value/SLA and route-budget constraints
 
   timeouts {}         // Deadlines, cancellation, per-operation timeouts
   retries  {}         // Retry policy for network/database/effectful calls
@@ -79,25 +81,77 @@ order is valid source but will be reordered by `logicn fmt`.
 
 ### Named Result Types
 
-Flows with contracts should declare the result type as a flow-local alias in `contract.types`, not inline in the signature:
+The preferred pattern is to declare the result type as a **top-level public `type`**
+before the flow declaration. This makes it visible to routes, tests, and other flows
+without importing contract internals.
 
 ```logicn
-// Preferred — result type named and documented in contract
-secure flow createOrder(readonly request: Request) -> CreateOrderResult
+// Most preferred — top-level public result type (Phase 41 canonical form)
+type CreateOrderResult = Result<Response, ApiError>
 
+secure flow createOrder(readonly request: Request) : CreateOrderResult
+contract {
+  intent { "Create a new order from a validated customer request." }
+  ...
+}
+{ ... }
+
+// Also valid — flow-local alias in contract.types (preferred when type is private to one flow)
+secure flow getPatient(readonly request: Request) : GetPatientResult
 contract {
   types {
-    type CreateOrderResult = Result<Response, ApiError>
+    type GetPatientResult = Result<PatientProfile, PatientError>
   }
   ...
 }
+{ ... }
 
 // Also valid — direct in signature (fine for simple flows without full contracts)
-secure flow simpleFlow(x: Int) -> Result<String, ApiError>
+pure flow simpleFlow(x: Int) : Result<String, ApiError>
 { ... }
 ```
 
-The named form is preferred for any flow with a `contract {}` block because it makes the return type discoverable without reading the signature, and it allows the contract to reference the result type by name in `errors {}` and `response {}`.
+The top-level `type` form is preferred for any flow whose result type may be
+referenced by routes, tests, or other flows. The `contract.types {}` form is
+preferred only when the type is genuinely private to a single flow. Both forms
+allow the contract to reference the result type by name in `errors {}` and `response {}`.
+
+### Inline Contract Style (Modern Preferred)
+
+In Phase 41 the preferred style places the `contract {}` as the **first item inside
+the flow body** `{}` rather than between the signature and the body:
+
+```logicn
+// Modern inline style (preferred for compact flows)
+pure flow classify(score: Int) : String {
+  contract {
+    intent { "Map a numeric score to a risk tier label." }
+  }
+  match score {
+    when score >= 90 => return "critical"
+    when score >= 70 => return "high"
+    when score >= 40 => return "medium"
+    _               => return "low"
+  }
+}
+
+// Traditional external style (still valid)
+pure flow classify(score: Int) -> String
+contract {
+  intent { "Map a numeric score to a risk tier label." }
+}
+{
+  match score {
+    when score >= 90 => return "critical"
+    when score >= 70 => return "high"
+    when score >= 40 => return "medium"
+    _               => return "low"
+  }
+}
+```
+
+Both placement styles are syntactically valid. The inline style is preferred for
+flows where the contract is short and the body benefits from reading as a single unit.
 
 ---
 
@@ -264,8 +318,7 @@ restrictions to model usage — `local_only` forbids remote model calls;
 
 ## Section: effects {}
 
-Alternative form for declaring side-effects, equivalent to `with effects [...]`
-at the flow signature.
+The canonical form for declaring side-effects. Use `contract { effects {} }`.
 
 ```logicn
 effects {
@@ -274,23 +327,77 @@ effects {
 }
 ```
 
-Both forms are valid. The formatter normalises to `effects {}` inside the
-contract when rewriting. `with effects [...]` at the signature level is not
-deprecated and remains supported.
+`with effects [...]` at the flow signature level is a **hard error**
+(LLN-SYNTAX-LEGACY-001) and must not appear in new or existing source files.
+The canonical form is `contract { effects {} }`.
 
-**Equivalence:**
+**Phase 41 rule — `effects {}` is optional for pure flows.**
+Omitting the `effects {}` section entirely means the flow declares no side-effects.
+An explicit empty `effects {}` is equivalent to omission. For `guarded flow` and
+`secure flow`, effects must be declared if the flow observes any.
+
+**Canonical forms:**
 
 ```logicn
-// These two are equivalent after formatting:
-
-secure flow getPatient(...) -> Result<Response, ApiError>
-with effects [database.read, audit.write] { ... }
-
-secure flow getPatient(...) -> Result<Response, ApiError>
+// Correct — effects declared (guarded/secure flows):
+secure flow getPatient(...) : Result<Response, ApiError>
 contract {
   effects { database.read, audit.write }
 } { ... }
+
+// Correct — pure flow, effects {} omitted (means no effects):
+pure flow classify(score: Int) : String {
+  contract {
+    intent { "Map a numeric score to a risk tier label." }
+  }
+  match score {
+    when score >= 90 => return "critical"
+    _               => return "low"
+  }
+}
+
+// Also correct — pure flow with explicit empty effects {}:
+pure flow httpStatus(code: Int) : String {
+  contract { effects {} }
+  match code {
+    200 => return "ok"
+    404 => return "not_found"
+    _   => return "unknown"
+  }
+}
+
+// ERROR — LLN-SYNTAX-LEGACY-001 (hard error, will not compile):
+// secure flow getPatient(...) -> Result<Response, ApiError>
+// with effects [database.read, audit.write] { ... }
 ```
+
+---
+
+## Section: economics {}
+
+Economics constraints for governed execution planning. This section declares
+cost, value, and budget boundaries the planner/runtime must respect.
+
+```logicn
+economics {
+  max_cost_gbp 0.05
+  max_latency_ms 120
+  min_value_score 0.80
+  deny_expensive_target photonic
+}
+```
+
+Typical declarations:
+
+| Declaration | Meaning |
+|---|---|
+| `max_cost_gbp N` | Hard upper bound on per-execution cost |
+| `max_latency_ms N` | Target execution latency budget |
+| `min_value_score N` | Minimum acceptable value/utility score |
+| `deny_expensive_target target` | Prevent execution routing to a high-cost target |
+
+This section informs plan selection and target bridging. It does not grant
+authority and cannot override `effects`, `privacy`, `rules`, or `audit`.
 
 ---
 
@@ -353,9 +460,10 @@ audit {
 ## Full Example: getPatient
 
 ```logicn
-secure flow getPatient(readonly request: Request)
--> GetPatientResult
+// Top-level public result type (Phase 41 preferred form)
+type GetPatientResult = Result<PatientProfile, PatientError>
 
+secure flow getPatient(readonly request: Request) : GetPatientResult
 contract {
 
   types {
@@ -407,6 +515,11 @@ contract {
   effects {
     database.read
     audit.write
+  }
+
+  economics {
+    max_cost_gbp 0.02
+    max_latency_ms 100
   }
 
   rules {
@@ -476,13 +589,73 @@ A flow with a body and no contract is allowed but ungoverned.
 
 ## Rules at a Glance
 
-- Canonical section order is: types, intent, request, response, context, model, effects, rules, events, audit
+- Canonical section order is: types, intent, request, response, context, model, effects, economics, timeouts, retries, limits, privacy, errors, rules, observability, events, audit
 - The formatter enforces section order; the compiler does not error on order violations in Phase 10A
 - `response.denies` fields must not appear in the response body — enforced in Phase 10B
 - `context.require` fields must be read before the first protected operation — enforced in Phase 10B
-- `with effects [...]` and `effects {}` inside a contract are equivalent; both remain valid
+- `with effects [...]` is a **hard error** (LLN-SYNTAX-LEGACY-001); use `contract { effects {} }` only
+- `effects {}` is **optional** for `pure flow` — omission means no effects declared
+- `else if` is a **hard error** (LLN-SYNTAX-010) — use `match` or sequential `if`
+- `:` is the modern preferred return-type separator; `->` is still accepted
+- Top-level `type` declarations are preferred over `contract.types {}` for public result types
+- `contract {}` may appear inline as the first item in the flow body (modern preferred style)
 - `audit.require signed attestation` requires `src/attestation.ts` to run before the response is returned
 - Intent never grants authority — it guides optimisation and documentation only
+
+---
+
+## Phase 41 Syntax Changes (quick reference)
+
+These rules were formalised or added in Phase 41 and apply to all new LogicN source.
+
+| Rule | Detail |
+|---|---|
+| `:` return type | `pure flow foo(x: Int) : String` — preferred; `->` still valid |
+| Inline contract | `contract {}` as first item in `{}` body — preferred for compact flows |
+| `when` guard arms | `when score >= 90 => return "critical"` in `match` |
+| Integer/string literal arms | `200 => return "ok"` — no `when` needed for constant values |
+| `effects {}` optional | Pure flow without `effects {}` = no effects (pure) |
+| Top-level result types | `type FooResult = Result<X, E>` at compilation unit level |
+| No `else if` | Hard error LLN-SYNTAX-010; use `match` or sequential `if` statements |
+| `unsafe let` at boundary | `unsafe let rawId: String = request.params.id` — marks untrusted input |
+
+**Phase 41 canonical style example:**
+
+```logicn
+// Top-level public result type
+type AuditPatientResult = Result<Response, AuditError>
+
+// Modern inline contract, : return type, when-guard match
+pure flow classify(score: Int) : String {
+  contract {
+    intent { "Map a numeric score to a risk tier label." }
+  }
+  match score {
+    when score >= 90 => return "critical"
+    when score >= 70 => return "high"
+    when score >= 40 => return "medium"
+    _               => return "low"
+  }
+}
+
+// Integer literal match arms, inline contract
+pure flow httpStatus(code: Int) : String {
+  contract { effects {} }
+  match code {
+    200 => return "ok"
+    404 => return "not_found"
+    _   => return "unknown"
+  }
+}
+
+// Binary if (not match) for a simple two-branch decision
+pure flow checkAge(age: Int) : Bool {
+  if age >= 18 {
+    return true
+  }
+  return false
+}
+```
 
 ---
 

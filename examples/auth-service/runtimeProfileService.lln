@@ -1,0 +1,47 @@
+// Phase 50 — Runtime Profile Service
+// Governs which execution profiles are allowed and what they permit
+
+pure flow profileAllowsRecursion(profile: String): Bool
+{
+  if profile.contains("strict") { return false }
+  if profile.contains("high_integrity") { return false }
+  return true
+}
+
+pure flow profileAllowsUnboundedLoop(profile: String): Bool
+{
+  if profile.contains("strict") { return false }
+  if profile.contains("deterministic") { return false }
+  return true
+}
+
+pure flow profileRequiresBudget(profile: String): Bool
+{
+  if profile.contains("high_integrity") { return true }
+  if profile.contains("deterministic") { return true }
+  return false
+}
+
+pure flow profileSecurityLevel(profile: String): Int
+{
+  if profile.contains("deterministic") { return 4 }
+  if profile.contains("high_integrity") { return 3 }
+  if profile.contains("strict") { return 3 }
+  if profile.contains("production") { return 2 }
+  return 1
+}
+
+secure flow checkProfile(readonly request: Request): Response
+{
+  contract { effects { network.inbound  audit.write } }
+
+  unsafe let profile: String = request.jsonBody.profile
+  let allowsRecursion: Bool = profileAllowsRecursion(profile)
+  let allowsUnbounded: Bool = profileAllowsUnboundedLoop(profile)
+  let requiresBudget: Bool = profileRequiresBudget(profile)
+  let securityLevel: Int = profileSecurityLevel(profile)
+  AuditLog.write({ event: "ProfileCheck", profile: profile, level: securityLevel })
+  return { profile: profile, allowsRecursion: allowsRecursion, allowsUnboundedLoop: allowsUnbounded, requiresBudget: requiresBudget, securityLevel: securityLevel }
+}
+
+route POST "/profile/check" { request Request  response Response  flow checkProfile }

@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const dataPath  = join(__dirname, "..", "results", "latest.json");
 
-const ORDER = ["rustAvx512","rustAvx2","rust","cpp","nodejs","python","logicnPassive","logicnManifest","logicnGoverned","wasm"];
+const ORDER = ["rustAvx512","rustAvx2","rust","cpp","nodejs","python","logicnPassive","logicnManifest","logicnGoverned","wasm","denoWebGpu"];
 const LABEL = {
   rustAvx512:     "Rust AVX-512",
   rustAvx2:       "Rust AVX2",
@@ -26,6 +26,7 @@ const LABEL = {
   logicnManifest: "LogicN (manifest)",
   logicnGoverned: "LogicN (governed)",
   wasm:           "WASM (Phase 27)",
+  denoWebGpu:     "Deno WebGPU (RTX 3050 Ti)",
 };
 
 // ── Metric extractors ──────────────────────────────────────────────────────────
@@ -236,7 +237,47 @@ for (const bench of data) {
 
 // ── 2. Memory usage ────────────────────────────────────────────────────────────
 
-console.log("\n## 2. Memory Usage\n");
+// ── 2. Memory Allocation per Operation ────────────────────────────────────────
+// The LOW-MEMORY benchmark specifically measures bytes allocated per operation.
+// Key insight: WASM and bytecode VM allocate ~0 bytes/op (pure Int32 arithmetic).
+// The tree-walker allocates a {__tag,value} object per AST node — ~200-400 bytes/op.
+
+const lowMemBench = data.find(b => b.benchmark === "low-memory");
+if (lowMemBench) {
+  console.log("\n## 2. Memory Allocation per Operation (low-memory benchmark)\n");
+  console.log("> **Key metric:** bytes allocated on the JS heap per integer operation.");
+  console.log("> WASM and bytecode VM should be near 0. Tree-walker allocates per AST node.\n");
+  console.log("| # | 🚦 | Runtime | Bytes/Op | Throughput | Total Ops | Heap Δ |");
+  console.log("|---|---|---|---|---|---|---|");
+
+  const lmResults = [];
+  for (const rt of ORDER) {
+    const r = lowMemBench.results?.[rt];
+    if (!r || r.error) continue;
+    const bpo = r.memory?.bytesPerOperation ?? r.memory?.heapUsedDelta != null
+      ? (r.memory.heapUsedDelta / ((r.calls ?? 1) * 10000)).toFixed(2)
+      : "—";
+    const t = throughput(r);
+    lmResults.push({ rt, r, bpo: parseFloat(bpo) || 0, t });
+  }
+  lmResults.sort((a, b) => a.bpo - b.bpo); // lowest bytes/op first (best memory efficiency)
+
+  const nodeRef = lmResults.find(x => x.rt === "nodejs")?.t ?? null;
+  lmResults.forEach((x, idx) => {
+    const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx + 1}`;
+    const light = trafficLight(x.t, nodeRef);
+    const bpoStr = x.bpo < 1 ? `${x.bpo.toFixed(2)}` : `${x.bpo.toFixed(0)}`;
+    const highlight = x.bpo < 1 ? "⚡ ~0 — no boxing" : x.bpo < 10 ? "✓ low" : x.bpo < 100 ? "⚠ moderate" : "✗ high — object per node";
+    const totalOps = x.r.memory?.totalOps ?? "—";
+    console.log(`| ${medal} | ${light} | ${LABEL[x.rt]} | ${bpoStr} bytes/op ${highlight} | ${fmtT(x.t)} | ${typeof totalOps === 'number' ? totalOps.toLocaleString() : totalOps} | ${fmtB(x.r.memory?.heapUsedDelta)} |`);
+  });
+
+  console.log("\n> **Why this matters:** Every byte allocated is a byte the GC must later collect.");
+  console.log("> WASM and the bytecode VM run with zero allocation — ideal for high-throughput governed services.");
+  console.log("> The tree-walker's per-node allocation is the primary target of Phases 31-33.\n");
+}
+
+console.log("\n## 2b. General Memory Usage\n");
 console.log("| Benchmark | Runtime | RSS | Peak RSS | Heap Used | Heap Δ (execution) |");
 console.log("|---|---|---|---|---|---|");
 
@@ -304,6 +345,58 @@ for (const bench of data) {
     console.log(`| ${medal} | ${light} | ${LABEL[rt]} | ${fmtT(t)} | ${fmtMs(wallMs(r))} | ${fmtMs(cpuMs(r))} | ${fmtB(rssBytes(r))} | ${fmtB(heapUsed(r))} | ${ratio(t,py)} | ${ratio(t,nd)} |`);
   });
   console.log();
+}
+
+// ── 4b. GPU-compute section ────────────────────────────────────────────────────
+// Dedicated view for the GPU-shaped workload, with honest GPU availability status.
+
+const gpuBench = data.find(b => b.benchmark === "gpu-compute");
+if (gpuBench) {
+  let gpu = null;
+  try {
+    const mod = await import("./gpu-detect.mjs");
+    gpu = mod.gpuReport();
+  } catch { /* detection optional */ }
+
+  console.log("\n## 4b. GPU-Compute Workload (parallel map-reduce)\n");
+  console.log("> A **GPU-shaped** workload: a per-element kernel `f(i)=i*2+1` applied across 100,000 elements + reduction.");
+  console.log("> On a GPU this parallelises across thousands of threads. The table below shows each runtime on **CPU** today.\n");
+
+  if (gpu) {
+    console.log(`**GPU detected:** ${gpu.device.present ? `${gpu.device.name} (driver ${gpu.device.driver}, ${gpu.device.memory})` : "none"}`);
+    console.log(`**Compute toolchain:** ${gpu.summary}`);
+    console.log(`**LogicN GPU backend:** \`${gpu.logicnGpuStatus}\` — gpu-plan.ts emits a WGSL skeleton only; no dispatch path (pending Phase 38).\n`);
+  }
+
+  console.log("| # | 🚦 | Runtime | Device | Throughput (kernel ops/s) | Wall | vs Node |");
+  console.log("|---|---|---|---|---|---|---|");
+
+  const gt = {}; for (const rt of ORDER) gt[rt] = throughput(gpuBench.results?.[rt]);
+  const gNodeRef = gt.nodejs ?? null;
+  const gRanked = ORDER
+    .filter(rt => gpuBench.results?.[rt] && !gpuBench.results[rt].error && gt[rt] !== null)
+    .sort((a, b) => (gt[b] ?? 0) - (gt[a] ?? 0));
+
+  gRanked.forEach((rt, idx) => {
+    const r = gpuBench.results?.[rt];
+    const t = gt[rt];
+    const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx + 1}`;
+    const light = trafficLight(t, gNodeRef);
+    console.log(`| ${medal} | ${light} | ${LABEL[rt]} | ${r.device ?? "cpu"} | ${fmtT(t)} | ${fmtMs(wallMs(r))} | ${ratio(t, gt.nodejs)} |`);
+  });
+
+  // Honest GPU rows — what each runtime COULD do on GPU, and current status
+  const gpuRunnable = gpu?.toolchains?.anyRunnable ?? false;
+  const gpuCell = gpuRunnable ? "✅ available" : "⏳ toolchain required";
+  console.log(`\n**GPU execution status (this machine):**\n`);
+  console.log("| Runtime | GPU path | Status |");
+  console.log("|---|---|---|");
+  console.log(`| Rust | wgpu (Vulkan/D3D12) | ${gpu?.toolchains?.rustWgpu ? "🔧 buildable (cargo present, harness pending)" : "⏳ toolchain required"} |`);
+  console.log(`| Python | torch CUDA / cupy | ${gpu?.toolchains?.pythonTorchCuda ? "✅ available" : "⏳ toolchain required (CPU-only torch)"} |`);
+  console.log(`| Node.js | WebGPU | ⏳ toolchain required (no navigator.gpu) |`);
+  console.log(`| Deno | WebGPU (built-in) | ${gpu?.toolchains?.denoWebGpu ? "✅ live — real GPU (Phase 38)" : "⏳ not installed"} |`);
+  console.log(`| **LogicN** | WebGPUComputePlan → WGSL | ❌ **pending Phase 38** — stub only, no measured number (by design) |`);
+  console.log(`\n> Per the project's honesty rule (same as the Runtime-in-LogicN 0% metric): no GPU number is shown until a backend actually executes. LogicN's real result on this workload is its **WASM/CPU** row above.\n`);
 }
 
 // ── 5. Observations ────────────────────────────────────────────────────────────

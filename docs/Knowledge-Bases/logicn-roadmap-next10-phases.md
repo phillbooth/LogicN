@@ -31,9 +31,27 @@ The 10 phases below take the runtime from 0% to ~50% (first governed HTTP servic
 | **30** | ✅ DONE | `buildProofGraphCached` — ExecutionSignature-keyed proof shape cache (67% hit rate on same-shape flows) |
 | **31** | ✅ DONE | Bytecode VM — Int32Array opcodes, 14.3× over sync tree-walker, ~300× over async governed |
 | **32** | ✅ DONE | `logicn diff` governance delta CLI (exit 2 on authority widening) + governance-diff module |
+| **33A** | ✅ DONE | Tier telemetry — executionTier + fallbackReason on FlowExecutionResult. All 5 tiers tagged: cache/bytecode/sync/egraph/tree |
+| **34** | ✅ **DONE** | **`verifyPasswordService.lln` IS a live governed HTTP service** — `POST /auth/verify` → governance → `BCrypt.verify` (real bcrypt) → audit → governed JSON. **Runtime-in-LogicN = 25%.** +13 tests. |
+| **35** | ✅ DONE | Password.verify/hash/needsMigration — stable API facade over bcrypt/Argon2 |
+| **36** | ✅ DONE | Argon2.hash/verify (Argon2id, OWASP preferred). Password.verify auto-routes by hash prefix |
+| **37** | ✅ DONE | Password.migrate — verify+rehash bcrypt→Argon2id on successful verify |
+| **38** | ✅ DONE | Deno WebGPU GPU benchmark live — RTX 3050 Ti, 3.99M ops/sec, result=1,000,000,000 |
+| **39** | ✅ DONE | GovernanceSignature Ed25519 — signProofGraph/verifyGovernanceSignature, tamper-detection verified |
+| **40** | ✅ DONE | Stage B executable — compiler.capabilities.lln (8 flows), lexer.lln (makeKeywordTable=40kw, scanWord works). 20 bootstrap tests. |
 
-**Test count: 2,605 compiler + 15 economics + 95 devtools = 2,715 total, 0 failures.**
-Phases 33-37 remain (integer fast-path, verifyPassword HTTP service → Runtime 25%, etc.).
+**Test count: 2,804 compiler + 15 economics + 95 graph + 32 security = 2,946 total, 0 failures.**
+
+| **41** | ✅ DONE | Phase 41 syntax: `when` guard match arms, integer/string literal match, inline contract (contract first in flow body), `:` return type canonical. 13 new tests. |
+| **45** | ✅ DONE (partial) | Bytecode VM Phase 45: `callExpr` support added, callee AST threaded through compiler, subPrograms map in BytecodeProgram. Integer-only restriction maintained; call VM path deferred to Phase 45B. |
+Phase 33 (fast-tier coverage) is scheduled but deferred behind the runtime goal. Phases 35–37
+next: Password API abstraction + wasmtime CLI (35), Argon2id + Deno Deploy (36), auto
+hash-migration + ValueGraph routing (37).
+
+> **Phase 34 note:** new stdlib `BCrypt.verify`/`BCrypt.hash` (via `bcryptjs`, real `$2b$`
+> hashes), registered with `crypto.verify` effect + stdlib-registry entry. Response
+> serializer now treats a plain record as the JSON body (convention over configuration —
+> the `__httpStatus`/`__body` envelope is opt-in). Hash store = in-memory fixture.
 
 ---
 
@@ -107,14 +125,72 @@ Two parallel tracks:
 
 ---
 
-## Phase 33 — Integer Fast-Path + Hardware Routing
+## Phase 33 — Fast-Tier Coverage + Hardware Routing
 **Theme: Performance + hardware**
 **Runtime %: 0% (foundation)**
 
-1. Skip boxing entirely for Int×op×Int hot paths (raw number arithmetic until flow boundary)
-2. CostGraph routes to WASM / CPU / NPU based on hardware profile (Phase 29 + 33 combine)
+> **Why this matters for the runtime:** the runtime's OWN flows (capability resolution,
+> audit, governance checks) will run as LogicN. They must hit the fast tiers, not the
+> tree-walker. Closing the black-gap is a prerequisite for a usable governed runtime.
 
-**Research needed:** Confirm the i5/i9 hardware detection approach — is CPUID via Node.js feasible, or do we shell out to a native helper?
+**Root-cause (confirmed by benchmark + audit):** the slowdown is execution *shape*, not
+governance policy. Real flows fall OUT of the bytecode VM / WASM into the governed
+tree-walker (316 bytes/op, high dispatch cost). The fix is to **shrink the set of flows
+that fall back** — every flow moved onto WASM or the bytecode VM fixes its CPU *and*
+memory in one move (0.10 bytes/op vs 316).
+
+This phase is **telemetry-gated and deliberately lean** — 2 mechanisms, not 6. See
+`logicn-performance-plan.md` and the "Conditional perf work" note below for the
+items intentionally deferred.
+
+### Phase 33A — Tier telemetry (DO FIRST, prerequisite for everything)
+- Per-benchmark report of which tier executed (`wasm` / `bytecode` / `tree`)
+- Fallback-reason counts (unsupported op, dynamic shape, recursion, policy gate)
+- Allocations/op + GC pause stats, not only throughput
+- **Gate:** measure before building anything. Telemetry may reveal some black cells
+  (e.g. `arithmetic-threshold`) are *deliberately forced* onto the governed path for
+  comparison, not what real flows do — in which case the problem is smaller than the
+  table suggests and later sub-phases shrink accordingly.
+
+### Phase 33B — Expand the ONE fast tier (the 80% win)
+- **Pure flows → widen WASM lowering** (WASM beats the bytecode VM where it applies)
+- **Governed-simple flows → widen bytecode VM**: records (fixed slot maps), bool/branch
+  /match opcodes, and **recursion on the VM's own call stack** (this is the real fix for
+  `governance-cost`, not a separate trampoline)
+- Compile-time eligibility bitmask from GIR/semantic graph chooses the tier
+- Skip boxing entirely for Int×op×Int hot paths (raw number arithmetic until flow boundary)
+
+### Phase 33C — Cheap, broad memory win
+- Replace per-call `Map` allocation with static slot arrays where keys are known at
+  compile time (helps even the fallback path; low risk, broad benefit)
+
+### Phase 33D — Hardware routing
+- CostGraph routes to WASM / CPU / NPU based on hardware profile (Phase 29 + 33 combine)
+- Hybrid Two-Tier detection: WASM core requests "fast matmul"; host (i5/i9) decides
+  AVX2 vs scalar. Core never sees CPU specifics (see Locked Decisions).
+
+**Re-measure gate after 33B/33C:** only then decide whether the conditional work below
+is even needed. Likely it is not.
+
+**Semantics constraint:** identical governance, effect, audit, taint, and proof behavior.
+Only execution *representation* changes. Every sub-phase ships with semantic-parity,
+governance-parity, audit-parity, and determinism tests (optimized tier output ==
+tree-walker output; same diagnostics; same deny/allow; same audit event set).
+
+**Research needed:** Confirm the i5/i9 hardware detection approach — is CPUID via Node.js
+feasible, or do we shell out to a native helper?
+
+### Conditional perf work (DEFERRED — only if 33A telemetry justifies it)
+These were proposed but are **parked**, because they either duplicate 33B or polish the
+path we are trying to abandon. Build only if telemetry proves a concrete need:
+- ❌ **Separate "pre-decoded plan" interpreter tier** — a pre-decoded, symbol-resolved
+  instruction stream *is* a bytecode VM. Don't maintain two fast tiers; fold into 33B.
+- ❌ **Monomorphic inline caches** (shape guards + deopt) — most complex/bug-prone item;
+  optimizes the tree-walker we're trying to stop landing in. Low ROI.
+- ❌ **Recursion trampoline** — narrow (proof-of-equivalence gate); recursion-on-VM (33B)
+  is the better framing for the same win.
+- ❌ **Arena / frame reuse** beyond slot arrays — defer; if 33B succeeds the hot flows
+  aren't in the tree-walker anyway.
 
 ---
 
@@ -135,7 +211,21 @@ route POST "/auth/verify" { verifyPassword }
 
 The first `.lln` file that IS the runtime service. HTTP request → governance check → WASM execution → response.
 
-**Research needed:** Which HTTP server substrate? Node.js `http` module, or compile to WASI and use a WASM HTTP host? Decision affects everything downstream.
+**Decided (2026-06-01):** Node.js `http` substrate (locked). bcrypt hashing via `BCrypt.verify`
+(already in stdlib allowlist + taint boundary). **In-memory fixture** hash store for the
+demo — proves the governed HTTP → execution → response path with zero infra.
+
+### Password handling track (decided 2026-06-01) — matures across Phases 34–37
+| Phase | Password capability |
+|---|---|
+| **34** | **bcrypt** — `BCrypt.verify`, in-memory fixture store |
+| **35** | **Password API abstraction** — stable `Password.verify` facade over the hash backend |
+| **36** | **Argon2id** — OWASP-preferred memory-hard scheme behind the same facade |
+| **37** | **Automatic hash migration** — transparently re-hash bcrypt → Argon2id on successful verify |
+
+> This track runs alongside the deployment milestones already on Phases 35–37 (wasmtime
+> CLI, Deno Deploy, ValueGraph routing) — password handling is the feature that matures
+> while deployment surface expands.
 
 ---
 
@@ -182,7 +272,9 @@ Phase 29: logicn-core-economics (CostGraph)     [routing engine]
 Phase 30: Governance overhead <3%               [perf: near-free governance]
 Phase 31: Bytecode VM                           [perf: close the black gap]
 Phase 32: logicn diff + Stage B lexer           [tooling + self-host prep]
-Phase 33: Integer fast-path + HW routing        [perf + hardware]
+Phase 33: Fast-tier coverage + HW routing       [perf — telemetry-gated, lean]
+          33A telemetry → 33B widen WASM/VM → 33C slot arrays → 33D HW routing
+          (plan-tier / inline-caches / trampoline DEFERRED unless telemetry proves need)
 Phase 34: verifyPassword HTTP service     🎯 RUNTIME 25%
 Phase 35: wasmtime CLI                          [standalone WASM]
 Phase 36: Deno Deploy                           [production traffic]

@@ -1,7 +1,15 @@
 # LogicN — Performance Plan: Closing the Speed Gap
 
-**Version: 1.0 — 2026-06-01**
+**Version: 1.1 — 2026-06-01**
 **Status: Active — targeting Phase 28–33**
+
+> **Roadmap home:** the governed-benchmark improvement work is now scheduled as
+> **Phase 33A–33D** in `logicn-roadmap-next10-phases.md` (telemetry-gated, lean —
+> 2 mechanisms not 6). Low-ROI items (separate plan-tier, inline caches, recursion
+> trampoline, arena reuse) are explicitly **deferred** there unless 33A telemetry
+> proves a concrete need. Root cause: execution *shape* (tree-walker fallback),
+> not governance policy. The fix is shrinking fallback frequency, not optimizing
+> the path we're trying to abandon.
 
 ---
 

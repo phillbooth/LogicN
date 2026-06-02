@@ -1,6 +1,7 @@
 /// @file: parser.lln
-/// @purpose: LogicN parser — Milestone 1: flow declaration headers
-/// @status: Stage B milestone — parses pure/guarded/secure/flow declarations
+/// @purpose: LogicN parser — Milestone 2: flow declaration headers + body stmts
+/// @status: Stage B milestone — parses pure/guarded/secure/flow declarations + body stmts
+/// @phase: 46
 /// test_status: milestone
 
 // ============================================================
@@ -28,12 +29,21 @@ record FlowParam {
   isReadonly: Bool
 }
 
+// A simplified statement node — bootstrap/Stage B only.
+// kind: "let" | "mut" | "return" | "call" | "unknown"
+// value: the first meaningful token after the keyword (or the whole raw segment)
+record Stmt {
+  kind: String
+  value: String
+}
+
 record FlowDecl {
   kind: String
   name: String
   params: Array<FlowParam>
   returnType: String
   effects: Array<String>
+  stmts: Array<Stmt>
 }
 
 record ParseResult {
@@ -80,40 +90,107 @@ contract { intent { "Parse a parenthesised parameter list. Caller must advance p
   mut scanning: Bool = true
   while scanning {
     let pv = tokVal(tokens, p)
-    if pv == ")" {
-      scanning = false
-    }
-    else if pv == "," {
-      p = p + 1
-    }
-    else if pv == "readonly" {
+    if pv == ")" { scanning = false }
+    if pv == "" { scanning = false }
+    if pv == "," { p = p + 1 }
+    if pv == "readonly" {
       let pname = tokVal(tokens, p + 1)
-      let colon = tokVal(tokens, p + 2)
-      let ptype = tokVal(tokens, p + 3)
+      let colon  = tokVal(tokens, p + 2)
+      let ptype  = tokVal(tokens, p + 3)
       if colon == ":" {
         params = params.append({ name: pname, typeName: ptype, isReadonly: true })
         p = p + 4
       }
-      else {
-        p = p + 1
-      }
+      if colon != ":" { p = p + 1 }
     }
-    else if pv == "" {
-      scanning = false
-    }
-    else {
+    // Generic identifier param (name: Type)
+    let isSpecial: Bool = pv == ")" or pv == "" or pv == "," or pv == "readonly"
+    if isSpecial == false {
       let colon = tokVal(tokens, p + 1)
       let ptype = tokVal(tokens, p + 2)
       if colon == ":" {
         params = params.append({ name: pv, typeName: ptype, isReadonly: false })
         p = p + 3
       }
-      else {
-        p = p + 1
-      }
+      if colon != ":" { p = p + 1 }
     }
   }
   return params
+}
+
+// ── Body parser (Phase 46) ───────────────────────────────────
+
+// Parse a flow body from the opening "{" (exclusive — caller has already
+// advanced past the "{") to the matching "}".
+// Emits simplified Stmt records for top-level let/mut/return/call tokens.
+// Unknown tokens become { kind: "unknown", value: <token> }.
+// Nested braces (if/while/match sub-blocks) are skipped as a unit.
+pure flow parseBody(tokens: Array<Token>, startPos: Int, total: Int) -> Array<Stmt>
+contract {
+  intent { "Scan a brace-balanced body from startPos, emit simplified Stmt records." }
+}
+{
+  mut stmts: Array<Stmt> = Array.empty()
+  mut p: Int = startPos
+  mut depth: Int = 1
+
+  while p < total and depth > 0 {
+    let tv = tokVal(tokens, p)
+
+    // Closing brace — dedent
+    if tv == "}" {
+      depth = depth - 1
+      p = p + 1
+    }
+
+    // Opening brace (nested block) — skip entire sub-block
+    if tv == "{" and depth > 0 {
+      depth = depth + 1
+      p = p + 1
+    }
+
+    // let statement: let name = ...  (value = name being bound)
+    if tv == "let" and depth == 1 {
+      let name = tokVal(tokens, p + 1)
+      stmts = stmts.append({ kind: "let", value: name })
+      p = p + 2
+    }
+
+    // mut statement: mut name = ...  (value = name being bound)
+    if tv == "mut" and depth == 1 {
+      let name = tokVal(tokens, p + 1)
+      stmts = stmts.append({ kind: "mut", value: name })
+      p = p + 2
+    }
+
+    // return statement: return <expr>  (value = first token of expr)
+    if tv == "return" and depth == 1 {
+      let expr = tokVal(tokens, p + 1)
+      stmts = stmts.append({ kind: "return", value: expr })
+      p = p + 2
+    }
+
+    // Detect standalone identifiers followed by "(" — call statements
+    let isKeywordOrBrace: Bool = tv == "let" or tv == "mut" or tv == "return" or tv == "{" or tv == "}" or tv == ""
+    if isKeywordOrBrace == false and depth == 1 {
+      let next = tokVal(tokens, p + 1)
+      if next == "(" {
+        stmts = stmts.append({ kind: "call", value: tv })
+        p = p + 1
+      }
+      if next != "(" {
+        p = p + 1
+      }
+    }
+
+    // Advance when depth == 0 (loop condition will exit)
+    if depth == 0 { p = p + 0 }
+
+    // Guard against empty string (EOF inside body)
+    if tv == "" { depth = 0 }
+  }
+
+  return stmts
 }
 
 // ── Main parser flow ─────────────────────────────────────────
@@ -136,13 +213,14 @@ contract {
     mut qualifier: String = ""
     mut namePos: Int = 0
 
+    // Detect qualifier — no else-if; use sequential if blocks (LogicN: match on strings not yet supported for runtime values)
     if tv == "pure" or tv == "guarded" or tv == "secure" {
       if tokVal(tokens, pos + 1) == "flow" {
         qualifier = tv
         namePos = pos + 2
       }
     }
-    else if tv == "flow" {
+    if tv == "flow" {
       qualifier = "flow"
       namePos = pos + 1
     }
@@ -167,16 +245,11 @@ contract {
           mut skipP: Bool = true
           while skipP {
             let sv = tokVal(tokens, p)
-            if sv == ")" {
-              p = p + 1
-              skipP = false
-            }
-            else if sv == "" {
-              skipP = false
-            }
-            else {
-              p = p + 1
-            }
+            if sv == ")" { p = p + 1  skipP = false }
+            if sv == "" { skipP = false }
+            // only advance if neither stop condition was met
+            let isStop: Bool = sv == ")" or sv == ""
+            if isStop == false { p = p + 1 }
           }
         }
 
@@ -188,48 +261,35 @@ contract {
           p = p + 1
         }
 
-        // Optional "with effects [io.read, ...]"
+        // Effects: canonical form is contract { effects { ... } }.
+        // "with effects [...]" was removed — Stage B parser does not parse it.
+        // Effects extraction from contract block is a Stage B milestone target.
         mut efx: Array<String> = Array.empty()
-        if tokVal(tokens, p) == "with" and tokVal(tokens, p + 1) == "effects" {
-          p = p + 2
-          if tokVal(tokens, p) == "[" {
+
+        // Phase 61: Skip a standalone contract block before the body.
+        // Some sources write:  flow name(...): Type contract { ... } { body }
+        // The contract block comes before the opening brace of the body.
+        if tokVal(tokens, p) == "contract" {
+          p = p + 1
+          if tokVal(tokens, p) == "{" {
             p = p + 1
-            mut scanEfx: Bool = true
-            while scanEfx {
-              let ev = tokVal(tokens, p)
-              if ev == "]" {
-                p = p + 1
-                scanEfx = false
-              }
-              else if ev == "," {
-                p = p + 1
-              }
-              else if ev == "" {
-                scanEfx = false
-              }
-              else {
-                mut ename: String = ev
-                p = p + 1
-                mut dotLoop: Bool = true
-                while dotLoop {
-                  if tokVal(tokens, p) == "." {
-                    ename = ename + "." + tokVal(tokens, p + 1)
-                    p = p + 2
-                  }
-                  else {
-                    dotLoop = false
-                  }
-                }
-                efx = efx.append(ename)
-              }
+            mut contractDepth: Int = 1
+            while p < total and contractDepth > 0 {
+              let cv = tokVal(tokens, p)
+              if cv == "{" { contractDepth = contractDepth + 1 }
+              if cv == "}" { contractDepth = contractDepth - 1 }
+              p = p + 1
             }
           }
         }
 
-        // Skip body block by counting braces
+        // Parse body block — Phase 46: collect Stmt records instead of just skipping.
+        mut bodyStmts: Array<Stmt> = Array.empty()
         if tokVal(tokens, p) == "{" {
-          mut depth: Int = 1
           p = p + 1
+          bodyStmts = parseBody(tokens, p, total)
+          // Advance p past the body by brace-counting (parseBody does not mutate p)
+          mut depth: Int = 1
           while p < total and depth > 0 {
             let bv = tokVal(tokens, p)
             if bv == "{" { depth = depth + 1 }
@@ -243,7 +303,8 @@ contract {
           name: flowName,
           params: params,
           returnType: returnType,
-          effects: efx
+          effects: efx,
+          stmts: bodyStmts
         })
         pos = p
       }

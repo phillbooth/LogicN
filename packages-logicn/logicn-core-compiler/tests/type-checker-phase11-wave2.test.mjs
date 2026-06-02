@@ -121,7 +121,7 @@ describe("Type checker — LLN-TYPE-014 MissingRequiredEffect", () => {
   it("emits LLN-TYPE-014 when calling a flow with network.outbound from a pure flow", () => {
     const result = parseAndCheck(`
 flow fetchRate(url: String) -> String
-  with effects [network.outbound]
+  contract { effects { network.outbound } }
 {
   return "1.0"
 }
@@ -140,7 +140,7 @@ pure flow computeRate() -> String {
   it("LLN-TYPE-014 message mentions the missing effect and the called flow", () => {
     const result = parseAndCheck(`
 flow fetchData(url: String) -> String
-  with effects [network.outbound]
+  contract { effects { network.outbound } }
 {
   return "data"
 }
@@ -160,13 +160,13 @@ flow pureProcessor() -> String {
   it("does NOT emit LLN-TYPE-014 when caller declares the required effect", () => {
     const result = parseAndCheck(`
 flow fetchRate(url: String) -> String
-  with effects [network.outbound]
+  contract { effects { network.outbound } }
 {
   return "1.0"
 }
 
 flow getRates() -> String
-  with effects [network.outbound]
+  contract { effects { network.outbound } }
 {
   return fetchRate("https://api.example.com")
 }

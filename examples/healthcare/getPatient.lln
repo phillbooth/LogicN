@@ -1,24 +1,24 @@
-secure flow getPatient(readonly request: Request) -> GetPatientResult
-contract {
-  types {
-    type GetPatientResult = Result<PatientSummary, PatientError>
-    type PatientId = Brand<String, "PatientId">
-    type PatientSummary = record { patientId: PatientId, name: String, dob: String }
-    type PatientError = enum { NotFound Unauthorized }
-  }
-  intent { "Retrieve a patient summary for clinical display." }
-  request {
-    context { require actor require trace_id }
-  }
-  effects { database.read phi.read audit.write }
-  privacy {
-    phi name dob
-    deny protected PatientId to response.body
-    require redaction before audit.write
-  }
-  audit { require runtime report require actor }
-}
+type GetPatientResult = Result<PatientSummary, PatientError>
+type PatientId = Brand<String, "PatientId">
+type PatientSummary = record { patientId: PatientId, name: String, dob: String }
+type PatientError = enum { NotFound Unauthorized }
+
+secure flow getPatient(readonly request: Request): GetPatientResult
 {
+  contract {
+    intent { "Retrieve a patient summary for clinical display." }
+    request {
+      context { require actor require trace_id }
+    }
+    effects { database.read phi.read audit.write }
+    privacy {
+      phi name dob
+      deny protected PatientId to response.body
+      require redaction before audit.write
+    }
+    audit { require runtime report require actor }
+  }
+
   let patientId: protected PatientId = validate.patientId(request.params.id)?
   let patient = PatientsDB.find(patientId)?
   AuditLog.write({

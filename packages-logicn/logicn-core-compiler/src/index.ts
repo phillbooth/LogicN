@@ -119,6 +119,13 @@ export {
   sharesGovernanceShape,
   diffFingerprints,
   generateROIReport,
+  signProofGraph,
+  signProofGraphHybrid,
+  verifyGovernanceSignature,
+  verifyGovernanceSignatureHybrid,
+  generateGovernanceKeyPair,
+  generateHybridGovernanceKeyPair,
+  type GovernanceAlgorithm,
   LLN_HW_001,
   LLN_HW_002,
   LLN_HW_003,
@@ -131,6 +138,7 @@ export {
   type GovernanceROIReport,
   type ImmutableInputSeal,
   type HardwareSealedDispatch,
+  type GovernanceKeyPair,
 } from "./proof-graph.js";
 
 // Phase 18D / 18E / 18F / Hybrid WASM — Type Registry
@@ -462,6 +470,8 @@ export {
   type FlowExecutionResult,
   type RuntimeAuditEntry,
   type InterpreterRuntimeOptions,
+  type ExecutionTier,
+  type TierFallbackReason,
 } from "./interpreter.js";
 
 // Phase 29C — Production Readiness Check

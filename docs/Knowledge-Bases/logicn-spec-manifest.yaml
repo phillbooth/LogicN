@@ -3,10 +3,12 @@
 # Usage:   Load this file to discover authoritative spec documents by topic.
 #          Do NOT use legacy/* paths as primary sources — see notes fields.
 # Updated: 2026-06-01
+# Grammar version: v1.1 (Phase 41 syntax additions — see grammar_phase41_additions)
 
 version: "1"
 language: "LogicN"
 format_version: "v1"
+grammar_version: "v1.1"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GRAMMAR
@@ -17,6 +19,28 @@ grammar:
     Authoritative EBNF grammar for the LogicN language. Covers all v1 syntax
     including flow, fn, route, guarded flow, contract blocks, effects, type
     declarations, and expression forms.
+  grammar_phase41_additions:
+    - feature: "when_guard_arm"
+      rule: "'when' expression '=>' arm_body — guard arm in match expressions"
+      example: "when score >= 90 => return \"critical\""
+    - feature: "integer_string_literal_match_arm"
+      rule: "integer_literal or string_literal as a match pattern directly"
+      example: "200 => return \"ok\""
+    - feature: "inline_contract"
+      rule: "contract {} may appear as first item inside flow body {}"
+      example: "pure flow foo(x: Int) : String { contract { intent { \"...\" } } ... }"
+    - feature: "colon_return_type"
+      rule: "':' is the modern preferred return-type separator; '->' still valid"
+      example: "pure flow foo(x: Int) : String"
+    - feature: "effects_optional_pure"
+      rule: "effects {} is optional for pure flow; omission = no effects"
+    - feature: "top_level_result_types"
+      rule: "type ResultName = Result<X,E> at compilation unit level preferred over contract.types"
+    - feature: "no_else_if"
+      diagnostic: "LLN-SYNTAX-010"
+      rule: "'else if' is a hard error; use match or sequential if"
+    - feature: "unsafe_let_boundary"
+      rule: "'unsafe let x = request.params.y' marks raw HTTP input at flow boundary"
   supplementary:
     - path: docs/Knowledge-Bases/core-syntax-keywords.md
       note: Keyword reference with examples
@@ -25,7 +49,7 @@ grammar:
     - path: docs/Knowledge-Bases/logicn-core-syntax-bindings-pipeline.md
       note: Binding pipeline syntax (let/mut/unsafe let/safe mut)
     - path: docs/Knowledge-Bases/logicn-syntax-if-match-optional.md
-      note: if, match, optional expression forms
+      note: if, match, optional expression forms; when-guard arms; integer/string literal arms
     - path: docs/Knowledge-Bases/logicn-syntax-loops-iteration.md
       note: Loop and iteration syntax
 
@@ -54,8 +78,10 @@ diagnostics:
       canonical: docs/Knowledge-Bases/logicn-security-model-layers.md
     - series: "LLN-SYNTAX-*, LLN-PARSE-*"
       canonical: docs/Knowledge-Bases/logicn-compiler-pipeline.md
-    - series: "LLN-BACKEND-*, LLN-TARGET-*"
+    - series: "LLN-BACKEND-*"
       canonical: docs/Knowledge-Bases/logicn-compiler-pipeline.md
+    - series: "LLN-TARGET-*"
+      canonical: docs/Knowledge-Bases/logicn-phase13-passive-plans-target-bridges.md
     - series: "LLN-RUNTIME-*"
       canonical: docs/Knowledge-Bases/logicn-runtime-lifecycle.md
 
@@ -191,6 +217,31 @@ security:
       note: Syntax-level secure defaults
 
 # ─────────────────────────────────────────────────────────────────────────────
+# SECURITY — HARDWARE TRUST AND POST-QUANTUM ATTESTATION
+# ─────────────────────────────────────────────────────────────────────────────
+security_hardware:
+  canonical: docs/Knowledge-Bases/logicn-post-quantum-hardware-security.md
+  description: >
+    Post-quantum attestation transition policy, hardware memory-safety requirements
+    (CHERI, ARM MTE), and confidential-execution (TEE) contracts for sensitive flows.
+    Introduces HardwareTrustProfile, LLN-HW-* diagnostics, and proof-chain binding rules.
+    Phase 13+ bridge policy; Phase 16+ attestation hardening; Phase 17+ strict enforcement.
+  diagnostic_series: "LLN-HW-*"
+  profiles:
+    - compat
+    - hybrid
+    - pq_strict
+  supplementary:
+    - path: docs/Knowledge-Bases/logicn-proof-chain-spec.md
+      note: Proof chain format — hardware trust evidence is bound here
+    - path: docs/Knowledge-Bases/logicn-signed-attestation.md
+      note: Signed attestation model and evidence versioning
+    - path: docs/Knowledge-Bases/logicn-hardware-arm.md
+      note: ARM target details including MTE support
+    - path: docs/Knowledge-Bases/logicn-governance-verifier-spec.md
+      note: Verifier pass that enforces hardware trust policy
+
+# ─────────────────────────────────────────────────────────────────────────────
 # HARDWARE TARGETS
 # ─────────────────────────────────────────────────────────────────────────────
 hardware_targets:
@@ -224,6 +275,79 @@ economics:
   supplementary:
     - path: docs/Knowledge-Bases/logicn-core-economics-package.md
       note: Economic package primitives and billing constructs
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BRIDGE PLANS
+# ─────────────────────────────────────────────────────────────────────────────
+bridge_plans:
+  canonical: docs/Knowledge-Bases/logicn-phase13-passive-plans-target-bridges.md
+  description: >
+    Phase 13 compile-time path: AST (checked) -> GIR -> PassiveExecutionPlan ->
+    TargetBridgePlan. Defines TargetBridgePlan and HardwareTrustProfile data
+    contracts, deterministic bridge selection algorithm, capability matrix, and
+    security/governance invariants. Bridge selection cannot widen permissions;
+    unsupported ops degrade to governed CPU path. Diagnostics: LLN-TARGET-101
+    through LLN-TARGET-103.
+  phase: 13
+  scope: compiler-side
+  runtime_impact: none
+  supplementary:
+    - path: docs/Knowledge-Bases/logicn-passive-execution-plans.md
+      note: PassiveExecutionPlan input contract (existing)
+    - path: docs/Knowledge-Bases/logicn-hardware-targets.md
+      note: Target definitions (CPU, GPU, NPU, WASM, photonic)
+    - path: docs/Knowledge-Bases/logicn-hardware-compatibility-matrix.md
+      note: Target compatibility matrix used by bridge selection
+    - path: docs/Knowledge-Bases/logicn-gir-schema.md
+      note: GIR schema — bridge reads flow compute target preferences from GIR
+    - path: docs/Knowledge-Bases/logicn-quantum-target-bridge.md
+      note: Quantum bridge target (future substrate, complementary)
+    - path: docs/Knowledge-Bases/logicn-governance-verifier-spec.md
+      note: Governance invariants that bridges must uphold
+    - path: docs/Knowledge-Bases/logicn-signed-attestation.md
+      note: Attestation algorithms referenced in HardwareTrustProfile
+  diagnostics_series:
+    - series: "LLN-TARGET-101 through LLN-TARGET-103"
+      note: Bridge selection and hardware trust profile diagnostics
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PHOTONIC / TERNARY
+# ─────────────────────────────────────────────────────────────────────────────
+photonic_ternary:
+  canonical: docs/Knowledge-Bases/logicn-photonic-ternary-bridge-spec.md
+  description: >
+    Compiler-safe contracts for Tri (three-valued type) in type checking and
+    lowering, and for photonic compute bridging. Covers: Tri type model,
+    truth tables (and/or/not), match exhaustiveness requirement, type system
+    enforcement (LLN-TYPE-031 through LLN-TYPE-033), GIRTriInfo metadata,
+    photonic bridge eligibility predicate, balanced ternary internal encoding,
+    security/correctness invariants, and required test additions.
+    Phase 13+, compiler-side only, no runtime impact.
+  phase: "13+"
+  scope: compiler-side
+  runtime_impact: none
+  diagnostics_series:
+    - series: "LLN-TYPE-031 through LLN-TYPE-033"
+      note: Tri type enforcement (InvalidTriCondition, InvalidTriOperand, TriBoolImplicitCoercionDenied)
+    - series: "LLN-PHOTONIC-001 through LLN-PHOTONIC-004"
+      note: Photonic bridge eligibility (MissingPhotonicCalibration, UnsupportedPhotonicOp, DeterminismRisk, TrustProfileMismatch)
+  supplementary:
+    - path: docs/Knowledge-Bases/logicn-core-logic-tri-decision-bool.md
+      note: Runtime TriState/Decision logic contracts (logicn-core-logic package)
+    - path: docs/Knowledge-Bases/logicn-core-logic-tristate-developer-guide.md
+      note: Developer guide for runtime Tri logic patterns
+    - path: docs/Knowledge-Bases/logicn-photonic-distinct-compute-model.md
+      note: Photonic as a distinct compute substrate — types, IR, wavelength model
+    - path: docs/Knowledge-Bases/logicn-core-photonic-backend-architecture.md
+      note: Governance-first photonic runtime architecture
+    - path: docs/Knowledge-Bases/logicn-core-photonic-governance-architecture.md
+      note: Photonic governance overlay spec
+    - path: docs/Knowledge-Bases/logicn-phase13-passive-plans-target-bridges.md
+      note: Phase 13 TargetBridgePlan and HardwareTrustProfile contracts
+    - path: docs/Knowledge-Bases/formal-type-system-spec.md
+      note: Authoritative type rules and full LLN-TYPE-* diagnostics
+    - path: docs/Knowledge-Bases/mathematics-and-tri-logic.md
+      note: Mathematical foundations for Tri
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GLOSSARY / ALIASES

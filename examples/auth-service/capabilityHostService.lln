@@ -1,0 +1,107 @@
+// Phase 42 — Capability Host in LogicN
+//
+// This declares the capability routing contract in LogicN source.
+// The capability host is what makes the runtime governance-first:
+// every side-effectful call routes through this governed layer before execution.
+//
+// This is the runtime-in-LogicN foundation for Phase 42-44 (75% milestone).
+//
+// The TypeScript CapabilityHost handles execution; this .lln file declares
+// the GOVERNANCE CONTRACT that the host must satisfy.
+//
+//   HTTP POST /capability/check  →  governance  →  capability policy check  →  response
+
+// Capability policy: which effects are allowed in which contexts
+pure flow isEffectAllowedInContext(effect: String, context: String): Bool
+{
+  contract {
+    intent { "Check if an effect is allowed in the given execution context." }
+  }
+
+  // Network effects require explicit context
+  if effect.contains("network") {
+    if context.contains("production") { return false }
+    if context.contains("deterministic") { return false }
+    return true
+  }
+
+  // Database effects require governed context
+  if effect.contains("database") {
+    if context.contains("deterministic") { return false }
+    return true
+  }
+
+  // Audit writes are always allowed (governance requirement)
+  if effect.contains("audit") { return true }
+
+  // Crypto effects are always allowed
+  if effect.contains("crypto") { return true }
+
+  // Secret reads require non-deterministic context
+  if effect.contains("secret") {
+    if context.contains("deterministic") { return false }
+    return true
+  }
+
+  // File system reads/writes allowed in non-deterministic context
+  if effect.contains("filesystem") {
+    if context.contains("deterministic") { return false }
+    return true
+  }
+
+  return false
+}
+
+// Returns the governance class for an effect
+pure flow effectGovernanceClass(effect: String): Int
+{
+  contract {
+    intent { "Return the governance class for an effect. 0=denied, 1=read, 2=write, 3=compute, 4=external" }
+  }
+
+  if effect.contains("audit") { return 2 }
+  if effect.contains("crypto") { return 3 }
+  if effect.contains("secret") { return 1 }
+  if effect.contains(".read") { return 1 }
+  if effect.contains(".write") { return 2 }
+  if effect.contains("network") { return 4 }
+  if effect.contains("ai") { return 4 }
+  return 0
+}
+
+// The governed capability check endpoint
+secure flow checkCapability(readonly request: Request): Response
+{
+  contract {
+    effects {
+      network.inbound
+      audit.write
+    }
+  }
+
+  unsafe let effect: String = request.jsonBody.effect
+  unsafe let context: String = request.jsonBody.context
+
+  let allowed: Bool = isEffectAllowedInContext(effect, context)
+  let govClass: Int = effectGovernanceClass(effect)
+
+  AuditLog.write({
+    event: "CapabilityCheck",
+    effect: effect,
+    context: context,
+    allowed: allowed
+  })
+
+  return {
+    effect: effect,
+    context: context,
+    allowed: allowed,
+    governanceClass: govClass
+  }
+}
+
+route POST "/capability/check" {
+  request Request
+  response Response
+  flow checkCapability
+}

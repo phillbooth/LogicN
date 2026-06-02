@@ -1,0 +1,41 @@
+// Phase 48 — Economics Service
+// Cost estimation for governed execution paths
+
+pure flow estimateComputeCost(opCount: Int, targetClass: Int): Int
+{
+  if targetClass == 4 { return opCount * 10 }
+  if targetClass == 3 { return opCount * 3 }
+  if targetClass == 2 { return opCount * 1 }
+  return opCount * 2
+}
+
+pure flow estimateRiskCost(recordCount: Int, classificationLevel: Int): Int
+{
+  if classificationLevel >= 4 { return recordCount * 160 }
+  if classificationLevel >= 3 { return recordCount * 80 }
+  if classificationLevel >= 2 { return recordCount * 40 }
+  return recordCount * 10
+}
+
+pure flow totalCost(computeCost: Int, riskCost: Int, auditCost: Int): Int
+{
+  return computeCost + riskCost + auditCost
+}
+
+secure flow estimateCost(readonly request: Request): Response
+{
+  contract { effects { network.inbound  audit.write } }
+
+  unsafe let opCount: Int = request.jsonBody.opCount
+  unsafe let targetClass: Int = request.jsonBody.targetClass
+  unsafe let recordCount: Int = request.jsonBody.recordCount
+  unsafe let classificationLevel: Int = request.jsonBody.classificationLevel
+  let compute: Int = estimateComputeCost(opCount, targetClass)
+  let risk: Int = estimateRiskCost(recordCount, classificationLevel)
+  let audit: Int = 5
+  let total: Int = totalCost(compute, risk, audit)
+  AuditLog.write({ event: "CostEstimate", total: total })
+  return { computeCost: compute, riskCost: risk, auditCost: audit, totalCost: total }
+}
+
+route POST "/economics/estimate" { request Request  response Response  flow estimateCost }

@@ -1,0 +1,55 @@
+/// low-memory benchmark — allocation pressure measurement
+///
+/// Tests: how many heap bytes does each runtime allocate per operation?
+/// Key comparison: WASM (near-zero) vs tree-walker (one object per AST node)
+///
+/// Algorithm: process an integer stream through a validation + transform pipeline.
+/// Each "operation" = validate an integer, classify it, accumulate totals.
+/// Designed to stress allocation paths without triggering garbage collection prematurely.
+///
+/// Expected results:
+///   WASM:       ~0 bytes/op  (Int32Array operations, no JS objects)
+///   Bytecode VM: ~0 bytes/op (Int32Array stack, no boxing)
+///   Tree-walker: ~200-400 bytes/op ({__tag,value} per AST node evaluation)
+///   Node.js:     ~0 bytes/op (V8 uses tagged integers, no boxing)
+
+pure flow validate(n: Int) -> Int
+contract { effects {} }
+{
+  if n < 0 { return 0 }
+  if n > 1000000 { return 0 }
+  return 1
+}
+
+pure flow classify(n: Int) -> Int
+contract { effects {} }
+{
+  if n < 100 { return 1 }
+  if n < 1000 { return 2 }
+  if n < 10000 { return 3 }
+  return 4
+}
+
+pure flow processStream(count: Int) -> Int
+contract { effects {} }
+{
+  mut total: Int = 0
+  mut valid: Int = 0
+  mut i: Int = 0
+  while i < count {
+    let v = validate(i)
+    if v == 1 {
+      let cls = classify(i)
+      total = total + cls
+      valid = valid + 1
+    }
+    i = i + 1
+  }
+  return total
+}
+
+pure flow main() -> Int
+contract { effects {} }
+{
+  return processStream(10000)
+}

@@ -276,7 +276,9 @@ describe("Parser — guarded flow", () => {
     // intentional: testing with effects [...] parser support for guarded flow declarations
     const result = parseOk(`
 guarded flow fetchRate(currency: String) -> Result<Decimal, NetworkError>
-with effects [network.outbound] {
+contract { effects { network.outbound } }
+
+{
   return Ok(Decimal("1.0"))
 }
 `);

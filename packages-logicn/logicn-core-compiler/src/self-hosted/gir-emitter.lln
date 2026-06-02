@@ -1,0 +1,86 @@
+/// @file: gir-emitter.lln
+/// @purpose: Stage B GIR emitter stub — Phase 68 milestone
+/// @phase: 68
+/// @status: bootstrap stub — describes GIR nodes from ParseResult FlowDecl records
+
+// ============================================================
+// LogicN Self-Hosted GIR Emitter — Phase 68
+//
+// Converts ParseResult (from Stage B parser) into simplified GIR nodes.
+// GIR = Governed Intermediate Representation — the canonical intermediate
+// form between the AST and backend lowering (WAT/WASM/GPU).
+//
+// Phase 68 scope: emit GIR node metadata for flow declarations.
+// Full GIR emission (expressions, body stmts) is Phase 72.
+// ============================================================
+
+record GIRNode {
+  kind: String
+  flowName: String
+  qualifier: String
+  returnType: String
+  effectCount: Int
+  paramCount: Int
+  isPure: Bool
+  isEffectFree: Bool
+}
+
+record GIRModule {
+  nodes: Array
+  flowCount: Int
+  pureCount: Int
+  governedCount: Int
+}
+
+// ── GIR node construction ─────────────────────────────────────
+
+pure flow emitFlowGIRNode(flowName: String, qualifier: String, returnType: String, effectCount: Int, paramCount: Int) -> GIRNode
+contract {
+  intent { "Emit a GIR node for a single flow declaration." }
+}
+{
+  let isPure: Bool = qualifier == "pure"
+  let isEffectFree: Bool = effectCount == 0
+  return {
+    kind: "flowDecl"
+    flowName: flowName
+    qualifier: qualifier
+    returnType: returnType
+    effectCount: effectCount
+    paramCount: paramCount
+    isPure: isPure
+    isEffectFree: isEffectFree
+  }
+}
+
+// ── GIR module emission ───────────────────────────────────────
+
+pure flow emitGIRModule(flows: Array) -> GIRModule
+contract {
+  intent { "Emit a GIR module from a Stage B ParseResult, mapping each FlowDecl to a GIR node." }
+}
+{
+  mut nodes: Array = Array.empty()
+  mut pureCount: Int = 0
+  mut governedCount: Int = 0
+  mut i: Int = 0
+  while i < flows.count() {
+    let fdOpt = flows.get(i)
+    match fdOpt {
+      Some(fd) => {
+        let name: String = fd.name
+        let qualifier: String = fd.kind
+        let retType: String = fd.returnType
+        let effects: Array = fd.effects
+        let params: Array = fd.params
+        let node: GIRNode = emitFlowGIRNode(name, qualifier, retType, effects.count(), params.count())
+        nodes = nodes.append(node)
+        if qualifier == "pure" { pureCount = pureCount + 1 }
+        if qualifier != "pure" { governedCount = governedCount + 1 }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return { nodes: nodes, flowCount: flows.count(), pureCount: pureCount, governedCount: governedCount }
+}

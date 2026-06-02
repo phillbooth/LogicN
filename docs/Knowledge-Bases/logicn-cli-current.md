@@ -93,13 +93,42 @@ Typical use: release pipelines, reproducible-build attestation, bootstrap trust 
 | `LLN-STDLIB-001` — stdlib call missing effect annotation | warning | error | warning | error | error |
 | `LLN-GOV-010` — flow has no intent declaration | info | warning | info | error | error |
 | `LLN-BUILD-001` — non-deterministic output detected | — | — | — | — | error |
-| `LLN-SYNTAX-LEGACY-001` — deprecated `with effects` syntax | warning | warning | warning | warning | error |
+| `LLN-SYNTAX-LEGACY-001` — removed `with effects` syntax (hard error) | error | error | error | error | error |
+| `LLN-SYNTAX-LEGACY-002` — legacy flow qualifier (`safe/guard/unsafe flow`) | warning | error | warning | error | error |
+| `LLN-STYLE-001` — `else if` advisory (use `match` for multi-branch) | info | warning | info | info | info |
 
 Notes:
 - `—` means the diagnostic is not evaluated in that mode.
 - `info` is surfaced in output but never causes a non-zero exit.
 - `warning` causes non-zero exit only when `--strict` is active.
 - `error` always causes exit 1.
+
+---
+
+## Syntax Notes
+
+### `with effects [...]` — Removed (LLN-SYNTAX-LEGACY-001)
+
+`with effects [...]` at the flow signature is a **hard error** in all modes.
+The parser rejects it immediately. The canonical form is:
+
+```logicn
+contract {
+  effects { database.read, audit.write }
+}
+```
+
+### `:` as Return-Type Separator — Accepted
+
+Both `->` and `:` are accepted as the return-type separator on flow and fn
+declarations. No diagnostic is emitted for either form. Formatters normalise
+to `->`. Example:
+
+```logicn
+// Both are valid — no diagnostic emitted:
+pure flow add(a: Int, b: Int) -> Int { ... }
+pure flow add(a: Int, b: Int) : Int  { ... }
+```
 
 ---
 

@@ -1,0 +1,36 @@
+// Phase 49 — Value Classification Service
+// Classifies data values for privacy/risk governance
+
+pure flow classifyValue(typeName: String): Int
+{
+  if typeName.contains("medical") { return 4 }
+  if typeName.contains("financial") { return 3 }
+  if typeName.contains("pii") { return 3 }
+  if typeName.contains("email") { return 2 }
+  if typeName.contains("public") { return 0 }
+  return 1
+}
+
+pure flow requiresRedaction(classification: Int): Bool
+{
+  return classification >= 3
+}
+
+pure flow requiresEncryption(classification: Int): Bool
+{
+  return classification >= 2
+}
+
+secure flow classifyData(readonly request: Request): Response
+{
+  contract { effects { network.inbound  audit.write } }
+
+  unsafe let typeName: String = request.jsonBody.typeName
+  let classification: Int = classifyValue(typeName)
+  let redact: Bool = requiresRedaction(classification)
+  let encrypt: Bool = requiresEncryption(classification)
+  AuditLog.write({ event: "ValueClassification", classification: classification })
+  return { typeName: typeName, classification: classification, requiresRedaction: redact, requiresEncryption: encrypt }
+}
+
+route POST "/value/classify" { request Request  response Response  flow classifyData }

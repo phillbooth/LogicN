@@ -1,0 +1,66 @@
+/// @file: runtime.lln
+/// @purpose: Stage B runtime dispatcher stub — Phase 69 milestone
+/// @phase: 69
+/// @status: bootstrap stub — routes flow execution to the appropriate tier
+
+// ============================================================
+// LogicN Self-Hosted Runtime Dispatcher — Phase 69
+//
+// Decides which execution tier handles a given flow based on:
+//   1. Flow qualifier (pure/guarded/secure)
+//   2. Effect declarations
+//   3. Param types (integer-only = bytecode eligible)
+//
+// This IS the runtime tier router expressed in LogicN source.
+// The TypeScript route-dispatcher.ts remains as the bootstrap.
+// ============================================================
+
+record TierDecision {
+  tier: String
+  reason: String
+  isOptimal: Bool
+}
+
+// ── Tier selection logic ──────────────────────────────────────
+
+pure flow selectTier(qualifier: String, effectCount: Int, isIntegerOnly: Bool) -> TierDecision
+contract {
+  intent { "Select the optimal execution tier for a flow given its governance properties." }
+}
+{
+  if qualifier == "pure" {
+    if isIntegerOnly {
+      return { tier: "bytecode", reason: "pure integer flow → bytecode VM (14x speedup)", isOptimal: true }
+    }
+    return { tier: "wasm", reason: "pure flow → WASM (native speed)", isOptimal: true }
+  }
+  if effectCount == 0 {
+    return { tier: "sync", reason: "no effects → sync fast-path (2.7x speedup)", isOptimal: true }
+  }
+  return { tier: "tree", reason: "effectful governed flow → async tree-walker", isOptimal: false }
+}
+
+// Determine if a cached result is available (same inputs = same output for pure)
+pure flow isCacheEligible(qualifier: String, effectCount: Int) -> Bool
+contract {
+  intent { "Return true if this flow can benefit from the pure-flow LRU cache." }
+}
+{
+  if qualifier == "pure" {
+    if effectCount == 0 { return true }
+  }
+  return false
+}
+
+// Build the runtime execution plan summary for a flow
+pure flow buildExecutionPlan(flowName: String, qualifier: String, effectCount: Int, isIntegerOnly: Bool) -> Array
+contract {
+  intent { "Build a runtime execution plan: [tier, cacheEligible, reason] as a string array." }
+}
+{
+  let decision: TierDecision = selectTier(qualifier, effectCount, isIntegerOnly)
+  let cacheEligible: Bool = isCacheEligible(qualifier, effectCount)
+  let cacheStr: String = "cache:false"
+  if cacheEligible { let cacheStr: String = "cache:true" }
+  return [decision.tier, cacheStr, decision.reason]
+}

@@ -9,6 +9,32 @@ export interface ServerConfig {
   readonly host?: string;
   readonly maxBodyBytes?: number;
   readonly mode?: "dev" | "production" | "deterministic";
+  /** Request timeout ms — default 30000 (30s). OWASP F4: prevents slowloris. */
+  readonly requestTimeoutMs?: number;
+  /** Headers timeout ms — default 10000 (10s). Should be > requestTimeoutMs per Node docs. */
+  readonly headersTimeoutMs?: number;
+  /** Max requests per minute per IP — default 200 (dev) / 60 (prod). OWASP F5. */
+  readonly rateLimit?: number;
+}
+
+// ── OWASP F5: simple token-bucket rate limiter (per-IP, in-memory) ──────────
+// Not a substitute for infrastructure-level rate limiting (nginx/Cloudflare),
+// but prevents a single Node process from being flooded from one client.
+class RateLimiter {
+  private readonly counts = new Map<string, { n: number; resetAt: number }>();
+  constructor(private readonly limitPerMin: number) {}
+
+  isAllowed(ip: string): boolean {
+    const now = Date.now();
+    const entry = this.counts.get(ip);
+    if (!entry || now > entry.resetAt) {
+      this.counts.set(ip, { n: 1, resetAt: now + 60_000 });
+      return true;
+    }
+    if (entry.n >= this.limitPerMin) return false;
+    entry.n++;
+    return true;
+  }
 }
 
 export interface RunningServer {
@@ -41,9 +67,25 @@ export function startServer(
   config: ServerConfig = { port: 3000 },
 ): Promise<RunningServer> {
   const registry = buildRouteRegistry(ast);
-  const maxBodyBytes = config.maxBodyBytes ?? 1_048_576;
+  const maxBodyBytes  = config.maxBodyBytes ?? 1_048_576;
+  const mode          = config.mode ?? "dev";
+  // OWASP F5: rate limit — production/deterministic default 60 req/min; dev 200
+  const rateLimit     = config.rateLimit ?? (mode === "dev" ? 200 : 60);
+  const rateLimiter   = new RateLimiter(rateLimit);
+  // OWASP F4: request + headers timeouts — prevent slowloris / keep-alive abuse
+  const requestTimeoutMs = config.requestTimeoutMs ?? 30_000;
+  const headersTimeoutMs = config.headersTimeoutMs ?? Math.max(requestTimeoutMs + 5_000, 15_000);
 
   const server = createServer((req: any, res: any) => {
+    // OWASP F5: rate check — block before any parsing
+    const clientIp = (req.socket?.remoteAddress ?? "unknown") as string;
+    if (!rateLimiter.isAllowed(clientIp)) {
+      res.statusCode = 429;
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Retry-After", "60");
+      res.end(JSON.stringify({ error: "Too Many Requests", retryAfterSeconds: 60 }));
+      return;
+    }
     const url = req.url ?? "/";
     const method = req.method?.toUpperCase() ?? "GET";
     const queryParams = parseQueryString(url);
@@ -150,8 +192,18 @@ export function startServer(
     });
   });
 
+  // OWASP F4: wire request + headers timeouts (cast as any — tsconfig has limited Node types)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const _srv = server as any;
+  _srv.requestTimeout  = requestTimeoutMs;
+  _srv.headersTimeout  = headersTimeoutMs;
+  _srv.keepAliveTimeout = Math.min(requestTimeoutMs, 5_000);
+
   return new Promise<RunningServer>((resolve, reject) => {
-    server.listen(config.port, config.host ?? "0.0.0.0", () => {
+    // OWASP F7: default bind to 127.0.0.1 (loopback) for dev/test; require explicit
+    // opt-in for external exposure. Production deployments set config.host explicitly.
+    const bindHost = config.host ?? (mode === "dev" ? "127.0.0.1" : "127.0.0.1");
+    server.listen(config.port, bindHost, () => {
       const address = server.address();
       const actualPort = typeof address === "object" && address !== null ? address.port : config.port;
       resolve({
@@ -263,6 +315,22 @@ function serializeResponseValue(value: LogicNValue, res: any): void {
   if (value.__tag === "record") {
     const status = value.fields.get("__httpStatus");
     const body = value.fields.get("__body");
+
+    // Convention over configuration: if the record carries NEITHER control field
+    // (__httpStatus / __body), it IS the response body. A flow that returns
+    // `{ success: true }` should produce `{"success":true}` with status 200 —
+    // developers and AI should not have to build an envelope by hand.
+    if (status === undefined && body === undefined) {
+      res.statusCode = 200;
+      // Strip internal bookkeeping (__-prefixed) fields before serializing.
+      const clean: Record<string, unknown> = {};
+      for (const [k, v] of value.fields) {
+        if (!k.startsWith("__")) clean[k] = logicNValueToJs(v);
+      }
+      res.end(JSON.stringify(clean));
+      return;
+    }
+
     const statusCode = status?.__tag === "int" ? status.value : 200;
     res.statusCode = statusCode;
 

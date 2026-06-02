@@ -171,7 +171,7 @@ describe("Effect checker - guarded flow", () => {
   it("accepts guarded flow with declared effects", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-  with effects [database.write]
+  contract { effects { database.write } }
 {
   let orderId = OrdersDB.insert(order)?
   return Ok(orderId)
@@ -183,7 +183,7 @@ guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
   it("emits LLN-EFFECT-001 for guarded flow missing a declared effect", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-  with effects []
+  contract { effects {  } }
 {
   let orderId = OrdersDB.insert(order)?
   return Ok(orderId)
@@ -195,7 +195,7 @@ guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
   it("warns for a guarded flow with an overdeclared effect", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow noOp(order: Order) -> Result<OrderId, OrderError>
-  with effects [database.write]
+  contract { effects { database.write } }
 {
   return Ok(order.id)
 }
@@ -209,7 +209,7 @@ describe("Effect checker - pure flow calls effectful flow", () => {
   it("emits LLN-EFFECT-003 when pure flow calls a guarded flow", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-  with effects [database.write]
+  contract { effects { database.write } }
 {
   return Ok(OrdersDB.insert(order)?)
 }
@@ -237,13 +237,13 @@ pure flow calculate(a: Int, b: Int) -> Int {
   it("allows guarded flow calling guarded flow when same effects are declared", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-  with effects [database.write]
+  contract { effects { database.write } }
 {
   return Ok(OrdersDB.insert(order)?)
 }
 
 guarded flow processOrder(order: Order) -> Result<OrderId, ProcessError>
-  with effects [database.write]
+  contract { effects { database.write } }
 {
   let orderId = saveOrder(order)?
   return Ok(orderId)
@@ -259,7 +259,7 @@ describe("Effect checker - canonical effect names", () => {
     // 'network' is a broad alias — now emits LLN-EFFECT-005 (warning), not LLN-EFFECT-004 (error)
     const { effectResults } = parseAndCheck(`
 guarded flow fetchRate(currency: String) -> Result<Decimal, RateError>
-  with effects [network]
+  contract { effects { network } }
 {
   unsafe let rawResponse = http.get("https://rates.example.com/" + currency)?
   return json.decode(rawResponse)
@@ -273,7 +273,7 @@ guarded flow fetchRate(currency: String) -> Result<Decimal, RateError>
     // 'database' is a broad alias — now emits LLN-EFFECT-005 (warning), not LLN-EFFECT-004 (error)
     const { effectResults } = parseAndCheck(`
 guarded flow loadOrder(order: Order) -> Result<Order, OrderError>
-  with effects [database]
+  contract { effects { database } }
 {
   return Ok(OrdersDB.find(order.id)?)
 }
@@ -285,7 +285,7 @@ guarded flow loadOrder(order: Order) -> Result<Order, OrderError>
   it("effects [network.outbound] has no canonical-name diagnostic", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow fetchRate(currency: String) -> Result<Decimal, RateError>
-  with effects [network.outbound]
+  contract { effects { network.outbound } }
 {
   unsafe let rawResponse = http.get("https://rates.example.com/" + currency)?
   return json.decode(rawResponse)
@@ -300,13 +300,13 @@ describe("Effect checker - inter-flow propagation", () => {
   it("flow A calls flow B and declares B's effect: no diagnostics", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-  with effects [database.write]
+  contract { effects { database.write } }
 {
   return Ok(OrdersDB.insert(order)?)
 }
 
 guarded flow processOrder(order: Order) -> Result<OrderId, ProcessError>
-  with effects [database.write]
+  contract { effects { database.write } }
 {
   let orderId = saveOrder(order)?
   return Ok(orderId)
@@ -318,13 +318,13 @@ guarded flow processOrder(order: Order) -> Result<OrderId, ProcessError>
   it("flow A calls flow B and misses B's effect: LLN-EFFECT-002", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-  with effects [database.write]
+  contract { effects { database.write } }
 {
   return Ok(OrdersDB.insert(order)?)
 }
 
 guarded flow processOrder(order: Order) -> Result<OrderId, ProcessError>
-  with effects []
+  contract { effects {  } }
 {
   let orderId = saveOrder(order)?
   return Ok(orderId)
@@ -336,19 +336,19 @@ guarded flow processOrder(order: Order) -> Result<OrderId, ProcessError>
   it("two-hop propagation requires the root caller to declare inherited effects", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow writeOrder(order: Order) -> Result<OrderId, OrderError>
-  with effects [database.write]
+  contract { effects { database.write } }
 {
   return Ok(OrdersDB.insert(order)?)
 }
 
 guarded flow saveOrder(order: Order) -> Result<OrderId, OrderError>
-  with effects [database.write]
+  contract { effects { database.write } }
 {
   return writeOrder(order)
 }
 
 guarded flow processOrder(order: Order) -> Result<OrderId, ProcessError>
-  with effects []
+  contract { effects {  } }
 {
   return saveOrder(order)
 }
@@ -372,7 +372,7 @@ pure flow fetchRate(currency: String) -> Result<Decimal, RateError> {
   it("http.post in guarded flow with network.outbound declared has no diagnostics", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow syncOrder(order: Order) -> Result<Unit, SyncError>
-  with effects [network.outbound]
+  contract { effects { network.outbound } }
 {
   let _ = http.post("https://sync.example.com/orders", order)?
   return Ok(unit)
@@ -393,7 +393,7 @@ pure flow readFile(path: String) -> Result<String, FileError> {
   it("Env.get in guarded flow without secret.read emits LLN-EFFECT-001", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow loadSecret(name: String) -> Result<String, Error>
-  with effects []
+  contract { effects {  } }
 {
   return Env.get(name)
 }
@@ -411,14 +411,14 @@ describe("Effect checker — devtools-graph buildCallGraph integration", () => {
     // as the previous hand-rolled map did.
     const { effectResults } = parseAndCheck(`
 guarded flow writeAudit() -> Result<Unit, Error>
-  with effects [audit.write]
+  contract { effects { audit.write } }
 {
   AuditLog.write("test")
   return Ok(unit)
 }
 
 guarded flow createRecord() -> Result<Unit, Error>
-  with effects [database.write, audit.write]
+  contract { effects { database.write audit.write } }
 {
   OrdersDB.insert("record")
   writeAudit()
@@ -426,7 +426,7 @@ guarded flow createRecord() -> Result<Unit, Error>
 }
 
 guarded flow processRequest() -> Result<Unit, Error>
-  with effects [database.write, audit.write]
+  contract { effects { database.write audit.write } }
 {
   return createRecord()
 }
@@ -438,14 +438,14 @@ guarded flow processRequest() -> Result<Unit, Error>
   it("reports LLN-EFFECT-002 when a caller misses transitive effect after graph refactor", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow innerWrite() -> Result<Unit, Error>
-  with effects [database.write]
+  contract { effects { database.write } }
 {
   OrdersDB.insert("x")
   return Ok(unit)
 }
 
 guarded flow outerCall() -> Result<Unit, Error>
-  with effects []
+  contract { effects {  } }
 {
   return innerWrite()
 }
@@ -459,13 +459,13 @@ guarded flow outerCall() -> Result<Unit, Error>
     // and must complete (guarded by the `seen` set in collectTransitiveCalledEffects).
     const { effectResults } = parseAndCheck(`
 guarded flow flowA(x: Int) -> Result<Int, Error>
-  with effects [database.read]
+  contract { effects { database.read } }
 {
   return flowB(x)
 }
 
 guarded flow flowB(x: Int) -> Result<Int, Error>
-  with effects [database.read]
+  contract { effects { database.read } }
 {
   return flowA(x)
 }
@@ -481,7 +481,7 @@ describe("Effect checker — EFFECT-001 suggestedCode is a complete contract blo
   it("suggestedCode contains a complete contract.effects block for missing effects", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow saveRecord(record: Record) -> Result<Unit, Error>
-  with effects []
+  contract { effects {  } }
 {
   let _ = OrdersDB.insert(record)?
   AuditLog.write("saved")
@@ -498,7 +498,7 @@ guarded flow saveRecord(record: Record) -> Result<Unit, Error>
   it("suggestedCode lists all missing effect names inside the contract block", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow writeAndAudit(data: Data) -> Result<Unit, Error>
-  with effects []
+  contract { effects {  } }
 {
   let _ = OrdersDB.insert(data)?
   return Ok(unit)
@@ -517,7 +517,7 @@ describe("Effect checker — EFFECT-004 canonical effect alias suggestions", () 
   it("pii.write emits EFFECT-004 suggesting database.write", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow storePersonal(data: PII) -> Result<Unit, Error>
-  with effects [pii.write]
+  contract { effects { pii.write } }
 {
   return Ok(unit)
 }
@@ -531,7 +531,7 @@ guarded flow storePersonal(data: PII) -> Result<Unit, Error>
   it("http.post emits EFFECT-004 suggesting network.outbound", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow sendRequest(payload: Payload) -> Result<Unit, Error>
-  with effects [http.post]
+  contract { effects { http.post } }
 {
   return Ok(unit)
 }
@@ -545,7 +545,7 @@ guarded flow sendRequest(payload: Payload) -> Result<Unit, Error>
   it("http.get emits EFFECT-004 suggesting network.outbound", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow fetchData(url: String) -> Result<String, Error>
-  with effects [http.get]
+  contract { effects { http.get } }
 {
   return Ok(unit)
 }
@@ -559,7 +559,7 @@ guarded flow fetchData(url: String) -> Result<String, Error>
   it("file.read emits EFFECT-004 suggesting filesystem.read", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow loadFile(path: String) -> Result<String, Error>
-  with effects [file.read]
+  contract { effects { file.read } }
 {
   return Ok(unit)
 }
@@ -573,7 +573,7 @@ guarded flow loadFile(path: String) -> Result<String, Error>
   it("email.send is canonical and does NOT emit EFFECT-004", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow sendEmail(msg: EmailMessage) -> Result<Unit, Error>
-  with effects [email.send]
+  contract { effects { email.send } }
 {
   return Ok(unit)
 }
@@ -590,7 +590,7 @@ describe("Effect checker — fn helper effect propagation", () => {
   it("emits EFFECT-002 when fn helper inside guarded flow makes a database call not declared", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow processOrder(order: Order) -> Result<Unit, Error>
-  with effects []
+  contract { effects {  } }
 {
   fn save(o: Order) -> Result<Unit, Error> {
     let _ = OrdersDB.insert(o)?
@@ -608,7 +608,7 @@ guarded flow processOrder(order: Order) -> Result<Unit, Error>
   it("no EFFECT-002 when fn helper effect is declared on the parent flow", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow processOrder(order: Order) -> Result<Unit, Error>
-  with effects [database.write]
+  contract { effects { database.write } }
 {
   fn save(o: Order) -> Result<Unit, Error> {
     let _ = OrdersDB.insert(o)?
@@ -630,7 +630,7 @@ describe("Effect checker — EFFECT-001 location points to specific call", () =>
   it("EFFECT-001 location is on the call expression, not the flow declaration line", () => {
     const { effectResults } = parseAndCheck(`
 guarded flow storeOrder(order: Order) -> Result<Unit, Error>
-  with effects []
+  contract { effects {  } }
 {
   let _ = OrdersDB.insert(order)?
   return Ok(unit)

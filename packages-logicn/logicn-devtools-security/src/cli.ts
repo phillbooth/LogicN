@@ -1,0 +1,129 @@
+#!/usr/bin/env node
+// =============================================================================
+// @logicn/devtools-security — CLI
+//
+// logicn-security audit <file.lln> [--profile strict,high_integrity] [--json]
+// logicn-security risk <classification> <records> <probability>
+// logicn-security path-check <root> <path>
+//
+// Exit codes:
+//   0 — passed (no critical/high findings)
+//   1 — usage error
+//   2 — security findings present (critical or high)
+//   3 — parse error
+// =============================================================================
+
+import { readFileSync } from "node:fs";
+import { runSecurityAudit, type SecurityAuditOptions } from "./audit-runner.js";
+import { checkPathSandbox } from "./path-sandbox.js";
+import { validateRegexPattern } from "./regex-guard.js";
+import { assessRisk, formatRiskAssessment, DataClassification } from "./risk-calculator.js";
+import type { RuntimeProfile } from "@logicn/core-compiler";
+
+const args = process.argv.slice(2);
+const command = args[0];
+
+async function main(): Promise<number> {
+  switch (command) {
+    case "audit": {
+      const filePath = args[1];
+      if (!filePath) {
+        process.stderr.write("Usage: logicn-security audit <file.lln> [--profile strict,...] [--json] [--strict]\n");
+        return 1;
+      }
+      const wantJson    = args.includes("--json");
+      const strictMode  = args.includes("--strict");
+      const profileIdx  = args.indexOf("--profile");
+      const profiles: RuntimeProfile[] = profileIdx >= 0
+        ? (args[profileIdx + 1] ?? "strict").split(",") as RuntimeProfile[]
+        : ["strict"];
+
+      let source: string;
+      try { source = readFileSync(filePath, "utf8"); }
+      catch { process.stderr.write(`Cannot read '${filePath}'\n`); return 1; }
+
+      const opts: SecurityAuditOptions = { profiles, fileName: filePath, strict: strictMode };
+      const report = await runSecurityAudit(source, opts);
+
+      if (wantJson) {
+        process.stdout.write(JSON.stringify(report, null, 2) + "\n");
+      } else {
+        process.stdout.write(`\nLogicN Security Audit — ${filePath}\n`);
+        process.stdout.write(`Profile: ${profiles.join(", ")} | ${report.summary}\n\n`);
+        if (report.findings.length === 0) {
+          process.stdout.write("  ✓ No findings\n");
+        } else {
+          for (const f of report.findings) {
+            const icon = f.severity === "critical" ? "🔴" : f.severity === "high" ? "🟠" : f.severity === "medium" ? "🟡" : "ℹ️";
+            process.stdout.write(`  ${icon} [${f.code}] ${f.flowName ? `(${f.flowName}) ` : ""}${f.message}\n`);
+          }
+        }
+        process.stdout.write("\n");
+      }
+
+      return report.passed ? 0 : 2;
+    }
+
+    case "path-check": {
+      const [, , root, path] = args;
+      if (!root || !path) {
+        process.stderr.write("Usage: logicn-security path-check <root> <path>\n");
+        return 1;
+      }
+      const result = checkPathSandbox(root, path);
+      process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+      return result.allowed ? 0 : 2;
+    }
+
+    case "regex-check": {
+      const pattern = args[1];
+      if (!pattern) { process.stderr.write("Usage: logicn-security regex-check <pattern>\n"); return 1; }
+      const result = validateRegexPattern(pattern);
+      process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+      return result.safe ? 0 : 2;
+    }
+
+    case "risk": {
+      const [, , classStr, recordsStr, probStr] = args;
+      if (!classStr || !recordsStr || !probStr) {
+        process.stderr.write("Usage: logicn-security risk <classification> <records> <probability>\n");
+        process.stderr.write("  classifications: public employee_data healthcare_phi financial_record customer_pii intellectual_property\n");
+        return 1;
+      }
+      const classMap: Record<string, DataClassification> = {
+        public: DataClassification.Public,
+        employee_data: DataClassification.Employee_Data,
+        healthcare_phi: DataClassification.Healthcare_PHI,
+        financial_record: DataClassification.Financial_Record,
+        customer_pii: DataClassification.Customer_PII,
+        intellectual_property: DataClassification.Intellectual_Property,
+      };
+      const cls = classMap[classStr.toLowerCase()];
+      if (cls === undefined) { process.stderr.write(`Unknown classification: ${classStr}\n`); return 1; }
+      const profile = {
+        classification: cls,
+        recordCount: parseInt(recordsStr, 10),
+        breachProbability: parseFloat(probStr),
+        isMultiCloud: args.includes("--multi-cloud"),
+        isUngovernedAI: args.includes("--ungoverned-ai"),
+      };
+      process.stdout.write(formatRiskAssessment(profile) + "\n");
+      return 0;
+    }
+
+    default:
+      process.stdout.write(`logicn-security — LogicN Security Devtools\n\n`);
+      process.stdout.write(`Commands:\n`);
+      process.stdout.write(`  audit <file.lln> [--profile strict,...] [--json] [--strict]   Run security audit\n`);
+      process.stdout.write(`  path-check <root> <path>                                      Check path confinement\n`);
+      process.stdout.write(`  regex-check <pattern>                                         Check regex for ReDoS\n`);
+      process.stdout.write(`  risk <classification> <records> <probability>                 Calculate breach risk\n\n`);
+      process.stdout.write(`Exit codes: 0=passed, 2=findings present, 3=parse error\n`);
+      return 0;
+  }
+}
+
+main().then(code => process.exit(code)).catch(e => {
+  process.stderr.write(`Fatal: ${e instanceof Error ? e.message : String(e)}\n`);
+  process.exit(1);
+});

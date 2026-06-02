@@ -104,9 +104,9 @@ contract {
 ## Compiler Status
 
 ```text
-Spec status: route is v1 specified.
-Parser status: implementation pending Phase 7+.
-Checker status: route-to-flow name/type validation pending Phase 7+.
-Runtime status: route lowering to HTTP/webhook/event adapters pending runtime work.
+Spec status:    route is v1 specified.
+Parser status:  implemented — route parsing live (Phases 34–51).
+Checker status: implemented — route-to-flow name/type validation live (Phases 34–51).
+Runtime status: implemented — route lowering to HTTP/webhook/event adapters live (Phases 34–51).
 ```
 

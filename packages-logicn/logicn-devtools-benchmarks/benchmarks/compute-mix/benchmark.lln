@@ -26,15 +26,10 @@ contract { effects {} }
     /// Step 4: 4-way branch on last 2 bits
     let branch: Int = mix2 - (mix2 / 4) * 4
 
-    if branch == 0 {
-      checksum = checksum + mix2
-    } else if branch == 1 {
-      checksum = checksum - mix1
-    } else if branch == 2 {
-      checksum = checksum + mix1 + mix2
-    } else {
-      checksum = checksum - mix2 + mix1
-    }
+    if branch == 0 { checksum = checksum + mix2 }
+    if branch == 1 { checksum = checksum - mix1 }
+    if branch == 2 { checksum = checksum + mix1 + mix2 }
+    if branch == 3 { checksum = checksum - mix2 + mix1 }
 
     /// Step 5: second LCG
     seed = seed * 2891336453 + 1442695041

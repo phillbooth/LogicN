@@ -357,6 +357,28 @@ class Parser {
           this.skipTopLevelStatement();
           return undefined;
         }
+        // LLN-SYNTAX-LEGACY-002: deprecated flow qualifiers — emit advisory, fall through to flow parse
+        case "safe":
+        case "guard": {
+          const legacyQual = tok.value;
+          const nextPeek = this.peek(1);
+          if (nextPeek.kind === "keyword" && nextPeek.value === "flow") {
+            // `safe flow` / `guard flow` — emit advisory and parse as `flow`
+            this.emitWarning(
+              "LLN-SYNTAX-LEGACY-002",
+              "LegacyFlowQualifier",
+              `'${legacyQual} flow' is a legacy qualifier. Use 'guarded flow' (for '${legacyQual} flow'). This will become an error in a future version.`,
+              this.loc(),
+              `Replace '${legacyQual} flow' with 'guarded flow'.`,
+            );
+            this.advance(); // consume the legacy qualifier, leave "flow" for parseFlowDecl
+            return this.parseFlowDecl("flow");
+          }
+          // Not followed by "flow" — fall through to unsafe handling
+          this.emitUnexpected(`Unexpected '${legacyQual}' at top level.`);
+          this.skipTopLevelStatement();
+          return undefined;
+        }
         case "unsafe": {
           // LLN-SYNTAX-008: unsafe let at top level — boundary data must be flow-owned
           const peek = this.peek(1);
@@ -462,10 +484,17 @@ class Parser {
     const params = this.parseParamList();
     this.expect("symbol", ")");
 
-    // Return type  `->`
-    // Allow `->` on the next line: `pure flow name(params)\n-> RetType`
+    // Return type — dual syntax (v1-current supports both):
+    //   `->`  canonical form:      `pure flow add(a: Int, b: Int) -> Int`
+    //   `:`   TS-readable proposal: `pure flow add(a: Int, b: Int): Int`
+    // Allow the return type separator on the next line.
     this.skipNewlines();
-    this.expect("operator", "->");
+    if (this.currentIs("symbol", ":")) {
+      // proposal/vNext colon form — accepted, no diagnostic yet
+      this.advance();
+    } else {
+      this.expect("operator", "->");
+    }
     const retTypeNode = this.parseTypeRef();
     const returnType = retTypeNode.value ?? "";
 
@@ -474,11 +503,12 @@ class Parser {
     let effectsNode: AstNode | undefined;
     let effectNames: string[] = [];
     if (this.currentIs("keyword", "with") && this.peek(1).kind === "keyword" && this.peek(1).value === "effects") {
-      // LLN-SYNTAX-LEGACY-001: 'with effects [...]' is the old form; warn and continue.
-      this.emitWarning(
+      // LLN-SYNTAX-LEGACY-001: 'with effects [...]' was removed in v1-current.
+      // Hard error: use 'contract { effects { ... } }' instead.
+      this.emit(
         "LLN-SYNTAX-LEGACY-001",
         "LegacyEffectsSyntax",
-        "'with effects [...]' is legacy syntax. Use 'contract { effects { ... } }' instead.",
+        "'with effects [...]' was removed. Use 'contract { effects { ... } }' instead.",
         this.loc(),
         "Replace 'with effects [database.write]' with:\n  contract {\n    effects {\n      database.write\n    }\n  }",
       );
@@ -564,9 +594,26 @@ class Parser {
       break;
     }
 
-    // Body block
+    // Body block — supports TWO styles:
+    //   Classic (external contract before body):  `flow f(): T  contract { ... }  { body }`
+    //   Modern (inline contract first in body):   `flow f(): T { contract { ... }  body }`
+    // Both produce identical AST. The inline style makes flows self-contained.
     this.skipNewlines();
     const body = this.parseBlock();
+
+    // Hoist any contractDecl that appeared as the first statement in the body (inline style).
+    // parseBlock() treats it as a statement — we lift it out to flowClauses so the rest of
+    // the flow parsing pipeline (effects extraction, meta building) sees it normally.
+    if (body.kind === "block") {
+      const bodyChildren: AstNode[] = (body.children as AstNode[] | undefined) ?? [];
+      const inlineIdx = bodyChildren.findIndex(c => c.kind === "contractDecl");
+      if (inlineIdx >= 0) {
+        const [inlineContract] = bodyChildren.splice(inlineIdx, 1);
+        if (inlineContract !== undefined && !flowClauses.some(c => c.kind === "contractDecl")) {
+          flowClauses.push(inlineContract);
+        }
+      }
+    }
 
     // If no inline effects were declared, check the contract block's effects sub-section.
     // (canonical contract style: `contract { effects { database.write audit.write } }`)
@@ -909,6 +956,9 @@ class Parser {
         case "compute":  return this.parseComputeTarget();
         case "fn":       return this.parseFnDecl();
         case "emit":     return this.parseEmitStmt();
+        // Inline contract block (modern style: contract inside flow body)
+        // `flow f(): T { contract { effects {} }  body... }`
+        case "contract": return this.parseContractDecl();
         case "while":    return this.parseWhileStmt();
         case "for":      return this.parseForEachStmt();
         // Safety-prefix binding forms:
@@ -1179,8 +1229,18 @@ class Parser {
     if (this.currentIs("keyword", "else")) {
       this.advance();
       this.skipNewlines();
-      // Support `else if` chains by recursively parsing the nested if statement
+      // `else if` is NOT allowed in LogicN. Use `match` for multi-branch logic.
+      // Rationale: `else if` is TypeScript/JavaScript baggage. LogicN uses `match`
+      // which is exhaustive, readable, and explicit — no fallthrough, no hidden paths.
       if (this.currentIs("keyword", "if") || this.currentIs("keyword", "unless")) {
+        this.emit(
+          "LLN-SYNTAX-010",
+          "ElseIfNotAllowed",
+          "'else if' is not allowed in LogicN. Use 'match' for multi-branch logic — it is exhaustive and has no hidden fallthrough.",
+          this.loc(),
+          "Replace:\n  if a { ... } else if b { ... } else { ... }\nWith:\n  match someValue {\n    CaseA => ...\n    CaseB => ...\n    _     => ...\n  }",
+        );
+        // Still parse the branch to recover and continue — don't leave the parser stuck
         const branch = this.parseStatement();
         if (branch !== undefined) children.push(branch);
       } else {
@@ -1241,10 +1301,38 @@ class Parser {
     const loc = this.loc();
     const pattern = this.current();
 
+    // Guard arm: `when condition => body`
+    // Used for ordered threshold matching — LogicN alternative to else-if chains.
+    //   match score {
+    //     when score >= 90 => return "critical"
+    //     when score >= 70 => return "high"
+    //     _                => return "low"
+    //   }
+    if (pattern.kind === "keyword" && pattern.value === "when") {
+      this.advance(); // consume "when"
+      const guard = this.parseExpression(); // the boolean guard condition
+      this.expect("operator", "=>");
+      this.skipNewlines();
+      let guardBody: AstNode;
+      if (this.currentIs("symbol", "{")) {
+        guardBody = this.parseBlock();
+      } else {
+        // parseStatement handles `return expr` as a one-liner arm body
+        guardBody = this.parseStatement() ?? { kind: "block", location: loc };
+      }
+      return {
+        kind: "matchArm",
+        value: "__guard__",     // sentinel: guard arm (not a named constructor pattern)
+        location: loc,
+        children: [guard, guardBody],
+      };
+    }
+
     // Wildcard arm: _ => body
     const isWildcard = pattern.kind === "identifier" && pattern.value === "_";
 
-    if (pattern.kind !== "identifier" && pattern.kind !== "keyword") {
+    if (pattern.kind !== "identifier" && pattern.kind !== "keyword" &&
+        pattern.kind !== "string" && pattern.kind !== "number") {
       this.emitUnexpected(`Expected match arm pattern, got "${pattern.value}".`);
       this.advance();
       return undefined;
@@ -1277,7 +1365,8 @@ class Parser {
     if (this.currentIs("symbol", "{")) {
       body = this.parseBlock();
     } else {
-      body = this.parseExprStatement() ?? { kind: "block", location: loc };
+      // parseStatement handles `return expr`, assignments, etc. as one-liner arm bodies
+      body = this.parseStatement() ?? { kind: "block", location: loc };
     }
 
     return {

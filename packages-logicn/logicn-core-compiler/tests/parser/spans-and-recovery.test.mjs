@@ -83,15 +83,15 @@ describe("parser spans: ParseDiagnostic carries byteSpan", () => {
     // Note: byteSpan is present when lexer provides token spans (which it now does)
   });
 
-  it("warning diagnostic has byteSpan when token spans are available", () => {
-    // with effects [...] legacy form requires -> ReturnType before it
+  it("error diagnostic has byteSpan when token spans are available (LLN-SYNTAX-LEGACY-001)", () => {
+    // with effects [...] is now a hard error — triggers LLN-SYNTAX-LEGACY-001 as error
     const source = `flow doWork() -> String with effects [database.write] {
   return "ok"
 }
 `;
     const result = parseProgram(source, "legacy.lln");
     const warnings = result.diagnostics.filter((d) => d.code === "LLN-SYNTAX-LEGACY-001");
-    assert.ok(warnings.length > 0, "Expected LLN-SYNTAX-LEGACY-001 warning");
+    assert.ok(warnings.length > 0, "Expected LLN-SYNTAX-LEGACY-001 error");
 
     const warn = warnings[0];
     assert.ok(warn !== undefined, "Warning must exist");
@@ -106,24 +106,23 @@ describe("parser spans: ParseDiagnostic carries byteSpan", () => {
 // LLN-SYNTAX-LEGACY-001: with effects [...] fires a warning
 // ---------------------------------------------------------------------------
 
-describe("LLN-SYNTAX-LEGACY-001: with effects fires legacy warning", () => {
-  it("'with effects [database.write]' emits LLN-SYNTAX-LEGACY-001 warning", () => {
-    // The legacy form requires a return type before 'with effects [...]'
+describe("LLN-SYNTAX-LEGACY-001: with effects is now a hard error", () => {
+  it("'with effects [database.write]' emits LLN-SYNTAX-LEGACY-001 as error (removed syntax)", () => {
+    // with effects [...] was removed — it is now a hard parse error, not a warning.
     const source = `flow save() -> String with effects [database.write] {
   return "saved"
 }
 `;
     const result = parseProgram(source, "legacy.lln");
-    const legacyWarnings = result.diagnostics.filter((d) => d.code === "LLN-SYNTAX-LEGACY-001");
+    const legacyErrors = result.diagnostics.filter((d) => d.code === "LLN-SYNTAX-LEGACY-001");
     assert.ok(
-      legacyWarnings.length >= 1,
+      legacyErrors.length >= 1,
       `Expected LLN-SYNTAX-LEGACY-001, got: ${JSON.stringify(result.diagnostics.map((d) => d.code))}`,
     );
-    const w = legacyWarnings[0];
-    assert.ok(w !== undefined, "Warning must exist");
-    assert.equal(w.severity, "warning", "LLN-SYNTAX-LEGACY-001 must be a warning, not an error");
-    assert.ok(w.message.includes("legacy"), "Message must mention 'legacy'");
-    assert.ok(w.suggestedFix !== undefined, "suggestedFix must be present");
+    const e = legacyErrors[0];
+    assert.ok(e !== undefined, "Error must exist");
+    assert.equal(e.severity, "error", "LLN-SYNTAX-LEGACY-001 must now be an error");
+    assert.ok(e.suggestedFix !== undefined, "suggestedFix must be present");
   });
 
   it("canonical 'contract { effects { ... } }' does NOT emit LLN-SYNTAX-LEGACY-001", () => {

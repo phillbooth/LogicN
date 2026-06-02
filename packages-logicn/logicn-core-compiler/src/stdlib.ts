@@ -14,7 +14,31 @@
 
 import { LLN_NONE, LLN_VOID, type LogicNValue } from "./interpreter.js";
 import { createHash as _nodeCryptoCreateHash, timingSafeEqual as _nodeCryptoTimingSafeEqual } from "node:crypto";
-import { resolve as pathResolve, relative as pathRelative, isAbsolute as pathIsAbsolute } from "node:path";
+import bcrypt from "bcryptjs";  // Phase 34: real bcrypt ($2b$) for BCrypt.verify / BCrypt.hash
+// Phase 36: Argon2id (OWASP preferred memory-hard KDF) — async, imported lazily
+// to avoid startup cost when Password API is not used.
+const _argon2Import = import("argon2") as Promise<{
+  hash(plain: string, opts?: { type?: number }): Promise<string>;
+  verify(hash: string, plain: string): Promise<boolean>;
+  argon2id: number;
+}>;
+// Phase 33: segment-safe path helpers.
+// Import resolve from node:path (named export works in TS); implement relative and
+// isAbsolute inline to avoid TypeScript's ESM named-export limitation.
+import { resolve as pathResolve } from "node:path";
+
+function pathRelative(from: string, to: string): string {
+  // Normalise separators (Windows backslash → forward slash)
+  const f = from.replace(/\\/g, "/").replace(/\/$/, "");
+  const t = to.replace(/\\/g, "/");
+  if (t === f) return "";
+  if (t.startsWith(f + "/")) return t.slice(f.length + 1);
+  return "../" + t;  // simple escape detection (not full rel-path, just used for escape check)
+}
+
+function pathIsAbsolute(p: string): boolean {
+  return /^(\/|[A-Za-z]:[/\\]|\\\\)/.test(p);
+}
 // process is globally available in Node.js — cast to any to access Node-specific methods
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const _proc = process as any;
@@ -1152,6 +1176,29 @@ async function networkAsync(fullName: string, args: readonly LogicNValue[], ctx:
   const url = strVal(args[0] ?? LLN_VOID);
   if (!url) return err("NetworkError: empty URL");
 
+  // OWASP F2: SSRF — enforce host allowlist + private-range denial before fetch.
+  // Parses the URL and checks the hostname against PRIVATE_IP_RANGES and any
+  // allowlist declared in the flow contract. Prevents server-side request forgery.
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname;
+    // Deny private/loopback ranges — these should never be reachable from governed code
+    const privateRangePatterns = [
+      /^127\./, /^10\./, /^172\.(1[6-9]|2[0-9]|3[01])\./, /^192\.168\./,
+      /^169\.254\./, /^::1$/, /^fc[0-9a-f][0-9a-f]:/i, /^fd[0-9a-f][0-9a-f]:/i,
+      /^0\.0\.0\.0$/, /^localhost$/i, /^metadata\.google\.internal$/i,
+    ];
+    if (privateRangePatterns.some(r => r.test(hostname))) {
+      return err(`NetworkError: SSRF — host '${hostname}' is in a private/reserved range (LLN-NET-001)`);
+    }
+    // Only allow http:// and https:// — no file://, ftp://, etc.
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return err(`NetworkError: SSRF — protocol '${parsed.protocol}' is not allowed`);
+    }
+  } catch {
+    return err(`NetworkError: invalid URL '${url}'`);
+  }
+
   try {
     const bodyArg = args[1];
     const init: RequestInit = { method };
@@ -1184,26 +1231,42 @@ async function filesystemAsync(fullName: string, args: readonly LogicNValue[], c
   const path = strVal(args[0] ?? LLN_VOID);
   if (path === "") return err("FileError: empty path");
 
-  // SECURITY (F3 hardened — Audit Pass 2): segment-safe path confinement.
+  // OWASP F3 (fully hardened — OWASP review pass): segment-safe + symlink-safe confinement.
   //
-  // PREVIOUS BUG: `startsWith` is bypassable — if root = "/app/root" then
-  // "/app/root2/evil" still passes the check because it starts with "/app/root".
-  //
-  // FIX: use path.relative(root, target). When the resolved target escapes the
-  // root, relative() returns a path that starts with ".." or is absolute.
-  // This is the canonical segment-safe confinement check.
-  //
-  // NOTE: symlink escapes require realpath() which is async. We use the sync
-  // resolve() path for now. Phase 34 wires this through an async policy check
-  // using fs.realpath() before dispatch. See logicn-security-hardening-phase34.md.
+  // Three-layer defence:
+  //   1. path.relative() — segment-safe (blocks ../  and sibling-prefix bypasses)
+  //   2. realpathSync() on the existing parent — resolves symlinks that point outside root
+  //   3. Both layers must agree — either alone is bypassable
   const _proc = process as unknown as { env: Record<string, string>; cwd(): string };
   const fsRootRaw = _proc.env["LOGICN_FS_ROOT"] ?? _proc.cwd();
-  const fsRoot    = pathResolve(fsRootRaw);         // canonical absolute root
-  const safePath  = pathResolve(fsRoot, path);      // fully resolved target
-  const rel       = pathRelative(fsRoot, safePath);  // relative from root to target
-  // If rel starts with ".." OR is absolute, target escaped the root
+  const fsRoot    = pathResolve(fsRootRaw);
+  const safePath  = pathResolve(fsRoot, path);
+
+  // Layer 1: segment-safe check
+  const rel = pathRelative(fsRoot, safePath);
   if (rel.startsWith("..") || pathIsAbsolute(rel)) {
     return err(`FileError: path '${path}' escapes the allowed root '${fsRootRaw}'`);
+  }
+
+  // Layer 2: symlink canonicalization via realpathSync on the existing ancestor
+  {
+    const fsModule = await import("node:fs") as unknown as {
+      realpathSync(p: string): string; existsSync(p: string): boolean;
+    };
+    try {
+      const { realpathSync, existsSync } = fsModule;
+      const realRoot = realpathSync(fsRoot);
+      // Resolve whichever ancestor exists (file itself, parent, or root)
+      const checkPath = existsSync(safePath) ? safePath
+        : existsSync(pathResolve(safePath, "..")) ? pathResolve(safePath, "..") : fsRoot;
+      const realTarget = realpathSync(checkPath);
+      const realRel    = pathRelative(realRoot, realTarget);
+      if (realRel.startsWith("..") || pathIsAbsolute(realRel)) {
+        return err(`FileError: path '${path}' escapes sandbox via symlink`);
+      }
+    } catch {
+      return err(`FileError: path '${path}' could not be canonicalized (access denied)`);
+    }
   }
 
   try {
@@ -1519,6 +1582,24 @@ export async function callStdlib(
       const cryptoMethod = fullName.slice("Crypto.".length);
       const cryptoResult = cryptoModule(cryptoMethod, args);
       if (cryptoResult !== undefined) return cryptoResult;
+    }
+
+    if (fullName.startsWith("BCrypt.")) {
+      const bcryptMethod = fullName.slice("BCrypt.".length);
+      const bcryptResult = bcryptModule(bcryptMethod, args);
+      if (bcryptResult !== undefined) return bcryptResult;
+    }
+
+    // Phase 35/36: Password API (async — Argon2id is async) + Argon2 module
+    if (fullName.startsWith("Password.")) {
+      const pwMethod = fullName.slice("Password.".length);
+      const pwResult = await passwordModule(pwMethod, args);
+      if (pwResult !== undefined) return pwResult;
+    }
+    if (fullName.startsWith("Argon2.")) {
+      const a2Method = fullName.slice("Argon2.".length);
+      const a2Result = await argon2Module(a2Method, args);
+      if (a2Result !== undefined) return a2Result;
     }
 
     const gateResult = gateFunction(fullName, args);
@@ -2238,6 +2319,157 @@ function cryptoModule(method: string, args: readonly LogicNValue[]): LogicNValue
         // Fallback: plain equality (non-timing-safe, but functional)
         return { __tag: "bool", value: aStr === bStr };
       }
+    }
+    default:
+      return undefined;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Phase 34 — BCrypt module: real bcrypt password verification via bcryptjs
+//
+// BCrypt.verify(plaintext, hash) -> Bool   — constant-time bcrypt comparison
+// BCrypt.hash(plaintext, rounds?) -> String — produce a $2b$ hash (for fixtures/tools)
+//
+// SECURITY: BCrypt.verify is registered as an untaint boundary for password
+// comparison — it accepts a raw (tainted) plaintext password by design, since
+// comparing against a stored hash is the whole point. The plaintext never
+// reaches any other sink. bcryptjs.compareSync is constant-time internally.
+// ---------------------------------------------------------------------------
+
+function bcryptModule(method: string, args: readonly LogicNValue[]): LogicNValue | undefined {
+  switch (method) {
+    case "verify": {
+      // verify(plaintext, hash) -> Bool
+      const plainArg = args[0] ?? LLN_VOID;
+      const hashArg  = args[1] ?? LLN_VOID;
+      const plain = plainArg.__tag === "secure" ? plainArg.value : strVal(plainArg);
+      const hash  = hashArg.__tag === "secure"  ? hashArg.value  : strVal(hashArg);
+      try {
+        return { __tag: "bool", value: bcrypt.compareSync(plain, hash) };
+      } catch {
+        // Malformed hash → not a match (never throw out of the sink)
+        return { __tag: "bool", value: false };
+      }
+    }
+    case "hash": {
+      // hash(plaintext, rounds?) -> String
+      const plainArg = args[0] ?? LLN_VOID;
+      const plain = plainArg.__tag === "secure" ? plainArg.value : strVal(plainArg);
+      const rounds = args[1]?.__tag === "int" ? Number(args[1].value) : 10;
+      try {
+        return { __tag: "string", value: bcrypt.hashSync(plain, rounds) };
+      } catch (e) {
+        return err(`BCryptError: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+    default:
+      return undefined;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Phase 36 — Argon2 module: Argon2id (OWASP preferred) password hashing
+// ---------------------------------------------------------------------------
+
+async function argon2Module(method: string, args: readonly LogicNValue[]): Promise<LogicNValue | undefined> {
+  const a2 = await _argon2Import;
+  switch (method) {
+    case "verify": {
+      const plainArg = args[0] ?? LLN_VOID;
+      const hashArg  = args[1] ?? LLN_VOID;
+      const plain = plainArg.__tag === "secure" ? plainArg.value : strVal(plainArg);
+      const hash  = hashArg.__tag === "secure"  ? hashArg.value  : strVal(hashArg);
+      try {
+        return { __tag: "bool", value: await a2.verify(hash, plain) };
+      } catch {
+        return { __tag: "bool", value: false };
+      }
+    }
+    case "hash": {
+      const plainArg = args[0] ?? LLN_VOID;
+      const plain = plainArg.__tag === "secure" ? plainArg.value : strVal(plainArg);
+      try {
+        return { __tag: "string", value: await a2.hash(plain, { type: a2.argon2id }) };
+      } catch (e) {
+        return err(`Argon2Error: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+    default:
+      return undefined;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Phase 35 — Password module: stable facade over the hash backend.
+//
+// Password.verify(plain, hash) -> Bool    — detects algo from hash prefix, delegates
+// Password.hash(plain)         -> String  — hashes with the current preferred algo
+// Password.needsMigration(hash) -> Bool   — true when hash uses a weaker algo
+//
+// Phase 34: backend = bcrypt    ($2b$...)
+// Phase 36: preferred = Argon2id ($argon2id$...) — bcrypt still verified for migration
+// Phase 37: Password.migrate(plain, oldHash) re-hashes to current preferred algo
+//
+// This is the stable call site: flows written with Password.* never change across phases.
+// ---------------------------------------------------------------------------
+
+async function passwordModule(method: string, args: readonly LogicNValue[]): Promise<LogicNValue | undefined> {
+  switch (method) {
+    case "verify": {
+      const plainArg = args[0] ?? LLN_VOID;
+      const hashArg  = args[1] ?? LLN_VOID;
+      const plain = plainArg.__tag === "secure" ? plainArg.value : strVal(plainArg);
+      const hash  = hashArg.__tag === "secure"  ? hashArg.value  : strVal(hashArg);
+      // Route by hash prefix
+      if (hash.startsWith("$argon2")) {
+        return argon2Module("verify", [{ __tag: "string", value: plain }, { __tag: "string", value: hash }]);
+      }
+      // Default: bcrypt ($2b$, $2a$, $2y$)
+      return bcryptModule("verify", [{ __tag: "string", value: plain }, { __tag: "string", value: hash }]);
+    }
+    case "hash": {
+      // Phase 36: default to Argon2id (OWASP preferred)
+      const plainArg = args[0] ?? LLN_VOID;
+      return argon2Module("hash", [plainArg]);
+    }
+    case "needsMigration": {
+      // Returns true when the stored hash uses a weaker algorithm (bcrypt) vs current preferred
+      const hashArg = args[0] ?? LLN_VOID;
+      const hash = hashArg.__tag === "secure" ? hashArg.value : strVal(hashArg);
+      const isBcrypt = hash.startsWith("$2");
+      return { __tag: "bool", value: isBcrypt };
+    }
+    case "migrate": {
+      // Phase 37: verify with old hash, then re-hash with current preferred if valid.
+      // Returns { migrated: Bool, newHash: String }
+      const plainArg = args[0] ?? LLN_VOID;
+      const oldHashArg = args[1] ?? LLN_VOID;
+      const plain   = plainArg.__tag === "secure" ? plainArg.value : strVal(plainArg);
+      const oldHash = oldHashArg.__tag === "secure" ? oldHashArg.value : strVal(oldHashArg);
+      // Verify against old hash
+      let verified = false;
+      if (oldHash.startsWith("$argon2")) {
+        const v = await argon2Module("verify", [{ __tag: "string", value: plain }, { __tag: "string", value: oldHash }]);
+        verified = v?.__tag === "bool" ? v.value : false;
+      } else {
+        try { verified = bcrypt.compareSync(plain, oldHash); } catch { verified = false; }
+      }
+      if (!verified) {
+        const fields = new Map<string, LogicNValue>([
+          ["migrated", { __tag: "bool", value: false }],
+          ["newHash",  { __tag: "string", value: "" }],
+        ]);
+        return { __tag: "record", fields };
+      }
+      // Hash with new preferred algorithm (Argon2id)
+      const newHashResult = await argon2Module("hash", [{ __tag: "string", value: plain }]);
+      const newHash = newHashResult?.__tag === "string" ? newHashResult.value : oldHash;
+      const fields = new Map<string, LogicNValue>([
+        ["migrated", { __tag: "bool", value: true }],
+        ["newHash",  { __tag: "string", value: newHash }],
+      ]);
+      return { __tag: "record", fields };
     }
     default:
       return undefined;

@@ -470,7 +470,7 @@ describe("Denial #13 — LLN-EFFECT-001: Network call without network.outbound d
   it("http.get in a guarded flow with no network.outbound declared emits LLN-EFFECT-001", () => {
     const src = `
 guarded flow fetchData(url: String) -> String
-  with effects []
+  contract { effects {  } }
 {
   let result: String = http.get(url)
   return result
@@ -503,7 +503,7 @@ describe("Denial #14 — LLN-EFFECT-001: secret.read used without declaration", 
   it("Env.get() in a guarded flow without secret.read emits LLN-EFFECT-001", () => {
     const src = `
 guarded flow loadKey(name: String) -> Result<String, Error>
-  with effects []
+  contract { effects {  } }
 {
   return Env.get(name)
 }
@@ -518,7 +518,7 @@ guarded flow loadKey(name: String) -> Result<String, Error>
   it("Env.get() is allowed when secret.read is declared", () => {
     const src = `
 guarded flow loadKey(name: String) -> Result<String, Error>
-  with effects [secret.read]
+  contract { effects { secret.read } }
 {
   return Env.get(name)
 }

@@ -8,52 +8,50 @@
 // Source: docs/Knowledge-Bases/logicn-hybrid-wasm-architecture.md
 // =============================================================================
 
+type ClassifyMessageResult = Result<Response, ApiError>
+
 guarded flow classifyMessage(
   readonly request: Request
-) -> ClassifyMessageResult
+): ClassifyMessageResult
+{
+  contract {
+    intent {
+      "Classify a message locally using governed AI inference."
+    }
 
-contract {
-  types {
-    type ClassifyMessageResult = Result<Response, ApiError>
-  }
+    request {
+      body {
+        text: unsafe String
+      }
+    }
 
-  intent {
-    "Classify a message locally using governed AI inference."
-  }
+    effects {
+      ai.inference
+      audit.write
+    }
 
-  request {
-    body {
-      text: unsafe String
+    targets {
+      prefer [npu, gpu, wasm, cpu]
+      fallback cpu
+      deny [remote.execution]
+    }
+
+    memory {
+      arena 32mb
+    }
+
+    privacy {
+      contains PII
+      deny protected MessageText to remote.execution
+      require redaction before audit.write
+    }
+
+    audit {
+      require runtime report
+      require selected target proof
     }
   }
 
-  effects {
-    ai.inference
-    audit.write
-  }
-
-  targets {
-    prefer [npu, gpu, wasm, cpu]
-    fallback cpu
-    deny [remote.execution]
-  }
-
-  memory {
-    arena 32mb
-  }
-
-  privacy {
-    contains PII
-    deny protected MessageText to remote.execution
-    require redaction before audit.write
-  }
-
-  audit {
-    require runtime report
-    require selected target proof
-  }
-}
-{
   unsafe let rawText: String = request.body.text
   let text: protected MessageText = validate.messageText(rawText)?
   let result = Classifier.run(text)?

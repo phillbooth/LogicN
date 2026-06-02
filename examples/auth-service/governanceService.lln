@@ -1,0 +1,76 @@
+// Phase 43 — Governance Verification Service
+//
+// Verifies governance metadata: maps effect qualifiers to governance levels
+// and determines whether audit logging is required for a given level.
+//
+// This is the runtime-in-LogicN governance introspection layer.
+// It answers: "what level of governance does this effect qualifier require?"
+// and "does this level mandate audit logging?"
+//
+// HTTP POST /governance/verify  →  governance  →  level + audit check  →  response
+
+// Maps an effect qualifier string to a governance level integer.
+// 0 = none (unknown), 1 = guarded, 2 = secure, 3 = critical
+pure flow governanceLevel(effectTag: String): Int
+{
+  contract {
+    intent { "Map an effect qualifier to a governance level (0=none,1=guarded,2=secure,3=critical)." }
+  }
+
+  if effectTag.contains("critical") { return 3 }
+  if effectTag.contains("secure") { return 2 }
+  if effectTag.contains("guarded") { return 1 }
+  return 0
+}
+
+// Returns true if the given governance level requires an audit trail.
+// Levels 2 (secure) and above mandate audit.write in their contracts.
+pure flow requiresAuditForLevel(level: Int): Bool
+{
+  contract {
+    intent { "Return true when the governance level mandates audit logging (level >= 2)." }
+  }
+
+  if level >= 2 { return true }
+  return false
+}
+
+// The governed governance verification endpoint.
+// Accepts { effects, qualifier } and returns the computed governance metadata.
+secure flow verifyGovernance(readonly request: Request): Response
+{
+  contract {
+    effects {
+      network.inbound
+      audit.write
+    }
+  }
+
+  unsafe let effectTag: String = request.jsonBody.effects
+  unsafe let qualifier: String = request.jsonBody.qualifier
+
+  let level: Int = governanceLevel(effectTag)
+  let requiresAudit: Bool = requiresAuditForLevel(level)
+
+  let qualifierValid: Bool = qualifier == "pure" || qualifier == "guarded" || qualifier == "secure"
+
+  AuditLog.write({
+    event: "GovernanceVerify",
+    effectTag: effectTag,
+    qualifier: qualifier,
+    level: level
+  })
+
+  return {
+    level: level,
+    requiresAudit: requiresAudit,
+    qualifierValid: qualifierValid,
+    governed: true
+  }
+}
+
+route POST "/governance/verify" {
+  request Request
+  response Response
+  flow verifyGovernance
+}

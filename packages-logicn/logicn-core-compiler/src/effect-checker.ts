@@ -100,6 +100,20 @@ export const EFFECT_REGISTRY: Readonly<Record<string, readonly string[]>> = {
   "Crypto.sign": ["crypto.sign"],
   "crypto.sign": ["crypto.sign"],
 
+  // Phase 34: bcrypt password verification — requires crypto.verify effect
+  "BCrypt.verify": ["crypto.verify"],
+  "BCrypt.hash": ["crypto.verify"],
+
+  // Phase 35: Password API facade — same effect as the underlying backend
+  "Password.verify": ["crypto.verify"],
+  "Password.hash": ["crypto.verify"],
+  "Password.migrate": ["crypto.verify"],
+  "Password.needsMigration": [],
+
+  // Phase 36: Argon2id — requires crypto.verify effect
+  "Argon2.verify": ["crypto.verify"],
+  "Argon2.hash": ["crypto.verify"],
+
   // Phase 25: Secret / Vault reads
   "Secrets.get": ["secret.read"],
   "vault.secret": ["secret.read"],

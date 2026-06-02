@@ -161,6 +161,8 @@ export const V1_ACTIVE_KEYWORDS: ReadonlySet<string> = new Set([
   // Readable Logic Forms (Phase 9C) — promoted from future-reserved
   // See: docs/Knowledge-Bases/logicn-readable-logic-forms.md
   "and", "or", "unless", "is",
+  // Guard match arms (Phase 41 syntax) — `when condition => body`
+  "when",
   // Note: "rules", "audit", "set" are intentionally NOT keywords — they are too
   // common as identifier names and are handled contextually in the contract parser.
 ]);

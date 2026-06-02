@@ -3,8 +3,8 @@
 ## Status
 
 ```text
-Route runtime: specified - implementation Phase 7B/8
-Applies to:     Stage 1 TypeScript HTTP server
+Route runtime: implemented — live (Phases 34–51)
+Applies to:    Stage 1 TypeScript HTTP server
 ```
 
 This document defines how checked LogicN `route` declarations are registered,
@@ -158,10 +158,10 @@ runtime enforces deployment policy at the boundary.
 ## Compiler Status
 
 ```text
-Route runtime:       specified - implementation Phase 7B/8
-Route manifest load: specified - implementation Phase 7B/8
-Request hydration:   specified - implementation Phase 7B/8
-Response gate:       specified - implementation Phase 7B/8
+Route runtime:       implemented — live (Phases 34–51)
+Route manifest load: implemented — live (Phases 34–51)
+Request hydration:   implemented — live (Phases 34–51)
+Response gate:       implemented — live (Phases 34–51)
 ```
 
 ## See Also

@@ -12,69 +12,69 @@
 
 secure flow classifyPrivateMedicalNote(
   readonly note: Protected<MedicalNote>
-) -> Result<ClinicalTagReport, ClinicalInferenceError>
-
-contract {
-  intent {
-    "Classify medical note privately on Apple Neural Engine without sending protected data to cloud services."
-  }
-
-  effects {
-    medical.read
-    ai.infer
-    audit.write
-  }
-
-  value {
-    classification medical
-    domain healthcare
-    regulatory_exposure extreme
-    estimated_loss_per_incident 5000000
-  }
-
-  privacy {
-    pii { patientId dateOfBirth diagnosis treatmentHistory }
-    require protected_boundary before ai.infer
-    require redaction before audit.write
-    require local_execution
-  }
-
-  hardware {
-    target apple.silicon
-    allow apple.cpu.arm64
-    allow apple.neural_engine
-    allow apple.secure_enclave
-    require no_cloud_fallback_without_policy
-    require deterministic_fallback wasm
-    require no_ambient_device_authority
-    require attested_provider
-    require secure_key_boundary
-    fallback wasm
-  }
-
-  ai {
-    approved_models { local_clinical_tagger_v1 }
-    max_model_calls 1
-    max_token_cost GBP0.00
-    require offline_execution
-  }
-
-  economics {
-    max_energy_budget 5mj
-    preferred_execution apple.neural_engine
-    fallback_execution wasm.simd
-  }
-
-  audit {
-    require proof_graph
-    require runtime_attestation
-    require hardware_target_trace
-    require data_boundary_trace
-    require actor
-    require trace_id
-  }
-}
+): Result<ClinicalTagReport, ClinicalInferenceError>
 {
+  contract {
+    intent {
+      "Classify medical note privately on Apple Neural Engine without sending protected data to cloud services."
+    }
+
+    effects {
+      medical.read
+      ai.infer
+      audit.write
+    }
+
+    value {
+      classification medical
+      domain healthcare
+      regulatory_exposure extreme
+      estimated_loss_per_incident 5000000
+    }
+
+    privacy {
+      pii { patientId dateOfBirth diagnosis treatmentHistory }
+      require protected_boundary before ai.infer
+      require redaction before audit.write
+      require local_execution
+    }
+
+    hardware {
+      target apple.silicon
+      allow apple.cpu.arm64
+      allow apple.neural_engine
+      allow apple.secure_enclave
+      require no_cloud_fallback_without_policy
+      require deterministic_fallback wasm
+      require no_ambient_device_authority
+      require attested_provider
+      require secure_key_boundary
+      fallback wasm
+    }
+
+    ai {
+      approved_models { local_clinical_tagger_v1 }
+      max_model_calls 1
+      max_token_cost GBP0.00
+      require offline_execution
+    }
+
+    economics {
+      max_energy_budget 5mj
+      preferred_execution apple.neural_engine
+      fallback_execution wasm.simd
+    }
+
+    audit {
+      require proof_graph
+      require runtime_attestation
+      require hardware_target_trace
+      require data_boundary_trace
+      require actor
+      require trace_id
+    }
+  }
+
   let validated    = validate.medicalNote(note)?
   let protected    = privacy.boundary(validated)?
   let tags         = AppleNeuralEngine.infer(protected)?

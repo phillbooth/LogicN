@@ -97,6 +97,18 @@ export const STDLIB_CAPABILITY_MAP: ReadonlyMap<string, StdlibCapabilityEntry> =
   ["crypto.verify",             { requiredEffects: ["crypto.verify"], wasmImport: "host:crypto.verify",  description: "Verify a cryptographic signature (short form). Requires crypto.verify effect." }],
   ["Crypto.sign",               { requiredEffects: ["crypto.sign"],   wasmImport: "host:crypto.sign",    description: "Sign data with a private key. Requires crypto.sign effect." }],
   ["crypto.sign",               { requiredEffects: ["crypto.sign"],   wasmImport: "host:crypto.sign",    description: "Sign data (short form). Requires crypto.sign effect." }],
+  // Phase 34: bcrypt password verification. verify accepts a raw plaintext by design
+  // (it IS the comparison sink) — bcryptjs.compareSync is constant-time internally.
+  ["BCrypt.verify",             { requiredEffects: ["crypto.verify"], wasmImport: "host:bcrypt.verify",  description: "Verify a plaintext password against a bcrypt hash. Requires crypto.verify effect." }],
+  ["BCrypt.hash",               { requiredEffects: ["crypto.verify"], wasmImport: "host:bcrypt.hash",    description: "Produce a bcrypt hash (for fixtures/tooling). Requires crypto.verify effect." }],
+  // Phase 35: Password API — stable facade. Call sites never change across phases.
+  ["Password.verify",           { requiredEffects: ["crypto.verify"], wasmImport: "host:password.verify",      description: "Verify plaintext against stored hash (auto-detects bcrypt/Argon2id). Requires crypto.verify." }],
+  ["Password.hash",             { requiredEffects: ["crypto.verify"], wasmImport: "host:password.hash",        description: "Hash a plaintext with the current preferred algorithm (Argon2id in Phase 36+)." }],
+  ["Password.needsMigration",   { requiredEffects: [],                wasmImport: "host:password.needs_migration", description: "Returns true if the hash uses a weaker algorithm than the current preferred." }],
+  ["Password.migrate",          { requiredEffects: ["crypto.verify"], wasmImport: "host:password.migrate",     description: "Verify + re-hash to current preferred algorithm on successful verify (Phase 37)." }],
+  // Phase 36: Argon2id — OWASP preferred memory-hard KDF
+  ["Argon2.verify",             { requiredEffects: ["crypto.verify"], wasmImport: "host:argon2.verify",        description: "Verify a plaintext against an Argon2id hash. Requires crypto.verify effect." }],
+  ["Argon2.hash",               { requiredEffects: ["crypto.verify"], wasmImport: "host:argon2.hash",          description: "Hash a plaintext with Argon2id. Requires crypto.verify effect." }],
 
   // ── Random (requires effect) ───────────────────────────────────────────────
   ["Random.secureBytes",   { requiredEffects: ["random.generate"], wasmImport: "host:random.bytes", description: "Generate cryptographically secure random bytes." }],

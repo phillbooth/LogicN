@@ -1,3 +1,5 @@
-pure flow greet(name: String) -> String
-contract { intent { "Return a greeting." } effects {} }
-{ return name }
+pure flow greet(name: String): String
+{
+  contract { intent { "Return a greeting." } }
+  return name
+}

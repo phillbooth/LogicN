@@ -13,14 +13,15 @@ The language is designed from the ground up so that execution intent, capability
 ## Build Progress
 
 > **Benchmark headline (Phase 27 WASM):** arithmetic-threshold = **4.0B ops/sec** — 2.9× faster than Rust, 5.2× faster than Node.js
+> **GPU headline (Phase 38 Deno WebGPU):** RTX 3050 Ti = **4.17M ops/sec** — first real GPU number
 
-**Post-Quantum and Hardware Security** — CHERI capability hardware, ML-DSA attestation, ARM MTE, TEE
+**Post-Quantum and Hardware Security** — CHERI capability hardware, ML-DSA-65 attestation (NIST FIPS 204), ARM MTE, TEE
 
 ```
-▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   5%
+▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   8%  (Ed25519 Phase 39 · ML-DSA-65 hybrid Phase 55 · HW trust profiles spec · CUDA backend Phase 58 pending PATH)
 ```
 
-**Photonic / Ternary Computing** — TriState types, balanced ternary logic, photonic backend bridge, Tri.and/or/not/match
+**Photonic / Ternary Computing** — TriState types, balanced ternary logic, photonic backend bridge
 
 ```
 ▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   3%  (TriState type · Tri stdlib ops · GIRTensorInfo.photonic_compatible · NativeCapabilityId.PhotonicBridge reserved)
@@ -35,50 +36,48 @@ The language is designed from the ground up so that execution intent, capability
 **Runtime written in LogicN** — Stage B: LogicN compiler compiles itself ← Major achievement milestone
 
 ```
-███████▌░░░░░░░░░░░░░░░░░░░░░░░  25%  (Phase 34 ACHIEVED — verifyPasswordService.lln IS a live governed HTTP service)
+███████████████████░░░░░░░░░░░░░  55%  (Phases 34-69 complete — 35 .lln files live · 8 Stage B compiler files · effect checker + governance verifier in LogicN)
 ```
+
+> ℹ️ **What 55% means:** 35 `.lln` files — 27 governed HTTP services + 8 aerospace/healthcare/AI examples — all parse with 0 errors. Eight Stage B self-hosted compiler files (lexer, parser, type-checker, effect-checker, governance-verifier, gir-emitter, runtime, compiler.capabilities) all 0 errors. Phase 50 milestone: Stage B pipeline describes flows, Stage A executes them with matching results. Phase 55: ML-DSA-65 hybrid signing live. Next: Phase 70 (full Stage B pipeline → Stage A execution = 60%), Phase 75 (CEC parity = 65%).
 
 **TypeScript Runtime** — Stage A: compiler pipeline + execution engine running on Node.js
 
 ```
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (2,696 tests · 0 failures · 223/223 CEC stable · Phases 25-34 complete · Security Audit Pass 2 complete)
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (2,810 compiler · 15 economics · 95 graph · 32 security = 2,952 total · 0 failures · Phases 25-69 complete)
 ```
 
 | Layer | Status | % |
 |---|---|---|
-| Specification / KB | 368+ docs, 223/223 examples stable, hybrid WASM v1.0, security anti-abuse, Phase 32 complete | 99% |
-| Lexer | All v1 keywords, TokenKindId, V1_DEPRECATED_RESERVED, LLN-LEX-001..006, slice scanning, FlatTokenStream | 97% |
-| Parser | NodeFlags (8 flags), byteSpan, recovery helpers, prefer [gpu/npu], contract.memory/network/hardware | 92% |
-| Type checker | LLN-TYPE-001..022, LLN-TYPE-030/031 (tensor), branded types, TypeId registry (R5 complete) | 80% |
+| Specification / KB | 370+ docs, 223/223 CEC stable, Phase 13 bridge spec, post-quantum hardware security, photonic/ternary spec | 99% |
+| Lexer | All v1 keywords (`when` Phase 41), TokenKindId, LLN-LEX-001..006, FlatTokenStream | 97% |
+| Parser | Phase 41 syntax: `:` return type, `when` guard arms, integer match, inline contract, `else if` → error | 94% |
+| Type checker | LLN-TYPE-001..022, LLN-TYPE-030/031 (tensor), effects extracted from contract.effects, branded types | 82% |
 | Value-state checker | Taint, 2-hop, ValueStateFlags, SINK_REQUIREMENTS, LLN-GATE-001 | 85% |
 | Effect checker | LLN-EFFECT-001..005, LLN-STDLIB-001 wired, EffectCheckerFlags, 31 legacy regex tracked | 84% |
-| Governance verifier | LLN-GOV-002..014, GovernanceFlags, RuntimeManifest, LLN-HW-001/002/003, ProofGraph caching | 85% |
+| Governance verifier | LLN-GOV-002..014, GovernanceFlags, RuntimeManifest, LLN-HW-001/002/003, ProofGraph caching (67% hit rate) | 85% |
 | GIR emitter | GIR v1, tensor metadata (7 flags), TypedArray lowering plan wired, WAT emitter + SIMD ops | 74% |
-| Stdlib | STDLIB_CAPABILITY_MAP (35+ functions), path sandbox (F3), regex ReDoS guard (F8) | 65% |
-| Package resolver | LLN-PKG-001..005, 11-package type registry, cross-module import resolution (R3 complete) | 75% |
-| Runtime interpreter | sync fast-path (14× tree-walker), bytecode VM (auto-routed), ProofGraph caching (67% hit rate) | 78% |
+| Stdlib | 35+ functions, path sandbox, regex ReDoS guard, BCrypt/Password/Argon2 APIs, SSRF guard, `when` keyword | 70% |
+| Package resolver | LLN-PKG-001..005, 11-package type registry, cross-module import resolution | 75% |
+| Runtime interpreter | sync fast-path (14×), bytecode VM (14.3×), tier telemetry on every result, per-request cache scoping | 80% |
 | WAT emitter + assembler | i32.add/sub/mul, if/else, while, mut/assign, WASM instantiation via wabt — Phase 27 complete | 88% |
-| WASM Execution | 8/8 benchmarks at native speed; arithmetic-threshold 3.7B/s (4.7× faster than Node.js) | 95% |
-| Economics Layer | CostGraph, ValueGraph, IBM breach matrix, RouteDecision, economics auto-inferred — Phase 29+33 | 65% |
-| Security (Taint/Profiles) | LLN-TAINT-001..006, LLN-PROFILE-001..007/005B, OWASP 24-boundary catalogue, F1-F8 hardened | 72% |
-| Bytecode VM | Int32Array opcodes, 14.3× over sync tree-walker, auto-routed in executeFlow — Phase 31 | 45% |
-| Governance Diff CLI | logicn diff — governance delta, exit 2 on authority widening, AI_INDEX, spec manifest | 82% |
+| WASM Execution | 10/10 benchmarks; arithmetic-threshold 4.0B/s (5.0× faster than Node.js); gpu-compute 4.17M/s (Deno WebGPU) | 96% |
+| Economics Layer | CostGraph, ValueGraph, IBM breach matrix, RouteDecision, auto-inferred economics (Phase 33+44) | 65% |
+| Security (Taint/Profiles) | LLN-TAINT-001..006, LLN-PROFILE-001..007+005B, OWASP 24-boundary catalogue, F1-F8 hardened, rate limiting | 75% |
+| Bytecode VM | Int32Array opcodes, 14.3× over sync tree-walker, `callExpr` support (Phase 45), auto-routed | 50% |
+| Password API | BCrypt (Phase 34) → Password facade (Phase 35) → Argon2id (Phase 36) → auto-migration (Phase 37) | 90% |
+| GovernanceSignature | Ed25519 v1 (Phase 39) + ML-DSA-65 hybrid v2 (Phase 55, NIST FIPS 204) — real post-quantum | 60% |
+| Tier Telemetry | executionTier + fallbackReason on every FlowExecutionResult — 5 tiers: cache/bytecode/sync/egraph/tree | 100% |
+| Governance Diff CLI | logicn diff — governance delta, exit 2 on authority widening | 82% |
 | Type registry | TypeId (56 IDs), EffectFlags (14), GovernanceFlags (8), NativeCapabilityId (6) | 78% |
-| Security policy | Tainted<T>, LLN-PROFILE-001..007, LLN-TAINT-001..004, profile enforcement (strict/high_integrity) | 65% |
-| SoA Arena | SoANodeArena (Int16/Int32 parallel arrays), FlatTokenStream (stride-4), FusedPass scaffold | 35% |
-| Lowering plans | TypedArrayLoweringPlan wired in GIR, MonomorphisationPlan/KernelFusionPlan stubs | 22% |
-| Register VM | runFromGraph() fast-path live (LOAD_CONST/SLOT/BINOP/RETURN), emitBytecode stub | 20% |
-| Views | StringView, BytesView, TensorView<T>, WASMLinearMemoryLayout — WASM linear memory types | 20% |
-| GPU/NPU/APU plans | WebGPUComputePlan, NPUKernelPlan, APUSharedMemoryPlan, NativePluginManifest | 16% |
-| Hybrid WASM–Native | v1.0 architecture document, EDA model, DataHandle, Component Model ABI spec | 18% |
-| Boundary graph | BoundaryGraph types, getUnauthorisedCrossings() in devtools | 28% |
-| Monkey-patch checker | LLN-SEC-020/021 source-level detection, AST + text level | 85% |
-| devtools-graph | BFS/DFS/topo, flag queries, CapabilityGraph, BoundaryGraph, WASMModuleGraph, NativeCapabilityQuery | 74% |
-| Stage B self-hosting | All 4 files parse with 0 errors: lexer.lln, parser.lln, type-checker.lln, compiler.capabilities.lln | 32% |
+| devtools-security | @logicn/devtools-security — runSecurityAudit, path sandbox, regex guard, secret checker, risk calc, CLI | 85% |
+| devtools-graph | BFS/DFS/topo, flag queries, CapabilityGraph, BoundaryGraph, WASMModuleGraph — 95 tests | 74% |
+| Stage B self-hosting | 8 files · 0 errors: lexer(5), parser(5), type-checker(2), effect-checker(4), governance-verifier(3), gir-emitter(2), runtime(3), compiler.capabilities(8) | 68% |
+| Live .lln services | 35 files: 27 auth-service routes + 8 aerospace/healthcare/AI/wasm examples — all parse 0 errors | 95% |
 | Passive execution plans | Plan types + builder + attestation + hashPassivePlan + executePlan wired | 40% |
-| Examples | 223/223 CEC stable + 11 example files (aerospace + healthcare) | 92% |
-| Photonic / Ternary | TriState type, Tri stdlib ops, photonic_compatible flag, NativeCapabilityId.PhotonicBridge | 3% |
-| CLI | check, check-strict, build, build-production, build-deterministic, --target wasm-standalone/hybrid | 88% |
+| SoA Arena | SoANodeArena (Int16/Int32 parallel arrays), FlatTokenStream (stride-4), FusedPass scaffold | 35% |
+| GPU/NPU/APU plans | WebGPUComputePlan, NPUKernelPlan, APUSharedMemoryPlan, NativePluginManifest | 16% |
+| CLI | check, check-strict, build, build-production, build-deterministic, --target wasm-standalone/wasm-wasi/hybrid | 90% |
 
 ---
 
@@ -592,6 +591,9 @@ const effects = checkEffects(result.flows, result.ast);
 | `docs/Knowledge-Bases/stdlib-gates.yaml` | Gate functions and governed sinks registry |
 | `docs/Knowledge-Bases/logicn-compiler-pipeline.md` | Compiler passes 1–10 in order |
 | `docs/Knowledge-Bases/logicn-architecture-layers.md` | Five-layer architecture |
+| `docs/Knowledge-Bases/logicn-phase13-passive-plans-target-bridges.md` | Phase 13 plan/bridge contracts and deterministic target selection |
+| `docs/Knowledge-Bases/logicn-photonic-ternary-bridge-spec.md` | Tri semantics and photonic bridge constraints |
+| `docs/Knowledge-Bases/logicn-post-quantum-hardware-security-spec.md` | Post-quantum attestation + CHERI/MTE/TEE trust profile model |
 | `docs/Examples/README.md` | Canonical Example Corpus index |
 | `docs/Knowledge-Bases/logicn-roadmap-phase16-20.md` | Phase 16–20 implementation roadmap |
 | `AGENTS.md` | AI coding tool instructions |

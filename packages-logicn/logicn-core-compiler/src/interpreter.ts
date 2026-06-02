@@ -588,6 +588,32 @@ export interface ExecutionAuditRecord {
   readonly manifestGovernanceFlagsMask?: number;
 }
 
+/** Phase 33A: Tier telemetry — which execution path ran for this flow.
+ *
+ * Ordered fastest→slowest:
+ *   cache    — result served from the pure-flow LRU cache (zero execution)
+ *   bytecode — Int32Array bytecode VM (Phase 31, ~14× tree-walker)
+ *   sync     — synchronous tree-walker fast-path (Phase 27B, ~2.7× tree-walker)
+ *   egraph   — ExecutionGraph register-VM (Phase 29B, experimental)
+ *   tree     — async governed tree-walker (full governance, slowest)
+ *
+ * Use this for:
+ *  - Benchmark reporting: "which tier actually ran?"
+ *  - Identifying flows that should be promoted (still on `tree` unexpectedly)
+ *  - Phase 33B decision: expand bytecode/WASM eligibility
+ */
+export type ExecutionTier = "cache" | "bytecode" | "sync" | "egraph" | "tree";
+
+/** Phase 33A: why a faster tier was not used (undefined = tier was chosen, not skipped). */
+export type TierFallbackReason =
+  | "cache-hit"           // served from cache — no execution
+  | "non-integer-args"    // bytecode VM requires integer-type args only
+  | "bytecode-compile-fail" // compileToBytecode returned null
+  | "sync-unsupported"    // sync tree-walker returned null (complex pattern)
+  | "egraph-disabled"     // egraphFastPath not set in runtimeOptions
+  | "egraph-nop"          // ExecutionGraph contained unhandled NOP ops
+  | "effectful-governed"; // flow has effects → must use full governed path
+
 export interface FlowExecutionResult {
   readonly value: LogicNValue;
   readonly effectsObserved: readonly string[];
@@ -595,6 +621,10 @@ export interface FlowExecutionResult {
   readonly diagnostics: readonly { code: string; message: string }[];
   readonly audit: ExecutionAuditRecord;
   readonly enforcementRecord?: ContractEnforcementRecord;
+  /** Phase 33A: which execution tier handled this flow. */
+  readonly executionTier?: ExecutionTier;
+  /** Phase 33A: why a faster tier wasn't used (populated on fallback). */
+  readonly fallbackReason?: TierFallbackReason;
 }
 
 export type ExecutionResult = FlowExecutionResult;
@@ -1108,6 +1138,14 @@ class Interpreter {
 
   private async evalExpr(node: AstNode): Promise<LogicNValue> {
     switch (node.kind) {
+      // Phase 41: returnStmt inside match arm bodies — `match x { _ => return "found" }`
+      // evalExpr is called from evalMatch for arm bodies. returnStmt needs to
+      // return its inner value rather than falling to default:LLN_VOID.
+      case "returnStmt": {
+        const retExpr = node.children?.[0];
+        return retExpr !== undefined ? await this.evalExpr(retExpr) : LLN_VOID;
+      }
+
       case "stringLiteral": {
         const raw = node.value ?? "";
         return { __tag: "string", value: stripStringQuotes(raw) };
@@ -1533,6 +1571,25 @@ class Interpreter {
 
     for (const arm of arms) {
       if (arm.kind !== "matchArm") continue;
+
+      // Phase 41: guard arm — `when condition => body`
+      // The arm was stored with value="__guard__"; children=[guardExpr, bodyNode]
+      if (arm.value === "__guard__") {
+        const children = arm.children ?? [];
+        if (children.length < 2) continue;
+        const [guardExpr, guardBody] = children;
+        if (guardExpr === undefined || guardBody === undefined) continue;
+        const guardResult = await this.evalExpr(guardExpr);
+        const guardPasses = guardResult.__tag === "bool" ? guardResult.value : guardResult.__tag !== "void";
+        if (!guardPasses) continue;
+        this.pushScope();
+        try {
+          return await this.evalExpr(guardBody);
+        } finally {
+          this.popScope();
+        }
+      }
+
       const match = matchPattern(subjectVal, arm.value ?? "");
       if (!match.matches) continue;
 
@@ -1700,6 +1757,13 @@ function matchPattern(
   if (pattern === "true" && subject.__tag === "bool") return { matches: subject.value };
   if (pattern === "false" && subject.__tag === "bool") return { matches: !subject.value };
   if (subject.__tag === "string") return { matches: subject.value === pattern };
+  // Phase 41: integer/number literal match arms — `200 => ...`
+  if (subject.__tag === "int" && /^-?\d+$/.test(pattern)) {
+    return { matches: subject.value === parseInt(pattern, 10) };
+  }
+  if (subject.__tag === "float" && /^-?\d*\.?\d+$/.test(pattern)) {
+    return { matches: subject.value === parseFloat(pattern) };
+  }
   if (subject.__tag === "unresolved") return { matches: subject.name === pattern };
   if (subject.__tag === "record" && subject.fields.has(pattern)) return { matches: true };
   return { matches: subject.__tag === pattern };
@@ -2193,12 +2257,13 @@ export async function executeFlow(
     runtimeOptions?.pureFastPath === true &&   // opt-in: pass { pureFastPath: true } to enable
     isPureEffectFree(ast, flowName)
   ) {
-    // Memoization: pure EffectFree flows with same args → same result
-    // Use sourceFile as a scope tag to prevent collision across different source files
-    // (e.g. multiple files all having a "main" flow with no args)
-    const sourceTag = typeof (runtimeOptions as Record<string, unknown>)?.sourceTag === "string"
-      ? (runtimeOptions as Record<string, unknown>).sourceTag as string
-      : undefined;
+    // Phase 49: per-request cache scoping.
+    // The cache key includes a sourceTag so that pure flows cached for one request
+    // cannot be served to a different request (prevents cross-request cache poisoning).
+    // Use: (1) explicit sourceTag from runtimeOptions, or (2) traceId as the scope.
+    const opts = runtimeOptions as Record<string, unknown>;
+    const sourceTag = (typeof opts?.sourceTag === "string" ? opts.sourceTag : undefined)
+      ?? (typeof opts?.traceId === "string" ? `req:${opts.traceId}` : undefined);
     const cacheKey = pureFlowCacheKey(flowName, args, sourceTag);
     const cached = getCachedPureFlow(cacheKey);
     if (cached !== undefined) {
@@ -2209,6 +2274,8 @@ export async function executeFlow(
         effectsObserved: [],
         auditEntries: [],
         diagnostics: [],
+        executionTier: "cache" as const,     // Phase 33A telemetry
+        fallbackReason: "cache-hit" as const,
         audit: {
           schemaVersion: "lln.runtime.audit.v1",
           flowName,
@@ -2239,6 +2306,7 @@ export async function executeFlow(
           effectsObserved: [],
           auditEntries: [],
           diagnostics: [],
+          executionTier: "bytecode" as const,   // Phase 33A telemetry
           audit: {
             schemaVersion: "lln.runtime.audit.v1" as const,
             flowName,
@@ -2269,6 +2337,8 @@ export async function executeFlow(
         effectsObserved: [],
         auditEntries: [],
         diagnostics: [],
+        executionTier: "sync" as const,         // Phase 33A telemetry
+        fallbackReason: "non-integer-args" as const, // bytecode rejected (non-int)
         audit: {
           schemaVersion: "lln.runtime.audit.v1" as const,
           flowName,
@@ -2302,7 +2372,8 @@ export async function executeFlow(
     if (result.value.__tag !== "runtimeError" && result.value.__tag !== "error") {
       setCachedPureFlow(cacheKey, result.value);
     }
-    return result;
+    // Phase 33A: sync-failed-but-pure → still tree tier (sync returned null)
+    return { ...result, executionTier: "tree" as const, fallbackReason: "sync-unsupported" as const } satisfies FlowExecutionResult;
   }
 
   // ExecutionGraph fast-path execution (Phase 29B)
@@ -2343,6 +2414,7 @@ export async function executeFlow(
             effectsObserved: [],
             auditEntries: [],
             diagnostics: [],
+            executionTier: "egraph" as const,   // Phase 33A telemetry
             audit: {
               schemaVersion: "lln.runtime.audit.v1",
               flowName,
@@ -2362,7 +2434,9 @@ export async function executeFlow(
   }
 
   const interpreter = new Interpreter(ast, knownFlows ?? [], enforcer, capabilityHost, runtimeOptions, executionPlans, manifest);
-  return interpreter.runFlow(flowName, args);
+  const treeResult = await interpreter.runFlow(flowName, args);
+  // Phase 33A: tag the governed tree-walker result
+  return { ...treeResult, executionTier: "tree" as const } satisfies FlowExecutionResult;
 }
 
 // =============================================================================

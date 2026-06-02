@@ -532,17 +532,48 @@ class TypeChecker {
         });
       this.flowParamTypes.set(node.value, paramTypes);
 
-      // Extract declared effects for LLN-TYPE-014
-      // effectsDecl child: { kind: "effectsDecl", value: "eff1, eff2", children: [effectRef...] }
+      // Extract declared effects for LLN-TYPE-014.
+      // Effects appear in two possible AST shapes:
+      //
+      //   1. Direct effectsDecl child (legacy `with effects [...]`, now removed):
+      //      { kind: "effectsDecl", children: [{ kind: "effectRef", value: "database.write" }] }
+      //
+      //   2. Inside contractDecl as "effects:block" identifier (canonical `contract { effects {} }`):
+      //      { kind: "contractDecl", children: [
+      //          { kind: "identifier", value: "effects:block",
+      //            children: [{ kind: "identifier", value: "effect:database.write" }] }
+      //      ]}
+      //
+      // The type-checker must handle both to support LLN-TYPE-014 with canonical syntax.
+
+      // Path 1: direct effectsDecl (legacy)
+      let effectNames: string[] = [];
       const effectsDeclNode = children.find((c) => c.kind === "effectsDecl");
       if (effectsDeclNode !== undefined) {
-        const effectNames = (effectsDeclNode.children ?? [])
+        effectNames = (effectsDeclNode.children ?? [])
           .filter((c) => c.kind === "effectRef" && c.value)
           .map((c) => c.value!.trim());
-        this.flowDeclaredEffects.set(node.value, effectNames);
       } else {
-        this.flowDeclaredEffects.set(node.value, []);
+        // Path 2: effects:block inside contractDecl (canonical form)
+        const contractDecl = children.find((c) => c.kind === "contractDecl");
+        if (contractDecl !== undefined) {
+          const effectsBlock = (contractDecl.children ?? []).find(
+            (c) => c.kind === "identifier" && (c.value === "effects:block" || c.value === "effects:")
+          );
+          if (effectsBlock !== undefined) {
+            effectNames = (effectsBlock.children ?? [])
+              .filter((c) => c.value?.startsWith("effect:") || c.value?.startsWith("effectRef:"))
+              .map((c) => (c.value ?? "").replace(/^effect:|^effectRef:/, "").trim());
+            // Also accept plain identifier children (dotted effect names)
+            if (effectNames.length === 0) {
+              effectNames = (effectsBlock.children ?? [])
+                .filter((c) => c.kind === "identifier" && c.value && !c.value.includes(":"))
+                .map((c) => c.value!.trim());
+            }
+          }
+        }
       }
+      this.flowDeclaredEffects.set(node.value, effectNames);
     }
 
     for (const child of node.children ?? []) {

@@ -25,6 +25,14 @@ const BENCHMARKS = [
   { id: "collection-pipeline",  dir: "collection-pipeline",  logicnOpsPerRun: 10000,                  passiveCallCount: 30 },
   { id: "governance-cost",      dir: "governance-cost",      logicnOpsPerRun: 1,                      passiveCallCount: 100 },
   { id: "hardware-targets",     dir: "hardware-targets",     logicnOpsPerRun: 1,                      passiveCallCount: 1000 },
+  // Low-memory: measures heap bytes allocated per operation.
+  // KEY METRIC: bytesPerOperation — WASM/Rust/Node ~0, tree-walker ~200-400 bytes/op.
+  // processStream(10000) does 10000 inner iterations (validate + classify per item).
+  { id: "low-memory",          dir: "low-memory",           logicnOpsPerRun: 10000,                  passiveCallCount: 20   },
+  // GPU-compute: parallel map-reduce kernel — a GPU-SHAPED workload run on CPU.
+  // mapReduce(100000) does 100000 per-element kernel evaluations.
+  // GPU columns are filled by gpu-detect (toolchain-gated); LogicN GPU = pending Phase 38.
+  { id: "gpu-compute",         dir: "gpu-compute",          logicnOpsPerRun: 100000,                 passiveCallCount: 10   },
 ];
 
 function runProc(cmd, args=[]) {
@@ -80,14 +88,33 @@ async function runBenchmark(bench) {
   }
 
   // ── WASM execution (Phase 27 — requires wat-wasm assembler) ─────────────
-  // When bench-native-wasm.mjs exists, it executes the WAT-compiled flow via
-  // WebAssembly.instantiate and measures execution throughput.
   const wasmRunner = join(dir, "bench-wasm.mjs");
   if (existsSync(wasmRunner)) {
     console.log(`  wasm...`);
-    // pathToFileURL converts Windows backslash paths to file:// URLs for ESM import()
     try { res.wasm = await (await import(pathToFileURL(wasmRunner).href)).runWasmBenchmark(); }
     catch(e) { res.wasm = { error: true, reason: String(e), runtime: "wasm" }; }
+  }
+
+  // ── Deno WebGPU execution (Phase 38 — real GPU when Deno+WebGPU available) ─
+  const denoWebGpuRunner = join(dir, "bench-deno-webgpu.ts");
+  if (existsSync(denoWebGpuRunner)) {
+    console.log(`  deno-webgpu...`);
+    try {
+      // On Windows, Deno is installed as deno.cmd — need shell:true and explicit path
+      const { spawnSync: _sp } = await import("node:child_process");
+      const { execSync: _exec } = await import("node:child_process");
+      // Find deno executable
+      let denoBin = "deno";
+      try { denoBin = _exec("where deno.cmd", { encoding: "utf8" }).trim().split("\n")[0].trim(); } catch {
+        try { denoBin = _exec("which deno", { encoding: "utf8" }).trim(); } catch { /* use "deno" */ }
+      }
+      const dr = _sp(denoBin, ["run", "--unstable-webgpu", denoWebGpuRunner], {
+        encoding: "utf8", timeout: 60000, shell: true,
+      });
+      res.denoWebGpu = (dr.status === 0 && dr.stdout?.trim())
+        ? (() => { try { return JSON.parse(dr.stdout.trim()); } catch { return null; } })()
+        : { error: true, reason: dr.stderr?.slice(0,200) ?? "spawn failed", runtime: "deno-webgpu" };
+    } catch(e) { res.denoWebGpu = { error: true, reason: String(e), runtime: "deno-webgpu" }; }
   }
 
   const lln = join(dir, "benchmark.lln");

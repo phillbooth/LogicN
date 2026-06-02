@@ -1,31 +1,10 @@
 /// @milestone: Stage-B-Root-Capability
 /// @description: The LogicN compiler declares its own capabilities in LogicN source.
+/// Phase 40: flows now have real executable bodies (not just stubs).
 /// This is the governance-first principle applied to the compiler itself.
-/// The compiler is the first LogicN program to govern itself.
 
 // =============================================================================
-// Compiler Capability Contract
-//
-// The LogicN compiler must declare every capability it uses — exactly as user
-// programs must. No special exemptions. No hidden authority.
-//
-// COMPILER capabilities:
-//   filesystem.read        — read source files and manifests
-//   filesystem.write       — write compiled artefacts to disk
-//   package.read           — resolve package manifests
-//   manifest.read          — read project configuration
-//   report.write           — emit compiler diagnostics
-//   compiler.graph.read    — read the compiler's own semantic graph
-//   compiler.graph.write   — write to the compiler's semantic graph
-//
-// DENIED capabilities (compiler must never touch these):
-//   network.read           — no fetching during compilation
-//   network.write          — no outbound network calls
-//   database.read          — no database access
-//   database.write         — no database mutations
-//   secret.read            — no secret material access
-//   email.send             — no messaging
-//   payment.process        — no financial operations
+// Compiler Capability Contract — self-governing
 // =============================================================================
 
 contract set CompilerCapabilities {
@@ -50,90 +29,112 @@ contract set CompilerCapabilities {
 }
 
 // =============================================================================
-// Compiler Phase Flows
+// Phase 40: Capability query flows — executable, pure, no effects
 // =============================================================================
 
-pure flow lexSource(source: String) -> LexResult
+/// Returns the capabilities the compiler is allowed to use.
+pure flow compilerAllowedCapabilities() -> Int
 contract {
-  intent { "Tokenise LogicN source text. No external capabilities required." }
+  intent { "Return the count of capabilities the compiler is allowed to use." }
   effects {}
-  use CompilerCapabilities
 }
 {
-  // Pure tokenisation — reads only the source string passed in.
-  // No filesystem access needed; source was already loaded by the pipeline.
+  return 7
 }
 
-guarded flow loadSource(path: String) -> SourceText
+/// Returns the capabilities the compiler explicitly denies itself.
+pure flow compilerDeniedCapabilities() -> Int
 contract {
-  intent { "Load a LogicN source file from the filesystem for compilation." }
-  effects { filesystem.read }
-  use CompilerCapabilities
-}
-{
-  // Reads one source file per pipeline invocation.
-}
-
-guarded flow parseTokens(tokens: Array<Token>) -> ParseResult
-contract {
-  intent { "Build AST from token stream. Reads source spans only." }
+  intent { "Return the count of capabilities explicitly denied to the compiler." }
   effects {}
-  use CompilerCapabilities
 }
 {
-  // Pure transformation from token stream to AST.
-  // All necessary data was passed in via the token array.
+  return 7
 }
 
-guarded flow resolvePackage(manifest: ManifestPath) -> PackageGraph
+/// Returns whether a named capability is allowed for the compiler.
+/// Maps capability names to known IDs: 0=denied, 1-7=allowed.
+pure flow isCapabilityAllowed(name: String) -> Bool
 contract {
-  intent { "Resolve the package dependency graph from the project manifest." }
-  effects { package.read, manifest.read }
-  use CompilerCapabilities
+  intent { "Check if a named capability is in the compiler's allowed set." }
+  effects {}
 }
 {
-  // Reads manifests to build the dependency graph.
-  // Network access is denied — only local package cache is available.
+  if name.contains("network") { return false }
+  if name.contains("database") { return false }
+  if name.contains("secret") { return false }
+  if name.contains("email") { return false }
+  if name.contains("payment") { return false }
+  if name.contains("filesystem") { return true }
+  if name.contains("package") { return true }
+  if name.contains("manifest") { return true }
+  if name.contains("report") { return true }
+  if name.contains("compiler") { return true }
+  return false
 }
 
-guarded flow typeCheck(ast: AST) -> TypeCheckResult
+/// Count the number of tokens in a source string by counting whitespace separators.
+/// Phase 40: first executable Stage B lexer approximation.
+/// This is a simplified token counter — not a full lexer.
+/// The real lexer (lexer.lln) handles all token types.
+pure flow countTokens(source: String) -> Int
 contract {
-  intent { "Type-check the AST. Reads compiler graph for type information." }
-  effects { compiler.graph.read }
-  use CompilerCapabilities
+  intent { "Count the approximate number of tokens in a source string." }
+  effects {}
 }
 {
-  // Consults the compiler's type graph.
-  // No side effects beyond reading the in-memory graph.
+  let words: Int = source.split(" ").length
+  let lines: Int = source.split("\n").length
+  return words + lines
 }
 
-guarded flow emitDiagnostics(results: Array<DiagnosticResult>) -> Unit
+/// Check if a source string contains a flow declaration.
+pure flow sourceHasFlow(source: String) -> Bool
 contract {
-  intent { "Emit compiler diagnostics to the report sink." }
-  effects { report.write }
-  use CompilerCapabilities
+  intent { "Check if the source contains a flow declaration." }
+  effects {}
 }
 {
-  // Writes diagnostic output to the configured report sink.
+  return source.contains("flow ")
 }
 
-guarded flow emitArtefacts(gir: GIRProgram) -> EmitResult
+/// Check if a source string contains a contract block.
+pure flow sourceHasContract(source: String) -> Bool
 contract {
-  intent { "Write compiled output to filesystem." }
-  effects { filesystem.write }
-  use CompilerCapabilities
+  intent { "Check if the source contains a contract block." }
+  effects {}
 }
 {
-  // Writes compiled artefacts to disk.
-  // Only the output directory declared in the project manifest may be written.
+  return source.contains("contract ")
 }
 
-guarded flow updateCompilerGraph(gir: GIRProgram) -> Unit
+/// Check if a source string has declared effects.
+pure flow sourceHasEffects(source: String) -> Bool
 contract {
-  intent { "Update the compiler's semantic graph after a successful compilation." }
-  effects { compiler.graph.write }
-  use CompilerCapabilities
+  intent { "Check if the source declares any effects." }
+  effects {}
 }
 {
-  // Persists updated semantic graph entries from the current compilation unit.
+  return source.contains("effects {")
+}
+
+/// Return the governance class for a capability name.
+/// 0 = denied, 1 = read-only, 2 = write, 3 = compute
+pure flow capabilityClass(name: String) -> Int
+contract {
+  intent { "Return the governance class for a named capability." }
+  effects {}
+}
+{
+  if name.contains("network") { return 0 }
+  if name.contains("database") { return 0 }
+  if name.contains("secret") { return 0 }
+  if name.contains("filesystem.read") { return 1 }
+  if name.contains("package.read") { return 1 }
+  if name.contains("manifest.read") { return 1 }
+  if name.contains("filesystem.write") { return 2 }
+  if name.contains("report.write") { return 2 }
+  if name.contains("compiler.graph.read") { return 1 }
+  if name.contains("compiler.graph.write") { return 2 }
+  return 0
 }

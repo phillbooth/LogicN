@@ -39,7 +39,8 @@ contract {
     }
   }
 }
-with effects [database.read] {
+contract { effects { database.read } }
+{
   return Ok(Response.ok("{}"))
 }
 `);
@@ -63,7 +64,8 @@ contract {
     cancel on deadline
   }
 }
-with effects [network.outbound] {
+contract { effects { network.outbound } }
+{
   return Ok(Response.ok("{}"))
 }
 `);
@@ -89,7 +91,8 @@ contract {
     }
   }
 }
-with effects [network.outbound, database.read] {
+contract { effects { network.outbound database.read } }
+{
   return Ok(Response.ok("{}"))
 }
 `);
@@ -111,7 +114,8 @@ contract {
     max memory 256 MB
   }
 }
-with effects [database.read] {
+contract { effects { database.read } }
+{
   return Ok(Response.ok("{}"))
 }
 `);
@@ -134,7 +138,8 @@ contract {
     require redaction before audit.write
   }
 }
-with effects [database.read, audit.write] {
+contract { effects { database.read audit.write } }
+{
   return Ok(Response.ok("{}"))
 }
 `);
@@ -160,7 +165,8 @@ contract {
     require trace_id
   }
 }
-with effects [database.read, audit.write] {
+contract { effects { database.read audit.write } }
+{
   return Ok(Response.ok("{}"))
 }
 `);
@@ -205,7 +211,8 @@ contract {
     deny protected values in logs
   }
 }
-with effects [database.read, network.outbound, audit.write] {
+contract { effects { database.read network.outbound audit.write } }
+{
   return Ok(Response.ok("{}"))
 }
 `);
@@ -225,7 +232,8 @@ contract {
     "Create a patient record."
   }
 }
-with effects [database.write, audit.write] {
+contract { effects { database.write audit.write } }
+{
   return Ok(Response.created("123"))
 }
 `);
@@ -294,7 +302,8 @@ contract {
     require runtime report
   }
 }
-with effects [database.read, audit.write] {
+contract { effects { database.read audit.write } }
+{
   return Ok(Response.ok("{}"))
 }
 `);

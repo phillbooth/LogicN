@@ -356,12 +356,88 @@ LogicN_COMPILER_TRI_MATCH_NOT_EXHAUSTIVE   → LLN-SAFETY-006 (canonical)
 ### Syntax (canonical series: LLN-SYNTAX-*)
 
 ```text
-LLN-SYNTAX-001   VAR_NOT_SUPPORTED       var is not a valid LogicN keyword
-LLN-SYNTAX-002   CONST_NOT_SUPPORTED     const is not a valid LogicN keyword
-LLN-SYNTAX-003   FUTURE_RESERVED_KEYWORD Future-reserved keyword used as identifier
-LLN-SYNTAX-004   ACTIVE_KEYWORD_AS_IDENT Active keyword used as identifier
-LLN-SYNTAX-005   TOP_LEVEL_FN_DENIED     fn may only appear inside a flow body
+LLN-SYNTAX-001   VAR_NOT_SUPPORTED           var is not a valid LogicN keyword
+LLN-SYNTAX-002   CONST_NOT_SUPPORTED         const is not a valid LogicN keyword
+LLN-SYNTAX-003   FUTURE_RESERVED_KEYWORD     Future-reserved keyword used as identifier
+LLN-SYNTAX-004   ACTIVE_KEYWORD_AS_IDENT     Active keyword used as identifier
+LLN-SYNTAX-005   TOP_LEVEL_FN_DENIED         fn may only appear inside a flow body
+LLN-SYNTAX-006   INVALID_BINDING_PREFIX      Unrecognised binding prefix (not let/mut/unsafe let/safe mut)
+LLN-SYNTAX-007   MISSING_RETURN_TYPE         Flow or fn declaration is missing a return type annotation
+LLN-SYNTAX-008   INVALID_ROUTE_METHOD        Route declaration uses an unrecognised HTTP method
+LLN-SYNTAX-009   DUPLICATE_CONTRACT_SECTION  Contract block contains a duplicate section key
+LLN-SYNTAX-010   ELSE_IF_DENIED              'else if' is not valid LogicN syntax; use 'match' or sequential 'if'
 ```
+
+Legacy syntax errors (hard errors):
+
+```text
+LLN-SYNTAX-LEGACY-001   WITH_EFFECTS_REMOVED   'with effects [...]' is no longer valid; use contract { effects {} }
+LLN-SYNTAX-LEGACY-002   REMOVED_FLOW_QUALIFIER  'safe flow', 'unsafe flow', 'guard flow' are removed qualifiers
+```
+
+### Style (canonical series: LLN-STYLE-*)
+
+Advisory diagnostics for code style. These are warnings, not errors (unless a strict
+profile upgrades them).
+
+```text
+LLN-STYLE-001   ELSE_IF_CHAIN_ADVISORY   Advisory: 'else if' chain detected; prefer 'match' or sequential 'if'
+                                          (Note: in v1 this is now elevated to LLN-SYNTAX-010 hard error)
+LLN-STYLE-002   DEEP_NESTING             Nesting depth exceeds 3; consider extracting to a named fn or flow
+```
+
+### Taint (canonical series: LLN-TAINT-*)
+
+Taint diagnostics enforce that external/untrusted data does not reach governed sinks
+without an explicit sanitiser boundary. Introduced in Phase 28.
+
+```text
+LLN-TAINT-001   INJECTION_SINK_TAINTED       Tainted value at injection sink (database.query, html.render, shell.exec)
+                                              — use a named stdlib sanitiser (Sql.escape, Html.escape, Shell.quote)
+LLN-TAINT-002   LOGIC_SINK_UNVALIDATED       Unvalidated value at business-logic sink — validate before use
+LLN-TAINT-003   TAINT_PROPAGATION            Taint propagated from source X to Y without sanitiser boundary
+LLN-TAINT-004   UNTAINT_BOUNDARY_REQUIRED    Tainted value used in context requiring explicit untaint
+LLN-TAINT-005   TAINTED_RETURN               Tainted value returned from flow without explicit declassification
+LLN-TAINT-006   CROSS_BOUNDARY_TAINT         Tainted value crosses a trust boundary without sanitiser
+LLN-TAINT-007   UNTRUSTED_HTTP_PARAM         Route param used without sanitiser (auto-taint at HTTP boundary)
+```
+
+### Profile (canonical series: LLN-PROFILE-*)
+
+Profile enforcement diagnostics. Emitted when a flow's behaviour violates the
+active compilation profile (strict, high_integrity, etc.). Introduced in Phase 28.
+
+```text
+LLN-PROFILE-001   STRICT_EFFECT_DENIED        Effect not permitted in 'strict' profile
+LLN-PROFILE-002   HIGH_INTEGRITY_SINK_DENIED  Governed sink not permitted in 'high_integrity' profile
+LLN-PROFILE-003   PROFILE_CAPABILITY_MISSING  Required capability not declared for this profile
+LLN-PROFILE-004   PROFILE_UNSAFE_BINDING      unsafe let binding not permitted in this profile without gateway
+LLN-PROFILE-005   PROFILE_AUDIT_REQUIRED      Profile requires audit.write effect; flow does not declare it
+LLN-PROFILE-005B  PROFILE_AUDIT_INCOMPLETE    Audit event produced but missing required fields for this profile
+LLN-PROFILE-006   PROFILE_TAINT_CHECK_DENIED  Profile requires taint checking; flow bypasses it
+LLN-PROFILE-007   PROFILE_SIGNATURE_REQUIRED  Profile requires governance signature; proof not provided
+```
+
+### Hardware Trust (canonical series: LLN-HW-*)
+
+Hardware trust profile diagnostics (Phase 13+) and post-quantum attestation
+diagnostics (Phase 55+). See `logicn-post-quantum-hardware-security.md`.
+
+```text
+LLN-HW-001   HARDWARE_CLASS_MISMATCH        Flow requires hardware class X; target provides class Y
+LLN-HW-002   PROOF_LEVEL_INSUFFICIENT       Flow requires proof level X; current level is Y
+LLN-HW-003   IMMUTABLE_SEAL_VIOLATED        ImmutableInputSeal constraint violated by flow
+LLN-HW-101   MISSING_REQUIRED_ATTESTATION   High-trust flow requires attestation; none provided
+LLN-HW-102   UNSUPPORTED_ATTESTATION_ALG    Attestation algorithm not accepted by target trust profile
+LLN-HW-103   HYBRID_ATTESTATION_INCOMPLETE  Hybrid mode requires both ed25519 and ML-DSA signatures; one missing
+LLN-HW-104   ATTESTATION_EVIDENCE_STALE     Attestation evidence schema version is outdated for this profile
+```
+
+> Phase 55: ML-DSA-65 (NIST FIPS 204) is the post-quantum signature algorithm.
+> `lln.gov.sig.v2` artifact format carries dual signatures (ed25519 + ml-dsa-65)
+> in hybrid mode. `generateHybridGovernanceKeyPair` produces the key pair.
+> Attestation policy profiles: `compat` (ed25519 or ML-DSA), `hybrid` (both required),
+> `pq_strict` (ML-DSA only). See `logicn-roadmap-phases-41-60.md §Phase 55`.
 
 ### Binding (canonical series: LLN-BINDING-*)
 

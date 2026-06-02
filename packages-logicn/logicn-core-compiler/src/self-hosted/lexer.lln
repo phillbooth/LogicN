@@ -121,45 +121,12 @@ contract {
           }
           Some(cb) => {
             let two = single + cb.toString()
-            if two == "->" {
-              return ["->", (pos + 2).toString(), "true"]
+            // Use a known-set check instead of else-if chains (LogicN: no else-if)
+            let known: Array<String> = ["->", "=>", "==", "!=", "<=", ">=", "&&", "||", "..", "::", "//", "/*"]
+            if known.contains(two) {
+              return [two, (pos + 2).toString(), "true"]
             }
-            else if two == "=>" {
-              return ["=>", (pos + 2).toString(), "true"]
-            }
-            else if two == "==" {
-              return ["==", (pos + 2).toString(), "true"]
-            }
-            else if two == "!=" {
-              return ["!=", (pos + 2).toString(), "true"]
-            }
-            else if two == "<=" {
-              return ["<=", (pos + 2).toString(), "true"]
-            }
-            else if two == ">=" {
-              return [">=", (pos + 2).toString(), "true"]
-            }
-            else if two == "&&" {
-              return ["&&", (pos + 2).toString(), "true"]
-            }
-            else if two == "||" {
-              return ["||", (pos + 2).toString(), "true"]
-            }
-            else if two == ".." {
-              return ["..", (pos + 2).toString(), "true"]
-            }
-            else if two == "::" {
-              return ["::", (pos + 2).toString(), "true"]
-            }
-            else if two == "//" {
-              return ["//", (pos + 2).toString(), "true"]
-            }
-            else if two == "/*" {
-              return ["/*", (pos + 2).toString(), "true"]
-            }
-            else {
-              return [single, (pos + 1).toString(), "false"]
-            }
+            return [single, (pos + 1).toString(), "false"]
           }
         }
       }
@@ -231,25 +198,31 @@ contract {
       }
 
       Some(c) => {
-        // Whitespace (space)
+        // Dispatch on character class.
+        // LogicN: no else-if. Whitespace chars are mutually exclusive so sequential
+        // if-without-else is correct — only one branch fires per character.
+        mut handled: Bool = false
+
         if c is ' ' {
           col = col + 1
           pos = pos + 1
+          handled = true
         }
-
-        // Tab
-        else if c is '\t' {
+        if handled == false {
+        if c is '\t' {
           col = col + 1
           pos = pos + 1
+          handled = true
         }
-
-        // Carriage return
-        else if c is '\r' {
+        }
+        if handled == false {
+        if c is '\r' {
           pos = pos + 1
+          handled = true
         }
-
-        // Newline
-        else if c is '\n' {
+        }
+        if handled == false {
+        if c is '\n' {
           let startLine = line
           let startCol = col
           let tok = { kind: TokenKind.Newline, value: "\n", line: startLine, column: startCol, endLine: startLine, endColumn: startCol + 1, start: pos, end: pos + 1 }
@@ -257,65 +230,55 @@ contract {
           line = line + 1
           col = 1
           pos = pos + 1
+          handled = true
         }
-
-        // Identifier or keyword (starts with a letter)
-        else if c.isLetter() {
-          let startPos = pos
-          let startLine = line
-          let startCol = col
-          let result = scanWord(source, pos, srcLen)
-          let ident = result.first().unwrapOr("")
-          let endPosStr = result.last().unwrapOr("0")
-          let endPos = endPosStr.toInt().unwrapOr(pos)
-          col = col + (endPos - startPos)
-          pos = endPos
-          let isKw = keywords.contains(ident)
-          if isKw {
-            let tok = { kind: TokenKind.Keyword, value: ident, line: startLine, column: startCol, endLine: line, endColumn: col, start: startPos, end: pos }
-            tokens = tokens.append(tok)
-          }
-          else {
-            let tok = { kind: TokenKind.Identifier, value: ident, line: startLine, column: startCol, endLine: line, endColumn: col, start: startPos, end: pos }
-            tokens = tokens.append(tok)
-          }
         }
-
-        // Digits — number literal
-        else if c.isDigit() {
-          let startPos = pos
-          let startLine = line
-          let startCol = col
-          let result = scanDigits(source, pos, srcLen)
-          let num = result.first().unwrapOr("")
-          let endPosStr = result.last().unwrapOr("0")
-          let endPos = endPosStr.toInt().unwrapOr(pos)
-          col = col + (endPos - startPos)
-          pos = endPos
-          let tok = { kind: TokenKind.NumberLiteral, value: num, line: startLine, column: startCol, endLine: line, endColumn: col, start: startPos, end: pos }
-          tokens = tokens.append(tok)
-        }
-
-        // Symbol or operator — check for two-char operators first
-        else {
-          let startLine = line
-          let startCol = col
-          let scanResult = scanOperator(source, pos, srcLen)
-          let opStr = scanResult.first().unwrapOr(c.toString())
-          let endPosStr = scanResult.get(1).unwrapOr((pos + 1).toString())
-          let isMulti = scanResult.last().unwrapOr("false")
-          let newPos = endPosStr.toInt().unwrapOr(pos + 1)
-          let opLen = newPos - pos
-          if isMulti == "true" {
-            let tok = { kind: TokenKind.Operator, value: opStr, line: startLine, column: startCol, endLine: line, endColumn: startCol + opLen, start: pos, end: newPos }
-            tokens = tokens.append(tok)
+        if handled == false {
+          let startPosX = pos
+          let startLineX = line
+          let startColX = col
+          if c.isLetter() {
+            let resultX = scanWord(source, pos, srcLen)
+            let identX = resultX.first().unwrapOr("")
+            let endPosStrX = resultX.last().unwrapOr("0")
+            let endPosX = endPosStrX.toInt().unwrapOr(pos)
+            col = col + (endPosX - startPosX)
+            pos = endPosX
+            let isKwX = keywords.contains(identX)
+            if isKwX {
+              tokens = tokens.append({ kind: TokenKind.Keyword, value: identX, line: startLineX, column: startColX, endLine: line, endColumn: col, start: startPosX, end: pos })
+            }
+            if isKwX == false {
+              tokens = tokens.append({ kind: TokenKind.Identifier, value: identX, line: startLineX, column: startColX, endLine: line, endColumn: col, start: startPosX, end: pos })
+            }
           }
-          else {
-            let tok = { kind: TokenKind.Symbol, value: opStr, line: startLine, column: startCol, endLine: line, endColumn: startCol + opLen, start: pos, end: newPos }
-            tokens = tokens.append(tok)
+          if c.isLetter() == false {
+            if c.isDigit() {
+              let resultX = scanDigits(source, pos, srcLen)
+              let numX = resultX.first().unwrapOr("")
+              let endPosStrX = resultX.last().unwrapOr("0")
+              let endPosX = endPosStrX.toInt().unwrapOr(pos)
+              col = col + (endPosX - startPosX)
+              pos = endPosX
+              tokens = tokens.append({ kind: TokenKind.NumberLiteral, value: numX, line: startLineX, column: startColX, endLine: line, endColumn: col, start: startPosX, end: pos })
+            }
+            if c.isDigit() == false {
+              let scanResultX = scanOperator(source, pos, srcLen)
+              let opStrX = scanResultX.first().unwrapOr(c.toString())
+              let endPosStrX = scanResultX.get(1).unwrapOr((pos + 1).toString())
+              let isMultiX = scanResultX.last().unwrapOr("false")
+              let newPosX = endPosStrX.toInt().unwrapOr(pos + 1)
+              let opLenX = newPosX - pos
+              if isMultiX == "true" {
+                tokens = tokens.append({ kind: TokenKind.Operator, value: opStrX, line: startLineX, column: startColX, endLine: line, endColumn: startColX + opLenX, start: pos, end: newPosX })
+              }
+              if isMultiX == "false" {
+                tokens = tokens.append({ kind: TokenKind.Symbol, value: opStrX, line: startLineX, column: startColX, endLine: line, endColumn: startColX + opLenX, start: pos, end: newPosX })
+              }
+              pos = newPosX
+              col = col + opLenX
+            }
           }
-          pos = newPos
-          col = col + opLen
         }
       }
     }

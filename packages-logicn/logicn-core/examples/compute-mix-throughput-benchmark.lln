@@ -80,15 +80,10 @@ effects [runtime.clock, runtime.metrics] {
 
       /// Step 5 — 4-way branch
       let branch: UInt32 = mix2 bitand 3
-      if branch == 0 {
-        checksum = checksum xor intval
-      } else if branch == 1 {
-        checksum = checksum + mix2
-      } else if branch == 2 {
-        checksum = checksum xor (mix1 << 3)
-      } else {
-        checksum = checksum + intval + mix1
-      }
+      if branch == 0 { checksum = checksum xor intval }
+      if branch == 1 { checksum = checksum + mix2 }
+      if branch == 2 { checksum = checksum xor (mix1 << 3) }
+      if branch == 3 { checksum = checksum + intval + mix1 }
 
       /// Step 6 — second LCG
       seed = seed * 6_364_136_223 + 1_442_695_041
@@ -112,15 +107,10 @@ effects [runtime.clock, runtime.metrics] {
       let sqrtval: Float = Math.sqrt(fval + 1.0)
       let intval: UInt32 = UInt32.fromFloat(Math.floor(sqrtval * 1_000_000.0))
       let branch: UInt32 = mix2 bitand 3
-      if branch == 0 {
-        checksum = checksum xor intval
-      } else if branch == 1 {
-        checksum = checksum + mix2
-      } else if branch == 2 {
-        checksum = checksum xor (mix1 << 3)
-      } else {
-        checksum = checksum + intval + mix1
-      }
+      if branch == 0 { checksum = checksum xor intval }
+      if branch == 1 { checksum = checksum + mix2 }
+      if branch == 2 { checksum = checksum xor (mix1 << 3) }
+      if branch == 3 { checksum = checksum + intval + mix1 }
       seed = seed * 6_364_136_223 + 1_442_695_041
       checksum = checksum xor seed
       index = index + 1

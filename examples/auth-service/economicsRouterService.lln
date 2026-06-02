@@ -1,0 +1,47 @@
+/// @service: economics router service — cost-based routing decisions
+/// @phase: 59
+
+type EconomicsResult = Result<Response, String>
+
+// Infer preferred target from effects
+pure flow inferTarget(hasAI: Bool, isSafetyCritical: Bool, hasDBWrite: Bool): String {
+  contract { intent { "Auto-infer the preferred execution target from flow properties." } }
+  if isSafetyCritical { return "enclave" }
+  if hasAI { return "gpu" }
+  if hasDBWrite { return "cpu" }
+  return "wasm"
+}
+
+// Classify risk tier from execution target
+pure flow inferRiskTier(execTarget: String): String {
+  contract { intent { "Map execution target to risk classification." } }
+  match execTarget {
+    "enclave" => return "critical"
+    "gpu"     => return "elevated"
+    "cpu"     => return "standard"
+    "wasm"    => return "standard"
+    _         => return "standard"
+  }
+}
+
+secure flow routeByEconomics(readonly request: Request): EconomicsResult {
+  contract {
+    effects { network.inbound audit.write }
+    intent { "Accept flow economics metadata and return a routing decision." }
+  }
+  unsafe let rawHasAI: String = request.jsonBody.hasAI
+  unsafe let rawIsCritical: String = request.jsonBody.isSafetyCritical
+  unsafe let rawHasDB: String = request.jsonBody.hasDBWrite
+  let hasAI: Bool = rawHasAI == "true"
+  let isCritical: Bool = rawIsCritical == "true"
+  let hasDB: Bool = rawHasDB == "true"
+  let target: String = inferTarget(hasAI, isCritical, hasDB)
+  let riskTier: String = inferRiskTier(target)
+  AuditLog.write({ eventName: "EconomicsRouted" target: target })
+  return Ok({ target: target riskTier: riskTier phase: 59 })
+}
+
+route POST "/economics/route" {
+  response EconomicsResult
+  flow routeByEconomics
+}

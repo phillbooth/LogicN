@@ -520,7 +520,9 @@ function parseArgs(): { readonly mode: CliMode; readonly targetDir: string } {
       const target = [...args.slice(1)].find((a) => a.startsWith("--target="))?.slice("--target=".length) ?? "";
       if (flags.has("--production") || flags.has("--deterministic")) {
         mode = flags.has("--deterministic") ? "build-deterministic" : "build-production";
-      } else if (target === "wasm-standalone" || flags.has("--target=wasm-standalone")) {
+      } else if (target === "wasm-standalone" || target === "wasm-wasi" ||
+                 flags.has("--target=wasm-standalone") || flags.has("--target=wasm-wasi")) {
+        // Phase 42: wasm-wasi is a canonical alias for wasm-standalone
         mode = "build-wasm-standalone";
       } else if (target === "wasm-hybrid" || flags.has("--target=wasm-hybrid")) {
         mode = "build-wasm-hybrid";
@@ -566,6 +568,7 @@ function parseArgs(): { readonly mode: CliMode; readonly targetDir: string } {
         "  build --production           Build with full governance enforcement\n" +
         "  build --deterministic        Build with strict reproducibility checks\n" +
         "  build --target=wasm-standalone  Emit WASM/WASI module (no JS required)\n" +
+        "  build --target=wasm-wasi       Alias for wasm-standalone (Phase 42)\n" +
         "  build --target=wasm-hybrid   Emit JS shell + WASM pure-flow core\n" +
         "  fix --effects                Suggest missing effect declarations\n" +
         "  emit --ai-graph              Emit build/semantic/logicn.ai.json\n" +
@@ -727,9 +730,21 @@ function runGovernanceDiff(baseRefArg: string): void {
       afterFlows.push(...parseProgram(afterSrc, file).flows);
     } catch { /* skip unreadable */ }
     // Before = the file at baseRef (git show)
+    // OWASP F1: use spawnSync with array args — never interpolate user input into shell string.
+    // Validate baseRef against a strict ref pattern first (no shell metacharacters).
     try {
-      const beforeSrc = execSync(`git show ${baseRef}:${rel}`, { encoding: "utf8" });
-      beforeFlows.push(...parseProgram(beforeSrc, file).flows);
+      if (!/^[a-zA-Z0-9._\-/^~@{}:]+$/.test(baseRef)) {
+        throw new Error(`Invalid git ref: '${baseRef}' contains unsafe characters`);
+      }
+      // OWASP F1: shell:false is the default for spawnSync — no need to pass it.
+      // The array-args form already prevents shell interpolation.
+      const gitResult = spawnSync("git", ["show", `${baseRef}:${rel}`], {
+        encoding: "utf8",
+        timeout: 15_000,
+      });
+      if (gitResult.status === 0 && gitResult.stdout) {
+        beforeFlows.push(...parseProgram(gitResult.stdout, file).flows);
+      }
     } catch { /* file did not exist at baseRef — treated as added */ }
   }
 

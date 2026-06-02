@@ -1,0 +1,104 @@
+/// @file: governance-verifier.lln
+/// @purpose: Stage B minimal governance verifier — Phase 67 milestone
+/// @phase: 67
+/// @status: bootstrap stub — validates governance contracts for pure and secure flows
+
+// ============================================================
+// LogicN Self-Hosted Governance Verifier — Phase 67
+//
+// Validates governance invariants from ParseResult:
+//   1. safety_critical flows must declare audit.write
+//   2. safety_critical flows must declare deterministic_execution
+//   3. secure flows must have at least one governance effect
+//
+// Uses Array/String params to avoid generic type constraints.
+// ============================================================
+
+record GovDiagnostic {
+  code: String
+  message: String
+  flowName: String
+}
+
+record GovResult {
+  diagnostics: Array
+  passed: Int
+  failed: Int
+}
+
+// ── Per-flow governance checks ────────────────────────────────
+
+pure flow checkSafetyCritical(flowName: String, hasAudit: Bool, hasDeterministic: Bool) -> Array
+contract {
+  intent { "LLN-VAL-001/002: safety_critical flows must have audit.write and deterministic_execution." }
+}
+{
+  mut diags: Array = Array.empty()
+  if hasAudit == false {
+    let msg: String = "safety_critical flow '" + flowName + "' must declare audit.write (LLN-VAL-001)"
+    diags = diags.append({ code: "LLN-VAL-001", message: msg, flowName: flowName })
+  }
+  if hasDeterministic == false {
+    let msg: String = "safety_critical flow '" + flowName + "' must require deterministic_execution (LLN-VAL-002)"
+    diags = diags.append({ code: "LLN-VAL-002", message: msg, flowName: flowName })
+  }
+  return diags
+}
+
+pure flow checkSecureFlowGovernance(flowName: String, effectCount: Int) -> Array
+contract {
+  intent { "Secure flows should declare governance effects for traceability." }
+}
+{
+  mut diags: Array = Array.empty()
+  if effectCount == 0 {
+    let msg: String = "secure flow '" + flowName + "' declares no effects — governance cannot be verified"
+    diags = diags.append({ code: "LLN-GOV-002", message: msg, flowName: flowName })
+  }
+  return diags
+}
+
+// ── Full governance verification pass ─────────────────────────
+
+pure flow verifyGovernance(flows: Array) -> GovResult
+contract {
+  intent { "Run all governance checks across flows from the Stage B ParseResult." }
+}
+{
+  mut allDiags: Array = Array.empty()
+  mut passed: Int = 0
+  mut failed: Int = 0
+  mut i: Int = 0
+  while i < flows.count() {
+    let fdOpt = flows.get(i)
+    match fdOpt {
+      Some(fd) => {
+        let name: String = fd.name
+        let kind: String = fd.kind
+        let effectCount: Int = fd.effects.count()
+        mut flowDiags: Array = Array.empty()
+        if kind == "secure" {
+          flowDiags = checkSecureFlowGovernance(name, effectCount)
+        }
+        if flowDiags.count() == 0 {
+          passed = passed + 1
+        }
+        if flowDiags.count() > 0 {
+          failed = failed + 1
+          mut j: Int = 0
+          while j < flowDiags.count() {
+            let dOpt = flowDiags.get(j)
+            match dOpt {
+              Some(d) => { allDiags = allDiags.append(d) }
+              None => {}
+            }
+            j = j + 1
+          }
+        }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return { diagnostics: allDiags, passed: passed, failed: failed }
+}

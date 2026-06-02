@@ -29,11 +29,16 @@ Declared on the flow or block header keyword.
 
 | Level | Keyword | Meaning |
 |---|---|---|
-| `safe` | `safe flow` | Pure or low-risk; no side-effectful operations |
+| `pure` | `pure flow` | Pure or low-risk; no side-effectful operations |
 | `guarded` | `guarded flow` | Governed; declared effects, policies, and audit |
+| `secure` | `secure flow` | Trust-boundary form; may declare effects, governance, audit |
 | `privileged` | `privileged flow` | High authority; requires declared capability |
-| `unsafe` | `unsafe flow` / `unsafe block` | Bypasses safety; needs reason, approval, fallback |
+| `unsafe block` | `unsafe block Name` | Bypasses safety for a bounded block; needs reason, approval, fallback |
 | `experimental` | `experimental flow` | Non-production; blocked in production targets |
+
+> **Legacy qualifiers removed:** `safe flow`, `guard flow`, and `unsafe flow` as top-level
+> qualifiers are not valid v1 syntax. They emit LLN-SYNTAX-LEGACY-002 (warning) if
+> encountered. Use `pure flow`, `guarded flow`, or `secure flow` respectively.
 
 Unqualified `flow` defaults to governed behavior with no extra constraints — same as the existing `flow` keyword.
 
@@ -45,10 +50,10 @@ Effects name every security-sensitive operation a flow may perform.
 
 ```logicn
 guarded flow createOrder(input: CreateOrderRequest)
-  intent "create customer order"
-  effects [database.write, network.call]
-  requires capability OrderWriter
-  audit required
+contract {
+  intent { "create customer order" }
+  effects { database.write, network.call }
+}
 {
   ...
 }
@@ -100,38 +105,40 @@ fn add(a: Int, b: Int) -> Int {
   return a + b
 }
 
-// Pure flow with intent.
-pure flow calculateTotals(orders: List<Order>)
-  intent "calculate order totals"
-  effects []
-  compute auto
+// Pure flow with intent declared in contract.
+pure flow calculateTotals(orders: List<Order>) -> List<Money>
+contract {
+  intent { "calculate order totals" }
+}
 {
   return orders.map(order => order.total)
 }
 
-// Guarded API flow — intent required.
-guarded flow createOrder(input: CreateOrderRequest)
-  intent "create customer order"
-  effects [database.write, network.call]
-  requires capability OrderWriter
-  audit required
+// Guarded API flow — intent required, effects in contract.
+guarded flow createOrder(input: CreateOrderRequest) -> Result<OrderId, ApiError>
+contract {
+  intent { "create customer order" }
+  effects { database.write, network.call }
+  audit { require proof }
+}
 {
   let order = Order.from(input)
   database.orders.insert(order)
   return Created(order.id)
 }
 
-// Privileged flow.
-privileged flow rotateSigningKey()
-  intent "rotate JWT signing key"
-  effects [secret.read, secret.write, audit.write]
-  requires capability KeyRotationAdmin
-  audit required
+// Privileged flow with effects in contract.
+privileged flow rotateSigningKey() -> Result<Unit, ApiError>
+contract {
+  intent { "rotate JWT signing key" }
+  effects { secret.read, secret.write, audit.write }
+  audit { require proof, require signed attestation }
+}
 {
   ...
 }
 
-// Unsafe block.
+// Unsafe block (remains valid — not a top-level flow qualifier).
 unsafe block NativeImageResize
   intent "resize image using approved native library"
   reason "native library provides required image format support"
@@ -141,11 +148,13 @@ unsafe block NativeImageResize
   native.call("resize_image")
 }
 
-// Experimental flow.
-experimental flow newFraudScoringModel(input: PaymentAttempt)
-  intent "test new fraud scoring model"
-  effects [ai.invoke]
-  audit required
+// Experimental flow with effects in contract.
+experimental flow newFraudScoringModel(input: PaymentAttempt) -> RiskScore
+contract {
+  intent { "test new fraud scoring model" }
+  effects { ai.invoke }
+  audit { require proof }
+}
 {
   ...
 }
@@ -187,9 +196,13 @@ If a flow declares intent and effects, the compiler checks for mismatches:
 
 ```logicn
 // Bad: declared intent says "send receipt" but body performs delete.
-safe flow sendReceipt(order: Order)
-  intent "send customer receipt"
-  effects [email.send]
+// @legacy: 'safe flow' is invalid v1 syntax (LLN-SYNTAX-LEGACY-002).
+// Use 'guarded flow' instead.
+guarded flow sendReceipt(order: Order) -> Result<Unit, ApiError>
+contract {
+  intent { "send customer receipt" }
+  effects { email.send }
+}
 {
   database.delete(order.id)
 }
@@ -205,6 +218,10 @@ safe flow sendReceipt(order: Order)
 ### In `@logicn/core`
 
 ```ts
+// Note: "safe" maps to the legacy 'safe flow' qualifier (LLN-SYNTAX-LEGACY-002).
+// In LLN syntax use 'pure flow'. "unsafe" as a top-level qualifier is also legacy;
+// use 'secure flow' or 'unsafe block' in source. These type values remain in the
+// compiler AST for backward-compatibility with parsed legacy files only.
 export type SafetyLevel =
   | "safe" | "guarded" | "privileged" | "unsafe" | "experimental";
 
@@ -298,16 +315,16 @@ export interface RuntimeFlowManifest {
 
 New node kinds added to `AstNodeKind` in `@logicn/core`:
 
-| Kind | Syntax element |
-|---|---|
-| `guardedFlowDecl` | `guarded flow Name(...)` |
-| `privilegedFlowDecl` | `privileged flow Name(...)` |
-| `unsafeFlowDecl` | `unsafe flow Name(...)` |
-| `experimentalFlowDecl` | `experimental flow Name(...)` |
-| `unsafeBlock` | `unsafe block Name { ... }` |
-| `intentDecl` | `intent "..."` in a flow header |
-| `requiresCapabilityDecl` | `requires capability CapabilityName` |
-| `fallbackDecl` | `fallback safeFlowName` in an unsafe block |
+| Kind | Syntax element | Notes |
+|---|---|---|
+| `guardedFlowDecl` | `guarded flow Name(...)` | Active v1 qualifier |
+| `privilegedFlowDecl` | `privileged flow Name(...)` | Active v1 qualifier |
+| `unsafeFlowDecl` | `unsafe flow Name(...)` | @legacy — LLN-SYNTAX-LEGACY-002 (warning); use `secure flow` or `unsafe block` |
+| `experimentalFlowDecl` | `experimental flow Name(...)` | Active v1 qualifier |
+| `unsafeBlock` | `unsafe block Name { ... }` | Active v1 form for bounded unsafe scope |
+| `intentDecl` | `intent "..."` inside `contract { intent {} }` | Use contract form only |
+| `requiresCapabilityDecl` | `requires capability CapabilityName` | Active |
+| `fallbackDecl` | `fallback safeFlowName` in an unsafe block | Active |
 
 ---
 
@@ -336,10 +353,11 @@ Rules:
 When a flow is `pure` with `effects []`, the runtime may safely rewrite sequential operations to parallel:
 
 ```logicn
-pure flow calculateTotals(orders: List<Order>)
-  intent "calculate order totals"
-  effects []
-  compute auto
+pure flow calculateTotals(orders: List<Order>) -> List<Money>
+contract {
+  intent { "calculate order totals" }
+}
+compute target best { prefer [wasm, cpu] }
 {
   return orders.map(order => order.total)
 }

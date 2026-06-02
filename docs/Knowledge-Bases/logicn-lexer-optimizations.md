@@ -141,7 +141,7 @@ Review candidates for `DEPRECATED_RESERVED`:
 ## Legacy Cleanup
 
 - `req` compatibility → keep `request`/`req` dual-key in route-dispatcher.ts for compatibility, but all docs/examples use `request: Request` only
-- `with effects [...]` → remains parseable as legacy; canonical style is `contract { effects {} }`; no new examples should use it
+- `with effects [...]` → **hard error** (LLN-SYNTAX-LEGACY-001); the parser rejects this form. Canonical form is `contract { effects {} }`. No source file may use `with effects [...]`.
 
 ## Implementation Order
 

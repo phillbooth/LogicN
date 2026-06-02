@@ -1,4 +1,13 @@
 cd C:\laragon\www\LO\packages-logicn\logicn-devtools-benchmarks
 npm run run
 npm run compare
+-------------------------------------
+# From anywhere:
+node --test /c/laragon/www/LO/packages-logicn/logicn-devtools-graph-algorithms/tests/*.test.mjs
 
+# Or from the package dir:
+cd C:\laragon\www\LO\packages-logicn\logicn-devtools-graph-algorithms
+npm test
+
+
+.gitignore
