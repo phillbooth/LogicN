@@ -212,7 +212,7 @@ secure flow createPatient(readonly request: Request) -> CreatePatientResult {
 
   contract {
     //all contract components are optional
-    
+
     types {
       type CreatePatientResult = Result<Response, ApiError>
     }
@@ -293,7 +293,7 @@ guarded flow fetchRate(currency: CurrencyCode) -> FetchRateResult {
 // Missing arms emit LLN-TYPE-021. Wildcard before other arms: LLN-TYPE-022.
 //
 pure flow describeStatus(s: Status) -> String {
-  match s {
+  return match s {
     Active    => "live"
     Suspended => "paused"
     Deleted   => "removed"
