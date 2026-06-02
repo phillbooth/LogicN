@@ -29,12 +29,45 @@ record FlowParam {
   isReadonly: Bool
 }
 
-// A simplified statement node — bootstrap/Stage B only.
-// kind: "let" | "mut" | "return" | "call" | "unknown"
-// value: the first meaningful token after the keyword (or the whole raw segment)
+// ── Expression AST (folded from body-parser.lln, Milestone M-A) ──
+// Self-referential children via Array<Self>; supported by the runtime.
+record Expr {
+  kind: String          // "lit" | "name" | "binary" | "unary" | "call"
+  value: String         // lit: literal text; name: identifier; binary/unary: operator; call: callee name
+  litType: String       // lit only: "Int" | "String" | "Bool"; otherwise ""
+  children: Array<Expr> // binary: [left, right]; unary: [operand]; call: args; lit/name: empty
+}
+
+record ExprParse {
+  expr: Expr
+  nextPos: Int          // index just past the last token consumed by this expression
+}
+
+// A structured statement node (folded from body-parser.lln, Milestone M-A).
 record Stmt {
+  kind: String         // "let" | "mut" | "assign" | "return" | "if" | "while" | "exprStmt"
+  name: String         // let/mut/assign target name; otherwise ""
+  typeName: String     // let/mut declared type (token after ':'); otherwise ""
+  expr: Array<Expr>    // 0 or 1 element: RHS / return value / if-while condition
+  body: Array<Stmt>    // if/while block statements (if: the then-block); otherwise empty
+  elseBody: Array<Stmt> // if: the else-block statements; otherwise empty
+}
+
+record StmtParse { stmt: Stmt, nextPos: Int }
+record BlockParse { stmts: Array<Stmt>, nextPos: Int }
+
+// A decomposed return expression — Phase S6 bridge to the self-hosted
+// type-checker.lln and gir-emitter.lln, which both consume exactly this shape.
+//   kind     : "literal" | "param" | "arith" | "compare"
+//   litType  : for literal/param, the static type ("Int"/"String"/"Bool"/"Unknown")
+//   leftType : for arith/compare, the type of the left operand
+//   rightType: for arith/compare, the type of the right operand
+// Unused fields are "" (empty string).
+record ReturnExpr {
   kind: String
-  value: String
+  litType: String
+  leftType: String
+  rightType: String
 }
 
 record FlowDecl {
@@ -43,7 +76,8 @@ record FlowDecl {
   params: Array<FlowParam>
   returnType: String
   effects: Array<String>
-  stmts: Array<Stmt>
+  body: Array<Stmt>
+  returnExpr: ReturnExpr
 }
 
 record ParseResult {
@@ -63,16 +97,163 @@ contract { intent { "Safely read token value at pos; empty string when out of bo
   }
 }
 
-pure flow isKw(tokens: Array<Token>, pos: Int) -> Bool
-contract { intent { "True when the token at pos is a Keyword token." } }
+// True when the token at pos is a Keyword token with the given value.
+// (folded from body-parser.lln; the old no-arg isKw was unused and removed.)
+pure flow isKw(tokens: Array<Token>, pos: Int, kw: String) -> Bool
+contract { intent { "True when the token at pos is a Keyword token with the given value." } }
 {
   let opt = tokens.get(pos)
   match opt {
     None => { return false }
     Some(tok) => {
       match tok.kind {
-        Keyword => { return true }
+        Keyword => { return tok.value == kw }
         _ => { return false }
+      }
+    }
+  }
+}
+
+// True when the token at pos is an Identifier token.
+pure flow isIdent(tokens: Array<Token>, pos: Int) -> Bool
+contract { intent { "True when the token at pos is an Identifier token." } }
+{
+  let opt = tokens.get(pos)
+  match opt {
+    None => { return false }
+    Some(tok) => {
+      match tok.kind {
+        Identifier => { return true }
+        _ => { return false }
+      }
+    }
+  }
+}
+
+// True when the token at pos is an Operator/Symbol token with the given value.
+pure flow isOpSym(tokens: Array<Token>, pos: Int, val: String) -> Bool
+contract { intent { "True when the token at pos is an Operator/Symbol token with the given value." } }
+{
+  let opt = tokens.get(pos)
+  match opt {
+    None => { return false }
+    Some(tok) => {
+      match tok.kind {
+        Operator => { return tok.value == val }
+        Symbol   => { return tok.value == val }
+        _        => { return false }
+      }
+    }
+  }
+}
+
+// True when the token at pos is a Newline token.
+pure flow isNewline(tokens: Array<Token>, pos: Int) -> Bool
+contract { intent { "True when the token at pos is a Newline token." } }
+{
+  let opt = tokens.get(pos)
+  match opt {
+    None => { return false }
+    Some(tok) => {
+      match tok.kind {
+        Newline => { return true }
+        _ => { return false }
+      }
+    }
+  }
+}
+
+// ── Return-expression decomposition (Phase S6) ───────────────
+
+// Classify a single operand token at `pos` into a static type name.
+//   NumberLiteral → "Int"
+//   StringLiteral → "String"
+//   true/false    → "Bool"  (Keyword tokens whose value is the literal)
+//   anything else → "Unknown"  (identifier / param reference)
+// Reads the token's TokenKind enum (match), mirroring isKw's pattern.
+pure flow classifyOperandType(tokens: Array<Token>, pos: Int) -> String
+contract { intent { "Map a return-operand token to its static type for arith/compare decomposition." } }
+{
+  let opt = tokens.get(pos)
+  match opt {
+    None => { return "Unknown" }
+    Some(tok) => {
+      match tok.kind {
+        NumberLiteral => { return "Int" }
+        StringLiteral => { return "String" }
+        Keyword => {
+          if tok.value == "true" { return "Bool" }
+          if tok.value == "false" { return "Bool" }
+          return "Unknown"
+        }
+        _ => { return "Unknown" }
+      }
+    }
+  }
+}
+
+// True when the operator value names a comparison operator (compare),
+// false when it names an arithmetic operator (arith).
+pure flow isCompareOp(op: String) -> Bool
+contract { intent { "Distinguish compare operators from arithmetic operators by value." } }
+{
+  if op == "==" { return true }
+  if op == "!=" { return true }
+  if op == "<"  { return true }
+  if op == ">"  { return true }
+  if op == "<=" { return true }
+  if op == ">=" { return true }
+  return false
+}
+
+// True when the operator value names an arithmetic operator.
+pure flow isArithOp(op: String) -> Bool
+contract { intent { "True when op is one of + - * / (arithmetic)." } }
+{
+  if op == "+" { return true }
+  if op == "-" { return true }
+  if op == "*" { return true }
+  if op == "/" { return true }
+  return false
+}
+
+// Decompose the return expression beginning at `startPos` (the first token
+// AFTER the `return` keyword) into a ReturnExpr record. Reads at most three
+// tokens: operand, optional operator, optional right operand.
+//   single literal       → { kind: "literal", litType: <type>, "", "" }
+//   single identifier    → { kind: "param",   litType: "Unknown", "", "" }
+//   X (+ - * /) Y        → { kind: "arith",   litType: "", leftType, rightType }
+//   X (== != < > <= >=) Y→ { kind: "compare", litType: "", leftType, rightType }
+pure flow decomposeReturn(tokens: Array<Token>, startPos: Int) -> ReturnExpr
+contract { intent { "Decompose a flow's return-expression tokens into the checker/emitter ReturnExpr shape." } }
+{
+  let opVal: String = tokVal(tokens, startPos + 1)
+  let binary: Bool = isArithOp(opVal) or isCompareOp(opVal)
+
+  if binary {
+    let leftType: String = classifyOperandType(tokens, startPos)
+    let rightType: String = classifyOperandType(tokens, startPos + 2)
+    if isCompareOp(opVal) {
+      return { kind: "compare", litType: "", leftType: leftType, rightType: rightType }
+    }
+    return { kind: "arith", litType: "", leftType: leftType, rightType: rightType }
+  }
+
+  // Single-operand return: literal or name reference.
+  let opt = tokens.get(startPos)
+  match opt {
+    None => { return { kind: "literal", litType: "Unknown", leftType: "", rightType: "" } }
+    Some(tok) => {
+      match tok.kind {
+        NumberLiteral => { return { kind: "literal", litType: "Int", leftType: "", rightType: "" } }
+        StringLiteral => { return { kind: "literal", litType: "String", leftType: "", rightType: "" } }
+        Keyword => {
+          if tok.value == "true" { return { kind: "literal", litType: "Bool", leftType: "", rightType: "" } }
+          if tok.value == "false" { return { kind: "literal", litType: "Bool", leftType: "", rightType: "" } }
+          return { kind: "param", litType: "Unknown", leftType: "", rightType: "" }
+        }
+        Identifier => { return { kind: "param", litType: "Unknown", leftType: "", rightType: "" } }
+        _ => { return { kind: "literal", litType: "Unknown", leftType: "", rightType: "" } }
       }
     }
   }
@@ -118,79 +299,520 @@ contract { intent { "Parse a parenthesised parameter list. Caller must advance p
   return params
 }
 
-// ── Body parser (Phase 46) ───────────────────────────────────
+// ════════════════════════════════════════════════════════════
+// BODY PARSER — full statement + expression AST (Milestone M-A)
+// Folded from body-parser.lln. parseBlock yields a nested Stmt/Expr AST.
+//
+// Expression cascade (LOW -> HIGH, each left-associative):
+//   parseExpr -> parseComparison (== != < > <= >=) -> parseAdditive (+ -)
+//             -> parseMultiplicative (* /) -> parsePrimary (lit/name/call/group)
+// ════════════════════════════════════════════════════════════
 
-// Parse a flow body from the opening "{" (exclusive — caller has already
-// advanced past the "{") to the matching "}".
-// Emits simplified Stmt records for top-level let/mut/return/call tokens.
-// Unknown tokens become { kind: "unknown", value: <token> }.
-// Nested braces (if/while/match sub-blocks) are skipped as a unit.
-pure flow parseBody(tokens: Array<Token>, startPos: Int, total: Int) -> Array<Stmt>
-contract {
-  intent { "Scan a brace-balanced body from startPos, emit simplified Stmt records." }
+// Token value at pos; "" when out of bounds.
+pure flow eTokVal(tokens: Array<Token>, pos: Int) -> String
+contract { intent { "Read token value at pos; empty string when out of bounds." } }
+{
+  let opt = tokens.get(pos)
+  match opt {
+    None => { return "" }
+    Some(tok) => { return tok.value }
+  }
 }
+
+// Skip leading Newline tokens; return the first non-Newline index >= pos.
+pure flow skipNewlines(tokens: Array<Token>, pos: Int) -> Int
+contract { intent { "Advance past Newline tokens; an expression does not span a newline." } }
+{
+  mut p: Int = pos
+  let total: Int = tokens.count()
+  mut scanning: Bool = true
+  while p < total and scanning {
+    let opt = tokens.get(p)
+    match opt {
+      None => { scanning = false }
+      Some(tok) => {
+        match tok.kind {
+          Newline => { p = p + 1 }
+          _ => { scanning = false }
+        }
+      }
+    }
+  }
+  return p
+}
+
+// True when the operator value names a comparison operator at this level.
+pure flow isCmpOp(op: String) -> Bool
+contract { intent { "Comparison operators: == != < > <= >=." } }
+{
+  if op == "==" { return true }
+  if op == "!=" { return true }
+  if op == "<"  { return true }
+  if op == ">"  { return true }
+  if op == "<=" { return true }
+  if op == ">=" { return true }
+  return false
+}
+
+// Parse an atom: literal, identifier (name or call), or parenthesised group.
+pure flow parsePrimary(tokens: Array<Token>, pos: Int) -> ExprParse
+contract { intent { "Parse a primary expression: literal, name, call, or ( group )." } }
+{
+  let p: Int = skipNewlines(tokens, pos)
+  let opt = tokens.get(p)
+  match opt {
+    None => {
+      return { expr: { kind: "name", value: "", litType: "", children: Array.empty() }, nextPos: p }
+    }
+    Some(tok) => {
+      match tok.kind {
+        NumberLiteral => {
+          return { expr: { kind: "lit", value: tok.value, litType: "Int", children: Array.empty() }, nextPos: p + 1 }
+        }
+        StringLiteral => {
+          return { expr: { kind: "lit", value: tok.value, litType: "String", children: Array.empty() }, nextPos: p + 1 }
+        }
+        Keyword => {
+          if tok.value == "true" {
+            return { expr: { kind: "lit", value: "true", litType: "Bool", children: Array.empty() }, nextPos: p + 1 }
+          }
+          if tok.value == "false" {
+            return { expr: { kind: "lit", value: "false", litType: "Bool", children: Array.empty() }, nextPos: p + 1 }
+          }
+          return { expr: { kind: "name", value: tok.value, litType: "", children: Array.empty() }, nextPos: p + 1 }
+        }
+        Identifier => {
+          if eTokVal(tokens, p + 1) == "(" {
+            return parseCallArgs(tokens, p + 1, tok.value)
+          }
+          return { expr: { kind: "name", value: tok.value, litType: "", children: Array.empty() }, nextPos: p + 1 }
+        }
+        Symbol => {
+          if tok.value == "(" {
+            let inner: ExprParse = parseExpr(tokens, p + 1)
+            let afterPos: Int = skipNewlines(tokens, inner.nextPos)
+            if eTokVal(tokens, afterPos) == ")" {
+              return { expr: inner.expr, nextPos: afterPos + 1 }
+            }
+            return { expr: inner.expr, nextPos: afterPos }
+          }
+          // Terminator tokens are NOT primaries — a dangling operator (`return a +`)
+          // must NOT consume the closing "}"/")"/"," (doing so swallowed a following
+          // flow). Return an empty node WITHOUT advancing so the caller stops here.
+          if tok.value == "}" or tok.value == ")" or tok.value == "," {
+            return { expr: { kind: "name", value: "", litType: "", children: Array.empty() }, nextPos: p }
+          }
+          return { expr: { kind: "name", value: tok.value, litType: "", children: Array.empty() }, nextPos: p + 1 }
+        }
+        _ => {
+          return { expr: { kind: "name", value: tok.value, litType: "", children: Array.empty() }, nextPos: p + 1 }
+        }
+      }
+    }
+  }
+}
+
+// Parse comma-separated argument expressions of a call. `lparenPos` points at the
+// "(" Symbol; `callee` is the identifier name preceding it.
+pure flow parseCallArgs(tokens: Array<Token>, lparenPos: Int, callee: String) -> ExprParse
+contract { intent { "Parse comma-separated call arguments from '(' to ')'." } }
+{
+  let total: Int = tokens.count()
+  mut args: Array<Expr> = Array.empty()
+  mut p: Int = lparenPos + 1
+  mut scanning: Bool = true
+
+  let firstTok: String = eTokVal(tokens, skipNewlines(tokens, p))
+  if firstTok == ")" {
+    p = skipNewlines(tokens, p) + 1
+    scanning = false
+  }
+
+  while scanning and p < total {
+    let argParse: ExprParse = parseExpr(tokens, p)
+    args = args.append(argParse.expr)
+    let afterArg: Int = skipNewlines(tokens, argParse.nextPos)
+    let sep: String = eTokVal(tokens, afterArg)
+    if sep == "," {
+      p = afterArg + 1
+    }
+    if sep == ")" {
+      p = afterArg + 1
+      scanning = false
+    }
+    let isSep: Bool = sep == "," or sep == ")"
+    if isSep == false {
+      p = afterArg
+      scanning = false
+    }
+  }
+
+  return { expr: { kind: "call", value: callee, litType: "", children: args }, nextPos: p }
+}
+
+// Unary prefix operators bind tighter than * / : `!x`, `-x` (and `--x` / `!!x`
+// via the recursive call). "!" lowers to value "not", "-" to value "neg".
+pure flow parseUnary(tokens: Array<Token>, pos: Int) -> ExprParse
+contract { intent { "Parse unary prefix operators ! and - over parsePrimary." } }
+{
+  let p: Int = skipNewlines(tokens, pos)
+  let op: String = eTokVal(tokens, p)
+  if op == "!" {
+    let operand: ExprParse = parseUnary(tokens, p + 1)
+    mut kids: Array<Expr> = Array.empty()
+    kids = kids.append(operand.expr)
+    return { expr: { kind: "unary", value: "not", litType: "", children: kids }, nextPos: operand.nextPos }
+  }
+  if op == "-" {
+    let operand: ExprParse = parseUnary(tokens, p + 1)
+    mut kids: Array<Expr> = Array.empty()
+    kids = kids.append(operand.expr)
+    return { expr: { kind: "unary", value: "neg", litType: "", children: kids }, nextPos: operand.nextPos }
+  }
+  return parsePrimary(tokens, p)
+}
+
+pure flow parseMultiplicative(tokens: Array<Token>, pos: Int) -> ExprParse
+contract { intent { "Left-associative * and / over parseUnary." } }
+{
+  let total: Int = tokens.count()
+  let firstParse: ExprParse = parseUnary(tokens, pos)
+  mut left: Expr = firstParse.expr
+  mut p: Int = firstParse.nextPos
+  mut scanning: Bool = true
+
+  while scanning and p < total {
+    let opPos: Int = skipNewlines(tokens, p)
+    let op: String = eTokVal(tokens, opPos)
+    if op == "*" or op == "/" {
+      let rightParse: ExprParse = parseUnary(tokens, opPos + 1)
+      let kids: Array<Expr> = makePair(left, rightParse.expr)
+      left = { kind: "binary", value: op, litType: "", children: kids }
+      p = rightParse.nextPos
+    }
+    else {
+      scanning = false
+    }
+  }
+
+  return { expr: left, nextPos: p }
+}
+
+pure flow parseAdditive(tokens: Array<Token>, pos: Int) -> ExprParse
+contract { intent { "Left-associative + and - over parseMultiplicative." } }
+{
+  let total: Int = tokens.count()
+  let firstParse: ExprParse = parseMultiplicative(tokens, pos)
+  mut left: Expr = firstParse.expr
+  mut p: Int = firstParse.nextPos
+  mut scanning: Bool = true
+
+  while scanning and p < total {
+    let opPos: Int = skipNewlines(tokens, p)
+    let op: String = eTokVal(tokens, opPos)
+    if op == "+" or op == "-" {
+      let rightParse: ExprParse = parseMultiplicative(tokens, opPos + 1)
+      let kids: Array<Expr> = makePair(left, rightParse.expr)
+      left = { kind: "binary", value: op, litType: "", children: kids }
+      p = rightParse.nextPos
+    }
+    else {
+      scanning = false
+    }
+  }
+
+  return { expr: left, nextPos: p }
+}
+
+pure flow parseComparison(tokens: Array<Token>, pos: Int) -> ExprParse
+contract { intent { "Left-associative comparison operators over parseAdditive." } }
+{
+  let total: Int = tokens.count()
+  let firstParse: ExprParse = parseAdditive(tokens, pos)
+  mut left: Expr = firstParse.expr
+  mut p: Int = firstParse.nextPos
+  mut scanning: Bool = true
+
+  while scanning and p < total {
+    let opPos: Int = skipNewlines(tokens, p)
+    let op: String = eTokVal(tokens, opPos)
+    if isCmpOp(op) {
+      let rightParse: ExprParse = parseAdditive(tokens, opPos + 1)
+      let kids: Array<Expr> = makePair(left, rightParse.expr)
+      left = { kind: "binary", value: op, litType: "", children: kids }
+      p = rightParse.nextPos
+    }
+    else {
+      scanning = false
+    }
+  }
+
+  return { expr: left, nextPos: p }
+}
+
+// Logical and/or — the lowest-precedence level, below comparison. `and`/`or` are
+// Keyword tokens. They share ONE left-associative level (no precedence between them),
+// so `a or b and c` parses as `(a or b) and c` (left-fold), matching the Stage-A
+// parser's treatment of and/or at a single level.
+pure flow parseLogical(tokens: Array<Token>, pos: Int) -> ExprParse
+contract { intent { "Left-associative logical and/or over parseComparison." } }
+{
+  let total: Int = tokens.count()
+  let firstParse: ExprParse = parseComparison(tokens, pos)
+  mut left: Expr = firstParse.expr
+  mut p: Int = firstParse.nextPos
+  mut scanning: Bool = true
+
+  while scanning and p < total {
+    let opPos: Int = skipNewlines(tokens, p)
+    let op: String = eTokVal(tokens, opPos)
+    if op == "and" or op == "or" {
+      let rightParse: ExprParse = parseComparison(tokens, opPos + 1)
+      let kids: Array<Expr> = makePair(left, rightParse.expr)
+      left = { kind: "binary", value: op, litType: "", children: kids }
+      p = rightParse.nextPos
+    }
+    else {
+      scanning = false
+    }
+  }
+
+  return { expr: left, nextPos: p }
+}
+
+pure flow parseExpr(tokens: Array<Token>, pos: Int) -> ExprParse
+contract { intent { "Parse a full expression by recursive descent from the lowest-precedence level." } }
+{
+  return parseLogical(tokens, pos)
+}
+
+pure flow makePair(a: Expr, b: Expr) -> Array<Expr>
+contract { intent { "Build the [left, right] children array for a binary node." } }
+{
+  mut out: Array<Expr> = Array.empty()
+  out = out.append(a)
+  out = out.append(b)
+  return out
+}
+
+// Parse a single statement beginning at `pos`. EVERY expression position is
+// routed through the real parseExpr and the cursor is advanced to its nextPos.
+pure flow parseStmt(tokens: Array<Token>, pos: Int) -> StmtParse
+contract { intent { "Parse one statement; dispatch on the leading token kind/value." } }
+{
+  let kwLet: Bool = isKw(tokens, pos, "let")
+  let kwMut: Bool = isKw(tokens, pos, "mut")
+  if kwLet or kwMut {
+    mut kind: String = "let"
+    if kwMut { kind = "mut" }
+    let name: String = tokVal(tokens, pos + 1)
+
+    mut typeName: String = ""
+    mut p: Int = pos + 2
+    if isOpSym(tokens, p, ":") {
+      typeName = tokVal(tokens, p + 1)
+      p = p + 2
+    }
+
+    if isOpSym(tokens, p, "=") {
+      p = p + 1
+    }
+    let rhs: ExprParse = parseExpr(tokens, p)
+    let stmt: Stmt = {
+      kind: kind,
+      name: name,
+      typeName: typeName,
+      expr: [rhs.expr],
+      body: Array.empty(),
+      elseBody: Array.empty()
+    }
+    return { stmt: stmt, nextPos: rhs.nextPos }
+  }
+
+  if isKw(tokens, pos, "return") {
+    let after: Int = pos + 1
+    let endsStmt: Bool = isNewline(tokens, after) or isOpSym(tokens, after, "}") or tokVal(tokens, after) == ""
+    if endsStmt {
+      let stmt: Stmt = { kind: "return", name: "", typeName: "", expr: Array.empty(), body: Array.empty(), elseBody: Array.empty() }
+      return { stmt: stmt, nextPos: after }
+    }
+    let rv: ExprParse = parseExpr(tokens, after)
+    let stmt: Stmt = { kind: "return", name: "", typeName: "", expr: [rv.expr], body: Array.empty(), elseBody: Array.empty() }
+    return { stmt: stmt, nextPos: rv.nextPos }
+  }
+
+  if isKw(tokens, pos, "if") {
+    let cond: ExprParse = parseExpr(tokens, pos + 1)
+    mut p: Int = cond.nextPos
+    while isNewline(tokens, p) {
+      p = p + 1
+    }
+    mut blk: BlockParse = { stmts: Array.empty(), nextPos: p }
+    if isOpSym(tokens, p, "{") {
+      blk = parseBlock(tokens, p + 1)
+    }
+    // Optional `else { ... }` — skip newlines, then look for the `else` keyword
+    // followed by `{`. LogicN bans chained `else if`, so only `else { ... }` here.
+    mut elseStmts: Array<Stmt> = Array.empty()
+    mut endPos: Int = blk.nextPos
+    mut q: Int = blk.nextPos
+    while isNewline(tokens, q) {
+      q = q + 1
+    }
+    if isKw(tokens, q, "else") {
+      mut r: Int = q + 1
+      while isNewline(tokens, r) {
+        r = r + 1
+      }
+      if isOpSym(tokens, r, "{") {
+        let elseBlk: BlockParse = parseBlock(tokens, r + 1)
+        elseStmts = elseBlk.stmts
+        endPos = elseBlk.nextPos
+      }
+    }
+    let stmt: Stmt = {
+      kind: "if",
+      name: "",
+      typeName: "",
+      expr: [cond.expr],
+      body: blk.stmts,
+      elseBody: elseStmts
+    }
+    return { stmt: stmt, nextPos: endPos }
+  }
+
+  if isKw(tokens, pos, "while") {
+    let cond: ExprParse = parseExpr(tokens, pos + 1)
+    mut p: Int = cond.nextPos
+    while isNewline(tokens, p) {
+      p = p + 1
+    }
+    mut blk: BlockParse = { stmts: Array.empty(), nextPos: p }
+    if isOpSym(tokens, p, "{") {
+      blk = parseBlock(tokens, p + 1)
+    }
+    let stmt: Stmt = {
+      kind: "while",
+      name: "",
+      typeName: "",
+      expr: [cond.expr],
+      body: blk.stmts,
+      elseBody: Array.empty()
+    }
+    return { stmt: stmt, nextPos: blk.nextPos }
+  }
+
+  let assignTarget: Bool = isIdent(tokens, pos) and isOpSym(tokens, pos + 1, "=")
+  if assignTarget {
+    let name: String = tokVal(tokens, pos)
+    let rhs: ExprParse = parseExpr(tokens, pos + 2)
+    let stmt: Stmt = {
+      kind: "assign",
+      name: name,
+      typeName: "",
+      expr: [rhs.expr],
+      body: Array.empty(),
+      elseBody: Array.empty()
+    }
+    return { stmt: stmt, nextPos: rhs.nextPos }
+  }
+
+  let ep: ExprParse = parseExpr(tokens, pos)
+  mut next: Int = ep.nextPos
+  if next <= pos {
+    next = pos + 1
+  }
+  let stmt: Stmt = {
+    kind: "exprStmt",
+    name: "",
+    typeName: "",
+    expr: [ep.expr],
+    body: Array.empty(),
+    elseBody: Array.empty()
+  }
+  return { stmt: stmt, nextPos: next }
+}
+
+// Parse a brace-delimited block. `pos` points at the token JUST AFTER the opening
+// "{". Parse statements until the matching "}", skipping Newline tokens between
+// statements. nextPos is just past the closing "}".
+pure flow parseBlock(tokens: Array<Token>, pos: Int) -> BlockParse
+contract { intent { "Parse statements until the matching closing brace; skip newlines between statements." } }
 {
   mut stmts: Array<Stmt> = Array.empty()
+  mut p: Int = pos
+  let total: Int = tokens.count()
+  mut scanning: Bool = true
+
+  while p < total and scanning {
+    if isNewline(tokens, p) {
+      p = p + 1
+    }
+    else {
+      if isOpSym(tokens, p, "}") {
+        p = p + 1
+        scanning = false
+      }
+      else {
+        if tokVal(tokens, p) == "" {
+          scanning = false
+        }
+        else {
+          let sp: StmtParse = parseStmt(tokens, p)
+          stmts = stmts.append(sp.stmt)
+          mut np: Int = sp.nextPos
+          if np <= p {
+            np = p + 1
+          }
+          p = np
+        }
+      }
+    }
+  }
+
+  return { stmts: stmts, nextPos: p }
+}
+
+// Scan a brace-balanced body (from startPos, just past the opening "{") for the
+// first TOP-LEVEL `return` statement and decompose its expression. Returns the
+// default sentinel { kind: "literal", litType: "Unknown", "", "" } when the body
+// has no top-level return. Nested sub-blocks (depth > 1) are ignored.
+pure flow findReturnExpr(tokens: Array<Token>, startPos: Int, total: Int) -> ReturnExpr
+contract {
+  intent { "Locate the first top-level return in a body and decompose it to a ReturnExpr." }
+}
+{
+  mut result: ReturnExpr = { kind: "literal", litType: "Unknown", leftType: "", rightType: "" }
   mut p: Int = startPos
   mut depth: Int = 1
+  mut scanning: Bool = true
 
-  while p < total and depth > 0 {
+  while p < total and depth > 0 and scanning {
     let tv = tokVal(tokens, p)
 
-    // Closing brace — dedent
     if tv == "}" {
       depth = depth - 1
       p = p + 1
     }
-
-    // Opening brace (nested block) — skip entire sub-block
     if tv == "{" and depth > 0 {
       depth = depth + 1
       p = p + 1
     }
-
-    // let statement: let name = ...  (value = name being bound)
-    if tv == "let" and depth == 1 {
-      let name = tokVal(tokens, p + 1)
-      stmts = stmts.append({ kind: "let", value: name })
-      p = p + 2
+    let isTopReturn: Bool = tv == "return" and depth == 1
+    if isTopReturn {
+      result = decomposeReturn(tokens, p + 1)
+      scanning = false
     }
-
-    // mut statement: mut name = ...  (value = name being bound)
-    if tv == "mut" and depth == 1 {
-      let name = tokVal(tokens, p + 1)
-      stmts = stmts.append({ kind: "mut", value: name })
-      p = p + 2
+    // Plain advance for any token not consumed by the structural handlers above.
+    // "{" and "}" advance p themselves; a top-level "return" stops the scan.
+    let isStructural: Bool = tv == "}" or tv == "{" or isTopReturn or tv == ""
+    if isStructural == false {
+      p = p + 1
     }
-
-    // return statement: return <expr>  (value = first token of expr)
-    if tv == "return" and depth == 1 {
-      let expr = tokVal(tokens, p + 1)
-      stmts = stmts.append({ kind: "return", value: expr })
-      p = p + 2
-    }
-
-    // Detect standalone identifiers followed by "(" — call statements
-    let isKeywordOrBrace: Bool = tv == "let" or tv == "mut" or tv == "return" or tv == "{" or tv == "}" or tv == ""
-    if isKeywordOrBrace == false and depth == 1 {
-      let next = tokVal(tokens, p + 1)
-      if next == "(" {
-        stmts = stmts.append({ kind: "call", value: tv })
-        p = p + 1
-      }
-      if next != "(" {
-        p = p + 1
-      }
-    }
-
-    // Advance when depth == 0 (loop condition will exit)
-    if depth == 0 { p = p + 0 }
-
-    // Guard against empty string (EOF inside body)
-    if tv == "" { depth = 0 }
+    if tv == "" { scanning = false }
   }
 
-  return stmts
+  return result
 }
 
 // ── Main parser flow ─────────────────────────────────────────
@@ -283,19 +905,18 @@ contract {
           }
         }
 
-        // Parse body block — Phase 46: collect Stmt records instead of just skipping.
+        // Parse body block — Milestone M-A: build the full structured Stmt/Expr
+        // AST via parseBlock (folded from body-parser.lln). parseBlock returns the
+        // statement list AND the cursor position just past the closing "}".
+        // Phase S6: also decompose the first top-level return into a ReturnExpr
+        // (back-compat; type-checker.lln + gir-emitter.lln still consume it).
         mut bodyStmts: Array<Stmt> = Array.empty()
+        mut returnExpr: ReturnExpr = { kind: "literal", litType: "Unknown", leftType: "", rightType: "" }
         if tokVal(tokens, p) == "{" {
-          p = p + 1
-          bodyStmts = parseBody(tokens, p, total)
-          // Advance p past the body by brace-counting (parseBody does not mutate p)
-          mut depth: Int = 1
-          while p < total and depth > 0 {
-            let bv = tokVal(tokens, p)
-            if bv == "{" { depth = depth + 1 }
-            if bv == "}" { depth = depth - 1 }
-            p = p + 1
-          }
+          returnExpr = findReturnExpr(tokens, p + 1, total)
+          let blk: BlockParse = parseBlock(tokens, p + 1)
+          bodyStmts = blk.stmts
+          p = blk.nextPos
         }
 
         flows = flows.append({
@@ -304,7 +925,8 @@ contract {
           params: params,
           returnType: returnType,
           effects: efx,
-          stmts: bodyStmts
+          body: bodyStmts,
+          returnExpr: returnExpr
         })
         pos = p
       }

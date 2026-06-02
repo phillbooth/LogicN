@@ -6,9 +6,14 @@ enum ReviewScale {
 }
 
 secure flow reviewScaleDecision(score: Decision) -> ReviewScale {
+  contract {
+    intent {
+      "Map a governed order decision onto the review-scale outcome."
+    }
+  }
   match score {
     Deny   => Reject
     Review => Escalate
-    ALOw   => Approve
+    Allow  => Approve
   }
 }

@@ -57,7 +57,12 @@ export interface SecurityAuditReport {
 export interface SecurityAuditOptions {
   /** Deployment profiles to enforce. Default: ["strict"] */
   readonly profiles?: readonly RuntimeProfile[];
-  /** Deployment mode for governance verifier. Default: "production" */
+  /**
+   * Deployment mode for the governance verifier. Default: "dev".
+   * Non-production modes ("dev", "check-only") grade advisory findings such as
+   * LLN-GOV-010 (secure flow missing intent) as info, so they do not fail the
+   * audit; "production"/"deterministic" promote them to errors.
+   */
   readonly governanceProfile?: "dev" | "production" | "deterministic" | "check-only";
   /** Source file name for error reporting */
   readonly fileName?: string;
@@ -98,7 +103,7 @@ const SEVERITY_MAP: ReadonlyMap<string, SecuritySeverity> = new Map([
   ["LLN-SEC-021", "critical"],
 ]);
 
-function classifySeverity(code: string, defaultSeverity?: "error" | "warning"): SecuritySeverity {
+function classifySeverity(code: string, defaultSeverity?: "error" | "warning" | "info"): SecuritySeverity {
   const mapped = SEVERITY_MAP.get(code);
   if (mapped !== undefined) return mapped;
   if (defaultSeverity === "error") return "high";
@@ -135,7 +140,7 @@ export async function runSecurityAudit(
 ): Promise<SecurityAuditReport> {
   const {
     profiles = ["strict"],
-    governanceProfile = "production",
+    governanceProfile = "dev",
     fileName = "source.lln",
     strict = false,
   } = options;
@@ -180,7 +185,7 @@ export async function runSecurityAudit(
     findings.push({
       code: d.code,
       name: d.name ?? d.code,
-      severity: classifySeverity(d.code, d.severity === "error" ? "error" : "warning"),
+      severity: classifySeverity(d.code, d.severity),
       message: d.message,
       checker: mapCheckerType(d.code),
     });

@@ -11,7 +11,7 @@ import {
   type ProjectGraph,
   type ProjectGraphWorkspaceConfig,
   type ProjectGraphWorkspaceFile,
-} from "../../logicn-devtools-project-graph/dist/index.js";
+} from "../../logicn-devtools-graph-project/dist/index.js";
 import type { CliContext, CliResult } from "./types.js";
 
 interface WorkspaceConfig {

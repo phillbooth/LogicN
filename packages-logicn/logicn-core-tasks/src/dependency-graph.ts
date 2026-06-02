@@ -5,7 +5,7 @@
 // Public interface is unchanged from the original hand-written DFS version.
 // =============================================================================
 
-import { GraphBuilder, resolveDependencies as llnResolveDependencies } from "lln-graph";
+import { GraphBuilder, resolveDependencies as llnResolveDependencies } from "@logicn/devtools-project-graph";
 import type { LoadedTasks } from "./load-tasks.js";
 import type { TaskDefinition, TaskError } from "./types.js";
 

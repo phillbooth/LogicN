@@ -167,6 +167,189 @@ contract {
   return [digits, i.toString()]
 }
 
+// ── scanString: read a "..." string literal starting at the opening quote ─────
+// startPos points at the opening '"'. Returns [value, endPos] where value is the
+// UNQUOTED content and endPos is the index just past the closing '"'.
+// A backslash (codePoint 92) escapes the next char so an escaped quote does not
+// terminate the string. The backslash+escaped char are both kept in value
+// (LogicN string escapes are pass-through, so this mirrors the raw source text).
+pure flow scanString(source: String, startPos: Int, srcLen: Int) -> Array<String>
+contract {
+  intent { "Scan a double-quoted string literal at startPos. Returns [unquotedValue, endPos] as strings." }
+}
+{
+  mut i = startPos + 1            // skip opening quote
+  mut value: String = ""
+  mut done = false
+  while i < srcLen and done == false {
+    let opt: Option<Char> = source.charAt(i)
+    match opt {
+      None => {
+        done = true
+      }
+      Some(nc) => {
+        if nc.codePoint() == 92 {
+          // backslash escape: keep it plus the following char (if any)
+          value = value + nc.toString()
+          i = i + 1
+          let opt2: Option<Char> = source.charAt(i)
+          match opt2 {
+            None => {
+              done = true
+            }
+            Some(ec) => {
+              value = value + ec.toString()
+              i = i + 1
+            }
+          }
+        }
+        else {
+          if nc is '"' {
+            i = i + 1            // consume closing quote
+            done = true
+          }
+          else {
+            value = value + nc.toString()
+            i = i + 1
+          }
+        }
+      }
+    }
+  }
+  return [value, i.toString()]
+}
+
+// ── scanCharLit: read a '...' char literal starting at the opening quote ───────
+// startPos points at the opening single quote (codePoint 39). Returns
+// [value, endPos] where value is the UNQUOTED content and endPos is just past the
+// closing quote. Backslash (92) escapes the next char (so '\'' would not end early).
+pure flow scanCharLit(source: String, startPos: Int, srcLen: Int) -> Array<String>
+contract {
+  intent { "Scan a single-quoted char literal at startPos. Returns [unquotedValue, endPos] as strings." }
+}
+{
+  mut i = startPos + 1            // skip opening quote
+  mut value: String = ""
+  mut done = false
+  while i < srcLen and done == false {
+    let opt: Option<Char> = source.charAt(i)
+    match opt {
+      None => {
+        done = true
+      }
+      Some(nc) => {
+        if nc.codePoint() == 92 {
+          value = value + nc.toString()
+          i = i + 1
+          let opt2: Option<Char> = source.charAt(i)
+          match opt2 {
+            None => {
+              done = true
+            }
+            Some(ec) => {
+              value = value + ec.toString()
+              i = i + 1
+            }
+          }
+        }
+        else {
+          if nc.codePoint() == 39 {
+            i = i + 1            // consume closing quote
+            done = true
+          }
+          else {
+            value = value + nc.toString()
+            i = i + 1
+          }
+        }
+      }
+    }
+  }
+  return [value, i.toString()]
+}
+
+// ── scanLineComment: read a // line comment to (but not including) the newline ─
+// startPos points at the first '/'. Returns [value, endPos]; value includes the
+// leading "//". endPos stops before the '\n' so the newline handler still fires.
+pure flow scanLineComment(source: String, startPos: Int, srcLen: Int) -> Array<String>
+contract {
+  intent { "Scan a // line comment at startPos to end of line. Returns [text, endPos] as strings." }
+}
+{
+  mut i = startPos
+  mut value: String = ""
+  mut done = false
+  while i < srcLen and done == false {
+    let opt: Option<Char> = source.charAt(i)
+    match opt {
+      None => {
+        done = true
+      }
+      Some(nc) => {
+        if nc is '\n' {
+          done = true
+        }
+        else {
+          value = value + nc.toString()
+          i = i + 1
+        }
+      }
+    }
+  }
+  return [value, i.toString()]
+}
+
+// ── scanBlockComment: read a /* ... */ block comment ──────────────────────────
+// startPos points at the first '/'. Returns [value, endPos]; value includes the
+// full "/* ... */" text. May span newlines. If the terminator never arrives the
+// scan stops at EOF (no infinite loop). Detection of the closing "*/" uses a
+// two-char lookahead, mirroring scanOperator.
+pure flow scanBlockComment(source: String, startPos: Int, srcLen: Int) -> Array<String>
+contract {
+  intent { "Scan a /* */ block comment at startPos through its terminator (or EOF). Returns [text, endPos] as strings." }
+}
+{
+  mut i = startPos + 2           // skip opening "/*"
+  mut value: String = "/*"
+  mut done = false
+  while i < srcLen and done == false {
+    let opt: Option<Char> = source.charAt(i)
+    match opt {
+      None => {
+        done = true
+      }
+      Some(nc) => {
+        if nc is '*' {
+          let optB: Option<Char> = source.charAt(i + 1)
+          match optB {
+            None => {
+              value = value + nc.toString()
+              i = i + 1
+              done = true
+            }
+            Some(cb) => {
+              if cb is '/' {
+                value = value + "*/"
+                i = i + 2
+                done = true
+              }
+              else {
+                value = value + nc.toString()
+                i = i + 1
+              }
+            }
+          }
+        }
+        else {
+          value = value + nc.toString()
+          i = i + 1
+        }
+      }
+    }
+  }
+  return [value, i.toString()]
+}
+
 // ── Main lexer flow ─────────────────────────────────────────
 
 guarded flow tokenize(source: String) -> TokenizeResult
@@ -217,6 +400,7 @@ contract {
         }
         if handled == false {
         if c is '\r' {
+          col = col + 1
           pos = pos + 1
           handled = true
         }
@@ -231,6 +415,99 @@ contract {
           col = 1
           pos = pos + 1
           handled = true
+        }
+        }
+        // ── String / char / comment interception (BEFORE scanOperator) ────────
+        // scanOperator treats // and /* as two-char operators, so these must be
+        // caught first or "// hi" would emit an Operator(//) and "text" an Ident.
+        if handled == false {
+        if c is '"' {
+          let startPosS = pos
+          let startLineS = line
+          let startColS = col
+          let resS = scanString(source, pos, srcLen)
+          let valS = resS.first().unwrapOr("")
+          let endPosStrS = resS.last().unwrapOr((pos + 1).toString())
+          let endPosS = endPosStrS.toInt().unwrapOr(pos + 1)
+          col = col + (endPosS - startPosS)
+          pos = endPosS
+          tokens = tokens.append({ kind: TokenKind.StringLiteral, value: valS, line: startLineS, column: startColS, endLine: line, endColumn: col, start: startPosS, end: pos })
+          handled = true
+        }
+        }
+        if handled == false {
+        if c.codePoint() == 39 {
+          let startPosC = pos
+          let startLineC = line
+          let startColC = col
+          let resC = scanCharLit(source, pos, srcLen)
+          let valC = resC.first().unwrapOr("")
+          let endPosStrC = resC.last().unwrapOr((pos + 1).toString())
+          let endPosC = endPosStrC.toInt().unwrapOr(pos + 1)
+          col = col + (endPosC - startPosC)
+          pos = endPosC
+          tokens = tokens.append({ kind: TokenKind.CharLiteral, value: valC, line: startLineC, column: startColC, endLine: line, endColumn: col, start: startPosC, end: pos })
+          handled = true
+        }
+        }
+        if handled == false {
+        if c is '/' {
+          // Peek the next char to distinguish // and /* from a bare / operator.
+          let optN: Option<Char> = source.charAt(pos + 1)
+          match optN {
+            None => {
+              // lone '/' at EOF — leave to scanOperator path below
+            }
+            Some(cn) => {
+              if cn is '/' {
+                let startPosL = pos
+                let startLineL = line
+                let startColL = col
+                let resL = scanLineComment(source, pos, srcLen)
+                let valL = resL.first().unwrapOr("")
+                let endPosStrL = resL.last().unwrapOr((pos + 1).toString())
+                let endPosL = endPosStrL.toInt().unwrapOr(pos + 1)
+                col = col + (endPosL - startPosL)
+                pos = endPosL
+                tokens = tokens.append({ kind: TokenKind.Comment, value: valL, line: startLineL, column: startColL, endLine: line, endColumn: col, start: startPosL, end: pos })
+                handled = true
+              }
+              if cn is '*' {
+                let startPosB = pos
+                let startLineB = line
+                let startColB = col
+                let resB = scanBlockComment(source, pos, srcLen)
+                let valB = resB.first().unwrapOr("")
+                let endPosStrB = resB.last().unwrapOr((pos + 1).toString())
+                let endPosB = endPosStrB.toInt().unwrapOr(pos + 1)
+                // Count internal newlines so line/col stay correct across the comment.
+                mut k = startPosB
+                mut curCol = startColB
+                while k < endPosB {
+                  let optK: Option<Char> = source.charAt(k)
+                  match optK {
+                    None => {
+                      k = endPosB
+                    }
+                    Some(ck) => {
+                      if ck is '\n' {
+                        line = line + 1
+                        curCol = 1
+                      }
+                      else {
+                        curCol = curCol + 1
+                      }
+                      k = k + 1
+                    }
+                  }
+                }
+                col = curCol
+                pos = endPosB
+                tokens = tokens.append({ kind: TokenKind.Comment, value: valB, line: startLineB, column: startColB, endLine: line, endColumn: col, start: startPosB, end: pos })
+                handled = true
+              }
+            }
+          }
         }
         }
         if handled == false {

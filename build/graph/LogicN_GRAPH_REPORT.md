@@ -1,15 +1,15 @@
 # LogicN Graph Report
 
 Workspace: LogicN-app
-Generated: 2026-05-30T13:38:24.864Z
+Generated: 2026-06-02T16:22:31.870Z
 
 ## Summary
 
 - Packages: 54
-- Documents: 1027
-- Types/interfaces: 609
-- Functions: 265
-- Relationships: 2801
+- Documents: 1358
+- Types/interfaces: 910
+- Functions: 417
+- Relationships: 3488
 
 ## Package Nodes
 
@@ -65,7 +65,7 @@ Generated: 2026-05-30T13:38:24.864Z
 - logicn-core-cli (packages-logicn/logicn-core-cli/README.md)
 - logicn-core-tasks (packages-logicn/logicn-core-tasks/README.md)
 - logicn-tools-benchmark (packages-logicn/logicn-tools-benchmark/README.md)
-- logicn-devtools-project-graph (packages-logicn/logicn-devtools-project-graph/README.md)
+- logicn-devtools-graph-project (packages-logicn/logicn-devtools-graph-project/README.md)
 - logicn-framework-example-app (packages-logicn/logicn-framework-example-app/README.md)
 
 ## High-Signal Questions

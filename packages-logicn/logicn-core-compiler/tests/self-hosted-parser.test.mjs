@@ -20,7 +20,9 @@
 //   - Constructs parsed: parameter lists (readonly and plain)
 //   - Constructs parsed: return type annotation (split "-" ">" tokens)
 //   - Constructs parsed: with effects [...] clause (dotted names)
-//   - Constructs parsed: shallow body brace-skipping
+//   - Constructs parsed: full structured body AST (Milestone M-A — the former
+//     body-parser.lln folded in: parseFlows yields FlowDecl.body as nested
+//     Stmt/Expr nodes via parseBlock, alongside the back-compat returnExpr)
 // =============================================================================
 
 import assert from "node:assert/strict";
@@ -118,6 +120,54 @@ function paramsList(flowDecl) {
     typeName:   strField(item, "typeName"),
     isReadonly: strField(item, "isReadonly"),
   }));
+}
+
+/**
+ * Extract the decomposed returnExpr record from a FlowDecl.
+ * Shape (Phase S6, matching type-checker.lln + gir-emitter.lln):
+ *   { kind, litType, leftType, rightType } — all strings.
+ */
+function returnExpr(flowDecl) {
+  const re = flowDecl.fields.get("returnExpr");
+  assert.equal(re?.__tag, "record", "FlowDecl.returnExpr must be a record");
+  return {
+    kind:      strField(re, "kind"),
+    litType:   strField(re, "litType"),
+    leftType:  strField(re, "leftType"),
+    rightType: strField(re, "rightType"),
+  };
+}
+
+// --- Full body AST readers (Milestone M-A: parseFlows now returns FlowDecl.body
+// as a nested Stmt/Expr AST, folded from the former body-parser.lln). These
+// mirror the .lln record shapes (Stmt { kind, name, typeName, expr, body },
+// Expr { kind, value, litType, children }). ---
+function readExpr(node) {
+  const x = node.value ?? node;
+  const kids = x.fields.get("children").items.map(readExpr);
+  return {
+    kind:    x.fields.get("kind").value,
+    value:   x.fields.get("value").value,
+    litType: x.fields.get("litType").value,
+    children: kids,
+  };
+}
+function readStmt(node) {
+  const x = node.value ?? node;
+  return {
+    kind:     x.fields.get("kind").value,
+    name:     x.fields.get("name").value,
+    typeName: x.fields.get("typeName").value,
+    expr:     x.fields.get("expr").items.map(readExpr),
+    body:     x.fields.get("body").items.map(readStmt),
+  };
+}
+
+/** Extract the structured body (Array<Stmt>) from a FlowDecl. */
+function bodyList(flowDecl) {
+  const b = flowDecl.fields.get("body");
+  assert.equal(b?.__tag, "list", "FlowDecl.body must be a list");
+  return b.items.map(readStmt);
 }
 
 // ---------------------------------------------------------------------------
@@ -409,6 +459,239 @@ describe("Self-Hosted Parser — body brace skipping", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Section 8b: decomposed return expression (Phase S6)
+//
+// The parser decomposes each flow's first top-level return into a
+// returnExpr record { kind, litType, leftType, rightType } that exactly
+// matches what self-hosted type-checker.lln and gir-emitter.lln consume.
+//   kind ∈ "literal" | "param" | "arith" | "compare"
+// ---------------------------------------------------------------------------
+
+describe("Self-Hosted Parser — decomposed returnExpr (Phase S6)", () => {
+
+  it("FlowDecl carries a returnExpr record", async () => {
+    const result = await pipeline('pure flow f() -> Int { return 42 }');
+    const [flow] = flowsList(result);
+    assert.equal(flow.fields.get("returnExpr")?.__tag, "record");
+  });
+
+  it("single NumberLiteral return → literal/Int", async () => {
+    const result = await pipeline('pure flow f() -> Int { return 42 }');
+    const [flow] = flowsList(result);
+    assert.deepEqual(returnExpr(flow), {
+      kind: "literal", litType: "Int", leftType: "", rightType: "",
+    });
+  });
+
+  it("single StringLiteral return → literal/String", async () => {
+    const result = await pipeline('pure flow f() -> String { return "hi" }');
+    const [flow] = flowsList(result);
+    assert.deepEqual(returnExpr(flow), {
+      kind: "literal", litType: "String", leftType: "", rightType: "",
+    });
+  });
+
+  it("true keyword return → literal/Bool", async () => {
+    const result = await pipeline('pure flow f() -> Bool { return true }');
+    const [flow] = flowsList(result);
+    assert.deepEqual(returnExpr(flow), {
+      kind: "literal", litType: "Bool", leftType: "", rightType: "",
+    });
+  });
+
+  it("false keyword return → literal/Bool", async () => {
+    const result = await pipeline('pure flow f() -> Bool { return false }');
+    const [flow] = flowsList(result);
+    assert.equal(returnExpr(flow).kind, "literal");
+    assert.equal(returnExpr(flow).litType, "Bool");
+  });
+
+  it("single Identifier return → param/Unknown (name reference)", async () => {
+    const result = await pipeline('pure flow g(n: Int) -> Int { return n }');
+    const [flow] = flowsList(result);
+    assert.deepEqual(returnExpr(flow), {
+      kind: "param", litType: "Unknown", leftType: "", rightType: "",
+    });
+  });
+
+  it("identifier arith 'a + b' → arith with Unknown operand types", async () => {
+    const result = await pipeline('pure flow f() -> Int { return a + b }');
+    const [flow] = flowsList(result);
+    assert.deepEqual(returnExpr(flow), {
+      kind: "arith", litType: "", leftType: "Unknown", rightType: "Unknown",
+    });
+  });
+
+  it("literal arith '1 + 2' classifies both operands as Int", async () => {
+    const result = await pipeline('pure flow f() -> Int { return 1 + 2 }');
+    const re = returnExpr(flowsList(result)[0]);
+    assert.equal(re.kind, "arith");
+    assert.equal(re.leftType, "Int");
+    assert.equal(re.rightType, "Int");
+    assert.equal(re.litType, "");
+  });
+
+  it("each arithmetic operator + - * / yields kind=arith", async () => {
+    for (const op of ["+", "-", "*", "/"]) {
+      const result = await pipeline(`pure flow f() -> Int { return 1 ${op} 2 }`);
+      const re = returnExpr(flowsList(result)[0]);
+      assert.equal(re.kind, "arith", `operator '${op}' should be arith`);
+    }
+  });
+
+  it("compare 'x == y' → compare with Unknown operand types", async () => {
+    const result = await pipeline('pure flow f() -> Bool { return x == y }');
+    const [flow] = flowsList(result);
+    assert.deepEqual(returnExpr(flow), {
+      kind: "compare", litType: "", leftType: "Unknown", rightType: "Unknown",
+    });
+  });
+
+  it("compare '3 < 4' classifies both operands as Int", async () => {
+    const result = await pipeline('pure flow f() -> Bool { return 3 < 4 }');
+    const re = returnExpr(flowsList(result)[0]);
+    assert.equal(re.kind, "compare");
+    assert.equal(re.leftType, "Int");
+    assert.equal(re.rightType, "Int");
+  });
+
+  it("each comparison operator == != < > <= >= yields kind=compare", async () => {
+    for (const op of ["==", "!=", "<", ">", "<=", ">="]) {
+      const result = await pipeline(`pure flow f() -> Bool { return 1 ${op} 2 }`);
+      const re = returnExpr(flowsList(result)[0]);
+      assert.equal(re.kind, "compare", `operator '${op}' should be compare`);
+    }
+  });
+
+  it("mixed-operand compare 'n > 0' classifies left=Unknown right=Int", async () => {
+    const result = await pipeline('pure flow f(n: Int) -> Bool { return n > 0 }');
+    const re = returnExpr(flowsList(result)[0]);
+    assert.equal(re.kind, "compare");
+    assert.equal(re.leftType, "Unknown");
+    assert.equal(re.rightType, "Int");
+  });
+
+  it("no return statement → default literal/Unknown sentinel", async () => {
+    const result = await pipeline('pure flow f() -> Int { let y = 1 }');
+    const [flow] = flowsList(result);
+    assert.deepEqual(returnExpr(flow), {
+      kind: "literal", litType: "Unknown", leftType: "", rightType: "",
+    });
+  });
+
+  it("only the top-level return is decomposed (nested return ignored)", async () => {
+    // The inner `return 1` is inside an if-block (depth 2); the top-level
+    // `return x` is what must be decomposed.
+    const result = await pipeline('pure flow f(x: Int) -> Int { if true { return 1 } return x }');
+    const re = returnExpr(flowsList(result)[0]);
+    assert.equal(re.kind, "param", "top-level `return x` should win over nested `return 1`");
+    assert.equal(re.litType, "Unknown");
+  });
+
+  it("returnExpr shape matches checker/emitter contract (four string fields)", async () => {
+    const result = await pipeline('pure flow f() -> Int { return 1 + 2 }');
+    const re = flowsList(result)[0].fields.get("returnExpr");
+    assert.deepEqual(
+      [...re.fields.keys()].sort(),
+      ["kind", "leftType", "litType", "rightType"],
+      "returnExpr must expose exactly {kind, litType, leftType, rightType}",
+    );
+  });
+
+});
+
+// ---------------------------------------------------------------------------
+// Section 8c: full structured body AST (Milestone M-A)
+//
+// parseFlows now folds in the former body-parser.lln: each FlowDecl carries a
+// `body` field that is the full nested Stmt/Expr AST (produced by parseBlock),
+// in ADDITION to the flat back-compat `returnExpr`. These assertions port the
+// strongest coverage from the deleted self-hosted-body-parser.test.mjs, proving
+// the structured body now comes straight out of a single parseFlows call.
+// ---------------------------------------------------------------------------
+
+describe("Self-Hosted Parser — full body AST (Milestone M-A)", () => {
+
+  it("FlowDecl exposes a structured `body` list (not the old flat `stmts`)", async () => {
+    const result = await pipeline('pure flow f(n: Int) -> Int { return n }');
+    const [flow] = flowsList(result);
+    assert.ok(!flow.fields.has("stmts"), "old flat `stmts` field must be gone");
+    assert.equal(flow.fields.get("body")?.__tag, "list", "FlowDecl.body must be a list");
+  });
+
+  it("let with type + initializer parses into the body AST", async () => {
+    const result = await pipeline('pure flow f() -> Int { let x: Int = 1 + 2 }');
+    const [s] = bodyList(flowsList(result)[0]);
+    assert.equal(s.kind, "let");
+    assert.equal(s.name, "x");
+    assert.equal(s.typeName, "Int");
+    assert.equal(s.expr[0].kind, "binary");
+    assert.equal(s.expr[0].value, "+");
+  });
+
+  it("multiple statements appear in order with correct kinds", async () => {
+    const result = await pipeline(
+      'pure flow f() -> Int { let a: Int = 1\nlet b: Int = 2\nreturn a + b }',
+    );
+    const stmts = bodyList(flowsList(result)[0]);
+    assert.deepEqual(stmts.map((s) => s.kind), ["let", "let", "return"]);
+    assert.deepEqual([stmts[0].name, stmts[1].name], ["a", "b"]);
+  });
+
+  it("if statement nests its one-statement body", async () => {
+    const result = await pipeline('pure flow f(n: Int) -> Int { if n < 2 { return n } }');
+    const [s] = bodyList(flowsList(result)[0]);
+    assert.equal(s.kind, "if");
+    assert.equal(s.expr[0].kind, "binary");
+    assert.equal(s.expr[0].value, "<");
+    assert.equal(s.body.length, 1);
+    assert.equal(s.body[0].kind, "return");
+  });
+
+  it("while statement nests an assignment in its body", async () => {
+    const result = await pipeline('pure flow f() -> Int { while i < n { i = i + 1 } }');
+    const [s] = bodyList(flowsList(result)[0]);
+    assert.equal(s.kind, "while");
+    assert.equal(s.body.length, 1);
+    assert.equal(s.body[0].kind, "assign");
+  });
+
+  it("a realistic recursive flow yields the full body AST from one parseFlows call", async () => {
+    const result = await pipeline(
+      'pure flow fib(n: Int) -> Int { if n < 2 { return n }\nreturn fib(n - 1) + fib(n - 2) }',
+    );
+    const [flow] = flowsList(result);
+    const stmts = bodyList(flow);
+
+    // Body structure: [if, return]
+    assert.deepEqual(stmts.map((s) => s.kind), ["if", "return"]);
+
+    // Final return is a binary '+' of two calls to fib.
+    const ret = stmts[1];
+    assert.equal(ret.expr[0].value, "+");
+    assert.deepEqual(ret.expr[0].children.map((c) => c.kind), ["call", "call"]);
+    assert.deepEqual(ret.expr[0].children.map((c) => c.value), ["fib", "fib"]);
+
+    // Header fields (consumed by type-checker.lln + gir-emitter.lln) intact.
+    assert.equal(strField(flow, "name"), "fib");
+    assert.equal(strField(flow, "kind"), "pure");
+    assert.equal(strField(flow, "returnType"), "Int");
+    const params = paramsList(flow);
+    assert.equal(params.length, 1);
+    assert.equal(params[0]?.name, "n");
+    assert.equal(params[0]?.typeName, "Int");
+    // Back-compat returnExpr still produced (first top-level return decomposed).
+    assert.equal(returnExpr(flow).kind, "param");
+  });
+
+  it("empty body yields an empty statement list", async () => {
+    const result = await pipeline('pure flow f() -> Int { }');
+    assert.equal(bodyList(flowsList(result)[0]).length, 0);
+  });
+
+});
+
+// ---------------------------------------------------------------------------
 // Section 9: error resilience
 // ---------------------------------------------------------------------------
 
@@ -451,6 +734,17 @@ describe("Self-Hosted Parser — error resilience", () => {
     );
     const flows = flowsList(parseResult.value);
     assert.equal(flows.length, 0);
+  });
+
+  // Regression: a dangling operator in an expression must NOT consume the closing
+  // "}" of the flow body (which previously swallowed the following flow).
+  it("a dangling operator does not swallow the following flow", async () => {
+    const result = await pipeline(
+      `pure flow f() -> Int { return a + }\npure flow g() -> Int { return 1 }`,
+    );
+    const flows = flowsList(result);
+    assert.equal(flows.length, 2, "both flows must survive a malformed return");
+    assert.deepEqual(flows.map((fd) => strField(fd, "name")), ["f", "g"]);
   });
 
 });

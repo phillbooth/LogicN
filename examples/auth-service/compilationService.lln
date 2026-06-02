@@ -13,6 +13,7 @@
 secure flow tokenizeSource(readonly request: Request): Response
 {
   contract {
+    intent { "Tokenize submitted LogicN source and summarise the governed token stream." }
     effects {
       network.inbound
       audit.write

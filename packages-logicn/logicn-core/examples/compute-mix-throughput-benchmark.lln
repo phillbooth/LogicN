@@ -37,9 +37,9 @@ enum ComputeMixBenchmarkError {
 /// @output Result<ComputeMixBenchmarkReport, ComputeMixBenchmarkError>
 /// @effects [runtime.clock, runtime.metrics]
 secure flow runComputeMixThroughputBenchmark(
-  targetMs: Int,
-  warmupMs: Int,
-  batchSize: Int
+targetMs: Int,
+warmupMs: Int,
+batchSize: Int
 ) -> Result<ComputeMixBenchmarkReport, ComputeMixBenchmarkError>
 effects [runtime.clock, runtime.metrics] {
   if targetMs < 10_000 {

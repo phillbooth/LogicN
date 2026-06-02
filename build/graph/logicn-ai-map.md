@@ -538,7 +538,7 @@ Provides:
 - BenchmarkSubmitPayload
 - DEFAULT_BENCHMARK_CONFIG
 
-## logicn-devtools-project-graph
+## logicn-devtools-graph-project
 
 LogicN project knowledge graph contracts for package, document, policy and report relationships.
 

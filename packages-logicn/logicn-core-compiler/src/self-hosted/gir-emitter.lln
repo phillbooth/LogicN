@@ -1,17 +1,33 @@
 /// @file: gir-emitter.lln
-/// @purpose: Stage B GIR emitter stub — Phase 68 milestone
+/// @purpose: Stage B GIR emitter — expression-level subset, executing (Phase S3)
 /// @phase: 68
-/// @status: bootstrap stub — describes GIR nodes from ParseResult FlowDecl records
+/// @status: functional subset — emits flow-decl metadata + per-flow return-expression GIR
+///
+/// Expected flow-record shape (from the Stage B ParseResult):
+///   { name: String, kind: String, returnType: String,
+///     effects: Array, params: Array,
+///     returnExpr: { kind: String, litType: String,
+///                   leftType: String, rightType: String } }
+///   returnExpr.kind is one of "literal" | "param" | "arith" | "compare".
 
 // ============================================================
-// LogicN Self-Hosted GIR Emitter — Phase 68
+// LogicN Self-Hosted GIR Emitter — Phase 68 / Axis-B S3
 //
 // Converts ParseResult (from Stage B parser) into simplified GIR nodes.
 // GIR = Governed Intermediate Representation — the canonical intermediate
 // form between the AST and backend lowering (WAT/WASM/GPU).
 //
-// Phase 68 scope: emit GIR node metadata for flow declarations.
-// Full GIR emission (expressions, body stmts) is Phase 72.
+// Scope: emit (1) a flow-decl metadata GIR node per flow AND
+//        (2) an expression-level GIR node lowering each flow's return
+//        expression. Each flow therefore contributes TWO nodes to the
+//        module: a "flowDecl" node and an "expr" node.
+//
+// Expression lowering (emitExprGIR):
+//   literal → op "const", carries the value type (litType), resultType = litType
+//   param   → op "load",  carries litType,                  resultType = litType
+//   arith   → op "add",   carries operand types,            resultType = "Int"
+//   compare → op "cmp",                                     resultType = "Bool"
+//   other   → op "unknown",                                 resultType = "Unknown"
 // ============================================================
 
 record GIRNode {
@@ -25,8 +41,19 @@ record GIRNode {
   isEffectFree: Bool
 }
 
+record GIRExprNode {
+  kind: String
+  flowName: String
+  exprKind: String
+  op: String
+  resultType: String
+  leftType: String
+  rightType: String
+}
+
 record GIRModule {
   nodes: Array
+  exprNodes: Array
   flowCount: Int
   pureCount: Int
   governedCount: Int
@@ -53,14 +80,75 @@ contract {
   }
 }
 
+// ── Expression-level GIR lowering ─────────────────────────────
+
+// Lower a decomposed return expression to a GIR op + result type.
+//   literal → "const" (resultType = litType)
+//   param   → "load"  (resultType = litType)
+//   arith   → "add"   (resultType = "Int", carries operand types)
+//   compare → "cmp"   (resultType = "Bool")
+//   other   → "unknown" (resultType = "Unknown")
+pure flow emitExprGIR(kind: String, litType: String, leftType: String, rightType: String) -> GIRExprNode
+contract {
+  intent { "Lower a flow's return expression (literal/param/arith/compare) to a GIR expression node." }
+}
+{
+  mut op: String = "unknown"
+  mut resultType: String = "Unknown"
+  if kind == "literal" {
+    op = "const"
+    resultType = litType
+  }
+  if kind == "param" {
+    op = "load"
+    resultType = litType
+  }
+  if kind == "arith" {
+    op = "add"
+    resultType = "Int"
+  }
+  if kind == "compare" {
+    op = "cmp"
+    resultType = "Bool"
+  }
+  return {
+    kind: "expr"
+    flowName: ""
+    exprKind: kind
+    op: op
+    resultType: resultType
+    leftType: leftType
+    rightType: rightType
+  }
+}
+
+// Build the expression GIR node for a flow, stamping its flow name on it.
+pure flow emitFlowExprGIR(flowName: String, kind: String, litType: String, leftType: String, rightType: String) -> GIRExprNode
+contract {
+  intent { "Emit the return-expression GIR node for a named flow." }
+}
+{
+  let base: GIRExprNode = emitExprGIR(kind, litType, leftType, rightType)
+  return {
+    kind: "expr"
+    flowName: flowName
+    exprKind: base.exprKind
+    op: base.op
+    resultType: base.resultType
+    leftType: base.leftType
+    rightType: base.rightType
+  }
+}
+
 // ── GIR module emission ───────────────────────────────────────
 
 pure flow emitGIRModule(flows: Array) -> GIRModule
 contract {
-  intent { "Emit a GIR module from a Stage B ParseResult, mapping each FlowDecl to a GIR node." }
+  intent { "Emit a GIR module from a Stage B ParseResult: a flow-decl node and an expression node per FlowDecl." }
 }
 {
   mut nodes: Array = Array.empty()
+  mut exprNodes: Array = Array.empty()
   mut pureCount: Int = 0
   mut governedCount: Int = 0
   mut i: Int = 0
@@ -75,6 +163,11 @@ contract {
         let params: Array = fd.params
         let node: GIRNode = emitFlowGIRNode(name, qualifier, retType, effects.count(), params.count())
         nodes = nodes.append(node)
+
+        let re = fd.returnExpr
+        let exprNode: GIRExprNode = emitFlowExprGIR(name, re.kind, re.litType, re.leftType, re.rightType)
+        exprNodes = exprNodes.append(exprNode)
+
         if qualifier == "pure" { pureCount = pureCount + 1 }
         if qualifier != "pure" { governedCount = governedCount + 1 }
       }
@@ -82,5 +175,290 @@ contract {
     }
     i = i + 1
   }
-  return { nodes: nodes, flowCount: flows.count(), pureCount: pureCount, governedCount: governedCount }
+  return { nodes: nodes, exprNodes: exprNodes, flowCount: flows.count(), pureCount: pureCount, governedCount: governedCount }
+}
+
+// ════════════════════════════════════════════════════════════
+// BODY GIR (Milestone M-B) — lower the parser's full Stmt/Expr body AST
+//
+// The flow-decl/flat-returnExpr emitter above stays for back-compat. This
+// section lowers a flow's full `body: Array<Stmt>` (from parser.lln) into a
+// nested GIR statement/expression tree:
+//   emitBodyGIR(body) -> Array<GIRStmt>   where each GIRStmt carries lowered
+//   GIRExpr operands. Expression lowering (lowerExpr) and statement lowering
+//   (lowerStmt) were developed as two halves and merged here.
+//
+// GIRExpr op : "const" | "load" | "binop" | "call" (| "unknown")
+// GIRStmt op : "store" | "ret" | "branch" | "loop" | "eval" (| "unknown")
+// ════════════════════════════════════════════════════════════
+
+record GIRExpr {
+  op: String
+  ty: String
+  value: String
+  kids: Array<GIRExpr>
+}
+
+// Map a source binary operator to its GIR opcode.
+pure flow opcodeOf(operator: String) -> String
+contract { intent { "Map a source binary operator to its GIR opcode." } }
+{
+  match operator {
+    "+"  => { return "add" }
+    "-"  => { return "sub" }
+    "*"  => { return "mul" }
+    "/"  => { return "div" }
+    "==" => { return "eq" }
+    "!=" => { return "ne" }
+    "<"  => { return "lt" }
+    ">"  => { return "gt" }
+    "<=" => { return "le" }
+    ">=" => { return "ge" }
+    _    => { return "unknown" }
+  }
+}
+
+// Result type of a binop opcode: arithmetic → Int, comparison → Bool, else "".
+pure flow binResultType(opcode: String) -> String
+contract { intent { "Result type of a binop opcode: arithmetic Int, comparison Bool." } }
+{
+  match opcode {
+    "add" => { return "Int" }
+    "sub" => { return "Int" }
+    "mul" => { return "Int" }
+    "div" => { return "Int" }
+    "eq"  => { return "Bool" }
+    "ne"  => { return "Bool" }
+    "lt"  => { return "Bool" }
+    "gt"  => { return "Bool" }
+    "le"  => { return "Bool" }
+    "ge"  => { return "Bool" }
+    _     => { return "" }
+  }
+}
+
+// Recursively lower a parser Expr AST node into a GIRExpr.
+pure flow lowerExpr(expr: Any) -> GIRExpr
+contract { intent { "Recursively lower a parser Expr AST node into a GIRExpr." } }
+{
+  let kind: String = expr.kind
+
+  if kind == "lit" {
+    return { op: "const", ty: expr.litType, value: expr.value, kids: Array.empty() }
+  }
+
+  if kind == "name" {
+    return { op: "load", ty: "", value: expr.value, kids: Array.empty() }
+  }
+
+  if kind == "binary" {
+    let opcode: String = opcodeOf(expr.value)
+    let children: Array = expr.children
+    mut kids: Array<GIRExpr> = Array.empty()
+    let lOpt = children.get(0)
+    match lOpt {
+      Some(l) => { kids = kids.append(lowerExpr(l)) }
+      None => {}
+    }
+    let rOpt = children.get(1)
+    match rOpt {
+      Some(r) => { kids = kids.append(lowerExpr(r)) }
+      None => {}
+    }
+    return { op: "binop", ty: binResultType(opcode), value: opcode, kids: kids }
+  }
+
+  if kind == "call" {
+    let children: Array = expr.children
+    mut kids: Array<GIRExpr> = Array.empty()
+    let n: Int = children.count()
+    mut i: Int = 0
+    while i < n {
+      let cOpt = children.get(i)
+      match cOpt {
+        Some(c) => { kids = kids.append(lowerExpr(c)) }
+        None => {}
+      }
+      i = i + 1
+    }
+    return { op: "call", ty: "", value: expr.value, kids: kids }
+  }
+
+  if kind == "unary" {
+    let children: Array = expr.children
+    mut kids: Array<GIRExpr> = Array.empty()
+    let opndOpt = children.get(0)
+    match opndOpt {
+      Some(opnd) => { kids = kids.append(lowerExpr(opnd)) }
+      None => {}
+    }
+    return { op: "unop", ty: "", value: expr.value, kids: kids }
+  }
+
+  return { op: "unknown", ty: "", value: kind, kids: Array.empty() }
+}
+
+// ── GIR statement node ────────────────────────────────────────
+record GIRStmt {
+  op: String               // "store" | "ret" | "branch" | "loop" | "eval"
+  name: String             // store: target name; else ""
+  expr: Array<GIRExpr>     // 0/1 element: lowered init/return/cond/eval value
+  body: Array<GIRStmt>     // branch/loop: lowered nested block (then-block); else empty
+  elseBody: Array<GIRStmt> // branch: lowered else-block; else empty
+}
+
+// Read the single carried expression off a statement, if present.
+pure flow firstExprOf(stmt: Any) -> Option
+contract { intent { "Return Some(expr) for the statement's lone carried expr, else None." } }
+{
+  if stmt.expr.count() > 0 {
+    return stmt.expr.get(0)
+  }
+  return None
+}
+
+// Lower one statement into a GIRStmt, recursing into if/while bodies.
+pure flow lowerStmt(stmt: Any) -> GIRStmt
+contract { intent { "Lower a single body statement into a GIRStmt." } }
+{
+  let kind: String = stmt.kind
+
+  if kind == "let" {
+    mut exprs: Array = Array.empty()
+    let rhsOpt = firstExprOf(stmt)
+    match rhsOpt {
+      Some(rhs) => { exprs = exprs.append(lowerExpr(rhs)) }
+      None => {}
+    }
+    return { op: "store", name: stmt.name, expr: exprs, body: Array.empty(), elseBody: Array.empty() }
+  }
+
+  if kind == "mut" {
+    mut exprs: Array = Array.empty()
+    let rhsOpt = firstExprOf(stmt)
+    match rhsOpt {
+      Some(rhs) => { exprs = exprs.append(lowerExpr(rhs)) }
+      None => {}
+    }
+    return { op: "store", name: stmt.name, expr: exprs, body: Array.empty(), elseBody: Array.empty() }
+  }
+
+  if kind == "assign" {
+    mut exprs: Array = Array.empty()
+    let rhsOpt = firstExprOf(stmt)
+    match rhsOpt {
+      Some(rhs) => { exprs = exprs.append(lowerExpr(rhs)) }
+      None => {}
+    }
+    return { op: "store", name: stmt.name, expr: exprs, body: Array.empty(), elseBody: Array.empty() }
+  }
+
+  if kind == "return" {
+    mut exprs: Array = Array.empty()
+    let valOpt = firstExprOf(stmt)
+    match valOpt {
+      Some(value) => { exprs = exprs.append(lowerExpr(value)) }
+      None => {}
+    }
+    return { op: "ret", name: "", expr: exprs, body: Array.empty(), elseBody: Array.empty() }
+  }
+
+  if kind == "if" {
+    mut exprs: Array = Array.empty()
+    let condOpt = firstExprOf(stmt)
+    match condOpt {
+      Some(cond) => { exprs = exprs.append(lowerExpr(cond)) }
+      None => {}
+    }
+    let lowered: Array = lowerBody(stmt.body)
+    let loweredElse: Array = lowerBody(stmt.elseBody)
+    return { op: "branch", name: "", expr: exprs, body: lowered, elseBody: loweredElse }
+  }
+
+  if kind == "while" {
+    mut exprs: Array = Array.empty()
+    let condOpt = firstExprOf(stmt)
+    match condOpt {
+      Some(cond) => { exprs = exprs.append(lowerExpr(cond)) }
+      None => {}
+    }
+    let lowered: Array = lowerBody(stmt.body)
+    return { op: "loop", name: "", expr: exprs, body: lowered, elseBody: Array.empty() }
+  }
+
+  if kind == "exprStmt" {
+    mut exprs: Array = Array.empty()
+    let eOpt = firstExprOf(stmt)
+    match eOpt {
+      Some(e) => { exprs = exprs.append(lowerExpr(e)) }
+      None => {}
+    }
+    return { op: "eval", name: "", expr: exprs, body: Array.empty(), elseBody: Array.empty() }
+  }
+
+  return { op: "unknown", name: "", expr: Array.empty(), body: Array.empty(), elseBody: Array.empty() }
+}
+
+// Lower a statement list (a flow body or nested if/while block) into GIRStmt nodes.
+pure flow lowerBody(stmts: Array) -> Array
+contract { intent { "Map each statement of a body through lowerStmt, returning Array<GIRStmt>." } }
+{
+  mut out: Array = Array.empty()
+  mut i: Int = 0
+  while i < stmts.count() {
+    let sOpt = stmts.get(i)
+    match sOpt {
+      Some(s) => { out = out.append(lowerStmt(s)) }
+      None => {}
+    }
+    i = i + 1
+  }
+  return out
+}
+
+// Public entry: lower a flow body's statement list into GIR statement nodes.
+pure flow emitBodyGIR(stmts: Array) -> Array
+contract { intent { "Public entry — lower a flow body's statement AST into Array<GIRStmt>." } }
+{
+  return lowerBody(stmts)
+}
+
+// FLOW TABLE (M-B) — build a cross-flow lookup table the runtime consumes to
+// resolve flow→flow calls. Each entry: { name, params: Array<String>, body: Array<GIRStmt> }.
+
+// Collect the ORDERED parameter names of a flow into an Array<String>.
+pure flow paramNames(params: Array) -> Array
+contract { intent { "Extract each FlowParam's name into an ordered Array<String>." } }
+{
+  mut names: Array<String> = Array.empty()
+  mut i: Int = 0
+  while i < params.count() {
+    let pOpt = params.get(i)
+    match pOpt {
+      Some(p) => { names = names.append(p.name) }
+      None => {}
+    }
+    i = i + 1
+  }
+  return names
+}
+
+// Build the flow table: one FlowEntry per flow, with lowered GIR bodies.
+pure flow buildFlowTable(flows: Array) -> Array
+contract { intent { "Build Array<FlowEntry> { name, params: Array<String>, body: Array<GIRStmt> } from parser flows." } }
+{
+  mut table: Array = Array.empty()
+  mut i: Int = 0
+  while i < flows.count() {
+    let fOpt = flows.get(i)
+    match fOpt {
+      Some(fd) => {
+        let entry = { name: fd.name, params: paramNames(fd.params), body: lowerBody(fd.body) }
+        table = table.append(entry)
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return table
 }

@@ -17,6 +17,12 @@ flow loadOrder(id: OrderId) -> Result<Order, OrderError> {
 }
 
 secure flow requireOrder(id: OrderId) -> Result<Order, OrderError> {
+  contract {
+    intent {
+      "Require an existing order by ID, returning the order when present or propagating the load error when absent."
+    }
+  }
+
   let result: Result<Order, OrderError> = loadOrder(id)
 
   match result {

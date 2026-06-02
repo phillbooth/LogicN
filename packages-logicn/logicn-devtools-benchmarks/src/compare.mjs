@@ -26,7 +26,7 @@ const LABEL = {
   logicnManifest: "LogicN (manifest)",
   logicnGoverned: "LogicN (governed)",
   wasm:           "WASM (Phase 27)",
-  denoWebGpu:     "Deno WebGPU (RTX 3050 Ti)",
+  denoWebGpu:     "Deno WebGPU (GPU)", // real GPU name filled at runtime from results (see GPU_NAME)
 };
 
 // ── Metric extractors ──────────────────────────────────────────────────────────
@@ -133,6 +133,21 @@ let data;
 try { data = JSON.parse(readFileSync(dataPath, "utf8")); }
 catch { console.error("No results — run: npm run run"); process.exit(1); }
 
+// Derive the real GPU name from the measured results rather than hardcoding it.
+// denoWebGpu.device looks like "gpu (WebGPU — NVIDIA GeForce RTX 2060)".
+function detectGpuName(rows) {
+  for (const b of rows) {
+    const d = b?.results?.denoWebGpu?.device;
+    if (typeof d === "string") {
+      const m = d.match(/WebGPU\s*[—–-]\s*([^)]+)/);
+      if (m) return m[1].trim();
+    }
+  }
+  return null;
+}
+const GPU_NAME = detectGpuName(data) ?? "GPU";
+LABEL.denoWebGpu = `Deno WebGPU (${GPU_NAME})`;
+
 // ── 1. Throughput summary ──────────────────────────────────────────────────────
 
 console.log("# LogicN Benchmark Report\n");
@@ -161,7 +176,7 @@ console.log("---\n");
 
 console.log("## 1. Throughput — Winner per Benchmark\n");
 console.log("> **🏆 Winner** = fastest runtime for that workload. Medals (🥇🥈🥉) show top 3 in the detail tables below.");
-console.log("> 🖥️ CPU = CPU execution | 🎮 GPU = real GPU dispatch (Deno WebGPU on RTX 3050 Ti)\n");
+console.log(`> 🖥️ CPU = CPU execution | 🎮 GPU = real GPU dispatch (Deno WebGPU on ${GPU_NAME})\n`);
 
 // ── Winner summary first ──────────────────────────────────────────────────────
 console.log("| Benchmark | 🏆 Winner | Speed | Device | Notes |");
@@ -199,7 +214,7 @@ for (const bench of data) {
   } else if (winnerRt === "logicnGoverned" || winnerRt === "logicnManifest") {
     note = "LogicN governed path wins this workload";
   } else if (winnerRt === "denoWebGpu") {
-    note = "🎮 Real GPU dispatch (RTX 3050 Ti via WebGPU)";
+    note = `🎮 Real GPU dispatch (${GPU_NAME} via WebGPU)`;
   } else if (winnerRt === "python") {
     note = "Python wins (C-backed lib or small-N setup overhead)";
   }
@@ -239,7 +254,7 @@ for (const bench of data) {
 }
 console.log("\n> †`Node/LogicN > 1` = Node.js faster. `< 1` = LogicN faster (e.g. collection-pipeline).");
 console.log("> †fibonacci: LogicN=fib(20), others=fib(30) — different workload depth.");
-console.log("> **Bold** = winner (within 5% of fastest). 🖥️ CPU = CPU execution. 🎮 GPU = Deno WebGPU (RTX 3050 Ti).");
+console.log(`> **Bold** = winner (within 5% of fastest). 🖥️ CPU = CPU execution. 🎮 GPU = Deno WebGPU (${GPU_NAME}).`);
 
 // ── 1.5 Traffic Light Summary ──────────────────────────────────────────────────
 // Shows at a glance how each key runtime compares to the best result.
@@ -411,15 +426,23 @@ if (gpuBench) {
     gpu = mod.gpuReport();
   } catch { /* detection optional */ }
 
+  // Ground truth beats toolchain detection: if a denoWebGpu result exists in the
+  // data, the GPU path actually ran (gpu-detect's `where deno` can miss a Deno
+  // that's only on the augmented runner PATH).
+  const denoActuallyRan = data.some(b => {
+    const d = b?.results?.denoWebGpu;
+    return d && !d.error && typeof d.device === "string" && d.device.toLowerCase().startsWith("gpu");
+  });
+
   console.log("\n## 4b. GPU-Compute Workload (parallel map-reduce)\n");
   console.log("> A **GPU-shaped** workload: a per-element kernel `f(i)=i*2+1` applied across 100,000 elements + reduction.");
   console.log("> On a GPU this parallelises across thousands of threads. 🖥️ CPU = running on CPU; 🎮 GPU = real GPU dispatch.\n");
 
   if (gpu) {
-    const denoGpuAvail = gpu.toolchains?.denoWebGpu ?? false;
+    const denoGpuAvail = (gpu.toolchains?.denoWebGpu ?? false) || denoActuallyRan;
     console.log(`**GPU detected:** ${gpu.device.present ? `${gpu.device.name} (driver ${gpu.device.driver}, ${gpu.device.memory})` : "none"}`);
     console.log(`**Compute toolchain:** ${gpu.summary}`);
-    console.log(`**Deno WebGPU:** ${denoGpuAvail ? "✅ available — real GPU dispatch enabled (RTX 3050 Ti)" : "⏳ not installed"}`);
+    console.log(`**Deno WebGPU:** ${denoGpuAvail ? `✅ available — real GPU dispatch enabled (${GPU_NAME})` : "⏳ not installed"}`);
     console.log(`**LogicN GPU backend:** \`${gpu.logicnGpuStatus}\` — gpu-plan.ts emits a WGSL skeleton only; no dispatch path (pending Phase 38).\n`);
   }
 
@@ -438,22 +461,23 @@ if (gpuBench) {
     const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx + 1}`;
     const light = trafficLight(t, gNodeRef);
     const rawDevice = r.device ?? "cpu";
-    // Label device column with CPU/GPU marker for clarity
-    const isGpu = typeof rawDevice === "string" && rawDevice.toLowerCase() !== "cpu" && rawDevice.toLowerCase() !== "n/a";
-    const deviceLabel = isGpu ? `🎮 GPU (${rawDevice})` : `🖥️ CPU`;
+    // Only a device string that actually starts with "gpu" is real GPU dispatch.
+    // CPU-serial/WASM rows report "cpu (serial)" / "cpu (wasm)" and must show 🖥️ CPU.
+    const isGpu = typeof rawDevice === "string" && rawDevice.trim().toLowerCase().startsWith("gpu");
+    const deviceLabel = isGpu ? `🎮 GPU (${rawDevice})` : `🖥️ CPU (${rawDevice})`;
     console.log(`| ${medal} | ${light} | ${LABEL[rt]} | ${deviceLabel} | ${fmtT(t)} | ${fmtMs(wallMs(r))} | ${ratio(t, gt.nodejs)} |`);
   });
 
   // Honest GPU rows — what each runtime COULD do on GPU, and current status
   const gpuRunnable = gpu?.toolchains?.anyRunnable ?? false;
-  const denoWebGpuAvail = gpu?.toolchains?.denoWebGpu ?? false;
+  const denoWebGpuAvail = (gpu?.toolchains?.denoWebGpu ?? false) || denoActuallyRan;
   console.log(`\n**GPU execution status (this machine):**\n`);
   console.log("| Runtime | GPU path | Device | Status |");
   console.log("|---|---|---|---|");
   console.log(`| Rust | wgpu (Vulkan/D3D12) | 🖥️ CPU (GPU pending) | ${gpu?.toolchains?.rustWgpu ? "🔧 buildable (cargo present, harness pending)" : "⏳ toolchain required"} |`);
   console.log(`| Python | torch CUDA / cupy | 🖥️ CPU (GPU pending) | ${gpu?.toolchains?.pythonTorchCuda ? "✅ available" : "⏳ toolchain required (CPU-only torch)"} |`);
   console.log(`| Node.js | WebGPU | 🖥️ CPU only | ⏳ toolchain required (no navigator.gpu in Node.js) |`);
-  console.log(`| Deno | WebGPU (built-in) | ${denoWebGpuAvail ? "🎮 GPU (RTX 3050 Ti)" : "🖥️ CPU"} | ${denoWebGpuAvail ? "✅ available — real GPU dispatch detected (Phase 38 ready)" : "⏳ not installed"} |`);
+  console.log(`| Deno | WebGPU (built-in) | ${denoWebGpuAvail ? `🎮 GPU (${GPU_NAME})` : "🖥️ CPU"} | ${denoWebGpuAvail ? "✅ available — real GPU dispatch detected (Phase 38 ready)" : "⏳ not installed"} |`);
   console.log(`| **LogicN** | WebGPUComputePlan → WGSL | 🖥️ CPU (GPU pending) | ❌ **pending Phase 38** — stub only, no measured number (by design) |`);
   console.log(`\n> Per the project's honesty rule (same as the Runtime-in-LogicN 0% metric): no GPU number is shown until a backend actually executes. LogicN's real result on this workload is its **WASM/CPU** row above.`);
   console.log(`> 🖥️ CPU = running on CPU cores. 🎮 GPU = real GPU dispatch via WebGPU/WGSL. Deno WebGPU is the only path currently capable of real GPU execution.\n`);
@@ -546,4 +570,4 @@ for (const bench of data) {
 
 console.log("\n> Bold = significantly behind (>10×). Blanks = benchmark not run for this runtime.");
 console.log("> Fibonacci passive is excluded from 'winner' comparison — LRU cache hit is not a fair race.");
-console.log("> gpu-compute GPU: RTX 3050 Ti slower than CPU at 100K elements (setup overhead dominates — crossover ~500K elements).");
+console.log(`> gpu-compute GPU: ${GPU_NAME} slower than CPU at 100K elements (setup overhead dominates — crossover ~500K elements).`);

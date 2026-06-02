@@ -22,7 +22,7 @@ pure flow tierGovernanceClass(tier: String): Int
 
 secure flow resolveRoute(readonly request: Request): Response
 {
-  contract { effects { network.inbound  audit.write } }
+  contract { intent { "Resolve the execution route and tier for a flow from its routing policy." } effects { network.inbound  audit.write } }
 
   unsafe let effectCount: Int = request.jsonBody.effectCount
   unsafe let hasAI: Bool = request.jsonBody.hasAI

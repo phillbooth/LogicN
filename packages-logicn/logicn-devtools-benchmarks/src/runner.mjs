@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawnSync, execSync } from "node:child_process";
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -46,15 +46,52 @@ const BENCHMARKS = [
   // Key question: how fast is WASM for string ops, and is the governed path viable for text work?
   { id: "text-html", dir: "text-html", logicnOpsPerRun: 1, passiveCallCount: 100 },
   // HTTP-throughput: localhost req/s — Node.js raw vs LogicN governed endpoint.
-  // Uses benchmark.mjs directly (not the standard runner pattern) — separate runner below.
-  // NOTE: This benchmark is run standalone, not via the main runner loop.
+  // Uses a server-lifecycle harness (benchmark.mjs), not the standard file pattern,
+  // so it is intentionally NOT in this array. Run it standalone: `npm run run:http`.
   // Tri-logic: 3-valued ternary logic (True=1, False=-1, Unknown=0) — all 27 truth table combinations.
   // Relevant for future photonic compute substrates; validates correctness and shows CPU overhead today.
   { id: "tri-logic", dir: "tri-logic", logicnOpsPerRun: 27000, passiveCallCount: 100 },
   // Data-query: SQL-like data filtering on arrays of JSON records — a core web service workload.
   // LogicN governed path validates query inputs as Tainted<String> before execution.
   { id: "data-query", dir: "data-query", logicnOpsPerRun: 1000, passiveCallCount: 50 },
+  // Call-chain: layered call-dispatch overhead — controller → service.method → util fn.
+  // In LogicN: main → serviceLayer → domainLayer → leafCompute (7 flow calls per chain).
+  // One op = one outer chain; 50,000 chains per run. Isolates flow-call cost (arg binding
+  // + governed frame), salted by loop index so the pure-flow memo cache never short-circuits.
+  { id: "call-chain", dir: "call-chain", logicnOpsPerRun: 50000, passiveCallCount: 5 },
+  // N-body: pairwise gravitational force (scaled-integer, governed). One run =
+  // simulate(64, 8) = steps×n×n = 32,768 softened inverse-distance force evals.
+  // Array-free index-math kernel; checksum (536024) is identical across Node,
+  // Python and the LogicN integer path. Physics-shaped compute throughput test.
+  { id: "nbody", dir: "nbody", logicnOpsPerRun: 32768, passiveCallCount: 5 },
+  // JSON-parse: key:value record scanning (the expensive part of real JSON workloads) —
+  // split records on ',', split fields on ':', accumulate field counts + value lengths.
+  // One run = scanRecords(500) = 500 records parsed. split/length match JS/Python exactly,
+  // so the checksum (12500) is identical across Node, Python and the LogicN string path.
+  { id: "json-parse", dir: "json-parse", logicnOpsPerRun: 500, passiveCallCount: 20 },
 ];
+
+// Resolve a usable Deno executable path on this machine.
+// Windows-safe: prefer a real .exe path (cmd.exe under shell:true cannot run the
+// POSIX-style path that Git's `which` returns, e.g. /c/Users/.../deno).
+function resolveDenoBin() {
+  const isWin = process.platform === "win32";
+  const home  = process.env.USERPROFILE || process.env.HOME || "";
+  // 1) Known default install location.
+  const candidates = [
+    join(home, ".deno", "bin", isWin ? "deno.exe" : "deno"),
+  ];
+  for (const c of candidates) { if (c && existsSync(c)) return c; }
+  // 2) `where deno` (Windows) returns real, runnable paths; take the first .exe.
+  try {
+    const cmd = isWin ? "where deno" : "command -v deno";
+    const out = execSync(cmd, { encoding: "utf8" }).trim().split(/\r?\n/);
+    const pick = out.find(p => !isWin || /\.exe$/i.test(p)) || out[0];
+    if (pick && existsSync(pick)) return pick;
+  } catch { /* fall through */ }
+  // 3) Last resort: bare name, let the shell resolve it.
+  return "deno";
+}
 
 function runProc(cmd, args=[]) {
   const r = spawnSync(cmd, args, { encoding:"utf8", timeout:180000 });
@@ -121,15 +158,10 @@ async function runBenchmark(bench) {
   if (existsSync(denoWebGpuRunner)) {
     console.log(`  deno-webgpu...`);
     try {
-      // On Windows, Deno is installed as deno.cmd — need shell:true and explicit path
       const { spawnSync: _sp } = await import("node:child_process");
-      const { execSync: _exec } = await import("node:child_process");
-      // Find deno executable
-      let denoBin = "deno";
-      try { denoBin = _exec("where deno.cmd", { encoding: "utf8" }).trim().split("\n")[0].trim(); } catch {
-        try { denoBin = _exec("which deno", { encoding: "utf8" }).trim(); } catch { /* use "deno" */ }
-      }
-      const dr = _sp(denoBin, ["run", "--unstable-webgpu", denoWebGpuRunner], {
+      const denoBin = resolveDenoBin();
+      // Quote the executable path (it may contain spaces / be a full path) for shell:true.
+      const dr = _sp(`"${denoBin}"`, ["run", "--unstable-webgpu", `"${denoWebGpuRunner}"`], {
         encoding: "utf8", timeout: 60000, shell: true,
       });
       res.denoWebGpu = (dr.status === 0 && dr.stdout?.trim())

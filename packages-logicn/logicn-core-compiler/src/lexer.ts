@@ -347,6 +347,13 @@ export function lex(source: string, file: string): LexResult {
         });
       }
       advance();
+      // LLN-LEX-001: A generic type expression never spans a newline, but a
+      // comparison `<` (e.g. `while i < n`) does. Reset the generic-nesting
+      // counter at every newline so unmatched `<` comparisons across separate
+      // lines cannot accumulate into a spurious "nesting exceeds depth" error.
+      // A genuinely deep single-line generic (>8 `<` before any newline) still
+      // trips the threshold, so detection is preserved.
+      genericDepth = 0;
       tokens.push(tok("newline", "\n", startPos, startLine, startCol));
       // LLN-LEX-004: Guard against token count overflow.
       if (tokens.length > MAX_TOKEN_COUNT) {
@@ -630,6 +637,15 @@ export function lex(source: string, file: string): LexResult {
     // ── Punctuation / symbols ──────────────────────────────────────────────
     if (SYMBOLS.has(ch)) {
       advance();
+      // LLN-LEX-001: A generic type expression never crosses a statement or
+      // block boundary, so reset the generic-nesting counter at `{`, `}` and
+      // `;`. Together with the newline reset above this bounds the counter to a
+      // single line/statement, preventing comparison `<` operators spread
+      // across statements from accumulating into a spurious depth error while
+      // still catching a genuinely deep single-line generic.
+      if (ch === "{" || ch === "}" || ch === ";") {
+        genericDepth = 0;
+      }
       tokens.push(tok("symbol", ch, startPos, startLine, startCol));
       continue;
     }

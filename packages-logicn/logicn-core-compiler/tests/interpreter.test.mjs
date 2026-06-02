@@ -597,3 +597,31 @@ pure flow test() -> Int {
     assert.equal(r.value.value, 400);
   });
 });
+
+describe("Interpreter - match on string literals", () => {
+  const SRC = `
+pure flow classify(kind: String) -> String {
+  match kind {
+    "literal" => { return "is-literal" }
+    "arith" => { return "is-arith" }
+    _ => { return "fallthrough" }
+  }
+}
+`;
+  const run = (k) => parseAndRun(SRC, "classify", new Map([["kind", { __tag: "string", value: k }]]));
+
+  it("dispatches to the first string-literal arm", async () => {
+    const r = await run("literal");
+    assert.equal(r.value.value, "is-literal");
+  });
+
+  it("dispatches to a later string-literal arm", async () => {
+    const r = await run("arith");
+    assert.equal(r.value.value, "is-arith");
+  });
+
+  it("falls through to the wildcard when no literal matches", async () => {
+    const r = await run("compare");
+    assert.equal(r.value.value, "fallthrough");
+  });
+});

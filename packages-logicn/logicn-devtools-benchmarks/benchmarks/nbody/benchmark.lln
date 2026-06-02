@@ -1,0 +1,76 @@
+/// N-body physics benchmark — pairwise gravitational force (scaled-integer).
+/// Deterministic integer kernel: positions are derived by index math (no arrays),
+/// force ∝ 1/r in 2D using a softened inverse-distance law with G scaled to 1e5.
+/// G is sized so every intermediate stays < 2^31 (the integer path is 32-bit), so
+/// the result matches Python `//` and JS `Math.trunc(a/b)` bit-for-bit.
+/// Positions use a multiplicative step coupling (i * t) so bodies genuinely move
+/// across steps — a purely additive t-term would cancel in the pairwise difference.
+
+pure flow posX(i: Int, t: Int) -> Int
+contract { effects {} }
+{
+  return i * 73 + i * t
+}
+
+pure flow posY(i: Int, t: Int) -> Int
+contract { effects {} }
+{
+  return i * 149 + i * t
+}
+
+pure flow netForce(i: Int, t: Int, n: Int) -> Int
+contract { effects {} }
+{
+  mut fxi: Int = 0
+  mut fyi: Int = 0
+  mut j: Int = 0
+  while j < n {
+    if j != i {
+      let dx: Int = posX(j, t) - posX(i, t)
+      let dy: Int = posY(j, t) - posY(i, t)
+      let d2: Int = dx * dx + dy * dy + 1
+      mut adx: Int = dx
+      if adx < 0 { adx = 0 - adx }
+      mut ady: Int = dy
+      if ady < 0 { ady = 0 - ady }
+      mut sx: Int = 0
+      if dx < 0 { sx = 0 - 1 }
+      if dx > 0 { sx = 1 }
+      mut sy: Int = 0
+      if dy < 0 { sy = 0 - 1 }
+      if dy > 0 { sy = 1 }
+      fxi = fxi + sx * (100000 * adx / d2)
+      fyi = fyi + sy * (100000 * ady / d2)
+    }
+    j = j + 1
+  }
+  mut afx: Int = fxi
+  if afx < 0 { afx = 0 - afx }
+  mut afy: Int = fyi
+  if afy < 0 { afy = 0 - afy }
+  return afx + afy
+}
+
+pure flow simulate(n: Int, steps: Int) -> Int
+contract { effects {} }
+{
+  mut checksum: Int = 0
+  mut t: Int = 0
+  while t < steps {
+    mut i: Int = 0
+    while i < n {
+      checksum = checksum + netForce(i, t, n)
+      if checksum > 1000000000 { checksum = checksum - 1000000000 }
+      if checksum < -1000000000 { checksum = checksum + 1000000000 }
+      i = i + 1
+    }
+    t = t + 1
+  }
+  return checksum
+}
+
+pure flow main() -> Int
+contract { effects {} }
+{
+  return simulate(64, 8)
+}

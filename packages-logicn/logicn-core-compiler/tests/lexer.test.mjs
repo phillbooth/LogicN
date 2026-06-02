@@ -308,6 +308,49 @@ describe("Lexer — LLN-LEX-001 excessive generic nesting", () => {
     assert.ok(diag !== undefined, "Expected LLN-LEX-001 for depth > 8");
     assert.equal(diag.code, "LLN-LEX-001");
   });
+
+  // ── Regression: generic-depth counter must reset at line/statement
+  //    boundaries so unmatched comparison `<` operators across separate
+  //    statements cannot accumulate into a spurious LLN-LEX-001. (Previously
+  //    the counter was global-per-file and never reset, so ≥8 `i < n` style
+  //    comparisons across lines emitted a false positive far from any generic.)
+  it("does NOT emit LLN-LEX-001 for many `<` comparisons across multiple lines", () => {
+    // Ten separate `while i < srcLen` lines — ten unmatched `<` operators.
+    // The newline reset must keep these from accumulating past depth 8.
+    const source = Array.from(
+      { length: 10 },
+      (_, i) => `while i < srcLen { x = ${i} }`,
+    ).join("\n");
+    const result = lex(source, "loops.lln");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-LEX-001");
+    assert.ok(diag === undefined, "Comparison `<` across separate lines must not trip LLN-LEX-001");
+  });
+
+  it("does NOT emit LLN-LEX-001 for many `<` comparisons separated by `;`", () => {
+    // All on one line, but separated by `;` statement boundaries — the `;`
+    // reset must keep the counter from accumulating across statements.
+    const source = Array.from({ length: 10 }, () => "a < b;").join(" ");
+    const result = lex(source, "stmts.lln");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-LEX-001");
+    assert.ok(diag === undefined, "Comparison `<` separated by `;` must not trip LLN-LEX-001");
+  });
+
+  it("still emits LLN-LEX-001 for a deeply nested single-line generic (>8 `<`)", () => {
+    // A genuine generic nested 9 levels deep on one line — no newline, brace
+    // or `;` to reset, so detection must still fire.
+    const source = "let x: Array<Array<Array<Array<Array<Array<Array<Array<Array<Int>>>>>>>>>";
+    const result = lex(source, "deep.lln");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-LEX-001");
+    assert.ok(diag !== undefined, "Genuine deep single-line generic must still emit LLN-LEX-001");
+    assert.equal(diag.code, "LLN-LEX-001");
+  });
+
+  it("does NOT emit LLN-LEX-001 for a moderate single-line generic (depth ≤ 8)", () => {
+    const source = "let y: Map<Array<Int>, Array<Str>>";
+    const result = lex(source, "mod.lln");
+    const diag = result.diagnostics.find((d) => d.code === "LLN-LEX-001");
+    assert.ok(diag === undefined, "Moderate generic depth ≤ 8 must not trip LLN-LEX-001");
+  });
 });
 
 describe("Lexer — LLN-LEX-002 oversized token", () => {

@@ -23,7 +23,7 @@ pure flow requiresEncryption(classification: Int): Bool
 
 secure flow classifyData(readonly request: Request): Response
 {
-  contract { effects { network.inbound  audit.write } }
+  contract { intent { "Classify request data into a governed value-sensitivity class." } effects { network.inbound  audit.write } }
 
   unsafe let typeName: String = request.jsonBody.typeName
   let classification: Int = classifyValue(typeName)

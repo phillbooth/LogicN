@@ -73,6 +73,7 @@ pure flow effectGovernanceClass(effect: String): Int
 secure flow checkCapability(readonly request: Request): Response
 {
   contract {
+    intent { "Resolve whether a requested effect is permitted in the caller's capability context." }
     effects {
       network.inbound
       audit.write

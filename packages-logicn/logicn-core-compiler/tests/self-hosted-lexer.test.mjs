@@ -340,4 +340,149 @@ pure flow classify(n: Int) -> String {
     assert.equal(result.diagnostics.filter((d) => d.code === "LLN-RUNTIME-002").length, 0,
       "Should produce no LLN-RUNTIME-002 unresolved call errors");
   });
+
+  // ── Step 8: String literals (S5) ─────────────────────────────────────────
+
+  it("tokenize produces StringLiteral with unquoted value", async () => {
+    const { ast } = loadLexer();
+    const result = await tokenize(ast, 'let s = "hi"');
+
+    assert.equal(result.value.__tag, "ok");
+    const toks = result.value.value.items.map(extractToken);
+    // Keyword(let) Identifier(s) Symbol(=) StringLiteral(hi) Eof
+    assert.equal(toks[0].kind, "Keyword");
+    assert.equal(toks[0].value, "let");
+    assert.equal(toks[1].kind, "Identifier");
+    assert.equal(toks[1].value, "s");
+    assert.equal(toks[2].kind, "Symbol");
+    assert.equal(toks[2].value, "=");
+    assert.equal(toks[3].kind, "StringLiteral", `Expected StringLiteral, got ${toks[3].kind}`);
+    assert.equal(toks[3].value, "hi", "String value should be unquoted");
+    assert.equal(toks[4].kind, "Eof");
+  });
+
+  it("tokenize keeps an escaped quote inside a string (does not terminate early)", async () => {
+    const { ast } = loadLexer();
+    // Source text: let s = "a\"b"  — the \" must not end the string.
+    const result = await tokenize(ast, 'let s = "a\\"b"');
+
+    assert.equal(result.value.__tag, "ok");
+    const toks = result.value.value.items.map(extractToken);
+    // Exactly one StringLiteral token (the escaped quote did not split it).
+    const strs = toks.filter((t) => t.kind === "StringLiteral");
+    assert.equal(strs.length, 1, `Expected exactly 1 StringLiteral, got ${strs.length}`);
+    // Backslash is retained (LogicN string escapes are pass-through in this lexer).
+    assert.equal(strs[0].value, 'a\\"b');
+    // The token AFTER the string must be Eof, not a stray identifier.
+    assert.equal(toks[toks.length - 1].kind, "Eof");
+  });
+
+  // ── Step 9: Char literals (S5) ───────────────────────────────────────────
+
+  it("tokenize produces CharLiteral with unquoted value", async () => {
+    const { ast } = loadLexer();
+    const result = await tokenize(ast, "let c = 'x'");
+
+    assert.equal(result.value.__tag, "ok");
+    const toks = result.value.value.items.map(extractToken);
+    assert.equal(toks[0].kind, "Keyword");
+    assert.equal(toks[3].kind, "CharLiteral", `Expected CharLiteral, got ${toks[3].kind}`);
+    assert.equal(toks[3].value, "x", "Char value should be unquoted");
+    assert.equal(toks[4].kind, "Eof");
+  });
+
+  // ── Step 10: Line comments (S5) ──────────────────────────────────────────
+
+  it("tokenize produces a Comment for a // line comment", async () => {
+    const { ast } = loadLexer();
+    const result = await tokenize(ast, "// note");
+
+    assert.equal(result.value.__tag, "ok");
+    const toks = result.value.value.items.map(extractToken);
+    assert.equal(toks[0].kind, "Comment", `Expected Comment, got ${toks[0].kind}`);
+    assert.equal(toks[0].value, "// note");
+    assert.equal(toks[1].kind, "Eof");
+  });
+
+  it("tokenize does NOT emit an Operator('//') for a line comment", async () => {
+    const { ast } = loadLexer();
+    const result = await tokenize(ast, "// note");
+
+    const toks = result.value.value.items.map(extractToken);
+    assert.ok(!toks.some((t) => t.kind === "Operator" && t.value === "//"),
+      "// must be intercepted before scanOperator");
+    assert.ok(!toks.some((t) => t.kind === "Identifier" && t.value === "note"),
+      "Comment body must not be lexed as an identifier");
+  });
+
+  it("line comment stops before the newline; following line still tokenizes", async () => {
+    const { ast } = loadLexer();
+    const result = await tokenize(ast, "// note\nlet y");
+
+    assert.equal(result.value.__tag, "ok");
+    const toks = result.value.value.items.map(extractToken);
+    // Comment(// note) Newline Keyword(let) Identifier(y) Eof
+    assert.equal(toks[0].kind, "Comment");
+    assert.equal(toks[0].value, "// note");
+    assert.equal(toks[1].kind, "Newline", "Newline after a line comment must still be emitted");
+    assert.equal(toks[2].kind, "Keyword");
+    assert.equal(toks[2].value, "let");
+    assert.equal(toks[3].kind, "Identifier");
+    assert.equal(toks[3].value, "y");
+    assert.equal(toks[4].kind, "Eof");
+  });
+
+  // ── Step 11: Block comments (S5) ─────────────────────────────────────────
+
+  it("tokenize produces a Comment for a /* ... */ block comment", async () => {
+    const { ast } = loadLexer();
+    const result = await tokenize(ast, "/* block */");
+
+    assert.equal(result.value.__tag, "ok");
+    const toks = result.value.value.items.map(extractToken);
+    assert.equal(toks[0].kind, "Comment", `Expected Comment, got ${toks[0].kind}`);
+    assert.equal(toks[0].value, "/* block */");
+    assert.equal(toks[1].kind, "Eof");
+  });
+
+  it("block comment may span a newline; surrounding tokens are unaffected", async () => {
+    const { ast } = loadLexer();
+    const result = await tokenize(ast, "/* multi\nline */ x");
+
+    assert.equal(result.value.__tag, "ok");
+    const toks = result.value.value.items.map(extractToken);
+    // Comment(/* multi\nline */) Identifier(x) Eof — note the internal newline is
+    // consumed as part of the block comment (no separate Newline token here).
+    assert.equal(toks[0].kind, "Comment");
+    assert.equal(toks[0].value, "/* multi\nline */");
+    assert.equal(toks[1].kind, "Identifier");
+    assert.equal(toks[1].value, "x");
+    assert.equal(toks[2].kind, "Eof");
+  });
+
+  it("block comment line tracking: token after a multi-line comment has correct line", async () => {
+    const { ast } = loadLexer();
+    const result = await tokenize(ast, "/* a\nb */\nlet z");
+
+    const tokens = result.value.value.items;
+    // Find the 'let' keyword token and check its start line is 3.
+    const letTok = tokens.find((t) => {
+      const e = extractToken(t);
+      return e.kind === "Keyword" && e.value === "let";
+    });
+    assert.ok(letTok, "let keyword should be present after the block comment");
+    const lineField = letTok.fields.get("line");
+    assert.equal(lineField?.value, 3, "let after a one-internal-newline block comment + newline should be on line 3");
+  });
+
+  it("unterminated block comment stops at EOF without error or hang", async () => {
+    const { ast } = loadLexer();
+    const result = await tokenize(ast, "/* never closed");
+
+    assert.equal(result.value.__tag, "ok");
+    const toks = result.value.value.items.map(extractToken);
+    assert.equal(toks[0].kind, "Comment");
+    assert.equal(toks[0].value, "/* never closed");
+    assert.equal(toks[1].kind, "Eof");
+  });
 });

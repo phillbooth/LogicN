@@ -13,6 +13,12 @@ flow findCustomer(id: CustomerId) -> Option<Customer> {
 }
 
 secure flow requireCustomer(id: CustomerId) -> Result<Customer, Error> {
+  contract {
+    intent {
+      "Require an existing customer by ID, returning the customer when present or an explicit not-found error when absent."
+    }
+  }
+
   let customer: Option<Customer> = findCustomer(id)
 
   match customer {

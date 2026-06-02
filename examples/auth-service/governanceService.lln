@@ -40,6 +40,7 @@ pure flow requiresAuditForLevel(level: Int): Bool
 secure flow verifyGovernance(readonly request: Request): Response
 {
   contract {
+    intent { "Verify a flow's governance level against its declared effect qualifier." }
     effects {
       network.inbound
       audit.write

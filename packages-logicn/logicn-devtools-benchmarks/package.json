@@ -13,7 +13,9 @@
     "run:guess":              "node src/runner.mjs --benchmark six-digit-guess",
     "run:hardware-targets":   "node src/runner.mjs --benchmark hardware-targets",
     "run:governance-cost":    "node src/runner.mjs --benchmark governance-cost",
+    "run:call-chain":         "node src/runner.mjs --benchmark call-chain",
     "run:passive":            "node src/runner.mjs --benchmark hardware-targets",
+    "run:http":               "node benchmarks/http-throughput/benchmark.mjs",
     "compare":                "node src/compare.mjs",
     "build:native":           "node src/build-native.mjs",
     "bench":                  "node src/runner.mjs --quick && node src/compare.mjs"

@@ -1749,6 +1749,15 @@ function matchPattern(
   subject: LogicNValue,
   pattern: string,
 ): { readonly matches: boolean; readonly bound?: LogicNValue } {
+  // String-literal patterns (`"literal" => ...`) arrive with their surrounding
+  // quotes still attached, because the parser stores the raw token value — same
+  // convention as stringLiteral expression nodes, which strip at eval time. Strip
+  // here too so the pattern compares against the runtime string value; otherwise
+  // `"literal"` (9 chars) never equals the string `literal` (7 chars) and every
+  // string-literal arm silently falls through to `_`.
+  if (pattern.length >= 2 && pattern.startsWith("\"") && pattern.endsWith("\"")) {
+    pattern = stripStringQuotes(pattern);
+  }
   if (pattern === "_") return { matches: true };
   if (pattern === "None") return { matches: subject.__tag === "none" };
   if (pattern === "Some" && subject.__tag === "some") return { matches: true, bound: subject.value };

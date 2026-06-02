@@ -1,17 +1,24 @@
 /// @file: governance-verifier.lln
-/// @purpose: Stage B minimal governance verifier — Phase 67 milestone
+/// @purpose: Stage B governance verifier — real subset, executing
 /// @phase: 67
-/// @status: bootstrap stub — validates governance contracts for pure and secure flows
+/// @status: functional subset — validates governance contracts for flows
+///
+/// Expected flow-record shape (from the Stage B ParseResult):
+///   { name: String, kind: String, effects: Array<String>,
+///     classification: String, deterministic: Bool }
+///   - classification is "safety_critical" or "standard"
+///   - deterministic is true when the flow requires deterministic_execution
 
 // ============================================================
 // LogicN Self-Hosted Governance Verifier — Phase 67
 //
 // Validates governance invariants from ParseResult:
-//   1. safety_critical flows must declare audit.write
-//   2. safety_critical flows must declare deterministic_execution
-//   3. secure flows must have at least one governance effect
+//   1. safety_critical flows must declare audit.write       (LLN-VAL-001)
+//   2. safety_critical flows must require deterministic_exec (LLN-VAL-002)
+//   3. secure flows must declare at least one effect         (LLN-GOV-002)
 //
-// Uses Array/String params to avoid generic type constraints.
+// hasAudit is DERIVED from the effects array (not trusted from caller), so the
+// safety-critical audit check reflects the flow's real declared effects.
 // ============================================================
 
 record GovDiagnostic {
@@ -24,6 +31,47 @@ record GovResult {
   diagnostics: Array
   passed: Int
   failed: Int
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+
+// True if `target` appears in the effects array.
+pure flow hasEffect(effectList: Array, wanted: String) -> Bool
+contract {
+  intent { "Return true when the flow's declared effects include the target effect." }
+}
+{
+  mut i: Int = 0
+  while i < effectList.count() {
+    let eOpt = effectList.get(i)
+    match eOpt {
+      Some(e) => {
+        if e == wanted { return true }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return false
+}
+
+// Append every element of `src` onto `dst` and return the result.
+pure flow appendAll(dst: Array, src: Array) -> Array
+contract {
+  intent { "Concatenate src onto dst (Stage B arrays are append-only)." }
+}
+{
+  mut out: Array = dst
+  mut i: Int = 0
+  while i < src.count() {
+    let xOpt = src.get(i)
+    match xOpt {
+      Some(x) => { out = out.append(x) }
+      None => {}
+    }
+    i = i + 1
+  }
+  return out
 }
 
 // ── Per-flow governance checks ────────────────────────────────
@@ -78,7 +126,127 @@ contract {
         let effectCount: Int = fd.effects.count()
         mut flowDiags: Array = Array.empty()
         if kind == "secure" {
-          flowDiags = checkSecureFlowGovernance(name, effectCount)
+          flowDiags = appendAll(flowDiags, checkSecureFlowGovernance(name, effectCount))
+        }
+        if fd.classification == "safety_critical" {
+          let hasAudit: Bool = hasEffect(fd.effects, "audit.write")
+          flowDiags = appendAll(flowDiags, checkSafetyCritical(name, hasAudit, fd.deterministic))
+        }
+        if flowDiags.count() == 0 {
+          passed = passed + 1
+        }
+        if flowDiags.count() > 0 {
+          failed = failed + 1
+          mut j: Int = 0
+          while j < flowDiags.count() {
+            let dOpt = flowDiags.get(j)
+            match dOpt {
+              Some(d) => { allDiags = allDiags.append(d) }
+              None => {}
+            }
+            j = j + 1
+          }
+        }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return { diagnostics: allDiags, passed: passed, failed: failed }
+}
+
+// ── Body-AST governance (M-B) ─────────────────────────────────
+//
+// Governance property: a `secure` flow must actually CALL audit in its body.
+// Audit traceability cannot be satisfied by declaration alone — the flow's
+// statement/expression body must contain a `call` Expr with callee "auditWrite".
+//
+// The collectors read AST records dynamically (no FlowDecl/Stmt/Expr type
+// declared). Recursion descends into: statement `expr` (0/1 element), nested
+// if/while `body`, and Expr `children` (call args, binary operands).
+
+// True if ANY call Expr reachable from `e` calls "auditWrite".
+pure flow exprCallsAudit(e: Array) -> Bool
+contract {
+  intent { "Return true when the expression (0/1-element array) contains an auditWrite call." }
+}
+{
+  mut i: Int = 0
+  while i < e.count() {
+    let xOpt = e.get(i)
+    match xOpt {
+      Some(x) => {
+        if x.kind == "call" {
+          if x.value == "auditWrite" { return true }
+        }
+        // Recurse into children (call args / binary operands).
+        mut j: Int = 0
+        while j < x.children.count() {
+          let cOpt = x.children.get(j)
+          match cOpt {
+            Some(c) => {
+              if exprCallsAudit(Array.empty().append(c)) { return true }
+            }
+            None => {}
+          }
+          j = j + 1
+        }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return false
+}
+
+// True if ANY call Expr in the statement list calls "auditWrite".
+pure flow flowCallsAudit(stmts: Array) -> Bool
+contract {
+  intent { "Recursively detect whether the flow body performs an auditWrite call." }
+}
+{
+  mut i: Int = 0
+  while i < stmts.count() {
+    let sOpt = stmts.get(i)
+    match sOpt {
+      Some(s) => {
+        // Statement-level expression (let/return/exprStmt/condition).
+        if exprCallsAudit(s.expr) { return true }
+        // Nested if/while block.
+        if flowCallsAudit(s.body) { return true }
+        // Else block of an if.
+        if flowCallsAudit(s.elseBody) { return true }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return false
+}
+
+// ── Body-governance verification pass ─────────────────────────
+
+pure flow checkBodyGovernance(flows: Array) -> GovResult
+contract {
+  intent { "A secure flow must perform an audit call in its body (LLN-VAL-001)." }
+}
+{
+  mut allDiags: Array = Array.empty()
+  mut passed: Int = 0
+  mut failed: Int = 0
+  mut i: Int = 0
+  while i < flows.count() {
+    let fdOpt = flows.get(i)
+    match fdOpt {
+      Some(fd) => {
+        let name: String = fd.name
+        let kind: String = fd.kind
+        mut flowDiags: Array = Array.empty()
+        if kind == "secure" {
+          if flowCallsAudit(fd.body) == false {
+            let msg: String = "secure flow '" + name + "' performs no audit call in its body"
+            flowDiags = flowDiags.append({ code: "LLN-VAL-001", message: msg, flowName: name })
+          }
         }
         if flowDiags.count() == 0 {
           passed = passed + 1

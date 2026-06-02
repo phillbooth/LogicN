@@ -21,7 +21,7 @@ pure flow manifestTrustLevel(verified: Bool, hasSignature: Bool, flagsValid: Boo
 
 secure flow verifyManifest(readonly request: Request): Response
 {
-  contract { effects { network.inbound  audit.write } }
+  contract { intent { "Verify a runtime manifest's schema version and signature status." } effects { network.inbound  audit.write } }
 
   unsafe let schemaVersion: String = request.jsonBody.schemaVersion
   unsafe let verified: Bool = request.jsonBody.verified

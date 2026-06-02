@@ -24,7 +24,7 @@ pure flow totalCost(computeCost: Int, riskCost: Int, auditCost: Int): Int
 
 secure flow estimateCost(readonly request: Request): Response
 {
-  contract { effects { network.inbound  audit.write } }
+  contract { intent { "Estimate the economic cost of an operation to inform routing decisions." } effects { network.inbound  audit.write } }
 
   unsafe let opCount: Int = request.jsonBody.opCount
   unsafe let targetClass: Int = request.jsonBody.targetClass

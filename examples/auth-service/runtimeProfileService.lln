@@ -33,7 +33,7 @@ pure flow profileSecurityLevel(profile: String): Int
 
 secure flow checkProfile(readonly request: Request): Response
 {
-  contract { effects { network.inbound  audit.write } }
+  contract { intent { "Check a runtime profile request against the governed profile rules." } effects { network.inbound  audit.write } }
 
   unsafe let profile: String = request.jsonBody.profile
   let allowsRecursion: Bool = profileAllowsRecursion(profile)

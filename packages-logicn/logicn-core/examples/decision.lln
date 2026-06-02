@@ -11,14 +11,19 @@ enum PaymentStatus {
 }
 
 enum Decision {
-  ALOw
+  Allow
   Deny
   Review
 }
 
 secure flow paymentDecision(status: PaymentStatus) -> Decision {
+  contract {
+    intent {
+      "Map a payment status to a governed order decision."
+    }
+  }
   match status {
-    Paid     => ALOw
+    Paid     => Allow
     Unpaid   => Review
     Pending  => Review
     Failed   => Deny

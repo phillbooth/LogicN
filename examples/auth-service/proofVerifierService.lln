@@ -39,6 +39,7 @@ pure flow proofStrength(algorithm: String): Int
 secure flow verifyProof(readonly request: Request): Response
 {
   contract {
+    intent { "Verify a governance proof using its declared proof algorithm." }
     effects {
       network.inbound
       audit.write

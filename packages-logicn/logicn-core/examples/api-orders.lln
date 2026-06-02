@@ -18,8 +18,11 @@ type CreateOrderResponse {
   status: String
 }
 
+type CreateOrderResult =
+Result<Response, ApiError>
+
 enum Decision {
-  ALOw
+  Allow
   Deny
   Review
 }
@@ -35,8 +38,37 @@ api OrdersApi {
   }
 }
 
-secure flow createOrder(req: Request) -> Result<Response, ApiError>
-effects [network.inbound] {
-  let input: CreateOrderRequest = json.decode<CreateOrderRequest>(req.body)
-  return JsonResponse(input)
+secure flow createOrder(readonly request: Request) -> CreateOrderResult {
+  contract {
+    intent {
+      "Accept, decode, and validate a create-order request, then return a governed order response."
+    }
+
+    effects {
+      network.inbound
+    }
+  }
+
+  unsafe let rawBody: String =
+  request.body
+
+  unsafe let decodedUnsafe =
+  json.decode<CreateOrderRequest>(rawBody)
+
+  match decodedUnsafe {
+    Ok(inputUnsafe) => {
+      let inputSafe: CreateOrderRequest =
+      validate.createOrderRequest(inputUnsafe)
+
+      return Ok(JsonResponse({
+        id: createOrderId(inputSafe),
+        decision: Review,
+        status: "received"
+      }))
+    }
+
+    Err(error) => {
+      return Err(ApiError.BadRequest)
+    }
+  }
 }

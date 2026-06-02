@@ -1,6 +1,12 @@
 # LogicN — Full Audit 2026-06-02
 
-**Status: 2,952 tests · 0 failures · Phase 69 complete**
+> **⚠ CORRECTED 2026-06-02 — see `logicn-runtime-status-SOT.md` (single source of truth).**
+> Verified counts: **2,946** total (compiler 2,822 · economics 15 · graph 95 · **security 14, not 32**).
+> The "Runtime-in-LogicN" figure below conflated two axes; against the actual goal
+> (engine self-hosting) the honest state is **≈20–25%, not 55%**. Where this doc and the
+> SOT disagree, the SOT wins.
+
+**Status: 2,946 tests · 0 failures (verified by running)**
 
 Supersedes: `logicn-audit-2026-06-01.md`
 
@@ -40,7 +46,7 @@ Supersedes: `logicn-audit-2026-06-01.md`
 | 35 | Password.verify/hash/needsMigration — stable API facade | ✅ |
 | 36 | Argon2.hash/verify (Argon2id, OWASP preferred) | ✅ |
 | 37 | Password.migrate — verify+rehash bcrypt→Argon2id on successful verify | ✅ |
-| 38 | Deno WebGPU GPU benchmark live — RTX 3050 Ti, 3.99M ops/sec | ✅ |
+| 38 | Deno WebGPU GPU benchmark live — RTX 2060 (4GB, confirmed via Win32_VideoController 2026-06-02), 3.99M ops/sec | ✅ |
 | 39 | GovernanceSignature Ed25519 — signProofGraph/verifyGovernanceSignature | ✅ |
 | 40 | Stage B executable — compiler.capabilities.lln (8 flows), lexer.lln | ✅ |
 | 41 | Phase 41 syntax: `when` guard arms, integer/string literal match, inline contract, `:` return type canonical, `else if` → LLN-SYNTAX-010 hard error. Grammar v1.1. | ✅ |
@@ -74,10 +80,10 @@ Supersedes: `logicn-audit-2026-06-01.md`
 |---|---|
 | lexer.lln | ✅ scanWord works, makeKeywordTable=40kw |
 | parser.lln | ✅ flow headers; body parsing Phase 46 |
-| type-checker.lln | ⏳ Phase 47 |
-| effect-checker.lln | ⏳ Phase 57 |
-| governance-verifier.lln | ⏳ Phase 56 |
-| gir-emitter.lln | ⏳ Phase 58 |
+| type-checker.lln | 🟡 partial — 3 checks (TYPE-001/002/004) executing, 13 tests (2026-06-02) |
+| effect-checker.lln | 🟡 partial — declared-vs-used reconciliation (EFFECT-001/003/004/005), 12 tests (2026-06-02) |
+| governance-verifier.lln | 🟡 partial — 3 checks (VAL-001/002, GOV-002) executing, 9 tests (2026-06-02) |
+| gir-emitter.lln | 🟡 partial — flow-decl + expression GIR (const/load/add/cmp), 13 tests (2026-06-02) |
 | runtime.lln | ⏳ Phase 60+ |
 | compiler.capabilities.lln | ✅ 8 flows |
 
@@ -144,4 +150,4 @@ Files verified as current (no changes needed):
 | KB documents | 368+ |
 | OWASP untaint boundaries | 22 |
 | Hardware trust profiles | 37 targets |
-| Stage B files complete | 2/8 |
+| Stage B files complete | 1 functional + 7 partial + 0 stub (see SOT §3) |

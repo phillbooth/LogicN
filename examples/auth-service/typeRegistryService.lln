@@ -54,6 +54,7 @@ pure flow typeCategory(name: String): String
 secure flow resolveType(readonly request: Request): Response
 {
   contract {
+    intent { "Resolve a type name against the governed type registry." }
     effects {
       network.inbound
       audit.write

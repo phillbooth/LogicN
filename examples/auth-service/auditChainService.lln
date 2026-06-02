@@ -38,6 +38,7 @@ pure flow isValidAuditStatus(status: String): Bool
 secure flow chainAuditEntry(readonly request: Request): Response
 {
   contract {
+    intent { "Chain a governed audit entry from the request's flowName, status, and timestamp." }
     effects {
       network.inbound
       audit.write

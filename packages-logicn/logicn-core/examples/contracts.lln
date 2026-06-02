@@ -1,6 +1,7 @@
 // EXPECT: ACCEPT
 // AREA: type-system
-// PURPOSE: explicit type contracts with effects declarations
+// PURPOSE: explicit governed contract with database write and audit evidence
+
 type ContractOrderId = String
 type ContractCustomerId = String
 
@@ -16,8 +17,11 @@ type ContractOrderResponse {
   status: String
 }
 
+type ContractOrderResult =
+Result<ContractOrderResponse, ContractOrderError>
+
 enum Decision {
-  ALOw
+  Allow
   Deny
   Review
 }
@@ -27,12 +31,30 @@ enum ContractOrderError {
   PaymentReviewRequired
 }
 
-/// @purpose Creates an order from a typed request contract.
-/// @input ContractOrderRequest
-/// @output Result<ContractOrderResponse, ContractOrderError>
-/// @effects [database.write]
-secure flow createContractOrder(input: ContractOrderRequest) -> Result<ContractOrderResponse, ContractOrderError>
-effects [database.write] {
+secure flow createContractOrder(input: ContractOrderRequest) -> ContractOrderResult {
+  contract {
+    types {
+      type ContractOrderResult =
+      Result<ContractOrderResponse, ContractOrderError>
+    }
+
+    intent {
+      "Create an order from a typed request, persist the order decision, and record audit evidence."
+    }
+
+    effects {
+      database.write
+      audit.write
+    }
+  }
+
+  AuditLog.write({
+    event: "ContractOrderCreated",
+    customerId: input.customerId,
+    sku: input.sku,
+    decision: Review
+  })
+
   return Ok(ContractOrderResponse {
     id: "order_contract_example"
     decision: Review

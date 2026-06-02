@@ -28,7 +28,7 @@ async function main(): Promise<number> {
     case "audit": {
       const filePath = args[1];
       if (!filePath) {
-        process.stderr.write("Usage: logicn-security audit <file.lln> [--profile strict,...] [--json] [--strict]\n");
+        process.stderr.write("Usage: logicn-security audit <file.lln> [--profile strict,...] [--governance dev|production|deterministic|check-only] [--json] [--strict]\n");
         return 1;
       }
       const wantJson    = args.includes("--json");
@@ -38,18 +38,29 @@ async function main(): Promise<number> {
         ? (args[profileIdx + 1] ?? "strict").split(",") as RuntimeProfile[]
         : ["strict"];
 
+      const govIdx = args.indexOf("--governance");
+      const validGov = ["dev", "production", "deterministic", "check-only"] as const;
+      type GovProfile = (typeof validGov)[number];
+      const governanceProfile: GovProfile = govIdx >= 0
+        ? (args[govIdx + 1] as GovProfile)
+        : "dev";
+      if (!validGov.includes(governanceProfile)) {
+        process.stderr.write(`Unknown --governance '${governanceProfile}'. Expected one of: ${validGov.join(", ")}\n`);
+        return 1;
+      }
+
       let source: string;
       try { source = readFileSync(filePath, "utf8"); }
       catch { process.stderr.write(`Cannot read '${filePath}'\n`); return 1; }
 
-      const opts: SecurityAuditOptions = { profiles, fileName: filePath, strict: strictMode };
+      const opts: SecurityAuditOptions = { profiles, governanceProfile, fileName: filePath, strict: strictMode };
       const report = await runSecurityAudit(source, opts);
 
       if (wantJson) {
         process.stdout.write(JSON.stringify(report, null, 2) + "\n");
       } else {
         process.stdout.write(`\nLogicN Security Audit — ${filePath}\n`);
-        process.stdout.write(`Profile: ${profiles.join(", ")} | ${report.summary}\n\n`);
+        process.stdout.write(`Profile: ${profiles.join(", ")} | Governance: ${governanceProfile} | ${report.summary}\n\n`);
         if (report.findings.length === 0) {
           process.stdout.write("  ✓ No findings\n");
         } else {

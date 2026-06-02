@@ -260,34 +260,16 @@ class BytecodeCompiler {
         break;
       }
 
-      // Phase 45: callExpr — call to another pure flow
-      // Compile the callee flow and inline its opcodes at the call site.
-      // This avoids the overhead of a VM call frame — small pure flows are just inlined.
+      // callExpr — call to another pure flow.
+      // The compiler used to emit Op.CALL here (Phase 45), but the VM never
+      // implemented a CALL handler: runBytecode falls through to `default: return 0`,
+      // so every flow that calls another flow miscompiled (non-recursive calls
+      // returned 0; self-recursive calls overflowed the compiler stack). Until the
+      // VM supports calls, decline these flows by throwing BytecodeUnsupported, which
+      // makes executeFlow fall back to the sync tree-walker — that path executes
+      // sub-flow calls correctly.
       case "callExpr": {
-        const calleeName = expr.value ?? "";
-        if (this.ast === null) throw new BytecodeUnsupported(`callExpr requires ast: ${calleeName}`);
-        // Only support calls to integer-compatible pure flows (no side effects)
-        const calleeNode = (this.ast.children ?? []).find(
-          c => c.kind === "pureFlowDecl" && c.value === calleeName
-        );
-        if (calleeNode === undefined) throw new BytecodeUnsupported(`callee not found: ${calleeName}`);
-        // Compile the callee (may throw BytecodeUnsupported if callee is unsupported)
-        let calleeProg = this.subPrograms.get(calleeName);
-        if (calleeProg === undefined) {
-          // Temporarily use a new compiler for the callee (avoids slot conflicts)
-          calleeProg = new BytecodeCompiler(calleeName, this.ast).compile(calleeNode);
-          this.subPrograms.set(calleeName, calleeProg);
-        }
-        // Push each argument onto the stack
-        const argNodes = (expr.children ?? []).filter(c => c.kind !== "callExpr" || c !== expr.children?.[0]);
-        for (const arg of argNodes) {
-          this.compileExpr(arg);
-        }
-        // Inline: allocate temp slots for callee params, copy args, run body opcodes, restore
-        // Simplified approach: store args into callee param slots then emit inlined code
-        // For now, use CALL opcode with subProgram index — handled by VM
-        this.code.push(Op.CALL, calleeProg.paramNames.length);
-        break;
+        throw new BytecodeUnsupported(`callExpr: ${expr.value ?? ""}`);
       }
 
       default:

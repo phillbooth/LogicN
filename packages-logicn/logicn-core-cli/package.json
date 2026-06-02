@@ -9,8 +9,8 @@
     "LogicN": "./dist/index.js"
   },
   "scripts": {
-    "typecheck": "npm --prefix ../logicn-devtools-project-graph run build && npm --prefix ../logicn-core-tasks run build && tsc --noEmit",
-    "build": "npm --prefix ../logicn-devtools-project-graph run build && npm --prefix ../logicn-core-tasks run build && tsc -p tsconfig.json",
+    "typecheck": "npm --prefix ../logicn-devtools-project-graph run build && npm --prefix ../logicn-devtools-graph-project run build && npm --prefix ../logicn-core-tasks run build && tsc --noEmit",
+    "build": "npm --prefix ../logicn-devtools-project-graph run build && npm --prefix ../logicn-devtools-graph-project run build && npm --prefix ../logicn-core-tasks run build && tsc -p tsconfig.json",
     "test": "npm run typecheck && npm run build && node --test tests/*.test.mjs"
   },
   "engines": {

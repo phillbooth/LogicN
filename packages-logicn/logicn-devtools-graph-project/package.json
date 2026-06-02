@@ -16,7 +16,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@logicn/devtools-project-graph": "github:logicn/lln-graph"
+    "@logicn/devtools-project-graph": "file:../logicn-devtools-project-graph"
   },
   "devDependencies": {
     "typescript": "^5.5.0"

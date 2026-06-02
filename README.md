@@ -13,7 +13,7 @@ The language is designed from the ground up so that execution intent, capability
 ## Build Progress
 
 > **Benchmark headline (Phase 27 WASM):** arithmetic-threshold = **4.0B ops/sec** — 2.9× faster than Rust, 5.2× faster than Node.js
-> **GPU headline (Phase 38 Deno WebGPU):** RTX 3050 Ti = **4.17M ops/sec** — first real GPU number
+> **GPU headline (Phase 38 Deno WebGPU):** NVIDIA RTX 2060 = **4.01M ops/sec** — first real GPU number
 
 **Post-Quantum and Hardware Security** — CHERI capability hardware, ML-DSA-65 attestation (NIST FIPS 204), ARM MTE, TEE
 

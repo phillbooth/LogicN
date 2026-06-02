@@ -659,7 +659,12 @@ export function createWorkspaceProjectGraph(
     }
   }
 
-  const graphPackage = packages.find((item) => item.name === "logicn-devtools-graph-project");
+  const projectGraphDocPath = input.workspace.docs?.projectGraph;
+  const graphPackage =
+    (projectGraphDocPath === undefined
+      ? undefined
+      : packages.find((item) => item.path === normalizePath(projectGraphDocPath))) ??
+    packages.find((item) => item.name === "logicn-devtools-graph-project");
   const reportNode: ProjectGraphNode = {
     id: "report:project-graph",
     kind: "Report",
