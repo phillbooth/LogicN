@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-06-02T16:22:31.870Z",
+  "generatedAt": "2026-06-02T20:02:38.192Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -18520,6 +18520,16 @@
       "kind": "Report",
       "label": "security-report.json",
       "sourcePath": "packages-logicn/logicn-core-security/examples/security-report.json",
+      "tags": [
+        "report",
+        "logicn-core-security"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-security/package-lock.json",
+      "kind": "Document",
+      "label": "package-lock.json",
+      "sourcePath": "packages-logicn/logicn-core-security/package-lock.json",
       "tags": [
         "report",
         "logicn-core-security"
@@ -43736,6 +43746,13 @@
       "kind": "owns",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-security/examples/security-report.json"
+    },
+    {
+      "from": "package:logicn-core-security",
+      "to": "doc:packages-logicn/logicn-core-security/package-lock.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-security/package-lock.json"
     },
     {
       "from": "package:logicn-core-security",

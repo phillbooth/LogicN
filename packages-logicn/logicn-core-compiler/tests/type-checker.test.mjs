@@ -1116,3 +1116,45 @@ flow test(readonly request: Request) -> String {
       "Should not emit type mismatch for String = request.body.email");
   });
 });
+
+// ── LLN-TYPE-023: deferred type check surfaced for `Auto`-declared param/return ──
+// Regression: isAssignmentCompatible() treats an `Auto`-declared target as universally
+// compatible, which previously SILENTLY muted the return-type (008) and arg-type (005)
+// checks. The deferral is now surfaced as a visible `warning` (LLN-TYPE-023).
+describe("Type checker — LLN-TYPE-023 Auto deferral is visible (not muted)", () => {
+  it("emits a warning when a return type is declared Auto", () => {
+    const result = parseAndCheck(`
+pure flow f() -> Auto {
+  return "anything"
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-023"),
+      `Expected LLN-TYPE-023 advisory for Auto return, got: ${result.diagnostics.map((d) => d.code).join(", ")}`);
+    const d = diagsWithCode(result, "LLN-TYPE-023")[0];
+    assert.equal(d.severity, "warning", "deferral must be a warning, not an error");
+  });
+
+  it("emits a warning when an Auto-declared parameter is called with a concrete arg", () => {
+    const result = parseAndCheck(`
+pure flow callee(x: Auto) -> Int { return 0 }
+pure flow caller() -> Int {
+  let r: Int = callee(true)
+  return 0
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-023"),
+      `Expected LLN-TYPE-023 advisory for Auto param, got: ${result.diagnostics.map((d) => d.code).join(", ")}`);
+  });
+
+  it("does NOT downgrade a concrete return mismatch — still a hard error", () => {
+    const result = parseAndCheck(`
+pure flow f() -> Int {
+  return "nope"
+}
+`);
+    assert.ok(hasDiag(result, "LLN-TYPE-008") || hasDiag(result, "LLN-TYPE-002"),
+      "concrete mismatch must still hard-error");
+    assert.ok(!hasDiag(result, "LLN-TYPE-023"),
+      "concrete types must not emit the Auto deferral advisory");
+  });
+});

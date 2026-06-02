@@ -944,3 +944,43 @@ contract { effects { database.write } }
     );
   });
 });
+
+// ── Regression: record literals must not launder taint ────────────────────────
+// `unsafe let x` → `let m = { id: x }` → sink(m) previously passed SILENTLY because
+// isTaintedExpression didn't inspect record field values. Now the record carries the
+// taint of its fields (gate calls on a field still sanitize).
+describe("Value-state checker — record literal taint propagation", () => {
+  it("flags taint when an unsafe binding is stored in a record then sunk", () => {
+    const result = parseAndCheck(`
+secure flow t(raw: String) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawInput: String = raw
+  let m = { id: rawInput }
+  let saved = DB.insert(m)?
+  return Ok(saved)
+}
+`);
+    assert.ok(
+      hasDiag(result, "LLN-VALUESTATE-005") || hasDiag(result, "LLN-VALUESTATE-003"),
+      `Expected a taint-at-sink diagnostic for record-laundered unsafe input, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+
+  it("does NOT flag when the record field is sanitized by a gate", () => {
+    const result = parseAndCheck(`
+secure flow t(raw: String) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawInput: String = raw
+  let m = { id: validate.input(rawInput) }
+  let saved = DB.insert(m)?
+  return Ok(saved)
+}
+`);
+    assert.ok(
+      !hasDiag(result, "LLN-VALUESTATE-005") && !hasDiag(result, "LLN-VALUESTATE-003"),
+      `Gate-sanitized record field must not trip taint, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+});

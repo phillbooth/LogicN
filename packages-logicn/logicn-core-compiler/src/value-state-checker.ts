@@ -519,6 +519,18 @@ function isTaintedExpression(
     // validateAge(rawAge) → builds "rawAge.validateAge" instead of just "validateAge".
     if (isGateCallName(fullCallName, userGates) || isGateCallName(methodNameOnly, userGates)) return false;
 
+    // Record literals parse as callExpr "#record" whose children are field-name
+    // identifiers, each holding the field VALUE as its own child. A tainted field
+    // value must keep the record tainted — otherwise `let m = { id: unsafeInput }`
+    // followed by a sink call on `m` silently launders the taint (injection path).
+    // Recurse on each field's value via isTaintedExpression so gate calls are honored.
+    if (expr.value === "#record") {
+      return (expr.children ?? []).some((field) => {
+        const valueNode = field.children?.[0];
+        return valueNode !== undefined && isTaintedExpression(valueNode, lookupBinding, userGates);
+      });
+    }
+
     // For non-gate calls, check whether the receiver binding is itself tainted/unsafe,
     // OR whether any of the call arguments are tainted.
     // Note: the first child is the receiver (could be a namespace identifier or binding).

@@ -25,8 +25,12 @@ single-number framing in `logicn-runtime-in-logicn-roadmap.md`,
 
 ## Current baseline (from SOT, verified 2026-06-02)
 
-Axis B ≈ **35–40%**: 1 functional + 7 partial + 0 stub of 8 pipeline files.
-**No stubs remain (2026-06-02)** — every stage runs a real subset.
+Axis B ≈ **75–80%** (was 35–40% at the start of 2026-06-02). **M-A/M-B/M-C all reached
+for the integer/Bool flow subset:** a recursive multi-flow `.lln` program now runs
+**source → lex → parse → type/effect/govern → emit GIR → execute** entirely in LogicN
+(`self-hosted-pipeline.test.mjs`: `fib(15)=610`, `sumTo(100)=5050`, nested cross-flow calls).
+The path from here to 100% is **widening, not new stages** — see "Path to 100%" below.
+**No stubs remain** — every stage runs a real subset.
 
 | Stage | File | State | Next move |
 |---|---|---|---|
@@ -129,6 +133,71 @@ recommended sequence; the user steers one file at a time.
   recursive MULTI-FLOW program (`fib(15)=610`, `sumTo(100)=5050`, nested `inc(inc(x))`).
   Cross-flow calls + recursion work via a flow table. Remaining to *full* M-C: widen the
   runtime value model (strings/records/lists) and runtime effect handling beyond Int/Bool.
+
+## Path to 100% (78% → 100%) — widening, not new stages
+
+**Definition of 100% (engine self-hosting).** All 8 self-hosted files execute a `.lln`
+program **source → run, entirely in LogicN**, at **feature parity with Stage A for the
+governed-flow subset** (Int/Bool/String/record/list values, the statement/expression
+grammar Stage A accepts, declared effects observed at runtime), proven by a **bootstrap
+conformance test** that runs a representative `.lln` through all 8 files and asserts the
+output equals Stage A's. *Not* in scope for "100% Axis B": full-language exotica the
+Stage-A compiler itself doesn't yet support, and the external §Tail below. Each phase
+exit = executing `.test.mjs` assertions (parse-clean never counts).
+
+Phases are mostly **independent** and can run in parallel (separate files); the bootstrap
+test (R6) is the final barrier. Rough % weights in brackets.
+
+### R1 — Runtime value model: strings  *(≈78 → 84%)*
+- **Why:** the GIR interpreter's `RtValue` is Int/Bool only; string-returning flows can be
+  parsed/checked/emitted but not executed.
+- **Deliver:** `RtValue` gains a String case; `runtime.lln` handles `const` String,
+  string `eq`/`ne`/`concat`/`length`; gir-emitter lowers string ops; `lowerExpr` carries
+  string literals through.
+- **Exit:** `self-hosted-pipeline.test.mjs` runs a flow that builds + returns a String
+  (e.g. `"a" + "b"` → `"ab"`, `.length`), value matches Stage A.
+
+### R2 — Runtime value model: records + lists  *(≈84 → 90%)*
+- **Deliver:** `RtValue` record/list cases; record construction + field access; list
+  build/`get`/`count`; the interpreter walks nested values. Self-referential values already
+  proven to work in the engine.
+- **Exit:** a flow constructing a record and a list, reading a field / indexing, runs e2e
+  with Stage-A-matching output.
+
+### R3 — Env scaling + perf  *(≈90 → 92%)*
+- **Why:** `envLookup` is O(n) over an append-only list → O(n²) per loop (review:
+  `sumTo` 1..800 ≈ 216s). Blocks realistic programs.
+- **Deliver:** a scoped/map-backed environment (overwrite-in-place on reassignment;
+  push/pop scope on call/block).
+- **Exit:** a perf test — `sumTo(2000)` / a 10k-iteration loop completes in well under a
+  second; correctness unchanged. (Folds in the perf concern raised in the benchmarks review.)
+
+### R4 — Runtime effects  *(≈92 → 95%)*
+- **Why:** declared effects are *checked* (effect-checker) but not *executed* — a `call`
+  to an effectful builtin (e.g. `auditWrite`) evaluates to 0.
+- **Deliver:** the interpreter records/dispatches declared effects observably (an audit
+  event list, a deterministic effect log) so an effectful flow's effects are visible in the
+  run; unresolved-call returns a diagnostic instead of silent 0.
+- **Exit:** a flow that performs `auditWrite(...)` produces an observable effect entry; an
+  unknown callee is flagged, not silently 0.
+
+### R5 — Grammar completeness  *(≈95 → 98%)*
+- **Deliver:** the remaining Stage-A flow-subset constructs the parser doesn't yet handle —
+  `match` expr/stmt, `for`, member/method access (`x.f()`), and any statement form still
+  missing — plus the downstream consumers (type/effect/govern/emit/run) widened to them.
+- **Exit:** representative flows using each new construct parse, check, emit, and run e2e.
+
+### R6 — Bootstrap conformance gate  *(≈98 → 100%)*
+- **Deliver:** one test that takes a representative governed `.lln` flow, runs it through
+  **all 8 self-hosted files** (lex → parse → type/effect/govern → emit GIR → run) AND
+  through Stage A, and asserts identical output + identical diagnostics.
+- **Exit:** `tests/self-hosted-bootstrap.test.mjs` green over a small corpus of flows that
+  exercise R1–R5. This is the **100% Axis-B marker**: LogicN compiles and runs LogicN at
+  parity with the TS reference for the supported subset, with zero TS in the pipeline.
+
+**Sequencing note:** R1→R2→R3 are the value-model spine (do in order; R3 unblocks larger
+programs). R4 and R5 are independent and can parallelize. R6 is last and gates the number.
+The honest in-repo ceiling is **R6 = 100% Axis B**; everything past that is the §Tail.
 
 ## §Tail — cannot be truthfully completed in-repo
 

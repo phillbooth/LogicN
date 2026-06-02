@@ -1035,6 +1035,19 @@ class TypeChecker {
                 node.location,
                 `Return a value of type '${this.currentReturnType}', or correct the flow return type declaration.`,
               ));
+            } else if (!isOkErrReturn && declaredBase === "Auto") {
+              // Surface the deferral: isAssignmentCompatible() treats an `Auto`-declared
+              // target as universally compatible, which silently mutes the return-type
+              // check. Emit a visible advisory instead of nothing. Once an inference pass
+              // resolves `Auto` to a concrete type, this site must re-check normally.
+              this.diagnostics.push({
+                code: "LLN-TYPE-023",
+                name: "DeferredTypeCheck",
+                severity: "warning",
+                message: `Return type declared 'Auto'; the type check against this return expression ('${inferredType}') is deferred pending inference.`,
+                ...(node.location !== undefined ? { location: node.location } : {}),
+                suggestedFix: `Declare a concrete return type to enable full return-type checking.`,
+              });
             }
           }
         }
@@ -1115,6 +1128,17 @@ class TypeChecker {
                   argNode.location,
                   `Pass a value of type '${expectedType}' as argument ${i + 1}.`,
                 ));
+              } else if (inferredArgType !== undefined && expectedType === "Auto") {
+                // Surface the deferral (see LLN-TYPE-023 on returnStmt): an `Auto`-declared
+                // parameter silently mutes the argument-type check via isAssignmentCompatible.
+                this.diagnostics.push({
+                  code: "LLN-TYPE-023",
+                  name: "DeferredTypeCheck",
+                  severity: "warning",
+                  message: `Parameter ${i + 1} of '${flowName}' is declared 'Auto'; the type check against this argument ('${inferredArgType}') is deferred pending inference.`,
+                  ...(argNode.location !== undefined ? { location: argNode.location } : {}),
+                  suggestedFix: `Declare a concrete type for parameter ${i + 1} of '${flowName}' to enable full argument checking.`,
+                });
               }
             }
           }

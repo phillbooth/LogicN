@@ -43,7 +43,7 @@ The language is designed from the ground up so that execution intent, capability
 **TypeScript Runtime** — Stage A: compiler pipeline + execution engine running on Node.js
 
 ```
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (3,009 compiler · 15 economics · 95 graph · 14 security = 3,133 total · 0 failures · reproduce: `node scripts/run-all-tests.js --core`)
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (3,014 compiler · 15 economics · 95 graph · 14 security = 3,138 total · 0 failures · reproduce: `node scripts/run-all-tests.js --core`)
 ```
 
 | Layer | Status | % |

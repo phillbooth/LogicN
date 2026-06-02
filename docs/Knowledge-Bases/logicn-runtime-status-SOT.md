@@ -11,15 +11,17 @@ below was produced by executing something, not by carrying a figure forward.
 
 ## 1. Verified test counts
 
-Run command per package: build, then `node --test`.
+Reproduce all four at once from the repo root: **`node scripts/run-all-tests.js --core`**
+(build order: graph-algorithms → economics → compiler → security; one exit code). It
+prints `3133 tests total`, matching the table below. (Per package: build, then `node --test`.)
 
 | Package | Tests | Pass | Fail | Prior doc claimed |
 |---|---|---|---|---|
-| logicn-core-compiler | 3,009 | 3,009 | 0 | 2,810 |
+| logicn-core-compiler | 3,014 | 3,014 | 0 | 2,810 |
 | logicn-core-economics | 15 | 15 | 0 | 15 ✓ |
 | logicn-devtools-graph-algorithms | 95 | 95 | 0 | 95 ✓ |
 | logicn-core-security | 14 | 14 | 0 | **32 ✗** |
-| **TOTAL** | **3,133** | **3,133** | **0** | 2,952 |
+| **TOTAL** | **3,138** | **3,138** | **0** | 2,952 |
 
 Corrections vs `logicn-audit-2026-06-02.md`:
 - Compiler 2,810 → **2,869** (includes +10 self-hosted runtime tests, +9

@@ -1,0 +1,11 @@
+{
+  "name": "logicn-monorepo-root",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Root scripts for the LogicN monorepo. NOTE: no npm workspaces — each package under packages-logicn/* is self-contained (file:../ deps + its own `npm test`). These scripts only orchestrate; they do not install or hoist.",
+  "scripts": {
+    "test": "node scripts/run-all-tests.js",
+    "test:core": "node scripts/run-all-tests.js --core",
+    "test:list": "node scripts/run-all-tests.js --list"
+  }
+}
