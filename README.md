@@ -39,7 +39,6 @@ The language is designed from the ground up so that execution intent, capability
 ███████████████████████░░░░░░░  78%  (the Stage B engine now COMPILES AND RUNS LogicN — source → lex → parse → type/effect/govern → emit GIR → execute, all in LogicN)
 ```
 
-> ℹ️ **What 78% means (engine self-hosting only):** this measures the **engine compiling itself**, not the governed service examples (those are application code, not the compiler). The 8 Stage B self-hosted files form a working pipeline: a `.lln` flow is lexed, parsed into a full `Stmt`/`Expr` AST, type/effect/governance-checked, lowered to GIR, and **executed** — entirely in LogicN, with zero TypeScript in the pipeline for the supported subset. A recursive multi-flow program runs end-to-end in LogicN: `fib(15)=610`, `sumTo(100)=5050`, nested cross-flow calls. Verified by `self-hosted-pipeline.test.mjs`. Grammar covers literals/names/calls/grouping, `+ - * /`, comparisons, logical `and`/`or`, unary `!`/`-`, and `let`/`mut`/`assign`/`return`/`if`-`else`/`while`. **Remaining to 100%:** widen the runtime value model (strings/records/lists) and runtime effects beyond Int/Bool. (Engine-only metric per `docs/Knowledge-Bases/logicn-runtime-status-SOT.md`; the 27 governed HTTP service facades are Axis-A application code and are not counted here.)
 
 **TypeScript Runtime** — Stage A: compiler pipeline + execution engine running on Node.js
 
@@ -209,33 +208,33 @@ LogicN is a **language-design and active compiler project**. It is not a product
 // Data arriving from outside (HTTP, file, env) is marked `unsafe let`.
 // The compiler prevents it reaching typed sinks without a validation gate.
 //
-secure flow createPatient(readonly request: Request) -> CreatePatientResult
+secure flow createPatient(readonly request: Request) -> CreatePatientResult {
 
-contract {
-  types {
-    type CreatePatientResult = Result<Response, ApiError>
+  contract {
+    //all contract components are optional
+    
+    types {
+      type CreatePatientResult = Result<Response, ApiError>
+    }
+
+    intent {
+      "Create a patient record with protected PII handling."
+    }
+
+    effects {
+      database.write
+      audit.write
+    }
+
+    privacy {
+      contains PII
+      require redaction before audit.write
+    }
   }
 
-  intent {
-    "Create a patient record with protected PII handling."
-  }
+  unsafe let rawEmail: String = request.body.email
 
-  effects {
-    database.write
-    audit.write
-  }
-
-  privacy {
-    contains PII
-    require redaction before audit.write
-  }
-}
-{
-  unsafe let rawEmail: String =
-    request.body.email
-
-  let email: protected Email =
-    validate.email(rawEmail)?
+  let email: protected Email = validate.email(rawEmail)?
 
   let saved =
     PatientsDB.insert({ email: email })?
@@ -263,22 +262,22 @@ pure flow calculateVat(price: Money<GBP>) -> Money<GBP> {
 //
 // Every effect must be declared. Missing effects are LLN-EFFECT-001.
 //
-guarded flow fetchRate(currency: CurrencyCode) -> FetchRateResult
+guarded flow fetchRate(currency: CurrencyCode) -> FetchRateResult {
 
-contract {
-  types {
-    type FetchRateResult = Result<Decimal, NetworkError>
+  contract {
+    types {
+      type FetchRateResult = Result<Decimal, NetworkError>
+    }
+
+    intent {
+      "Fetch an exchange rate from an external service."
+    }
+
+    effects {
+      network.outbound
+    }
   }
 
-  intent {
-    "Fetch an exchange rate from an external service."
-  }
-
-  effects {
-    network.outbound
-  }
-}
-{
   unsafe let rawResponse: String =
     http.get("/rates/" + currency)?
 
