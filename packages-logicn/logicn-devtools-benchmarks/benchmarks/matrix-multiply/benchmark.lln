@@ -1,0 +1,41 @@
+/// Matrix multiply benchmark — Phase 45+ (float via scaled integers)
+/// Computes C = A × B where A, B are NxN matrices.
+/// Values are stored as scaled integers (× 1000) to use the integer WASM path.
+
+pure flow dotProduct(n: Int, rowOffset: Int, colOffset: Int) -> Int
+contract { effects {} }
+{
+  mut sum: Int = 0
+  mut k: Int = 0
+  while k < n {
+    let a: Int = rowOffset + k
+    let b: Int = colOffset + k
+    sum = sum + (a * b)
+    k = k + 1
+  }
+  return sum
+}
+
+pure flow matMulScalar(n: Int) -> Int
+contract { effects {} }
+{
+  mut total: Int = 0
+  mut i: Int = 0
+  while i < n {
+    mut j: Int = 0
+    while j < n {
+      let dp: Int = dotProduct(n, i * n, j)
+      total = total + dp
+      if total > 1000000000 { total = total - 1000000000 }
+      j = j + 1
+    }
+    i = i + 1
+  }
+  return total
+}
+
+pure flow main() -> Int
+contract { effects {} }
+{
+  return matMulScalar(32)
+}

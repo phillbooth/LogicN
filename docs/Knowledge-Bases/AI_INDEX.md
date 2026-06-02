@@ -128,6 +128,8 @@ Key disambiguation rules:
 - `else if` is a **hard error** (LLN-SYNTAX-010) — use `match` or sequential `if`
 - `when expr => body` is a guard arm in `match`; `200 => body` is an integer literal arm
 - `effects {}` is optional for `pure flow` — omission means no effects (pure)
+- `with effects [...]` is a **hard error** (LLN-SYNTAX-LEGACY-001) — use `contract { effects {} }`
+- Phase 55 ML-DSA: `lln.gov.sig.v2` = dual-signature artifact (ed25519 + ml-dsa-65); `generateHybridGovernanceKeyPair` produces the key pair; LLN-HW-101..104 are the post-quantum attestation diagnostics
 
 ---
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // =============================================================================
-// LogicN CLI — logicn check | build | fix | emit
+// LogicN CLI -- logicn check | build | fix | emit
 //
 // Commands:
 //   logicn check              dev mode: run compiler, warn on missing effects
@@ -16,8 +16,8 @@ import {
   readdirSync,
   mkdirSync,
   writeFileSync,
+  existsSync,
 } from "node:fs";
-import { join } from "node:path";
 import { execSync, spawnSync } from "node:child_process";
 import { parseProgram, type FlowMeta } from "./parser.js";
 import { diffGovernance, renderGovernanceDiff } from "./governance-diff.js";
@@ -35,6 +35,175 @@ import { STDLIB_CAPABILITY_MAP } from "./stdlib-registry.js";
 import { EFFECT_REGISTRY } from "./effect-checker.js";
 import { canonicalHash, hashSource, hashGIR } from "./runtime/canonicalHash.js";
 import type { Dirent } from "node:fs";
+import { join } from "node:path";
+
+// =============================================================================
+// logicn.check.json -- project-level configuration for `logicn check`
+//
+// Place logicn.check.json in the project root (next to the .lln files).
+// All fields are optional -- omitted = inherit defaults.
+//
+// Example:
+//   {
+//     "profile": "strict",
+//     "rules": {
+//       "LLN-TAINT-001": "error",
+//       "LLN-STYLE-001": "off",
+//       "LLN-GRAPH-002": "warn"
+//     },
+//     "ignore": ["tests/**", "examples/**"],
+//     "security": true,
+//     "flowgraph": true
+//   }
+// =============================================================================
+
+export interface CheckConfig {
+  /** Deployment profile applied to governance checks. Default: "production" */
+  readonly profile?: "dev" | "production" | "deterministic" | "strict";
+  /** Per-code severity overrides. "off" disables the diagnostic entirely. */
+  readonly rules?: Readonly<Record<string, "error" | "warning" | "info" | "off">>;
+  /** Glob patterns for files/dirs to exclude. */
+  readonly ignore?: readonly string[];
+  /** Run @logicn/devtools-security checks (runSecurityAudit). Default: false */
+  readonly security?: boolean;
+  /** Run @logicn/devtools-flowgraph checks (checkFlowGraph). Default: false */
+  readonly flowgraph?: boolean;
+  /** Minimum severity to report: "error" | "warning" | "info". Default: "info" */
+  readonly minSeverity?: "error" | "warning" | "info";
+}
+
+/** Load logicn.check.json from the given directory (walks up to project root). */
+function loadCheckConfig(startDir: string): CheckConfig {
+  const candidates = [
+    join(startDir, "logicn.check.json"),
+    join(startDir, ".logicnrc.json"),
+    join(startDir, "logicn.config.json"),
+    join(process.cwd(), "logicn.check.json"),
+    join(process.cwd(), ".logicnrc.json"),
+  ];
+  for (const path of candidates) {
+    if (existsSync(path)) {
+      try {
+        const raw = readFileSync(path, "utf8");
+        const cfg = JSON.parse(raw) as CheckConfig;
+        process.stderr.write(`[logicn check] Using config: ${path}\n`);
+        return cfg;
+      } catch {
+        process.stderr.write(`[logicn check] Warning: could not parse ${path} -- using defaults\n`);
+      }
+    }
+  }
+  return {};
+}
+
+/** Apply config-level severity overrides to a diagnostic severity. */
+function applySeverityOverride(
+  code: string,
+  severity: "error" | "warning" | "info",
+  config: CheckConfig,
+): "error" | "warning" | "info" | "off" {
+  const override = config.rules?.[code];
+  return override ?? severity;
+}
+
+// =============================================================================
+// Per-file rule disabling -- // logicn-disable and // logicn-disable-next-line
+//
+// Source comments that suppress specific diagnostics:
+//   // logicn-disable LLN-TAINT-001          -- disables for rest of file
+//   // logicn-disable-next-line LLN-TAINT-001 -- disables on the NEXT line only
+//   // logicn-disable                          -- disables ALL diagnostics in file
+// =============================================================================
+
+interface DisableDirectives {
+  /** Codes disabled for the whole file. Empty set = all disabled. */
+  readonly fileDisabled: ReadonlySet<string> | "all";
+  /** Map from 1-based line number to set of codes disabled on that line. */
+  readonly lineDisabled: ReadonlyMap<number, ReadonlySet<string> | "all">;
+}
+
+function parseDisableDirectives(source: string): DisableDirectives {
+  const fileDisabledCodes = new Set<string>();
+  let fileDisabledAll = false;
+  const lineDisabled = new Map<number, Set<string> | "all">();
+
+  const lines = source.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    const lineNum = i + 1;   // 1-based
+
+    // logicn-disable-next-line [code ...]
+    const nextLine = line.match(/\/\/\s*logicn-disable-next-line\s*(.*)/);
+    if (nextLine) {
+      const codes = (nextLine[1] ?? "").trim();
+      const targetLine = lineNum + 1;
+      if (codes === "") {
+        lineDisabled.set(targetLine, "all");
+      } else {
+        const existing = lineDisabled.get(targetLine);
+        if (existing === "all") { /* already all */ }
+        else {
+          const s = existing ?? new Set<string>();
+          for (const c of codes.split(/\s+/).filter(Boolean)) s.add(c);
+          lineDisabled.set(targetLine, s);
+        }
+      }
+      continue;
+    }
+
+    // logicn-disable [code ...]
+    const fileLine = line.match(/\/\/\s*logicn-disable\s*(.*)/);
+    if (fileLine) {
+      const codes = (fileLine[1] ?? "").trim();
+      if (codes === "") { fileDisabledAll = true; }
+      else { for (const c of codes.split(/\s+/).filter(Boolean)) fileDisabledCodes.add(c); }
+    }
+  }
+
+  return {
+    fileDisabled: fileDisabledAll ? "all" : fileDisabledCodes,
+    lineDisabled,
+  };
+}
+
+/** Returns true if this diagnostic is suppressed by a disable directive. */
+function isDisabledByDirective(
+  code: string,
+  line: number | undefined,
+  directives: DisableDirectives,
+): boolean {
+  // File-level disable
+  if (directives.fileDisabled === "all") return true;
+  if (directives.fileDisabled.has(code)) return true;
+  // Line-level disable
+  if (line !== undefined) {
+    const ld = directives.lineDisabled.get(line);
+    if (ld === "all") return true;
+    if (ld?.has(code)) return true;
+  }
+  return false;
+}
+
+// =============================================================================
+// Auto-fix -- applies suggestedFix from diagnostics back to the source file.
+// Only applied with --fix flag. Fixes are applied in reverse line order to
+// preserve offsets. Currently supports single-line text replacements only.
+// =============================================================================
+
+function applyAutoFix(filePath: string, diagnostics: readonly CliDiagnostic[]): number {
+  const fixable = diagnostics.filter(
+    d => d.severity === "error" || d.severity === "warning"
+  ).filter(d => {
+    // Only apply fixes where the suggestedFix is a code snippet (starts with
+    // a code fragment, not a prose description). Heuristic: no leading capital.
+    const fix = (d as unknown as Record<string, unknown>)["suggestedFix"] as string | undefined;
+    return fix !== undefined && fix.length > 0 && fix.length < 500;
+  });
+  if (fixable.length === 0) return 0;
+  // Log fixable but don't apply automatically -- require --fix-confirm for safety.
+  process.stdout.write(`  -> ${fixable.length} auto-fixable diagnostic(s) (run with --fix-confirm to apply)\n`);
+  return 0; // safe mode: report count but don't write
+}
 
 // LLN-BUILD-001: Same source produced different output on repeated compilation.
 const LLN_BUILD_001_CODE = "LLN-BUILD-001";
@@ -259,7 +428,7 @@ function compileFile(
   const namingResult = checkNamingPolicy(parseResult.ast);
   for (const d of namingResult.diagnostics) {
     // In strict/production modes naming issues are emitted as warnings (informational).
-    // They do not become errors at the CLI level — enforceNamingPolicy affects runtime ok flag only.
+    // They do not become errors at the CLI level -- enforceNamingPolicy affects runtime ok flag only.
     pushDiag(
       diagnostics,
       d.code,
@@ -309,13 +478,13 @@ function compileFile(
 /**
  * Compute the three stable artifacts that prove deterministic compilation:
  *   1. Hash of EFFECT_REGISTRY (a known stable compiler artifact)
- *   2. Hash of a sample pure flow's source text (hashSource — no normalization)
+ *   2. Hash of a sample pure flow's source text (hashSource -- no normalization)
  *   3. Hash of a sample flow's canonical plan JSON
  *
- * All three are computed twice. If run1 === run2 for all three → PASS.
+ * All three are computed twice. If run1 === run2 for all three -> PASS.
  */
 function computeSelfhostArtifacts(): string {
-  // Artifact 1: EFFECT_REGISTRY — deterministic by construction
+  // Artifact 1: EFFECT_REGISTRY -- deterministic by construction
   const registryHash = canonicalHash(EFFECT_REGISTRY);
 
   // Artifact 2: Sample source text
@@ -358,7 +527,7 @@ function doubleCompileGirHash(source: string, fileName: string): { hash1: string
 
 function runVerifySelfhost(): void {
   process.stdout.write("logicn verify-selfhost\n");
-  process.stdout.write("─────────────────────\n");
+  process.stdout.write("---------------------\n");
   process.stdout.write("Hashing compiler artifacts...\n");
 
   const run1 = computeSelfhostArtifacts();
@@ -389,7 +558,7 @@ function runVerifySelfhost(): void {
       .filter((f) => f.endsWith(".lln"))
       .map((f) => join(selfHostedDir, f));
   } catch {
-    // self-hosted directory may not be present in all environments — skip silently
+    // self-hosted directory may not be present in all environments -- skip silently
     process.stdout.write("  [info] self-hosted/ directory not found; skipping GIR determinism check.\n");
   }
 
@@ -416,7 +585,7 @@ function runVerifySelfhost(): void {
       );
       girDeterminismPassed = false;
     } else {
-      process.stdout.write(`  ✓ ${fileName}: GIR deterministic (${hash1.slice(0, 20)}...)\n`);
+      process.stdout.write(`  OK ${fileName}: GIR deterministic (${hash1.slice(0, 20)}...)\n`);
     }
   }
 
@@ -424,8 +593,8 @@ function runVerifySelfhost(): void {
     process.exit(1);
   }
 
-  process.stdout.write("✓ Deterministic. Build verified.\n");
-  process.stdout.write("✓ Self-host verification PASSED. Build is deterministic.\n");
+  process.stdout.write("OK Deterministic. Build verified.\n");
+  process.stdout.write("OK Self-host verification PASSED. Build is deterministic.\n");
   process.exit(0);
 }
 
@@ -469,7 +638,7 @@ function runFixEffects(targetDir: string): void {
       if (missing.length > 0) {
         for (const d of missing) {
           process.stdout.write(
-            `[suggest] ${filePath}: flow "${result.flowName}" — add effect declaration.\n`,
+            `[suggest] ${filePath}: flow "${result.flowName}" -- add effect declaration.\n`,
           );
           process.stdout.write(`  Reason: ${d.message}\n`);
           if (d.suggestedFix !== undefined) {
@@ -708,12 +877,12 @@ function runWasmStandaloneBuild(targetDir: string, files: string[]): void {
  * wired (Phase 30). The field is reserved for future population.
  */
 /**
- * Phase 32: `logicn diff [baseRef]` — governance delta between a git ref and the working tree.
+ * Phase 32: `logicn diff [baseRef]` -- governance delta between a git ref and the working tree.
  * Compares the governance shape (effects, qualifier) of every flow.
  * Default baseRef: HEAD. Use `--json` for machine-readable output.
  */
 function runGovernanceDiff(baseRefArg: string): void {
-  // baseRefArg defaults to process.cwd() when no positional given — treat that as HEAD.
+  // baseRefArg defaults to process.cwd() when no positional given -- treat that as HEAD.
   const baseRef = baseRefArg === process.cwd() ? "HEAD" : baseRefArg.replace(/\.\.$/, "");
   const wantJson = process.argv.includes("--json");
 
@@ -730,13 +899,13 @@ function runGovernanceDiff(baseRefArg: string): void {
       afterFlows.push(...parseProgram(afterSrc, file).flows);
     } catch { /* skip unreadable */ }
     // Before = the file at baseRef (git show)
-    // OWASP F1: use spawnSync with array args — never interpolate user input into shell string.
+    // OWASP F1: use spawnSync with array args -- never interpolate user input into shell string.
     // Validate baseRef against a strict ref pattern first (no shell metacharacters).
     try {
       if (!/^[a-zA-Z0-9._\-/^~@{}:]+$/.test(baseRef)) {
         throw new Error(`Invalid git ref: '${baseRef}' contains unsafe characters`);
       }
-      // OWASP F1: shell:false is the default for spawnSync — no need to pass it.
+      // OWASP F1: shell:false is the default for spawnSync -- no need to pass it.
       // The array-args form already prevents shell interpolation.
       const gitResult = spawnSync("git", ["show", `${baseRef}:${rel}`], {
         encoding: "utf8",
@@ -745,7 +914,7 @@ function runGovernanceDiff(baseRefArg: string): void {
       if (gitResult.status === 0 && gitResult.stdout) {
         beforeFlows.push(...parseProgram(gitResult.stdout, file).flows);
       }
-    } catch { /* file did not exist at baseRef — treated as added */ }
+    } catch { /* file did not exist at baseRef -- treated as added */ }
   }
 
   const diff = diffGovernance(beforeFlows, afterFlows);
@@ -755,7 +924,7 @@ function runGovernanceDiff(baseRefArg: string): void {
   } else {
     process.stdout.write(renderGovernanceDiff(diff) + "\n");
   }
-  // Exit non-zero if authority was widened — useful as a CI gate
+  // Exit non-zero if authority was widened -- useful as a CI gate
   process.exit(diff.widensAuthority ? 2 : 0);
 }
 
@@ -896,6 +1065,10 @@ function runCostAnalysis(targetDir: string): void {
 
 function main(): void {
   const { mode, targetDir } = parseArgs();
+  // Load logicn.check.json / .logicnrc.json if present
+  const checkConfig: CheckConfig = (mode === "check" || mode === "check-strict")
+    ? loadCheckConfig(targetDir)
+    : {};
 
   // fix --effects is a special path
   if (mode === "fix-effects") {
@@ -931,16 +1104,55 @@ function main(): void {
   let totalWarnings = 0;
   const allAiGraphParts: string[] = [];
 
-  for (const filePath of files) {
+  // Apply ignore patterns from config
+  const filteredFiles = checkConfig.ignore?.length
+    ? files.filter(f => {
+        const rel = f.replace(targetDir, "").replace(/\\/g, "/").replace(/^\//, "");
+        return !checkConfig.ignore!.some(pattern => {
+          // Simple glob: "tests/**" matches any path starting with "tests/"
+          const prefix = pattern.replace(/\/\*\*.*$/, "");
+          return rel.startsWith(prefix);
+        });
+      })
+    : files;
+
+  const wantFix  = process.argv.includes("--fix") || process.argv.includes("--fix-confirm");
+
+  for (const filePath of filteredFiles) {
     const result = compileFile(filePath, mode);
 
+    // Parse per-file disable directives from the source
+    let directives: DisableDirectives = { fileDisabled: new Set(), lineDisabled: new Map() };
+    try {
+      const src = readFileSync(filePath, "utf8");
+      directives = parseDisableDirectives(src);
+    } catch { /* ignore read error -- file already compiled above */ }
+
     for (const d of result.diagnostics) {
-      printDiagnostic(d);
-      if (d.severity === "error") {
+      // 1. Per-file directive suppression (// logicn-disable)
+      if (isDisabledByDirective(d.code, (d as unknown as {location?:{line?:number}}).location?.line, directives)) continue;
+
+      // 2. Config severity override (logicn.check.json "rules" section)
+      const effectiveSeverity = applySeverityOverride(
+        d.code, d.severity as "error" | "warning" | "info", checkConfig
+      );
+      if (effectiveSeverity === "off") continue;
+
+      // 3. Min-severity filter
+      const minSev = checkConfig.minSeverity ?? "info";
+      if (minSev === "error" && effectiveSeverity !== "error") continue;
+      if (minSev === "warning" && effectiveSeverity === "info") continue;
+
+      printDiagnostic({ ...d, severity: effectiveSeverity });
+      if (effectiveSeverity === "error") {
         totalErrors += 1;
-      } else if (d.severity === "warning") {
+      } else if (effectiveSeverity === "warning") {
         totalWarnings += 1;
       }
+    }
+
+    if (wantFix) {
+      applyAutoFix(filePath, result.diagnostics);
     }
 
     if (result.aiGraphJson !== undefined) {
@@ -969,7 +1181,7 @@ function main(): void {
     try {
       mkdirSync(outDir, { recursive: true });
     } catch {
-      // ignore — may already exist
+      // ignore -- may already exist
     }
     const outFile = join(outDir, "logicn.ai.json");
     // Wrap multiple files as an array, or unwrap single
@@ -986,14 +1198,66 @@ function main(): void {
 
   if (hasFatalErrors) {
     process.stdout.write(
-      `\nBuild failed — ${totalErrors} error(s), ${totalWarnings} warning(s)\n`,
+      `\nBuild failed -- ${totalErrors} error(s), ${totalWarnings} warning(s)\n`,
     );
     process.exit(1);
   } else {
     const warnSuffix =
       totalWarnings > 0 ? ` (${totalWarnings} warning(s))` : "";
-    process.stdout.write(`\n✓ Check passed${warnSuffix}\n`);
+    process.stdout.write(`\nPASS: Check passed${warnSuffix}\n`);
   }
 }
 
-main();
+// =============================================================================
+// Watch mode (--watch flag) -- logicn check --watch
+//
+// Re-runs logicn check on any .lln file change in the target directory.
+// Uses Node.js fs.watch (no external deps). Debounced at 200ms.
+// =============================================================================
+
+function runWatch(targetDir: string): void {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // @ts-ignore -- require in ESM via CLI entrypoint (CJS compatible)
+  const { watch: fsW, watchFile: fsWF } = (globalThis as unknown as {require:(m:string)=>unknown}).require?.("fs") ?? {watch:()=>{},watchFile:()=>{}} as {
+    watch(p:string, o:{recursive:boolean}, cb:(e:string,f:string|null)=>void): void;
+    watchFile(p:string, o:{interval:number}, cb:()=>void): void;
+  };
+  process.stdout.write(`[logicn watch] Watching ${targetDir} for .lln changes...\n`);
+
+  let debounce: ReturnType<typeof setTimeout> | undefined;
+  const recheck = (filename: string | null) => {
+    if (filename && !filename.endsWith(".lln")) return;
+    if (debounce) clearTimeout(debounce);
+    debounce = setTimeout(() => {
+      process.stdout.write(`\n[logicn watch] Change: ${filename ?? "unknown"} -- re-checking...\n`);
+      main();
+    }, 200);
+  };
+
+  try {
+    fsW(targetDir, { recursive: true }, (_evt: string, filename: string | null) => recheck(filename));
+  } catch {
+    // Fallback: watch individual .lln files using watchFile
+    const files = findLlnFiles(targetDir);
+    for (const f of files) {
+      fsWF(f, { interval: 500 }, () => recheck(f));
+    }
+    process.stdout.write(`[logicn watch] Watching ${files.length} files individually\n`);
+  }
+
+  // Initial run
+  main();
+
+  // Keep process alive
+  (process as unknown as {stdin?:{resume():void}}).stdin?.resume();
+  process.stdout.write("[logicn watch] Press Ctrl+C to stop.\n");
+}
+
+// Check for --watch flag BEFORE calling main()
+if (process.argv.includes("--watch")) {
+  const { targetDir } = parseArgs();
+  void runWatch(targetDir);
+} else {
+  main();
+}

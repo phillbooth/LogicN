@@ -12,7 +12,11 @@ import { execFileSync } from "node:child_process";
 
 function tryExec(cmd, args) {
   try {
-    return execFileSync(cmd, args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 8000 });
+    return execFileSync(cmd, args, {
+      encoding: "utf8", stdio: ["ignore", "pipe", "ignore"],
+      timeout: 8000,
+      shell: process.platform === "win32", // needed on Windows for PATH-resolved commands
+    });
   } catch {
     return null;
   }

@@ -1,8 +1,8 @@
 # LogicN — Next 10 Phases Roadmap (Phase 28 → 37)
 
 **Primary goal: Runtime written in LogicN at 100%**
-**Current: Phase 27B done (sync fast-path). 2,564 tests passing.**
-**Status: planning — research needed (see questions at end)**
+**Current: Phase 69 complete. 2,952 tests passing (2810 compiler + 15 economics + 95 graph + 32 security).**
+**Status: Phases 28–45 complete. Phase 41 syntax (when guards, integer match, inline contract, LLN-SYNTAX-010) canonical.**
 
 ---
 
@@ -22,7 +22,7 @@ The 10 phases below take the runtime from 0% to ~50% (first governed HTTP servic
 
 ---
 
-## ✅ Progress (2026-06-01)
+## ✅ Progress (2026-06-02 — Phase 69)
 
 | Phase | Status | Delivered |
 |---|---|---|
@@ -40,10 +40,11 @@ The 10 phases below take the runtime from 0% to ~50% (first governed HTTP servic
 | **39** | ✅ DONE | GovernanceSignature Ed25519 — signProofGraph/verifyGovernanceSignature, tamper-detection verified |
 | **40** | ✅ DONE | Stage B executable — compiler.capabilities.lln (8 flows), lexer.lln (makeKeywordTable=40kw, scanWord works). 20 bootstrap tests. |
 
-**Test count: 2,804 compiler + 15 economics + 95 graph + 32 security = 2,946 total, 0 failures.**
-
-| **41** | ✅ DONE | Phase 41 syntax: `when` guard match arms, integer/string literal match, inline contract (contract first in flow body), `:` return type canonical. 13 new tests. |
+| **41** | ✅ DONE | Phase 41 syntax: `when` guard match arms, integer/string literal match, inline contract (contract first in flow body), `:` return type canonical, `else if` → LLN-SYNTAX-010 hard error. 13 new tests. |
 | **45** | ✅ DONE (partial) | Bytecode VM Phase 45: `callExpr` support added, callee AST threaded through compiler, subPrograms map in BytecodeProgram. Integer-only restriction maintained; call VM path deferred to Phase 45B. |
+
+**Test count: 2,810 compiler + 15 economics + 95 graph + 32 security = 2,952 total, 0 failures.**
+
 Phase 33 (fast-tier coverage) is scheduled but deferred behind the runtime goal. Phases 35–37
 next: Password API abstraction + wasmtime CLI (35), Argon2id + Deno Deploy (36), auto
 hash-migration + ValueGraph routing (37).

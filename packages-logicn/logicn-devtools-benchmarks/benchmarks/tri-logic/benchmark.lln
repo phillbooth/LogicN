@@ -1,0 +1,49 @@
+/// tri-logic benchmark — Kleene ternary logic using the min/max equivalence.
+/// True=1, False=-1, Unknown=0 (Int8 encoding).
+///
+/// KEY INSIGHT: In this encoding, Kleene logic collapses to scalar math:
+///   Tri.and(a,b) = min(a,b)  — one comparison instruction
+///   Tri.or(a,b)  = max(a,b)  — one comparison instruction
+///   Tri.not(a)   = -a        — one negation instruction
+/// This makes tri-logic WASM-compilable with zero branching overhead.
+
+pure flow triAndFast(a: Int, b: Int) -> Int
+contract { effects {} }
+{
+  if a < b { return a }
+  return b
+}
+
+pure flow triOrFast(a: Int, b: Int) -> Int
+contract { effects {} }
+{
+  if a > b { return a }
+  return b
+}
+
+pure flow triNotFast(a: Int) -> Int
+contract { effects {} }
+{
+  return 0 - a
+}
+
+pure flow runBulkTri(n: Int) -> Int
+contract { effects {} }
+{
+  mut total: Int = 0
+  mut i: Int = 0
+  while i < n {
+    let a: Int = (i - (i / 3) * 3) - 1
+    let b: Int = ((i * 7) - ((i * 7) / 3) * 3) - 1
+    total = total + triAndFast(a, b) + triOrFast(a, b) + triNotFast(a)
+    if total > 1000000 { total = total - 1000000 }
+    i = i + 1
+  }
+  return total
+}
+
+pure flow main() -> Int
+contract { effects {} }
+{
+  return runBulkTri(100000)
+}

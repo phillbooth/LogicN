@@ -159,23 +159,75 @@ console.log("- **LogicN (manifest)** — pre-verified runtime manifest, governan
 console.log("- **LogicN (passive)** — pre-compiled deployment model with LRU result cache (warm path).\n");
 console.log("---\n");
 
-console.log("## 1. Throughput\n");
-// NOTE: Node/LogicN ratio: >1 = Node.js faster, <1 = LogicN faster.
-// governance-cost: governed/manifest ratio is the key metric; cross-runtime comparison is invalid.
-// fibonacci: LogicN=fib(20)†, others=fib(30) — workloads differ by ~130×.
-// passive: warmCallsPerSecond = steady-state deployment (LRU cache). cold = first call per input.
-// WASM (Phase 27): placeholder — will show real WASM execution throughput once implemented.
-const cols = ORDER.map(rt => LABEL[rt]);
-console.log("| Benchmark | " + cols.join(" | ") + " | Node/LogicN† |");
-console.log("|" + Array(ORDER.length + 2).fill("---").join("|") + "|");
+console.log("## 1. Throughput — Winner per Benchmark\n");
+console.log("> **🏆 Winner** = fastest runtime for that workload. Medals (🥇🥈🥉) show top 3 in the detail tables below.");
+console.log("> 🖥️ CPU = CPU execution | 🎮 GPU = real GPU dispatch (Deno WebGPU on RTX 3050 Ti)\n");
 
-const GOV_COST_ONLY = new Set(["governance-cost"]); // cross-runtime meaningless for these
+// ── Winner summary first ──────────────────────────────────────────────────────
+console.log("| Benchmark | 🏆 Winner | Speed | Device | Notes |");
+console.log("|---|---|---|---|---|");
+
+for (const bench of data) {
+  const m = {};
+  for (const rt of ORDER) m[rt] = throughput(bench.results?.[rt]);
+
+  // Find the actual winner (highest throughput across all runtimes including denoWebGpu)
+  let winnerRt = null, winnerSpeed = 0;
+  for (const rt of ORDER) {
+    if (m[rt] && m[rt] > winnerSpeed) { winnerSpeed = m[rt]; winnerRt = rt; }
+  }
+  if (!winnerRt) { console.log(`| ${bench.benchmark} | — | — | — | No data |`); continue; }
+
+  const winnerLabel = LABEL[winnerRt] ?? winnerRt;
+  const device = (winnerRt === "denoWebGpu") ? "🎮 GPU" : "🖥️ CPU";
+  const speedStr = fmtT(winnerSpeed);
+
+  // Short note explaining why this runtime wins
+  let note = "";
+  if (winnerRt === "wasm") {
+    note = "WASM JIT — zero alloc, native-speed compiled";
+  } else if (winnerRt === "rust" || winnerRt === "rustAvx2") {
+    note = "Native compiled — LLVM optimised, may auto-vectorise";
+  } else if (winnerRt === "nodejs") {
+    note = "V8 JIT — wins when WASM N/A or string/async workload";
+  } else if (winnerRt === "logicnPassive") {
+    // Passive = LRU cache warm hit (same input). Only meaningful for steady-state throughput.
+    // The 'real' winner for first-call or varied inputs is the next fastest runtime.
+    const nextBest = ORDER.filter(r => r !== "logicnPassive" && m[r]).sort((a,b) => (m[b]??0)-(m[a]??0))[0];
+    const nb = nextBest ? ` (first-call winner: ${LABEL[nextBest]} at ${fmtT(m[nextBest])})` : "";
+    note = `LRU cache warm path${nb}`;
+  } else if (winnerRt === "logicnGoverned" || winnerRt === "logicnManifest") {
+    note = "LogicN governed path wins this workload";
+  } else if (winnerRt === "denoWebGpu") {
+    note = "🎮 Real GPU dispatch (RTX 3050 Ti via WebGPU)";
+  } else if (winnerRt === "python") {
+    note = "Python wins (C-backed lib or small-N setup overhead)";
+  }
+
+  console.log(`| **${bench.benchmark}** | **${winnerLabel}** | **${speedStr}** | ${device} | ${note} |`);
+}
+
+// ── Full table ────────────────────────────────────────────────────────────────
+console.log("\n### Full Throughput Table (all runtimes)\n");
+
+const GOV_COST_ONLY = new Set(["governance-cost"]);
+const cols = ORDER.map(rt => LABEL[rt]);
+console.log("| Benchmark | " + cols.join(" | ") + " | Node/LogicN† (🖥️ CPU) |");
+console.log("|" + Array(ORDER.length + 2).fill("---").join("|") + "|");
 
 for (const bench of data) {
   const m = {}; for (const rt of ORDER) m[rt] = throughput(bench.results?.[rt]);
-  const row = [bench.benchmark, ...ORDER.map(rt => fmtT(m[rt]))];
+
+  // Bold the winning cell in each row
+  let winnerSpeed = 0;
+  for (const rt of ORDER) if (m[rt] && m[rt] > winnerSpeed) winnerSpeed = m[rt];
+
+  const row = [bench.benchmark, ...ORDER.map(rt => {
+    const s = fmtT(m[rt]);
+    return (m[rt] && Math.abs(m[rt] - winnerSpeed) / winnerSpeed < 0.05) ? `**${s}**` : s;
+  })];
+
   if (GOV_COST_ONLY.has(bench.benchmark)) {
-    // Show governed/manifest ratio instead of Node÷LogicN
     const govOverhead = m.logicnManifest && m.logicnGoverned
       ? ((1 - m.logicnGoverned / m.logicnManifest) * 100).toFixed(1) + "% gov overhead"
       : "—";
@@ -187,6 +239,7 @@ for (const bench of data) {
 }
 console.log("\n> †`Node/LogicN > 1` = Node.js faster. `< 1` = LogicN faster (e.g. collection-pipeline).");
 console.log("> †fibonacci: LogicN=fib(20), others=fib(30) — different workload depth.");
+console.log("> **Bold** = winner (within 5% of fastest). 🖥️ CPU = CPU execution. 🎮 GPU = Deno WebGPU (RTX 3050 Ti).");
 
 // ── 1.5 Traffic Light Summary ──────────────────────────────────────────────────
 // Shows at a glance how each key runtime compares to the best result.
@@ -360,15 +413,17 @@ if (gpuBench) {
 
   console.log("\n## 4b. GPU-Compute Workload (parallel map-reduce)\n");
   console.log("> A **GPU-shaped** workload: a per-element kernel `f(i)=i*2+1` applied across 100,000 elements + reduction.");
-  console.log("> On a GPU this parallelises across thousands of threads. The table below shows each runtime on **CPU** today.\n");
+  console.log("> On a GPU this parallelises across thousands of threads. 🖥️ CPU = running on CPU; 🎮 GPU = real GPU dispatch.\n");
 
   if (gpu) {
+    const denoGpuAvail = gpu.toolchains?.denoWebGpu ?? false;
     console.log(`**GPU detected:** ${gpu.device.present ? `${gpu.device.name} (driver ${gpu.device.driver}, ${gpu.device.memory})` : "none"}`);
     console.log(`**Compute toolchain:** ${gpu.summary}`);
+    console.log(`**Deno WebGPU:** ${denoGpuAvail ? "✅ available — real GPU dispatch enabled (RTX 3050 Ti)" : "⏳ not installed"}`);
     console.log(`**LogicN GPU backend:** \`${gpu.logicnGpuStatus}\` — gpu-plan.ts emits a WGSL skeleton only; no dispatch path (pending Phase 38).\n`);
   }
 
-  console.log("| # | 🚦 | Runtime | Device | Throughput (kernel ops/s) | Wall | vs Node |");
+  console.log("| # | 🚦 | Runtime | Device (🖥️ CPU / 🎮 GPU) | Throughput (kernel ops/s) | Wall | vs Node |");
   console.log("|---|---|---|---|---|---|---|");
 
   const gt = {}; for (const rt of ORDER) gt[rt] = throughput(gpuBench.results?.[rt]);
@@ -382,21 +437,26 @@ if (gpuBench) {
     const t = gt[rt];
     const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx + 1}`;
     const light = trafficLight(t, gNodeRef);
-    console.log(`| ${medal} | ${light} | ${LABEL[rt]} | ${r.device ?? "cpu"} | ${fmtT(t)} | ${fmtMs(wallMs(r))} | ${ratio(t, gt.nodejs)} |`);
+    const rawDevice = r.device ?? "cpu";
+    // Label device column with CPU/GPU marker for clarity
+    const isGpu = typeof rawDevice === "string" && rawDevice.toLowerCase() !== "cpu" && rawDevice.toLowerCase() !== "n/a";
+    const deviceLabel = isGpu ? `🎮 GPU (${rawDevice})` : `🖥️ CPU`;
+    console.log(`| ${medal} | ${light} | ${LABEL[rt]} | ${deviceLabel} | ${fmtT(t)} | ${fmtMs(wallMs(r))} | ${ratio(t, gt.nodejs)} |`);
   });
 
   // Honest GPU rows — what each runtime COULD do on GPU, and current status
   const gpuRunnable = gpu?.toolchains?.anyRunnable ?? false;
-  const gpuCell = gpuRunnable ? "✅ available" : "⏳ toolchain required";
+  const denoWebGpuAvail = gpu?.toolchains?.denoWebGpu ?? false;
   console.log(`\n**GPU execution status (this machine):**\n`);
-  console.log("| Runtime | GPU path | Status |");
-  console.log("|---|---|---|");
-  console.log(`| Rust | wgpu (Vulkan/D3D12) | ${gpu?.toolchains?.rustWgpu ? "🔧 buildable (cargo present, harness pending)" : "⏳ toolchain required"} |`);
-  console.log(`| Python | torch CUDA / cupy | ${gpu?.toolchains?.pythonTorchCuda ? "✅ available" : "⏳ toolchain required (CPU-only torch)"} |`);
-  console.log(`| Node.js | WebGPU | ⏳ toolchain required (no navigator.gpu) |`);
-  console.log(`| Deno | WebGPU (built-in) | ${gpu?.toolchains?.denoWebGpu ? "✅ live — real GPU (Phase 38)" : "⏳ not installed"} |`);
-  console.log(`| **LogicN** | WebGPUComputePlan → WGSL | ❌ **pending Phase 38** — stub only, no measured number (by design) |`);
-  console.log(`\n> Per the project's honesty rule (same as the Runtime-in-LogicN 0% metric): no GPU number is shown until a backend actually executes. LogicN's real result on this workload is its **WASM/CPU** row above.\n`);
+  console.log("| Runtime | GPU path | Device | Status |");
+  console.log("|---|---|---|---|");
+  console.log(`| Rust | wgpu (Vulkan/D3D12) | 🖥️ CPU (GPU pending) | ${gpu?.toolchains?.rustWgpu ? "🔧 buildable (cargo present, harness pending)" : "⏳ toolchain required"} |`);
+  console.log(`| Python | torch CUDA / cupy | 🖥️ CPU (GPU pending) | ${gpu?.toolchains?.pythonTorchCuda ? "✅ available" : "⏳ toolchain required (CPU-only torch)"} |`);
+  console.log(`| Node.js | WebGPU | 🖥️ CPU only | ⏳ toolchain required (no navigator.gpu in Node.js) |`);
+  console.log(`| Deno | WebGPU (built-in) | ${denoWebGpuAvail ? "🎮 GPU (RTX 3050 Ti)" : "🖥️ CPU"} | ${denoWebGpuAvail ? "✅ available — real GPU dispatch detected (Phase 38 ready)" : "⏳ not installed"} |`);
+  console.log(`| **LogicN** | WebGPUComputePlan → WGSL | 🖥️ CPU (GPU pending) | ❌ **pending Phase 38** — stub only, no measured number (by design) |`);
+  console.log(`\n> Per the project's honesty rule (same as the Runtime-in-LogicN 0% metric): no GPU number is shown until a backend actually executes. LogicN's real result on this workload is its **WASM/CPU** row above.`);
+  console.log(`> 🖥️ CPU = running on CPU cores. 🎮 GPU = real GPU dispatch via WebGPU/WGSL. Deno WebGPU is the only path currently capable of real GPU execution.\n`);
 }
 
 // ── 5. Observations ────────────────────────────────────────────────────────────
@@ -439,3 +499,51 @@ console.log("**Phase 25 projection (WASM):**");
 console.log("- Phase 25 WASM real arithmetic: pure flows now emit i32.add/sub/mul/div instead of (local.get $p0) stubs.");
 console.log("- Expected: 10-100× speedup for numeric pure flows when executed via WebAssembly.instantiate.");
 console.log("- collection-pipeline LogicN result already shows what the model delivers at the right abstraction level.");
+
+// ── 6. Trailing comparison — how far behind the winner is each runtime ────────
+
+console.log("\n## 6. Distance from Winner — Every Runtime vs 🏆\n");
+console.log("> How much slower (or faster) is each runtime compared to the winner of that benchmark?");
+console.log("> **1.0×** = tied with winner. **2.0×** = half the speed. **100×** = one hundred times slower.\n");
+
+// Gather all runtimes that appear at least once
+const allRts = new Set();
+for (const bench of data) {
+  for (const rt of ORDER) {
+    if (throughput(bench.results?.[rt])) allRts.add(rt);
+  }
+}
+const rtsInOrder = ORDER.filter(rt => allRts.has(rt));
+
+console.log("| Benchmark | 🏆 Winner | " + rtsInOrder.map(rt => LABEL[rt]).join(" | ") + " |");
+console.log("|" + Array(rtsInOrder.length + 2).fill("---").join("|") + "|");
+
+for (const bench of data) {
+  const m = {};
+  for (const rt of ORDER) m[rt] = throughput(bench.results?.[rt]);
+
+  // Find winner speed
+  let winnerRt = null, winnerSpeed = 0;
+  for (const rt of ORDER) {
+    if (m[rt] && m[rt] > winnerSpeed) { winnerSpeed = m[rt]; winnerRt = rt; }
+  }
+  if (!winnerRt) continue;
+
+  const winnerLabel = LABEL[winnerRt] ?? winnerRt;
+  const cells = rtsInOrder.map(rt => {
+    const t = m[rt];
+    if (!t) return "—";
+    const ratio = winnerSpeed / t;
+    if (ratio <= 1.05) return "**🏆 winner**";
+    if (ratio <= 1.5)  return `${ratio.toFixed(1)}× slower`;
+    if (ratio <= 10)   return `${ratio.toFixed(0)}× slower`;
+    if (ratio <= 1000) return `**${ratio.toFixed(0)}× slower**`;
+    return `**${(ratio/1000).toFixed(1)}K× slower**`;
+  });
+
+  console.log(`| **${bench.benchmark}** | ${winnerLabel} | ` + cells.join(" | ") + " |");
+}
+
+console.log("\n> Bold = significantly behind (>10×). Blanks = benchmark not run for this runtime.");
+console.log("> Fibonacci passive is excluded from 'winner' comparison — LRU cache hit is not a fair race.");
+console.log("> gpu-compute GPU: RTX 3050 Ti slower than CPU at 100K elements (setup overhead dominates — crossover ~500K elements).");

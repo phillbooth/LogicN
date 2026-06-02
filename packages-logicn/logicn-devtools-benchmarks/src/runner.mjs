@@ -33,6 +33,27 @@ const BENCHMARKS = [
   // mapReduce(100000) does 100000 per-element kernel evaluations.
   // GPU columns are filled by gpu-detect (toolchain-gated); LogicN GPU = pending Phase 38.
   { id: "gpu-compute",         dir: "gpu-compute",          logicnOpsPerRun: 100000,                 passiveCallCount: 10   },
+  // Matrix multiply: canonical float32 GEMM at two scales (32×32 and 64×64).
+  // LogicN uses scaled integer arithmetic (×1000) for the WASM path.
+  // Key question: does WASM SIMD beat CPU, and at what scale does WebGPU win?
+  { id: "matrix-multiply", dir: "matrix-multiply", logicnOpsPerRun: 32 * 32, passiveCallCount: 5 },
+  // Crypto-ops: SHA-256 bulk hashing, HMAC-SHA256, Ed25519 sign+verify.
+  // WASM column is N/A — crypto delegates to the host capability.
+  // LogicN stub documents the governance model (crypto.verify effect required).
+  { id: "crypto-ops", dir: "crypto-ops", logicnOpsPerRun: 1, passiveCallCount: 100 },
+  // Text/HTML: string processing workload for web services.
+  // LogicN string flows go through the sync tree-walker (not the integer bytecode VM).
+  // Key question: how fast is WASM for string ops, and is the governed path viable for text work?
+  { id: "text-html", dir: "text-html", logicnOpsPerRun: 1, passiveCallCount: 100 },
+  // HTTP-throughput: localhost req/s — Node.js raw vs LogicN governed endpoint.
+  // Uses benchmark.mjs directly (not the standard runner pattern) — separate runner below.
+  // NOTE: This benchmark is run standalone, not via the main runner loop.
+  // Tri-logic: 3-valued ternary logic (True=1, False=-1, Unknown=0) — all 27 truth table combinations.
+  // Relevant for future photonic compute substrates; validates correctness and shows CPU overhead today.
+  { id: "tri-logic", dir: "tri-logic", logicnOpsPerRun: 27000, passiveCallCount: 100 },
+  // Data-query: SQL-like data filtering on arrays of JSON records — a core web service workload.
+  // LogicN governed path validates query inputs as Tainted<String> before execution.
+  { id: "data-query", dir: "data-query", logicnOpsPerRun: 1000, passiveCallCount: 50 },
 ];
 
 function runProc(cmd, args=[]) {

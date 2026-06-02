@@ -2,8 +2,9 @@
 # Purpose: Machine-readable canonical path manifest for AI prompt bootstrapping and tooling.
 # Usage:   Load this file to discover authoritative spec documents by topic.
 #          Do NOT use legacy/* paths as primary sources — see notes fields.
-# Updated: 2026-06-01
+# Updated: 2026-06-02
 # Grammar version: v1.1 (Phase 41 syntax additions — see grammar_phase41_additions)
+# Phase: 69 | Tests: 2,952 (2810 compiler + 15 economics + 95 graph + 32 security)
 
 version: "1"
 language: "LogicN"
@@ -84,6 +85,22 @@ diagnostics:
       canonical: docs/Knowledge-Bases/logicn-phase13-passive-plans-target-bridges.md
     - series: "LLN-RUNTIME-*"
       canonical: docs/Knowledge-Bases/logicn-runtime-lifecycle.md
+    - series: "LLN-HW-*"
+      canonical: docs/Knowledge-Bases/logicn-post-quantum-hardware-security.md
+      note: >
+        LLN-HW-001/002/003 — hardware governance class diagnostics (Phase 26B).
+        LLN-HW-101/102/103/104 — post-quantum attestation diagnostics (Phase 55):
+        MissingRequiredAttestation, UnsupportedAttestationAlgorithm,
+        HybridAttestationIncomplete, AttestationEvidenceStale.
+    - series: "LLN-TAINT-*"
+      canonical: docs/Knowledge-Bases/logicn-security-model-layers.md
+      note: "Taint propagation and sanitiser boundary diagnostics (Phase 28+)"
+    - series: "LLN-PROFILE-*"
+      canonical: docs/Knowledge-Bases/logicn-security-model-layers.md
+      note: "Profile enforcement diagnostics: strict, high_integrity (Phase 28+)"
+    - series: "LLN-STYLE-*"
+      canonical: docs/Knowledge-Bases/compiler-diagnostics.md
+      note: "Code style advisory diagnostics (LLN-STYLE-001: else if chain)"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PIPELINE
@@ -348,6 +365,39 @@ photonic_ternary:
       note: Authoritative type rules and full LLN-TYPE-* diagnostics
     - path: docs/Knowledge-Bases/mathematics-and-tri-logic.md
       note: Mathematical foundations for Tri
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STAGE B — SELF-HOSTED COMPILER FILES
+# ─────────────────────────────────────────────────────────────────────────────
+stage_b:
+  description: >
+    Stage B is the self-hosted LogicN compiler — LogicN compiling LogicN.
+    8 total files are planned. Status as of Phase 69:
+  files:
+    - name: lexer.lln
+      status: DONE
+      note: makeKeywordTable (40kw), scanWord works. Phase 40.
+    - name: compiler.capabilities.lln
+      status: DONE
+      note: 8 flows. Phase 40.
+    - name: parser.lln
+      status: PARTIAL
+      note: Flow headers parsed. Body parsing Phase 46.
+    - name: type-checker.lln
+      status: PLANNED
+      note: Phase 47 — minimal inference stub
+    - name: effect-checker.lln
+      status: PLANNED
+      note: Phase 57
+    - name: governance-verifier.lln
+      status: PLANNED
+      note: Phase 56
+    - name: gir-emitter.lln
+      status: PLANNED
+      note: Phase 58
+    - name: runtime.lln
+      status: PLANNED
+      note: Phase 60+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GLOSSARY / ALIASES
