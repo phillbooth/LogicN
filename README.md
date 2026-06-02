@@ -36,15 +36,15 @@ The language is designed from the ground up so that execution intent, capability
 **Runtime written in LogicN** — Stage B: LogicN compiler compiles itself ← Major achievement milestone
 
 ```
-███████████████████░░░░░░░░░░░░░  55%  (Phases 34-69 complete — 35 .lln files live · 8 Stage B compiler files · effect checker + governance verifier in LogicN)
+███████████████████████░░░░░░░  78%  (the Stage B engine now COMPILES AND RUNS LogicN — source → lex → parse → type/effect/govern → emit GIR → execute, all in LogicN)
 ```
 
-> ℹ️ **What 55% means:** 35 `.lln` files — 27 governed HTTP services + 8 aerospace/healthcare/AI examples — all parse with 0 errors. Eight Stage B self-hosted compiler files (lexer, parser, type-checker, effect-checker, governance-verifier, gir-emitter, runtime, compiler.capabilities) all 0 errors. Phase 50 milestone: Stage B pipeline describes flows, Stage A executes them with matching results. Phase 55: ML-DSA-65 hybrid signing live. Next: Phase 70 (full Stage B pipeline → Stage A execution = 60%), Phase 75 (CEC parity = 65%).
+> ℹ️ **What 78% means (engine self-hosting only):** this measures the **engine compiling itself**, not the governed service examples (those are application code, not the compiler). The 8 Stage B self-hosted files form a working pipeline: a `.lln` flow is lexed, parsed into a full `Stmt`/`Expr` AST, type/effect/governance-checked, lowered to GIR, and **executed** — entirely in LogicN, with zero TypeScript in the pipeline for the supported subset. A recursive multi-flow program runs end-to-end in LogicN: `fib(15)=610`, `sumTo(100)=5050`, nested cross-flow calls. Verified by `self-hosted-pipeline.test.mjs`. Grammar covers literals/names/calls/grouping, `+ - * /`, comparisons, logical `and`/`or`, unary `!`/`-`, and `let`/`mut`/`assign`/`return`/`if`-`else`/`while`. **Remaining to 100%:** widen the runtime value model (strings/records/lists) and runtime effects beyond Int/Bool. (Engine-only metric per `docs/Knowledge-Bases/logicn-runtime-status-SOT.md`; the 27 governed HTTP service facades are Axis-A application code and are not counted here.)
 
 **TypeScript Runtime** — Stage A: compiler pipeline + execution engine running on Node.js
 
 ```
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (2,810 compiler · 15 economics · 95 graph · 32 security = 2,952 total · 0 failures · Phases 25-69 complete)
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (3,009 compiler · 15 economics · 95 graph · 14 security = 3,133 total · 0 failures · reproduce: `node scripts/run-all-tests.js --core`)
 ```
 
 | Layer | Status | % |
@@ -72,7 +72,7 @@ The language is designed from the ground up so that execution intent, capability
 | Type registry | TypeId (56 IDs), EffectFlags (14), GovernanceFlags (8), NativeCapabilityId (6) | 78% |
 | devtools-security | @logicn/devtools-security — runSecurityAudit, path sandbox, regex guard, secret checker, risk calc, CLI | 85% |
 | devtools-graph | BFS/DFS/topo, flag queries, CapabilityGraph, BoundaryGraph, WASMModuleGraph — 95 tests | 74% |
-| Stage B self-hosting | 8 files · 0 errors: lexer(5), parser(5), type-checker(2), effect-checker(4), governance-verifier(3), gir-emitter(2), runtime(3), compiler.capabilities(8) | 68% |
+| Stage B self-hosting | 8 files · **executes end-to-end in LogicN**: lexer (string/char/comments), parser (full Stmt/Expr AST + if/else/unary/logical), type/effect/governance checks on the body AST, GIR emitter (expr+stmt), runtime GIR interpreter w/ cross-flow calls + recursion (`fib`, `sumTo`) | 80% |
 | Live .lln services | 35 files: 27 auth-service routes + 8 aerospace/healthcare/AI/wasm examples — all parse 0 errors | 95% |
 | Passive execution plans | Plan types + builder + attestation + hashPassivePlan + executePlan wired | 40% |
 | SoA Arena | SoANodeArena (Int16/Int32 parallel arrays), FlatTokenStream (stride-4), FusedPass scaffold | 35% |
