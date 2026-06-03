@@ -8,6 +8,8 @@ Built for financial, medical, government, and enterprise platforms, LogicN intro
 
 The language is designed from the ground up so that execution intent, capability boundaries, memory ownership, and effects are **declared in source and enforced by tooling** — not inferred, guessed, or left to convention. It targets CPUs, GPUs, NPUs, APUs, WASM and future heterogeneous hardware.
 
+> **New here?** → [**SETUP.md**](SETUP.md) — install on Windows, Linux, or macOS · run your first benchmark · explore the examples · Hello World with full comments
+
 ---
 
 ## Build Progress
@@ -43,40 +45,48 @@ The language is designed from the ground up so that execution intent, capability
 **TypeScript Runtime** — Stage A: compiler pipeline + execution engine running on Node.js
 
 ```
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (3,070 compiler · 15 economics · 95 graph · 14 security = 3,194 (core) · 109 devtools/ext = 3,288 full total · 0 failures · reproduce: `node scripts/run-all-tests.js --core`)
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (3,109 compiler · 15 economics · 95 graph · 14 security = 3,233 (core) · 127 devtools/ext = 3,360 full total · 0 failures · reproduce: `node scripts/run-all-tests.js --core`)
 ```
 
 | Layer | Status | % |
 |---|---|---|
-| **Specification / KB** | 400+ docs, 223/223 CEC stable, governed-runtime research (Cedar/OPA/Pony/Koka/in-toto), ASIC/cyber-physical hardening spec, C++ bridge spec, fortified typed logic spec | 99% |
-| **Lexer** | All v1 keywords, TokenKindId, LLN-LEX-001..006, FlatTokenStream; generic type param handling (`Array<Int>=` fused-token fix) | 98% |
-| **Parser** | Phase 41 syntax + `for` loops (range + iterator), record literals, `match` constructor patterns (`Some(x)`), cross-module `import` skip, generic type param skip | 96% |
-| **Type checker** | LLN-TYPE-001..022, LLN-TYPE-030/031 (tensor), `Auto` deferral (LLN-TYPE-023), `Int.toStr()` + `String.length()` + method dispatch widened | 84% |
-| **Value-state checker** | Taint, 2-hop, ValueStateFlags, SINK_REQUIREMENTS, LLN-GATE-001; **secret sink trilogy** LLN-SECRET-001/002/003 (log + serialize + network egress); source inference for `secret.get`/`vault.read`/`kms.*` | 90% |
-| **Effect checker** | LLN-EFFECT-001..005, LLN-STDLIB-001 wired, EffectCheckerFlags | 84% |
-| **Governance verifier** | LLN-GOV-002..018; ProofGraph + `EpilogueReceipt` (sha256_seal live, zk stub); `LiabilityProfile` auto-calculated; `cyber_physical_hardening` validation (LLN-GOV-017/018); `decreases` annotation (KB, pending impl) | 88% |
-| **Contract blocks** | `intent` `effects` `authority` `privacy` `limits` `economics` `epilogue` `secrets` `audit` `targets` `types` `request` `response` `cyber_physical_hardening` `liability` — all parsed, auto-by-default where appropriate | 95% |
-| **GIR emitter** | GIR v1, tensor metadata (7 flags), `field`/`arrlit`/`reclit`/`matche`/`arm` ops, WAT emitter + SIMD ops | 80% |
-| **Stdlib** | 40+ functions, path sandbox, regex ReDoS guard, BCrypt/Password/Argon2 APIs, SSRF guard, `Int.toStr()` `String.length()` `contains()` `startsWith()` `List.append()` `unwrapOr()` | 75% |
-| **Runtime interpreter** | sync fast-path (14×), bytecode VM (14.3×), tier telemetry (5 tiers); Stage B: observable effects (`RunResult{retVal, auditLog}`), record literals, for loops, cross-module imports | 85% |
-| **WAT emitter + assembler** | i32.add/sub/mul, if/else, while, mut/assign, WASM instantiation via wabt — Phase 27 complete | 88% |
-| **WASM Execution** | 10/10 benchmarks; arithmetic-threshold 4.0B/s; gpu-compute 4.17M/s (Deno WebGPU RTX 2060); governed wins data-query outright | 96% |
-| **Economics Layer** | CostGraph, ValueGraph, IBM breach-risk matrix, RouteDecision, auto-inferred economics; `contract.economics {}` auto-by-default | 68% |
-| **Governance Signatures** | Ed25519 v1 (Phase 39) + ML-DSA-65 hybrid v2 (Phase 55, NIST FIPS 204) post-quantum; `EpilogueReceipt` sha256_seal live, zk_snark_receipt stub | 65% |
-| **Security (Taint/Profiles)** | LLN-TAINT-001..006, LLN-PROFILE-001..007+005B, OWASP 24-boundary, secret sink trilogy, PCI DSS 4.0.1 audit (LLN-PCI-001..010) | 80% |
-| **Stage B self-hosting** | **100%** — full pipeline runs entirely in LogicN: lex→parse→type/effect/govern→GIR→execute. 21 bootstrap tests. Cross-module imports, record literals, for loops, match destructuring, observable effects. LogicN is its own runtime. | **100%** |
-| **DevTools** | naming (LLN-NAMING-001..005) · context receipts (51–97% token reduction) · intelligence (BM25 hybrid search) · provenance (data lineage) · **PCI DSS 4.0.1 audit** · security (LLN-TAINT/GATE/SECRET/PCI/GOV) | 90% |
-| **Ext packages** | `logicn-ext-secrets-vault` (HashiCorp Vault, dual-token rotation, zero-wipe) · `logicn-ext-proof-snarkjs` (Groth16 prover, `ProverBackend` interface) | 70% |
-| **Live .lln services** | 39 files: 31 auth-service routes (incl. sovereign + physical hardening tier examples) + 8 aerospace/healthcare/AI/wasm examples — all parse 0 errors | 97% |
-| **Password API** | BCrypt → Password facade → Argon2id → auto-migration (Phase 37) | 90% |
-| **Tier Telemetry** | executionTier + fallbackReason on every FlowExecutionResult — 5 tiers: cache/bytecode/sync/egraph/tree | 100% |
+| **Specification / KB** | 400+ docs, 223/223 CEC stable, governed-runtime research, ASIC/cyber-physical hardening, C++ bridge, fortified typed logic, wasmtime roadmap | 100% |
+| **Lexer** | All v1 keywords, TokenKindId, LLN-LEX-001..006, FlatTokenStream; `Array<Int>=` fused-token fix | 98% |
+| **Parser** | `for` loops (range + iterator), record literals, `match Some(x)` destructuring, cross-module `import`, generic type skip | 96% |
+| **Type checker** | LLN-TYPE-001..022 + tensor, `Auto` deferral (LLN-TYPE-023), `Int.toStr()` + `String.length()` + method dispatch widened | 84% |
+| **Value-state checker** | Secret sink trilogy (LLN-SECRET-001/002/003); list/record/inter-flow taint; `source_from` annotation (Network → auto-tainted) | 100% |
+| **Effect checker** | LLN-EFFECT-001..005, LLN-STDLIB-001, EffectCheckerFlags | 84% |
+| **Governance verifier** | LLN-GOV-001..020 + LLN-TERM-001; ProofGraph + sha256_seal EpilogueReceipt; LiabilityProfile auto-calc; `decreases` annotation | 100% |
+| **Contract blocks** | All 16 blocks parsed + validated — `limits {}` typo (GOV-019), broad authority (GOV-020), high-risk proof nudge (GOV-006), intent mismatch (GOV-001) | 100% |
+| **GIR emitter** | GIR v1, tensor metadata, `field`/`arrlit`/`reclit`/`matche`/`arm` ops, WAT emitter + SIMD ops | 80% |
+| **Stdlib** | 40+ functions: path sandbox, ReDoS guard, BCrypt/Argon2, SSRF guard, `toStr()` `length()` `contains()` `append()` `unwrapOr()` | 75% |
+| **Runtime interpreter** | sync fast-path (14×), tier telemetry (5 tiers); Stage B: `RunResult{retVal, auditLog}`, record literals, for loops, cross-module imports | 85% |
+| **WAT emitter + assembler** | i32 arithmetic, if/else, while, locals — Phase 27 complete; wabt assembly; governance-cost: **3.2K/s → 1.88M/s via WASM (588×)** | 88% |
+| **WASM Execution** | 10/10 benchmarks; arithmetic-threshold **4.0B/s**; gpu-compute 4.17M/s (RTX 2060); governed wins data-query outright | 100% |
+| **Economics Layer** | CostGraph, ValueGraph, IBM breach-risk matrix, RouteDecision; `contract.economics {}` auto-by-default | 68% |
+| **Governance Signatures** | Ed25519 v1 + ML-DSA-65 hybrid (NIST FIPS 204); sha256_seal live; zk_snark_receipt Phase 1 stub | 65% |
+| **Security (Taint/Profiles)** | LLN-TAINT-001..006, LLN-PROFILE-001..007+005B, OWASP 24-boundary, **PCI DSS 4.0.1** (LLN-PCI-001..010) | 80% |
+| **Stage B self-hosting** | **100%** — LogicN compiles and runs itself. 21 bootstrap tests. Strings, records, lists, for/match, observable effects, cross-module imports. | **100%** |
+| **DevTools** | naming · context receipts · BM25 search · data lineage · **PCI DSS 4.0.1 audit** · security audit (3,127 tests) | 100% |
+| **Ext packages** | `logicn-ext-secrets-vault` (Vault, dual-token rotation, zero-wipe) · `logicn-ext-proof-snarkjs` (Groth16 Phase 1) | 75% |
+| **Live .lln services** | 39 files: auth-service routes + aerospace/healthcare/AI/wasm examples — all parse 0 errors | 97% |
+| **Password API** | BCrypt → Password facade → Argon2id → auto-migration | 90% |
+| **Tier Telemetry** | executionTier + fallbackReason on every FlowExecutionResult — 5 tiers | 100% |
 | **Governance Diff CLI** | `logicn diff` — governance delta, exit 2 on authority widening | 82% |
 | **Package resolver** | LLN-PKG-001..005, 11-package type registry, cross-module import resolution | 75% |
-| **Passive execution plans** | Plan types + builder + attestation + hashPassivePlan + executePlan wired | 40% |
-| **Bytecode VM** | Int32Array opcodes, 14.3× over sync tree-walker, `callExpr` support (Phase 45), auto-routed | 50% |
-| **SoA Arena** | SoANodeArena (Int16/Int32 parallel arrays), FlatTokenStream (stride-4), FusedPass scaffold | 35% |
-| **GPU/NPU/APU plans** | WebGPUComputePlan, NPUKernelPlan, APUSharedMemoryPlan, NativePluginManifest | 16% |
-| **CLI** | check, check-strict, build, build-production, build-deterministic, --target wasm-standalone/wasm-wasi/hybrid | 90% |
+
+---
+
+### Roadmap — next phases
+
+| Layer | Current | Target | Notes |
+|---|---|---|---|
+| **Bytecode VM** | 50% | 80% | Int32Array opcodes, callExpr support — accelerates the tree-walker interim tier |
+| **Passive execution plans** | 40% | 70% | Plan types + hashPassivePlan + executePlan — needed for multi-target dispatch |
+| **CLI / Package layout** | 75% | 100% | Refactoring to support `npm install -g @logicn/cli`, Linux server deployment |
+| **Stage B → native WASM** | — | — | Compile `runtime.lln` itself through WAT emitter → `wasmtime logicn-runtime.wasm program.lln` (no Node.js). Baseline recorded: governance-cost 3.2K/s → target ~500M/s |
+| **SoA Arena** | 35% | 60% | SoANodeArena, FlatTokenStream — high-performance data layout for hot paths |
+| **GPU/NPU/APU dispatch** | 16% | 40% | WebGPUComputePlan, NPUKernelPlan — full heterogeneous hardware routing |
 
 ---
 
@@ -113,7 +123,7 @@ LogicN is three things building toward one platform:
 **1. A language** — strict typing, explicit errors, explicit memory ownership,
 declared effects, no hidden nulls, no silent failures. Source files use `.lln`.
 
-**2. A compiler and checker** — a multi-pass static pipeline that enforces language rules before code runs: lexer → parser → type checker → value-state/taint checker (secret sink trilogy) → effect checker → governance verifier (ProofGraph, epilogue receipts, liability auto-calculation, cyber-physical hardening validation) → GIR emitter → tiered runtime. **3,194 tests, 0 failures** (core suite). **Stage B self-hosting is 100% complete** — LogicN now runs itself.
+**2. A compiler and checker** — a multi-pass static pipeline that enforces language rules before code runs: lexer → parser → type checker → value-state/taint checker (secret sink trilogy) → effect checker → governance verifier (ProofGraph, epilogue receipts, liability auto-calculation, cyber-physical hardening validation) → GIR emitter → tiered runtime. **3,233 tests, 0 failures** (core suite). **Stage B self-hosting is 100% complete** — LogicN now runs itself.
 
 **3. A governed runtime architecture** — a model for coordinating compute
 across targets (CPU, WASM, GPU, accelerators) with capability-based authority,

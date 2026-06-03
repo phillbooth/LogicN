@@ -69,6 +69,8 @@ const BENCHMARKS = [
   // One run = scanRecords(500) = 500 records parsed. split/length match JS/Python exactly,
   // so the checksum (12500) is identical across Node, Python and the LogicN string path.
   { id: "json-parse", dir: "json-parse", logicnOpsPerRun: 500, passiveCallCount: 20 },
+  // ── HTTP throughput — sequential requests/sec to governed localhost endpoint ──
+  { id: "http-throughput", dir: "http-throughput", devtoolsOnly: true },
   // ── DevTools benchmarks — measure tool throughput over auth-service corpus ──
   // These run node.mjs only (no .lln / Rust / WASM path). Key metric: files/sec
   // or queries/sec. Added 2026-06-03 with the 4 new devtools packages.

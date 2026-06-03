@@ -12,6 +12,8 @@ export {
 export {
   renderTextReport,
   renderJsonReport,
+  renderProvReport,
+  type ProvReportOptions,
 } from "./reporter.js";
 
 export type {

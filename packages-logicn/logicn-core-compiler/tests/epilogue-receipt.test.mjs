@@ -105,7 +105,7 @@ describe("epilogue-receipt", () => {
   // -------------------------------------------------------------------------
   // Test 4: zk_snark_receipt + halt_pipeline → zkReceiptStub contains "PENDING"
   // -------------------------------------------------------------------------
-  it("4. zk_snark_receipt + halt_pipeline → zkReceiptStub contains 'PENDING'", () => {
+  it("4. zk_snark_receipt + halt_pipeline → zkReceiptStub contains 'groth16-phase1'", () => {
     const { govResult } = parseAndVerify(
       makeSource(
         "epilogue { generate_proof zk_snark_receipt on_verification_failure halt_pipeline }",
@@ -116,8 +116,8 @@ describe("epilogue-receipt", () => {
     assert.ok(pg.epilogueReceipt, "EpilogueReceipt should be present");
     assert.equal(pg.epilogueReceipt.strategy, "zk_snark_receipt");
     assert.ok(
-      pg.epilogueReceipt.zkReceiptStub?.includes("PENDING"),
-      `zkReceiptStub should contain 'PENDING' but got: ${pg.epilogueReceipt.zkReceiptStub}`,
+      pg.epilogueReceipt.zkReceiptStub?.includes("groth16-phase1"),
+      `zkReceiptStub should contain 'groth16-phase1' but got: ${pg.epilogueReceipt.zkReceiptStub}`,
     );
     assert.equal(pg.epilogueReceipt.onFailure, "halt_pipeline");
   });

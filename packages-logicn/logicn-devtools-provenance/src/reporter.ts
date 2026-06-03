@@ -147,3 +147,117 @@ export function renderJsonReport(graph: ProvenanceGraph, fileCount: number): str
   };
   return JSON.stringify(output, null, 2);
 }
+
+// ---------------------------------------------------------------------------
+// W3C PROV-JSON serialisation
+//
+// Spec: https://www.w3.org/TR/prov-json/
+//
+// Mapping:
+//   source nodes   → entity  (lln:tainted: true when !isTrusted)
+//   transform/gate nodes → activity
+//   sink nodes     → entity + wasGeneratedBy link to last gate in the same flow
+// ---------------------------------------------------------------------------
+
+export interface ProvReportOptions {
+  /** Output format selector. "prov-json" emits a W3C PROV-JSON structure. */
+  format?: "prov-json" | "text" | "json";
+}
+
+/**
+ * Render a provenance graph in W3C PROV-JSON format.
+ *
+ * Structure:
+ * {
+ *   "prefix": { "lln": "https://logicn.io/prov/v1#" },
+ *   "entity":  { "lln:source_N": { "prov:label": "...", "lln:tainted": true } },
+ *   "activity": { "lln:gate_N": { "prov:label": "...", "lln:kind": "gate" } },
+ *   "wasGeneratedBy": { "lln:clean_N": { "prov:entity": "...", "prov:activity": "..." } }
+ * }
+ */
+export function renderProvReport(graph: ProvenanceGraph, opts: ProvReportOptions = {}): string {
+  if (opts.format !== "prov-json") {
+    // Default: delegate to text report
+    return renderTextReport(graph, graph.nodes.length);
+  }
+
+  const prefix = {
+    lln: "https://logicn.io/prov/v1#",
+  };
+
+  const entity: Record<string, Record<string, unknown>> = {};
+  const activity: Record<string, Record<string, unknown>> = {};
+  const wasGeneratedBy: Record<string, Record<string, string>> = {};
+
+  // Index nodes by id for edge traversal
+  const nodeById = new Map<string, DataNode>();
+  for (const node of graph.nodes) {
+    nodeById.set(node.id, node);
+  }
+
+  // Track: for each flow, the last gate/transform node id
+  const lastGateByFlow = new Map<string, string>();
+  // Process transforms first to build lastGate map
+  for (const node of graph.nodes) {
+    if (node.kind === "transform") {
+      lastGateByFlow.set(node.flowName, `lln:gate_${node.id}`);
+    }
+  }
+
+  let entityCounter = 0;
+  let activityCounter = 0;
+  let cleanCounter = 0;
+
+  for (const node of graph.nodes) {
+    if (node.kind === "source") {
+      entityCounter++;
+      const key = `lln:source_${entityCounter}`;
+      entity[key] = {
+        "prov:label": node.label,
+        "lln:tainted": !node.isTrusted,
+        "lln:flowName": node.flowName,
+        "lln:kind": node.sourceKind ?? "unknown",
+      };
+    } else if (node.kind === "transform") {
+      activityCounter++;
+      const key = `lln:gate_${activityCounter}`;
+      activity[key] = {
+        "prov:label": node.label,
+        "lln:kind": node.transformKind ?? "gate",
+        "lln:flowName": node.flowName,
+        "lln:trusted": node.isTrusted,
+      };
+      // Update lastGateByFlow with the key for later sink linking
+      lastGateByFlow.set(node.flowName, key);
+    } else if (node.kind === "sink") {
+      // Sink nodes appear as entities; link to last gate via wasGeneratedBy
+      entityCounter++;
+      const entityKey = `lln:sink_${entityCounter}`;
+      entity[entityKey] = {
+        "prov:label": node.label,
+        "lln:tainted": !node.isTrusted,
+        "lln:flowName": node.flowName,
+        "lln:kind": node.sinkKind ?? "unknown",
+      };
+
+      const lastGate = lastGateByFlow.get(node.flowName);
+      if (lastGate !== undefined) {
+        cleanCounter++;
+        const wgbKey = `lln:clean_${cleanCounter}`;
+        wasGeneratedBy[wgbKey] = {
+          "prov:entity": entityKey,
+          "prov:activity": lastGate,
+        };
+      }
+    }
+  }
+
+  const provJson = {
+    prefix,
+    entity,
+    activity,
+    wasGeneratedBy,
+  };
+
+  return JSON.stringify(provJson, null, 2);
+}

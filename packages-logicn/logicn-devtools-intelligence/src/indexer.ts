@@ -10,6 +10,7 @@
 
 import { readdir, readFile, stat, writeFile, readFile as readFileAsync } from "node:fs/promises";
 import { join, resolve, relative } from "node:path";
+import { createHash } from "node:crypto";
 import { parseProgram } from "@logicn/core-compiler";
 import { extractFlows } from "./extractor.js";
 import type { IndexedFlow, WorkspaceIndex } from "./types.js";
@@ -107,6 +108,7 @@ export async function buildIndex(
   // Load existing index for incremental support
   const existing = await loadExistingIndex(indexPath);
   const existingByPath = new Map<string, IndexedFlow[]>();
+  const existingFileHashes: Record<string, string> = existing?.fileHashes ?? {};
   if (existing !== null) {
     for (const flow of existing.flows) {
       const arr = existingByPath.get(flow.filePath) ?? [];
@@ -119,11 +121,12 @@ export async function buildIndex(
   const llnFiles = await walkLlnFiles(absWorkspace);
 
   const allFlows: IndexedFlow[] = [];
+  const newFileHashes: Record<string, string> = {};
   let filesIndexed = 0;
   let filesSkipped = 0;
 
   for (const filePath of llnFiles) {
-    // Check mtime for incremental
+    // Check mtime for incremental (fast pre-filter)
     let mtime = 0;
     try {
       const st = await stat(filePath);
@@ -133,20 +136,7 @@ export async function buildIndex(
       continue;
     }
 
-    const existingFlows = existingByPath.get(filePath);
-    if (
-      existingFlows !== undefined &&
-      existingFlows.length > 0 &&
-      existingFlows[0] !== undefined &&
-      existingFlows[0].sourceMtime === mtime
-    ) {
-      // File unchanged — reuse existing indexed flows
-      allFlows.push(...existingFlows);
-      filesSkipped++;
-      continue;
-    }
-
-    // Parse and extract
+    // Read file content for SHA-256 differential check
     let source = "";
     try {
       source = await readFile(filePath, "utf-8");
@@ -154,6 +144,24 @@ export async function buildIndex(
       continue;
     }
 
+    // Compute SHA-256 of file content
+    const contentHash = createHash("sha256").update(source, "utf8").digest("hex");
+    newFileHashes[filePath] = contentHash;
+
+    // Skip if content hash matches existing index (content unchanged)
+    const existingFlows = existingByPath.get(filePath);
+    if (
+      existingFlows !== undefined &&
+      existingFlows.length > 0 &&
+      existingFileHashes[filePath] === contentHash
+    ) {
+      // File content unchanged — reuse existing indexed flows
+      allFlows.push(...existingFlows);
+      filesSkipped++;
+      continue;
+    }
+
+    // Parse and extract
     const parseResult = parseProgram(source, relative(absWorkspace, filePath));
     const flows = extractFlows({ parseResult, filePath, source, sourceMtime: mtime });
     allFlows.push(...flows);
@@ -165,6 +173,8 @@ export async function buildIndex(
     builtAt: new Date().toISOString(),
     workspaceDir: absWorkspace,
     flows: allFlows,
+    fileHashes: newFileHashes,
+    skippedFiles: filesSkipped,
   };
 
   await saveIndex(indexPath, index);

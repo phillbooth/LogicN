@@ -1,11 +1,19 @@
 {
-  "name": "logicn-monorepo-root",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Root scripts for the LogicN monorepo. NOTE: no npm workspaces — each package under packages-logicn/* is self-contained (file:../ deps + its own `npm test`). These scripts only orchestrate; they do not install or hoist.",
+  "name": "@logicn/cli",
+  "version": "0.1.0",
+  "description": "LogicN compiler and runtime CLI — compile .lln programs to WASM, run them, type-check with governance.",
+  "type": "module",
+  "bin": {
+    "logicn": "./logicn.mjs"
+  },
   "scripts": {
-    "test": "node scripts/run-all-tests.js",
-    "test:core": "node scripts/run-all-tests.js --core",
-    "test:list": "node scripts/run-all-tests.js --list"
-  }
+    "test": "node scripts/run-all-tests.cjs",
+    "test:core": "node scripts/run-all-tests.cjs --core",
+    "test:list": "node scripts/run-all-tests.cjs --list"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["logicn", "compiler", "governance", "wasm"],
+  "license": "Apache-2.0"
 }

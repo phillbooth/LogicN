@@ -187,6 +187,80 @@ describe("LLN-NAMING-001 + LLN-NAMING-004: abbreviated identifiers in flow", () 
 });
 
 // ---------------------------------------------------------------------------
+// Test 6b — LLN-NAMING-001: loop counter `mut i: Int = 0` should NOT trigger
+// ---------------------------------------------------------------------------
+
+describe("LLN-NAMING-001: loop counter exemption", () => {
+  it("mut i: Int = 0 inside a while loop body produces no LLN-NAMING-001 for 'i'", () => {
+    const source = [
+      "pure flow sumRange(limit: Int) -> Int",
+      "contract { effects {} }",
+      "{",
+      "  mut i: Int = 0",
+      "  mut total: Int = 0",
+      "  while i < limit {",
+      "    set total = total + i",
+      "    set i = i + 1",
+      "  }",
+      "  return total",
+      "}",
+    ].join("\n");
+
+    const report = runNamingAudit(source, { fileName: "test.lln" });
+    const finding = report.findings.find(
+      f => f.code === "LLN-NAMING-001" && f.identifierName === "i",
+    );
+    assert.equal(
+      finding,
+      undefined,
+      `Expected no LLN-NAMING-001 for loop counter 'i', got: ${JSON.stringify(report.findings.map(f => `${f.code}:${f.identifierName}`))}`,
+    );
+  });
+
+  it("mut j: Int = 0 loop counter is also exempt from LLN-NAMING-001", () => {
+    const source = [
+      "pure flow countDown(limit: Int) -> Int",
+      "contract { effects {} }",
+      "{",
+      "  mut j: Int = limit",
+      "  while j > 0 {",
+      "    set j = j - 1",
+      "  }",
+      "  return j",
+      "}",
+    ].join("\n");
+
+    const report = runNamingAudit(source, { fileName: "test.lln" });
+    const finding = report.findings.find(
+      f => f.code === "LLN-NAMING-001" && f.identifierName === "j",
+    );
+    assert.equal(
+      finding,
+      undefined,
+      `Expected no LLN-NAMING-001 for loop counter 'j', got: ${JSON.stringify(report.findings.map(f => `${f.code}:${f.identifierName}`))}`,
+    );
+  });
+
+  it("let x: Float is exempt as geometry variable (no LLN-NAMING-001)", () => {
+    const source = [
+      "pure flow computeDistance(x: Float, y: Float) -> Float",
+      "contract { effects {} }",
+      "{ return x + y }",
+    ].join("\n");
+
+    const report = runNamingAudit(source, { fileName: "test.lln" });
+    const findings001 = report.findings.filter(
+      f => f.code === "LLN-NAMING-001" && (f.identifierName === "x" || f.identifierName === "y"),
+    );
+    assert.equal(
+      findings001.length,
+      0,
+      `Expected no LLN-NAMING-001 for geometry vars x/y, got: ${JSON.stringify(findings001.map(f => `${f.code}:${f.identifierName}`))}`,
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Test 7 — Parse error → exit code 3 (CLI test)
 // ---------------------------------------------------------------------------
 

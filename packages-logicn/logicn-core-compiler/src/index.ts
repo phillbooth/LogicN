@@ -651,8 +651,13 @@ export {
 export {
   verifyGovernance,
   extractArenaLimitMB,
+  LLN_GOV_001,
   LLN_GOV_003,
+  LLN_GOV_006,
   LLN_GOV_013,
+  LLN_GOV_019,
+  LLN_GOV_020,
+  LLN_TERM_001,
   LLN_VAL_001,
   LLN_VAL_002,
   LLN_VAL_003,

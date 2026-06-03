@@ -1,0 +1,377 @@
+# LogicN — Setup Guide
+
+Install LogicN on Windows, Linux, or macOS. The `logicn` command lets you compile `.lln` programs to WebAssembly, run them, and type-check with full governance.
+
+---
+
+## Prerequisites — all platforms
+
+You need **Node.js 18 or later**. Check your version:
+
+```bash
+node --version   # should print v18.x.x or higher
+```
+
+If you don't have it: https://nodejs.org (LTS version recommended)
+
+---
+
+## Windows
+
+### Step 1 — Open PowerShell as Administrator
+
+Right-click the Start button → **"Windows Terminal (Admin)"** or search for **PowerShell**, right-click → **"Run as administrator"**.
+
+You should see `PS C:\WINDOWS\system32>` or similar with `(Admin)` in the title bar.
+
+### Step 2 — Allow scripts (one-time fix for npm)
+
+PowerShell blocks scripts by default. Run this **once** to allow signed scripts:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+Type `Y` and press Enter to confirm.
+
+### Step 3 — Clone and link
+
+```powershell
+git clone https://github.com/logicn/LogicN.git
+cd LogicN
+npm link
+```
+
+### Step 4 — Verify
+
+```powershell
+logicn --help
+```
+
+You should see the LogicN CLI help. If PowerShell still blocks it, use **Command Prompt** (`cmd.exe`) instead — it has no script restrictions:
+
+```cmd
+cd C:\wwwprojects\LogicN
+npm link
+logicn --help
+```
+
+### Optional — wasmtime (run compiled .wasm binaries)
+
+Download from https://wasmtime.dev or via winget:
+
+```powershell
+winget install BytecodeAlliance.Wasmtime
+```
+
+---
+
+## Linux
+
+### Step 1 — Install Node.js 18+
+
+**Ubuntu / Debian:**
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+**Fedora / RHEL:**
+```bash
+curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+sudo dnf install -y nodejs
+```
+
+**Arch:**
+```bash
+sudo pacman -S nodejs npm
+```
+
+### Step 2 — Clone and link
+
+```bash
+git clone https://github.com/logicn/LogicN.git
+cd LogicN
+npm link
+```
+
+If you get a permissions error on `npm link`, use:
+```bash
+sudo npm link
+```
+
+Or configure npm to use a local prefix (no sudo):
+```bash
+mkdir -p ~/.npm-global
+npm config set prefix '~/.npm-global'
+echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc
+source ~/.bashrc
+npm link
+```
+
+### Step 3 — Verify
+
+```bash
+logicn --help
+```
+
+### Optional — wasmtime
+
+```bash
+curl https://wasmtime.dev/install.sh -sSf | bash
+```
+
+---
+
+## macOS
+
+### Step 1 — Install Node.js 18+
+
+**Via Homebrew** (recommended):
+```bash
+brew install node
+```
+
+**Via nvm** (if you need multiple Node versions):
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.bashrc   # or ~/.zshrc on zsh
+nvm install 20
+nvm use 20
+```
+
+### Step 2 — Clone and link
+
+```bash
+git clone https://github.com/logicn/LogicN.git
+cd LogicN
+npm link
+```
+
+### Step 3 — Verify
+
+```bash
+logicn --help
+```
+
+### Optional — wasmtime
+
+```bash
+brew install wasmtime
+# or:
+curl https://wasmtime.dev/install.sh -sSf | bash
+```
+
+---
+
+## Running your first program
+
+Once `logicn` is on your PATH, try the governance-cost benchmark — it computes the sum of 1 to 100 (= 5050, the Gauss problem) with full governance verification:
+
+**Run it:**
+```bash
+logicn run packages-logicn/logicn-devtools-benchmarks/benchmarks/governance-cost/benchmark.lln --invoke main
+# → 5050
+```
+
+**Compile to WebAssembly:**
+```bash
+logicn build packages-logicn/logicn-devtools-benchmarks/benchmarks/governance-cost/benchmark.lln
+# → build/benchmark.wasm  (133 bytes)
+# → build/benchmark.wat   (28 lines)
+```
+
+**Run the compiled WASM with wasmtime (no Node.js needed):**
+```bash
+wasmtime --invoke main build/benchmark.wasm
+# → 5050
+```
+
+**Type-check with governance:**
+```bash
+logicn check examples/auth-service/verifyPassword.lln
+# → ✅ verifyPassword.lln: 0 errors, 0 governance warnings
+```
+
+---
+
+## Running the benchmarks
+
+The benchmark suite compares LogicN against Rust, C++, Node.js, Python, and WASM across 23 workloads.
+
+```bash
+cd packages-logicn/logicn-devtools-benchmarks
+
+# Run all benchmarks (takes 5–10 minutes):
+npm run run
+
+# Show the comparison table (uses last saved results):
+npm run compare
+```
+
+You'll see results like this on screen:
+
+```
+## 1. Throughput — Winner per Benchmark
+
+| Benchmark       | 🏆 Winner          | Winner Speed | LogicN (governed) | gov ÷ Python     |
+|---|---|---|---|---|
+| arithmetic-threshold | WASM (Phase 27) | 4.0B/s  | 860K/s  | ❌ 0.19×         |
+| data-query      | LogicN (governed)  | 228K/s       | 228K/s             | 🏆 (winner)      |
+| nbody           | LogicN (passive)   | 76K/s        | 62K/s              | ✅ 1,200× faster |
+...
+
+## Benchmark Glossary
+| nbody | N-body gravitational force: pairwise O(N²) physics simulation | 1,200× faster than Python |
+| governance-cost | Sum 1..100 (triangle number = 5050, the Gauss problem) | Measures governance overhead |
+| data-query | Filter + sort + aggregate — LogicN wins this workload outright | ...
+```
+
+**Quick benchmark (development feedback, ~30 seconds):**
+```bash
+npm run run -- --quick
+```
+
+---
+
+## Where are the examples?
+
+```
+LogicN/
+├── examples/
+│   └── auth-service/           ← 31 real governed flows
+│       ├── verifyPassword.lln       verify a user password
+│       ├── governanceService.lln    proof-graph generation
+│       ├── runtimeProfileService.lln security profiles
+│       ├── sovereignTransaction.lln  Tier 1 ASIC hardening example
+│       └── ...28 more flows
+│
+├── packages-logicn/
+│   └── logicn-devtools-benchmarks/
+│       └── benchmarks/
+│           ├── governance-cost/    benchmark.lln ← good starting point
+│           ├── nbody/              benchmark.lln
+│           ├── data-query/         benchmark.lln
+│           └── ...20 more
+│
+└── tests/
+    └── r6-corpus/              ← 5 verified reference flows
+        ├── r6-001-classify.lln
+        ├── r6-002-distance.lln
+        ├── r6-003-listlen.lln
+        ├── r6-004-record-amount.lln
+        └── r6-005-name-of.lln
+```
+
+Open any `.lln` file in VS Code to see LogicN source with full governance contracts.
+
+---
+
+## Hello World
+
+```logicn
+// ── hello.lln ─────────────────────────────────────────────────────────────────
+//
+// Your first LogicN flow.
+//
+// LogicN is a governed language — every flow (function) declares what it does
+// in a `contract {}` block. This is not documentation; the compiler enforces it.
+//
+// Key ideas:
+//   - `pure flow`  = no side effects, no network, no database. Provably safe.
+//   - `contract`   = machine-verified declaration of intent + rules.
+//   - `intent`     = what this flow is FOR (required for secure/governed flows).
+//   - `return`     = explicit return. No hidden control flow.
+// ──────────────────────────────────────────────────────────────────────────────
+
+// A flow is like a function, but it carries a governance contract.
+//
+// `pure` means: no side effects whatsoever.
+//   The compiler will reject this flow if it tries to write to a database,
+//   call the network, or mutate global state. It's provably pure.
+//
+// `greet` is the flow name — fully spelled, no abbreviations (e.g. not `greet` → `g`).
+//
+// `(name: String)` is the parameter — typed and named explicitly.
+//
+// `-> String` is the return type — always declared. No implicit returns.
+
+pure flow greet(name: String) -> String
+contract {
+  // `intent` tells the compiler, AI tools, and human reviewers what this flow
+  // is FOR. It's required for any governed/secure flow. The compiler checks that
+  // your declared intent doesn't contradict your declared effects.
+  intent { "Produce a personalised greeting string for the given name." }
+
+  // No `effects {}` block — because this is a pure flow.
+  // Effects are deny-by-default: omitting effects means the compiler
+  // GUARANTEES this flow cannot write to a database, call the network,
+  // or produce any observable side effect. It's mathematically pure.
+}
+{
+  // The flow body. Plain LogicN expressions.
+  //
+  // `return` is explicit — LogicN has no implicit last-expression return.
+  // `+` on strings is concatenation (no toString() needed, types are explicit).
+  return "Hello, " + name + "! Welcome to LogicN."
+}
+
+
+// ── Running this flow ─────────────────────────────────────────────────────────
+//
+//   logicn run hello.lln --invoke greet
+//   → Hello, World! Welcome to LogicN.
+//
+//   logicn build hello.lln
+//   → build/hello.wasm (tiny, runs without Node.js via wasmtime)
+//
+//   logicn check hello.lln
+//   → ✅ hello.lln: 0 errors, 0 governance warnings
+//
+// ──────────────────────────────────────────────────────────────────────────────
+
+
+// ── Going further: a governed flow with effects ───────────────────────────────
+//
+// When a flow writes to a log, database, or network, it must declare the effect.
+// Effects are deny-by-default: if you don't declare it, the compiler rejects it.
+//
+// `secure` means: this flow has at least one side effect and must be
+// explicitly governed. The compiler requires an `intent` block.
+
+secure flow greetAndLog(name: String) -> String
+contract {
+  intent { "Greet the user and record the greeting in the audit log." }
+
+  // Declare the side effect explicitly.
+  // The compiler verifies that the flow body actually performs this effect
+  // and only this effect — no surprise database writes or network calls.
+  effects { audit.write }
+}
+{
+  let greeting: String = "Hello, " + name + "!"
+
+  // AuditLog.write is a governed effect — it goes into the tamper-evident
+  // audit trail. The compiler knows about this because we declared
+  // `effects { audit.write }` above. If we removed that declaration,
+  // the compiler would error: "undeclared effect: audit.write".
+  AuditLog.write("Greeted: " + name)
+
+  return greeting
+}
+
+
+// ── Key differences from TypeScript / Python / Go ────────────────────────────
+//
+// TypeScript:   function greet(name: string): string { return `Hello, ${name}!` }
+//               → No governance. No guarantee about side effects.
+//               → An AI or refactor could silently add a database write.
+//
+// LogicN:       pure flow greet(name: String) -> String  contract { ... }  { ... }
+//               → Compiler PROVES no side effects possible.
+//               → Any attempt to add a database write causes a compile error.
+//               → The intent is machine-readable and auditable.
+//
+// This is why LogicN targets software handling money, PII, healthcare,
+// and government data — where "I think this is pure" is not good enough.
+// ──────────────────────────────────────────────────────────────────────────────

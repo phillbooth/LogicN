@@ -437,6 +437,31 @@ function isGateCallName(fullName: string, userGates?: ReadonlySet<string>): bool
   return false;
 }
 
+/**
+ * Phase 4.3: Walk the AST and collect user-defined flow names.
+ * Includes flowDecl, secureFlowDecl, pureFlowDecl, guardedFlowDecl kinds.
+ * Used for inter-flow call-site taint warnings.
+ */
+function collectUserFlows(ast: AstNode): Set<string> {
+  const flows = new Set<string>();
+
+  function walk(node: AstNode): void {
+    if (
+      node.kind === "flowDecl" ||
+      node.kind === "secureFlowDecl" ||
+      node.kind === "pureFlowDecl" ||
+      node.kind === "guardedFlowDecl"
+    ) {
+      const flowName = node.value ?? "";
+      if (flowName !== "") flows.add(flowName);
+    }
+    for (const child of node.children ?? []) walk(child);
+  }
+
+  walk(ast);
+  return flows;
+}
+
 // ---------------------------------------------------------------------------
 // AST name reconstruction helpers
 // ---------------------------------------------------------------------------
@@ -511,6 +536,49 @@ function parseBindingValue(value: string): BindingInfo {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 4: Source-from origin taint map
+//
+// Maps recognised `source_from` origin prefixes to taint status.
+// "tainted" origins produce bindings equivalent to `unsafe let`.
+// "clean" origins produce plain (untainted) bindings.
+// ---------------------------------------------------------------------------
+
+const SOURCE_FROM_TAINTED_PREFIXES = [
+  "Network.",
+  "External.",
+] as const;
+
+const SOURCE_FROM_CLEAN_PREFIXES = [
+  "InternalService.",
+  "Config.",
+] as const;
+
+const SOURCE_FROM_TAINTED_EXACT = new Set([
+  "Network.ClientSocket",
+  "Network.HttpRequest",
+  "Network.WebSocket",
+]);
+
+const SOURCE_FROM_CLEAN_EXACT = new Set([
+  "Database.PrimaryKey",
+]);
+
+/**
+ * Returns true if a `source_from` origin string denotes an untrusted source
+ * (equivalent to `unsafe let` taint).
+ */
+function isUntrustedSourceFromOrigin(origin: string): boolean {
+  if (SOURCE_FROM_TAINTED_EXACT.has(origin)) return true;
+  if (SOURCE_FROM_CLEAN_EXACT.has(origin)) return false;
+  // Prefix matching — Network.* and External.* are tainted
+  if (SOURCE_FROM_TAINTED_PREFIXES.some((p) => origin.startsWith(p))) return true;
+  // InternalService.* and Config.* are clean
+  if (SOURCE_FROM_CLEAN_PREFIXES.some((p) => origin.startsWith(p))) return false;
+  // Unknown origins: treat as clean (conservative — only flag what is known-bad)
+  return false;
+}
+
+// ---------------------------------------------------------------------------
 // Phase 11B.1 — Taint expression analysis
 //
 // Determines whether an expression tree is derived from an unsafe or
@@ -538,7 +606,14 @@ function isTaintedExpression(
 
   if (expr.kind === "memberExpr") {
     const receiver = expr.children?.[0];
-    return receiver !== undefined && isTaintedExpression(receiver, lookupBinding);
+    return receiver !== undefined && isTaintedExpression(receiver, lookupBinding, userGates);
+  }
+
+  // Phase 4.1: list/array literals — tainted if any element is tainted
+  if (expr.kind === "listLiteral") {
+    return (expr.children ?? []).some((element) =>
+      isTaintedExpression(element, lookupBinding, userGates),
+    );
   }
 
   if (expr.kind === "callExpr") {
@@ -563,6 +638,18 @@ function isTaintedExpression(
         const valueNode = field.children?.[0];
         return valueNode !== undefined && isTaintedExpression(valueNode, lookupBinding, userGates);
       });
+    }
+
+    // Phase 4.1: append(list, value) — if any non-receiver arg is tainted, result is tainted
+    if (methodNameOnly === "append") {
+      const args = expr.children?.slice(1) ?? [];
+      // Also handle method-style call: receiver.append(taintedArg)
+      // receiver is children[0] — only check args for taint in append
+      if (args.some((a) => isTaintedExpression(a, lookupBinding, userGates))) return true;
+      // Also check if this is standalone append(list, taintedVal) — all children are args
+      const allArgs = expr.children ?? [];
+      if (allArgs.some((a) => isTaintedExpression(a, lookupBinding, userGates))) return true;
+      return false;
     }
 
     // For non-gate calls, check whether the receiver binding is itself tainted/unsafe,
@@ -637,9 +724,12 @@ class ValueStateChecker {
   private readonly scopes: Array<Map<string, BindingInfo>> = [];
   // Phase 11B.2: user-defined gate function names (collected from fnDecl nodes)
   private readonly userGates: ReadonlySet<string>;
+  // Phase 4.3: user-defined flow names (collected from *flowDecl nodes)
+  private readonly userFlows: ReadonlySet<string>;
 
-  constructor(userGates: ReadonlySet<string> = new Set()) {
+  constructor(userGates: ReadonlySet<string> = new Set(), userFlows: ReadonlySet<string> = new Set()) {
     this.userGates = userGates;
+    this.userFlows = userFlows;
   }
 
   check(ast: AstNode): void {
@@ -823,15 +913,35 @@ class ValueStateChecker {
   // ── Binding handlers ─────────────────────────────────────────────────────
 
   private registerParamBinding(node: AstNode): void {
-    // paramDecl.value = "name: Type"
+    // paramDecl.value = "name: Type" or "name: Type source_from Origin"
     const paramValue = node.value ?? "";
     const colonIdx = paramValue.indexOf(":");
     if (colonIdx === -1) return;
     const name = paramValue.slice(0, colonIdx).trim();
     const typeSection = paramValue.slice(colonIdx + 1).trim();
-    const typeName = typeSection.split(/[<\s]/)[0] ?? typeSection;
+
+    // Phase 4.4: detect `source_from` annotation in the type section
+    // Format: "Type source_from Origin" (e.g. "String source_from Network.ClientSocket")
+    const sourceFromIdx = typeSection.indexOf("source_from");
+    let typeName: string;
+    let sourceFromOrigin: string | undefined;
+    if (sourceFromIdx !== -1) {
+      typeName = typeSection.slice(0, sourceFromIdx).trim().split(/[<\s]/)[0] ?? "";
+      sourceFromOrigin = typeSection.slice(sourceFromIdx + "source_from".length).trim();
+    } else {
+      typeName = typeSection.split(/[<\s]/)[0] ?? typeSection;
+    }
+
     const locField = node.location !== undefined ? { declaredAt: node.location } : {};
-    this.registerBinding({ name, safetyPrefix: undefined, typeName, ...locField });
+
+    // Phase 4.4: auto-taint params from untrusted source_from origins
+    // Treat them as `unsafe`-equivalent (safetyPrefix = "unsafe") so existing
+    // VALUESTATE-003 and VALUESTATE-005 sink guards fire normally.
+    if (sourceFromOrigin !== undefined && isUntrustedSourceFromOrigin(sourceFromOrigin)) {
+      this.registerBinding({ name, safetyPrefix: "unsafe", typeName, ...locField });
+    } else {
+      this.registerBinding({ name, safetyPrefix: undefined, typeName, ...locField });
+    }
   }
 
   private handleLetDecl(node: AstNode): void {
@@ -1008,6 +1118,33 @@ class ValueStateChecker {
       const callName = buildFullCallName(node);
       for (const child of node.children ?? []) {
         this.checkArgForSecretNetwork(child, callName, node.location);
+      }
+    }
+
+    // Phase 4.3: Inter-flow taint — warn when a tainted argument is passed to a
+    // user-defined flow. This is a call-site warning (LLN-VALUESTATE-004), NOT
+    // full inter-procedural analysis. We do not follow into the callee body.
+    const calleeName = node.value ?? "";
+    if (this.userFlows.has(calleeName)) {
+      // All children are arguments (no "method" style for user flow calls)
+      const callArgs = node.children ?? [];
+      for (const arg of callArgs) {
+        if (isTaintedExpression(arg, (n) => this.lookupBinding(n), this.userGates)) {
+          const taintName = findTaintSourceName(arg, (n) => this.lookupBinding(n))
+            ?? (arg.kind === "identifier" ? (arg.value ?? "?") : "?");
+          this.diagnostics.push({
+            code: "LLN-VALUESTATE-004",
+            name: "TaintedValuePropagation",
+            severity: "error",
+            message: `Tainted value '${taintName}' passed to '${calleeName}'. Validate before passing to another flow.`,
+            ...(node.location !== undefined ? { location: node.location } : {}),
+            suggestedFix: `Validate '${taintName}' before the call: let safe${taintName.charAt(0).toUpperCase() + taintName.slice(1)} = validate.${taintName}(${taintName})?`,
+            suggestedCode: `validate.${taintName}(${taintName})?`,
+            why: `'${taintName}' is tainted — it came from an untrusted boundary source and has not been validated.`,
+            risk: `Passing unvalidated input to '${calleeName}' can propagate taint across flow boundaries.`,
+          });
+          break; // One diagnostic per call site is enough
+        }
       }
     }
   }
@@ -1355,7 +1492,9 @@ class ValueStateChecker {
 export function checkValueStates(ast: AstNode): ValueStateCheckResult {
   // Phase 11B.2: collect user-defined gate functions before running the checker
   const userGates = collectUserGates(ast);
-  const checker = new ValueStateChecker(userGates);
+  // Phase 4.3: collect user-defined flow names for inter-flow call-site warnings
+  const userFlows = collectUserFlows(ast);
+  const checker = new ValueStateChecker(userGates, userFlows);
   checker.check(ast);
   return checker.getResult();
 }

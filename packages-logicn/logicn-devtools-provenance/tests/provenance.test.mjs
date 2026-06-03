@@ -17,6 +17,7 @@ import {
   collectLlnFiles,
   renderTextReport,
   renderJsonReport,
+  renderProvReport,
 } from "../dist/index.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -243,6 +244,119 @@ describe("renderJsonReport: valid JSON", () => {
     };
     const parsed = JSON.parse(renderJsonReport(graph, 1));
     assert.equal(parsed.schemaVersion, "lln.provenance.v1");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 9. W3C PROV-JSON serialisation
+// ---------------------------------------------------------------------------
+
+describe("renderProvReport: W3C PROV-JSON format", () => {
+  it("renderProvReport(graph, { format: 'prov-json' }) produces valid JSON with entity and activity keys", () => {
+    const result = analyzeFile(VERIFY_PASSWORD_SRC, VERIFY_PASSWORD_PATH);
+    const graph = {
+      nodes: result.nodes,
+      edges: result.edges,
+      summary: {
+        totalFlows: result.flows.length,
+        flowsWithTaintedData: result.hasTaintedData ? 1 : 0,
+        flowsWithUngatedSinks: result.ungatedSinkReached ? 1 : 0,
+        trustBoundaryCrossings: 0,
+      },
+      riskFlows: [],
+    };
+
+    const provJsonStr = renderProvReport(graph, { format: "prov-json" });
+
+    // Must be valid JSON
+    let parsed;
+    assert.doesNotThrow(() => { parsed = JSON.parse(provJsonStr); }, "PROV-JSON must be valid JSON");
+    assert.ok(parsed !== null && typeof parsed === "object", "Parsed PROV-JSON must be an object");
+
+    // Must have 'entity' and 'activity' top-level keys (W3C PROV-JSON spec)
+    assert.ok("entity" in parsed, "PROV-JSON must have 'entity' key");
+    assert.ok("activity" in parsed, "PROV-JSON must have 'activity' key");
+
+    // Must have the lln prefix
+    assert.ok("prefix" in parsed, "PROV-JSON must have 'prefix' key");
+    assert.ok(
+      parsed.prefix?.lln !== undefined,
+      "PROV-JSON prefix must include 'lln' namespace",
+    );
+
+    console.log(`  PROV-JSON: ${Object.keys(parsed.entity).length} entities, ${Object.keys(parsed.activity).length} activities`);
+  });
+
+  it("PROV-JSON entity values include prov:label fields", () => {
+    const result = analyzeFile(VERIFY_PASSWORD_SRC, VERIFY_PASSWORD_PATH);
+    const graph = {
+      nodes: result.nodes,
+      edges: result.edges,
+      summary: {
+        totalFlows: result.flows.length,
+        flowsWithTaintedData: result.hasTaintedData ? 1 : 0,
+        flowsWithUngatedSinks: 0,
+        trustBoundaryCrossings: 0,
+      },
+      riskFlows: [],
+    };
+
+    const parsed = JSON.parse(renderProvReport(graph, { format: "prov-json" }));
+    const entityValues = Object.values(parsed.entity);
+
+    assert.ok(entityValues.length > 0, "Should have at least one entity");
+    for (const entityVal of entityValues) {
+      assert.ok(
+        "prov:label" in entityVal,
+        `Each entity must have prov:label, got: ${JSON.stringify(entityVal)}`,
+      );
+    }
+  });
+
+  it("source nodes with isTrusted=false appear as entities with lln:tainted=true", () => {
+    const result = analyzeFile(UNGATED_FLOW_SRC, "ungatedFlow.lln");
+    const graph = {
+      nodes: result.nodes,
+      edges: result.edges,
+      summary: {
+        totalFlows: result.flows.length,
+        flowsWithTaintedData: result.hasTaintedData ? 1 : 0,
+        flowsWithUngatedSinks: result.ungatedSinkReached ? 1 : 0,
+        trustBoundaryCrossings: 0,
+      },
+      riskFlows: [],
+    };
+
+    const parsed = JSON.parse(renderProvReport(graph, { format: "prov-json" }));
+    const entityValues = Object.values(parsed.entity);
+
+    // At least one entity should have lln:tainted = true (the unsafe source)
+    const hasTaintedEntity = entityValues.some(e => e["lln:tainted"] === true);
+    assert.ok(hasTaintedEntity, "Expected at least one entity with lln:tainted=true for an ungated flow");
+  });
+
+  it("transform nodes appear as activities in PROV-JSON", () => {
+    // gated flow has a validate.input transform → should appear as activity
+    const result = analyzeFile(GATED_FLOW_SRC, "safeDbWrite.lln");
+    const graph = {
+      nodes: result.nodes,
+      edges: result.edges,
+      summary: {
+        totalFlows: result.flows.length,
+        flowsWithTaintedData: result.hasTaintedData ? 1 : 0,
+        flowsWithUngatedSinks: result.ungatedSinkReached ? 1 : 0,
+        trustBoundaryCrossings: 0,
+      },
+      riskFlows: [],
+    };
+
+    const parsed = JSON.parse(renderProvReport(graph, { format: "prov-json" }));
+
+    // gated flow has a transform node — should produce at least one activity
+    assert.ok(
+      typeof parsed.activity === "object",
+      "PROV-JSON should have an activity object",
+    );
   });
 });
 

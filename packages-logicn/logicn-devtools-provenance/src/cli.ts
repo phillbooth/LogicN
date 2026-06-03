@@ -21,7 +21,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { analyzeFile, buildProvenanceGraph, collectLlnFiles } from "./analyzer.js";
-import { renderTextReport, renderJsonReport } from "./reporter.js";
+import { renderTextReport, renderJsonReport, renderProvReport } from "./reporter.js";
 import type { ProvenanceOptions } from "./types.js";
 
 const args = process.argv.slice(2);
@@ -114,11 +114,15 @@ async function main(): Promise<number> {
     case "report": {
       const dir = args[1];
       if (dir === undefined || dir === "") {
-        process.stderr.write("Usage: logicn-provenance report <directory> [--json]\n");
+        process.stderr.write("Usage: logicn-provenance report <directory> [--json] [--format prov-json]\n");
         return 1;
       }
 
       const wantJson = args.includes("--json");
+      const formatIdx = args.indexOf("--format");
+      const formatArg = formatIdx >= 0 ? args[formatIdx + 1] : undefined;
+      const wantProvJson = formatArg === "prov-json";
+
       const files = collectLlnFiles(resolve(dir));
 
       if (files.length === 0) {
@@ -128,7 +132,9 @@ async function main(): Promise<number> {
 
       const graph = buildProvenanceGraph(files);
 
-      if (wantJson) {
+      if (wantProvJson) {
+        process.stdout.write(renderProvReport(graph, { format: "prov-json" }) + "\n");
+      } else if (wantJson) {
         process.stdout.write(renderJsonReport(graph, files.length) + "\n");
       } else {
         process.stdout.write(renderTextReport(graph, files.length));

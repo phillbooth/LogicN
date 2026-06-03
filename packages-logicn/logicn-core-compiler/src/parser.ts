@@ -158,6 +158,13 @@ export interface FlowMeta {
   readonly returnType: string;
   readonly declaredEffects: readonly string[];
   readonly location: SourceLocation;
+  /**
+   * Optional termination metric declared with the `decreases` keyword after
+   * the return type arrow. Example: `-> Int decreases n`
+   * Stored as the raw metric expression string, e.g. "n" or "(m - n)".
+   * Undefined when the annotation is absent.
+   */
+  readonly decreasesMetric?: string;
 }
 
 export interface ParseResult {
@@ -498,6 +505,47 @@ class Parser {
     const retTypeNode = this.parseTypeRef();
     const returnType = retTypeNode.value ?? "";
 
+    // Optional `decreases <metric>` termination annotation.
+    // Appears on the same line immediately after the return type:
+    //   pure flow countdown(n: Int) -> Int decreases n { ... }
+    //   secure flow process(m: Int, n: Int) -> Bool decreases (m - n) { ... }
+    let decreasesMetric: string | undefined;
+    {
+      // Peek at the next non-newline token without consuming newlines yet.
+      // `decreases` is not a keyword — it is an identifier.
+      // Only treat it as a decreases annotation when it appears on the same
+      // logical line as the return type (i.e. before the first newline).
+      const nextTok = this.current();
+      if (nextTok.kind === "identifier" && nextTok.value === "decreases") {
+        this.advance(); // consume "decreases"
+        // Collect the metric: either a parenthesised expression or an identifier.
+        if (this.currentIs("symbol", "(")) {
+          // Parenthesised metric: (m - n)
+          let depth = 0;
+          const metricParts: string[] = [];
+          while (!this.isEof()) {
+            const t = this.current();
+            if (t.kind === "symbol" && t.value === "(") { depth++; metricParts.push("("); this.advance(); }
+            else if (t.kind === "symbol" && t.value === ")") {
+              depth--;
+              metricParts.push(")");
+              this.advance();
+              if (depth <= 0) break;
+            } else if (t.kind === "newline") break;
+            else { metricParts.push(t.value); this.advance(); }
+          }
+          decreasesMetric = metricParts.join(" ").trim();
+        } else {
+          // Simple identifier metric
+          const metTok = this.current();
+          if (metTok.kind === "identifier" || metTok.kind === "keyword") {
+            decreasesMetric = metTok.value;
+            this.advance();
+          }
+        }
+      }
+    }
+
     // Optional effects declaration on the next line(s)
     this.skipNewlines();
     let effectsNode: AstNode | undefined;
@@ -645,6 +693,7 @@ class Parser {
       returnType,
       declaredEffects: effectNames,
       location: loc,
+      ...(decreasesMetric !== undefined ? { decreasesMetric } : {}),
     };
     this.flows.push(meta);
 
@@ -791,7 +840,25 @@ class Parser {
     const typeRef = this.parseTypeRef();
 
     const prefix = isReadonly ? "readonly " : "";
-    const paramText = `${prefix}${nameTok.value}: ${typeRef.value ?? ""}`;
+
+    // Phase 4.4: optional `source_from Origin` annotation after the type.
+    // `source_from` is an identifier token (not a keyword) so we peek at the
+    // current token and consume the annotation when present.
+    let sourceFromSuffix = "";
+    if (this.current().kind === "identifier" && this.current().value === "source_from") {
+      this.advance(); // consume "source_from"
+      // Consume the origin: one or more identifier/dot tokens e.g. Network.ClientSocket
+      let origin = "";
+      while (!this.isEof() && (this.current().kind === "identifier" || (this.current().kind === "symbol" && this.current().value === "."))) {
+        origin += this.current().value;
+        this.advance();
+      }
+      if (origin !== "") {
+        sourceFromSuffix = ` source_from ${origin}`;
+      }
+    }
+
+    const paramText = `${prefix}${nameTok.value}: ${typeRef.value ?? ""}${sourceFromSuffix}`;
     return { kind: "paramDecl", value: paramText, location: loc, children: [typeRef] };
   }
 
@@ -1935,6 +2002,25 @@ class Parser {
     this.advance(); // consume "intent"
 
     let value = "";
+
+    // Block form: `intent { "string literal" }` — extract the string content.
+    // This form is used inside `contract { intent { "..." } }` blocks.
+    if (this.currentIs("symbol", "{")) {
+      this.advance(); // consume {
+      this.skipNewlines();
+      if (this.current().kind === "string") {
+        const raw = this.current().value;
+        value = raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw;
+        this.advance();
+      }
+      // Consume any remaining tokens up to closing brace
+      while (!this.currentIs("symbol", "}") && !this.isEof()) {
+        this.advance();
+      }
+      this.expect("symbol", "}");
+      return { kind: "intentDecl", value, location: loc };
+    }
+
     if (this.current().kind === "string") {
       // Strip surrounding double-quotes from the string literal
       const raw = this.current().value;

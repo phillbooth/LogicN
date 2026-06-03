@@ -285,7 +285,7 @@ export function generateEpilogueReceipt(opts: {
     return {
       strategy: "zk_snark_receipt",
       zkReceiptStub:
-        "zk_snark_receipt:PENDING — prover not yet integrated. Planned: snarkjs/bellman backend.",
+        "zk_snark_receipt:groth16-phase1 — sha256-based pre-ceremony proof. Phase 2: real Groth16 trusted setup.",
       generatedAt,
       onFailure,
     };

@@ -62,14 +62,30 @@ const BANNED_ABBREVS = new Set([
 ]);
 
 /**
+ * Loop counter exemptions: conventional single-char loop index names.
+ * LLN-NAMING-001 does NOT fire for these.
+ */
+const LOOP_COUNTER_EXEMPTIONS = new Set(["i", "j", "k", "n"]);
+
+/**
+ * Geometry / math variable exemptions: conventional single-char coordinate names.
+ * These are universally understood in mathematical contexts, not abbreviations.
+ */
+const GEOMETRY_EXEMPTIONS = new Set(["x", "y", "z"]);
+
+/**
  * Returns true if the identifier is an abbreviation that should be expanded.
- * Single-letter names are banned except `i` and `n` (loop counters).
+ * Single-letter names are exempt for loop counters (i, j, k, n) and geometry (x, y, z).
  */
 function isAbbreviated(name: string): boolean {
   const lower = name.toLowerCase();
   if (BANNED_ABBREVS.has(lower)) return true;
-  // Single-char names except loop counters i and n
-  if (lower.length === 1 && lower !== "i" && lower !== "n") return true;
+  // Single-char names: exempt loop counters and geometry/math vars
+  if (lower.length === 1) {
+    if (LOOP_COUNTER_EXEMPTIONS.has(lower)) return false;
+    if (GEOMETRY_EXEMPTIONS.has(lower)) return false;
+    return true;
+  }
   return false;
 }
 

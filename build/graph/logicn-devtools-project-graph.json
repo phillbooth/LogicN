@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-06-03T19:53:13.637Z",
+  "generatedAt": "2026-06-03T23:00:13.884Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -4188,6 +4188,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-completion-roadmap-2026-06-03.md",
+      "kind": "Document",
+      "label": "logicn-completion-roadmap-2026-06-03.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-completion-roadmap-2026-06-03.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-compliance-governance.md",
       "kind": "Document",
       "label": "logicn-compliance-governance.md",
@@ -4714,6 +4723,15 @@
       "kind": "Document",
       "label": "logicn-design-secrets-epilogue-blocks.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-design-secrets-epilogue-blocks.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-deterministic-runtime-containment.md",
+      "kind": "Document",
+      "label": "logicn-deterministic-runtime-containment.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-deterministic-runtime-containment.md",
       "tags": [
         "document"
       ]
@@ -6037,6 +6055,24 @@
       "kind": "Document",
       "label": "logicn-value-state-checker-architecture.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-value-state-checker-architecture.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-wasmtime-baseline.md",
+      "kind": "Document",
+      "label": "logicn-wasmtime-baseline.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-wasmtime-baseline.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-wasmtime-roadmap.md",
+      "kind": "Document",
+      "label": "logicn-wasmtime-roadmap.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-wasmtime-roadmap.md",
       "tags": [
         "document"
       ]
@@ -12919,6 +12955,56 @@
       "id": "type:logicn-core-compiler:LLN_GOV_012",
       "kind": "Type",
       "label": "LLN_GOV_012",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_GOV_019",
+      "kind": "Type",
+      "label": "LLN_GOV_019",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_GOV_020",
+      "kind": "Type",
+      "label": "LLN_GOV_020",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_GOV_006",
+      "kind": "Type",
+      "label": "LLN_GOV_006",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_GOV_001",
+      "kind": "Type",
+      "label": "LLN_GOV_001",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_TERM_001",
+      "kind": "Type",
+      "label": "LLN_TERM_001",
       "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
       "tags": [
         "type",
@@ -40071,6 +40157,41 @@
     {
       "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:LLN_GOV_012",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_GOV_019",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_GOV_020",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_GOV_006",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_GOV_001",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_TERM_001",
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"

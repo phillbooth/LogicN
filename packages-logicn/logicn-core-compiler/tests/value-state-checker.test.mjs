@@ -1039,3 +1039,258 @@ ${body}
     assert.ok(!hasDiag(r, "LLN-SECRET-002"));
   });
 });
+
+// ── Phase 4.1: List/array taint propagation ───────────────────────────────────
+
+describe("Value-state checker — Phase 4.1 list taint propagation", () => {
+  it("list containing a tainted element → DB.insert → VALUESTATE-005", () => {
+    const result = parseAndCheck(`
+secure flow test(raw: String) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let unsafeInput: String = raw
+  let xs = [unsafeInput, "clean"]
+  let saved = DB.insert(xs)?
+  return Ok(saved)
+}
+`);
+    assert.ok(
+      hasDiag(result, "LLN-VALUESTATE-005") || hasDiag(result, "LLN-VALUESTATE-003"),
+      `Expected taint-at-sink for list with tainted element, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+
+  it("clean list → DB.insert → clean (no taint diagnostic)", () => {
+    const result = parseAndCheck(`
+secure flow test() -> Result<String, Error>
+contract { effects { database.write } }
+{
+  let xs = ["clean1", "clean2"]
+  let saved = DB.insert(xs)?
+  return Ok(saved)
+}
+`);
+    assert.ok(
+      !hasDiag(result, "LLN-VALUESTATE-005") && !hasDiag(result, "LLN-VALUESTATE-003"),
+      `Unexpected taint diagnostic for clean list, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+
+  it("list with all elements sanitized → sink → clean", () => {
+    const result = parseAndCheck(`
+secure flow test(raw: String) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let unsafeInput: String = raw
+  let safeVal: String = validate.input(unsafeInput)?
+  let xs = [safeVal, "other"]
+  let saved = DB.insert(xs)?
+  return Ok(saved)
+}
+`);
+    assert.ok(
+      !hasDiag(result, "LLN-VALUESTATE-005") && !hasDiag(result, "LLN-VALUESTATE-003"),
+      `Gate-sanitized list element must not trip taint, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+});
+
+// ── Phase 4.2: Deep nested record field taint ─────────────────────────────────
+
+describe("Value-state checker — Phase 4.2 deep nested record field taint", () => {
+  it("p.id where p = { id: unsafeInput } → let v = p.id → DB.insert(v) → VALUESTATE-005", () => {
+    const result = parseAndCheck(`
+secure flow test(raw: String) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let unsafeInput: String = raw
+  let p = { id: unsafeInput }
+  let v = p.id
+  let saved = DB.insert(v)?
+  return Ok(saved)
+}
+`);
+    assert.ok(
+      hasDiag(result, "LLN-VALUESTATE-005") || hasDiag(result, "LLN-VALUESTATE-003"),
+      `Expected taint-at-sink for p.id from tainted record, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+
+  it("clean record field access → sink → clean", () => {
+    const result = parseAndCheck(`
+secure flow test() -> Result<String, Error>
+contract { effects { database.write } }
+{
+  let p = { id: "safe_id" }
+  let v = p.id
+  let saved = DB.insert(v)?
+  return Ok(saved)
+}
+`);
+    assert.ok(
+      !hasDiag(result, "LLN-VALUESTATE-005") && !hasDiag(result, "LLN-VALUESTATE-003"),
+      `Unexpected taint for clean record field, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+});
+
+// ── Phase 4.3: Inter-flow taint tracking ─────────────────────────────────────
+
+describe("Value-state checker — Phase 4.3 inter-flow taint tracking", () => {
+  it("tainted arg passed to user-defined flow → VALUESTATE-004 warning", () => {
+    const result = parseAndCheck(`
+flow processData(input: String) -> String {
+  return input
+}
+
+secure flow test(raw: String) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let rawBody: String = raw
+  let result = processData(rawBody)
+  return Ok(result)
+}
+`);
+    assert.ok(
+      hasDiag(result, "LLN-VALUESTATE-004"),
+      `Expected LLN-VALUESTATE-004 for tainted arg to user flow, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+
+  it("tainted arg passed to user flow: message names both the value and the flow", () => {
+    const result = parseAndCheck(`
+flow processData(input: String) -> String {
+  return input
+}
+
+secure flow test(raw: String) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  unsafe let raw: String = raw
+  processData(raw)
+  return Ok("ok")
+}
+`);
+    const diag = result.diagnostics.find((d) => d.code === "LLN-VALUESTATE-004");
+    assert.ok(diag !== undefined, "Expected LLN-VALUESTATE-004");
+    assert.ok(
+      diag.message.includes("processData"),
+      `Expected 'processData' in message: ${diag.message}`,
+    );
+  });
+
+  it("clean arg passed to user-defined flow → no VALUESTATE-004", () => {
+    const result = parseAndCheck(`
+flow processData(input: String) -> String {
+  return input
+}
+
+secure flow test() -> Result<String, Error>
+contract { effects { database.write } }
+{
+  let cleanVal: String = "safe"
+  let result = processData(cleanVal)
+  return Ok(result)
+}
+`);
+    assert.ok(
+      !hasDiag(result, "LLN-VALUESTATE-004"),
+      `Unexpected LLN-VALUESTATE-004 for clean arg to user flow, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+});
+
+// ── Phase 4.4: source_from annotation ────────────────────────────────────────
+
+describe("Value-state checker — Phase 4.4 source_from annotation", () => {
+  it("param source_from Network.ClientSocket → auto-tainted → DB.insert → VALUESTATE-003", () => {
+    const result = parseAndCheck(`
+secure flow handleRequest(body: String source_from Network.ClientSocket) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  let saved = DB.insert(body)?
+  return Ok(saved)
+}
+`);
+    assert.ok(
+      hasDiag(result, "LLN-VALUESTATE-003"),
+      `Expected LLN-VALUESTATE-003 for source_from Network.ClientSocket, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+
+  it("param source_from Network.HttpRequest → auto-tainted → DB.insert → VALUESTATE-003", () => {
+    const result = parseAndCheck(`
+secure flow handleRequest(payload: String source_from Network.HttpRequest) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  let saved = DB.insert(payload)?
+  return Ok(saved)
+}
+`);
+    assert.ok(
+      hasDiag(result, "LLN-VALUESTATE-003"),
+      `Expected LLN-VALUESTATE-003 for source_from Network.HttpRequest, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+
+  it("param source_from Network.* with gate upgrade → sink → clean", () => {
+    const result = parseAndCheck(`
+secure flow handleRequest(body: String source_from Network.ClientSocket) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  safe mut body = validate.body(body)?
+  let saved = DB.insert(body)?
+  return Ok(saved)
+}
+`);
+    assert.ok(
+      !hasDiag(result, "LLN-VALUESTATE-003"),
+      `Unexpected VALUESTATE-003 after gate upgrade of source_from param, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+
+  it("param source_from InternalService.Config → clean → DB.insert → clean", () => {
+    const result = parseAndCheck(`
+secure flow handleRequest(config: String source_from InternalService.Config) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  let saved = DB.insert(config)?
+  return Ok(saved)
+}
+`);
+    assert.ok(
+      !hasDiag(result, "LLN-VALUESTATE-003") && !hasDiag(result, "LLN-VALUESTATE-005"),
+      `Unexpected taint diagnostic for InternalService.Config source_from, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+
+  it("param source_from External.Api → tainted (External.* prefix) → DB.insert → VALUESTATE-003", () => {
+    const result = parseAndCheck(`
+secure flow handleRequest(data: String source_from External.Api) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  let saved = DB.insert(data)?
+  return Ok(saved)
+}
+`);
+    assert.ok(
+      hasDiag(result, "LLN-VALUESTATE-003"),
+      `Expected VALUESTATE-003 for External.* source_from, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+
+  it("param source_from Database.PrimaryKey → clean → DB.insert → clean", () => {
+    const result = parseAndCheck(`
+secure flow handleRequest(id: String source_from Database.PrimaryKey) -> Result<String, Error>
+contract { effects { database.write } }
+{
+  let saved = DB.insert(id)?
+  return Ok(saved)
+}
+`);
+    assert.ok(
+      !hasDiag(result, "LLN-VALUESTATE-003") && !hasDiag(result, "LLN-VALUESTATE-005"),
+      `Unexpected taint for Database.PrimaryKey source_from, got: ${result.diagnostics.map((d) => d.code).join(", ")}`,
+    );
+  });
+});

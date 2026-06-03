@@ -127,6 +127,56 @@ describe("Indexer", () => {
     );
     console.log(`  2nd build: skipped=${result2.filesSkipped} re-indexed=${result2.filesIndexed}`);
   });
+
+  // ---------------------------------------------------------------------------
+  // Test 11: SHA-256 differential re-indexing skips unchanged files
+  // ---------------------------------------------------------------------------
+
+  test("11. SHA-256 differential re-indexing: second build has skippedFiles > 0", async () => {
+    const available = await authServiceAvailable();
+    if (!available) return;
+
+    // Use a temp index dir so we start clean regardless of prior test runs
+    const { mkdtemp, rmdir } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const tempDir = await mkdtemp(join(tmpdir(), "lln-idx-test-"));
+
+    try {
+      // First build into temp dir — should index all files
+      const result1 = await buildIndex(AUTH_SERVICE_DIR, tempDir);
+      assert.ok(
+        result1.filesIndexed + result1.filesSkipped > 0,
+        `First build should process files, got indexed=${result1.filesIndexed} skipped=${result1.filesSkipped}`,
+      );
+
+      // Second build on the same directory — content unchanged, all files skipped via SHA-256 hash
+      const result2 = await buildIndex(AUTH_SERVICE_DIR, tempDir);
+      assert.ok(
+        result2.filesSkipped > 0,
+        `Expected skippedFiles > 0 on second build (SHA-256 differential), got ${result2.filesSkipped}`,
+      );
+
+      // Verify the .lindex file contains fileHashes
+      const indexContent = JSON.parse(
+        await readFile(join(tempDir, "workspace.lindex"), "utf-8"),
+      );
+      assert.ok(
+        typeof indexContent.fileHashes === "object" && indexContent.fileHashes !== null,
+        "workspace.lindex should contain fileHashes map",
+      );
+      assert.ok(
+        Object.keys(indexContent.fileHashes).length > 0,
+        "fileHashes map should be non-empty",
+      );
+
+      console.log(
+        `  SHA-256 differential: 1st build indexed=${result1.filesIndexed}, ` +
+        `2nd build skipped=${result2.filesSkipped} hashes=${Object.keys(indexContent.fileHashes).length}`,
+      );
+    } finally {
+      try { await rmdir(tempDir, { recursive: true }); } catch { /* ignore */ }
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "builtAt": "2026-06-03T19:53:09.181Z",
+  "builtAt": "2026-06-03T23:00:09.426Z",
   "workspaceDir": "C:\\wwwprojects\\LogicN\\examples\\auth-service",
   "flows": [
     {
@@ -52,7 +52,7 @@
       "signatureText": "pure flow auditEventId(flowName: String, timestamp: String) -> String",
       "lineStart": 13,
       "lineEnd": 13,
-      "indexedAt": "2026-06-03T12:01:49.148Z",
+      "indexedAt": "2026-06-03T20:15:43.259Z",
       "sourceMtime": 1780487807200.504
     },
     {
@@ -103,7 +103,7 @@
       "signatureText": "pure flow isValidAuditStatus(status: String) -> Bool",
       "lineStart": 24,
       "lineEnd": 24,
-      "indexedAt": "2026-06-03T12:01:49.148Z",
+      "indexedAt": "2026-06-03T20:15:43.259Z",
       "sourceMtime": 1780487807200.504
     },
     {
@@ -294,7 +294,7 @@
       "signatureText": "secure flow chainAuditEntry(readonly request: Request) -> Response",
       "lineStart": 38,
       "lineEnd": 38,
-      "indexedAt": "2026-06-03T12:01:49.148Z",
+      "indexedAt": "2026-06-03T20:15:43.259Z",
       "sourceMtime": 1780487807200.504
     },
     {
@@ -366,7 +366,7 @@
       "signatureText": "pure flow classifyAuditSeverity(eventType: String) -> String",
       "lineStart": 8,
       "lineEnd": 8,
-      "indexedAt": "2026-06-03T12:01:49.152Z",
+      "indexedAt": "2026-06-03T20:15:43.263Z",
       "sourceMtime": 1780487972155.9578
     },
     {
@@ -421,7 +421,7 @@
       "signatureText": "pure flow validateAuditEvent(eventName: String, level: String) -> Bool",
       "lineStart": 25,
       "lineEnd": 25,
-      "indexedAt": "2026-06-03T12:01:49.152Z",
+      "indexedAt": "2026-06-03T20:15:43.263Z",
       "sourceMtime": 1780487972155.9578
     },
     {
@@ -602,7 +602,7 @@
       "signatureText": "secure flow writeAuditEvent(readonly request: Request) -> AuditWriteResult",
       "lineStart": 40,
       "lineEnd": 40,
-      "indexedAt": "2026-06-03T12:01:49.152Z",
+      "indexedAt": "2026-06-03T20:15:43.263Z",
       "sourceMtime": 1780487972155.9578
     },
     {
@@ -682,7 +682,7 @@
       "signatureText": "pure flow selectExecutionTier(qualifier: String, hasEffects: Bool, isIntegerOnly: Bool) -> String",
       "lineStart": 7,
       "lineEnd": 7,
-      "indexedAt": "2026-06-03T12:01:49.154Z",
+      "indexedAt": "2026-06-03T20:15:43.265Z",
       "sourceMtime": 1780487974616.931
     },
     {
@@ -742,7 +742,7 @@
       "signatureText": "pure flow tierTrafficLight(tier: String) -> String",
       "lineStart": 18,
       "lineEnd": 18,
-      "indexedAt": "2026-06-03T12:01:49.154Z",
+      "indexedAt": "2026-06-03T20:15:43.265Z",
       "sourceMtime": 1780487974616.931
     },
     {
@@ -919,7 +919,7 @@
       "signatureText": "secure flow resolveBytecodeRoute(readonly request: Request) -> TierResult",
       "lineStart": 30,
       "lineEnd": 30,
-      "indexedAt": "2026-06-03T12:01:49.154Z",
+      "indexedAt": "2026-06-03T20:15:43.265Z",
       "sourceMtime": 1780487974616.931
     },
     {
@@ -1012,7 +1012,7 @@
       "signatureText": "pure flow isEffectAllowedInContext(effect: String, context: String) -> Bool",
       "lineStart": 15,
       "lineEnd": 15,
-      "indexedAt": "2026-06-03T12:01:49.156Z",
+      "indexedAt": "2026-06-03T20:15:43.267Z",
       "sourceMtime": 1780487609660.9053
     },
     {
@@ -1072,7 +1072,7 @@
       "signatureText": "pure flow effectGovernanceClass(effect: String) -> Int",
       "lineStart": 56,
       "lineEnd": 56,
-      "indexedAt": "2026-06-03T12:01:49.156Z",
+      "indexedAt": "2026-06-03T20:15:43.267Z",
       "sourceMtime": 1780487609660.9053
     },
     {
@@ -1224,7 +1224,7 @@
       "signatureText": "secure flow checkCapability(readonly request: Request) -> Response",
       "lineStart": 73,
       "lineEnd": 73,
-      "indexedAt": "2026-06-03T12:01:49.156Z",
+      "indexedAt": "2026-06-03T20:15:43.267Z",
       "sourceMtime": 1780487609660.9053
     },
     {
@@ -1292,7 +1292,7 @@
       "signatureText": "pure flow isEffectAvailable(effectName: String) -> Bool",
       "lineStart": 8,
       "lineEnd": 8,
-      "indexedAt": "2026-06-03T12:01:49.158Z",
+      "indexedAt": "2026-06-03T20:15:43.269Z",
       "sourceMtime": 1780487976884.6782
     },
     {
@@ -1352,7 +1352,7 @@
       "signatureText": "pure flow effectTier(effectName: String) -> String",
       "lineStart": 26,
       "lineEnd": 26,
-      "indexedAt": "2026-06-03T12:01:49.158Z",
+      "indexedAt": "2026-06-03T20:15:43.269Z",
       "sourceMtime": 1780487976884.6782
     },
     {
@@ -1507,7 +1507,7 @@
       "signatureText": "secure flow resolveCapability(readonly request: Request) -> CapabilityResolveResult",
       "lineStart": 42,
       "lineEnd": 42,
-      "indexedAt": "2026-06-03T12:01:49.158Z",
+      "indexedAt": "2026-06-03T20:15:43.269Z",
       "sourceMtime": 1780487976884.6782
     },
     {
@@ -1673,7 +1673,7 @@
       "signatureText": "secure flow tokenizeSource(readonly request: Request) -> Response",
       "lineStart": 13,
       "lineEnd": 13,
-      "indexedAt": "2026-06-03T12:01:49.159Z",
+      "indexedAt": "2026-06-03T20:15:43.270Z",
       "sourceMtime": 1780487606768.32
     },
     {
@@ -1781,7 +1781,7 @@
       "signatureText": "secure flow createSession(readonly request: Request) -> CreateSessionResult",
       "lineStart": 9,
       "lineEnd": 9,
-      "indexedAt": "2026-06-03T07:28:35.529Z",
+      "indexedAt": "2026-06-03T20:15:43.271Z",
       "sourceMtime": 1780386290495.4285
     },
     {
@@ -1866,7 +1866,7 @@
       "signatureText": "pure flow inferTarget(hasAI: Bool, isSafetyCritical: Bool, hasDBWrite: Bool) -> String",
       "lineStart": 7,
       "lineEnd": 7,
-      "indexedAt": "2026-06-03T12:01:49.160Z",
+      "indexedAt": "2026-06-03T20:15:43.273Z",
       "sourceMtime": 1780487982036.783
     },
     {
@@ -1928,7 +1928,7 @@
       "signatureText": "pure flow inferRiskTier(execTarget: String) -> String",
       "lineStart": 16,
       "lineEnd": 16,
-      "indexedAt": "2026-06-03T12:01:49.160Z",
+      "indexedAt": "2026-06-03T20:15:43.273Z",
       "sourceMtime": 1780487982036.783
     },
     {
@@ -2116,7 +2116,7 @@
       "signatureText": "secure flow routeByEconomics(readonly request: Request) -> EconomicsResult",
       "lineStart": 27,
       "lineEnd": 27,
-      "indexedAt": "2026-06-03T12:01:49.160Z",
+      "indexedAt": "2026-06-03T20:15:43.273Z",
       "sourceMtime": 1780487982036.783
     },
     {
@@ -2188,7 +2188,7 @@
       "signatureText": "pure flow estimateComputeCost(opCount: Int, targetClass: Int) -> Int",
       "lineStart": 4,
       "lineEnd": 4,
-      "indexedAt": "2026-06-03T12:01:49.161Z",
+      "indexedAt": "2026-06-03T20:15:43.274Z",
       "sourceMtime": 1780487702392.3938
     },
     {
@@ -2263,7 +2263,7 @@
       "signatureText": "pure flow estimateRiskCost(recordCount: Int, classificationLevel: Int) -> Int",
       "lineStart": 12,
       "lineEnd": 12,
-      "indexedAt": "2026-06-03T12:01:49.161Z",
+      "indexedAt": "2026-06-03T20:15:43.274Z",
       "sourceMtime": 1780487702392.3938
     },
     {
@@ -2329,7 +2329,7 @@
       "signatureText": "pure flow totalCost(computeCost: Int, riskCost: Int, auditCost: Int) -> Int",
       "lineStart": 20,
       "lineEnd": 20,
-      "indexedAt": "2026-06-03T12:01:49.161Z",
+      "indexedAt": "2026-06-03T20:15:43.274Z",
       "sourceMtime": 1780487702392.3938
     },
     {
@@ -2523,7 +2523,7 @@
       "signatureText": "secure flow estimateCost(readonly request: Request) -> Response",
       "lineStart": 25,
       "lineEnd": 25,
-      "indexedAt": "2026-06-03T12:01:49.161Z",
+      "indexedAt": "2026-06-03T20:15:43.274Z",
       "sourceMtime": 1780487702392.3938
     },
     {
@@ -2600,7 +2600,7 @@
       "signatureText": "pure flow effectRequiresCapability(effectName: String) -> String",
       "lineStart": 9,
       "lineEnd": 9,
-      "indexedAt": "2026-06-03T12:01:49.162Z",
+      "indexedAt": "2026-06-03T20:15:43.276Z",
       "sourceMtime": 1780487984937.0315
     },
     {
@@ -2655,7 +2655,7 @@
       "signatureText": "pure flow effectsAreComplete(declaredEffect: String, qualifier: String) -> Bool",
       "lineStart": 29,
       "lineEnd": 29,
-      "indexedAt": "2026-06-03T12:01:49.162Z",
+      "indexedAt": "2026-06-03T20:15:43.276Z",
       "sourceMtime": 1780487984937.0315
     },
     {
@@ -2710,7 +2710,7 @@
       "signatureText": "pure flow classifyEffectSeverity(capability: String) -> String",
       "lineStart": 40,
       "lineEnd": 40,
-      "indexedAt": "2026-06-03T12:01:49.162Z",
+      "indexedAt": "2026-06-03T20:15:43.276Z",
       "sourceMtime": 1780487984937.0315
     },
     {
@@ -2887,7 +2887,7 @@
       "signatureText": "secure flow checkEffectDeclaration(readonly request: Request) -> EffectCheckResult",
       "lineStart": 57,
       "lineEnd": 57,
-      "indexedAt": "2026-06-03T12:01:49.162Z",
+      "indexedAt": "2026-06-03T20:15:43.276Z",
       "sourceMtime": 1780487984937.0315
     },
     {
@@ -2943,7 +2943,7 @@
       "signatureText": "pure flow governanceLevel(effectTag: String) -> Int",
       "lineStart": 14,
       "lineEnd": 14,
-      "indexedAt": "2026-06-03T12:01:49.164Z",
+      "indexedAt": "2026-06-03T20:15:43.277Z",
       "sourceMtime": 1780487804161.6448
     },
     {
@@ -2987,7 +2987,7 @@
       "signatureText": "pure flow requiresAuditForLevel(level: Int) -> Bool",
       "lineStart": 28,
       "lineEnd": 28,
-      "indexedAt": "2026-06-03T12:01:49.164Z",
+      "indexedAt": "2026-06-03T20:15:43.277Z",
       "sourceMtime": 1780487804161.6448
     },
     {
@@ -3148,7 +3148,7 @@
       "signatureText": "secure flow verifyGovernance(readonly request: Request) -> Response",
       "lineStart": 40,
       "lineEnd": 40,
-      "indexedAt": "2026-06-03T12:01:49.164Z",
+      "indexedAt": "2026-06-03T20:15:43.277Z",
       "sourceMtime": 1780487804161.6448
     },
     {
@@ -3227,7 +3227,7 @@
       "signatureText": "pure flow isEffectPermittedInProfile(effectName: String, profile: String) -> Bool",
       "lineStart": 8,
       "lineEnd": 8,
-      "indexedAt": "2026-06-03T12:01:49.165Z",
+      "indexedAt": "2026-06-03T20:15:43.279Z",
       "sourceMtime": 1780487987816.6921
     },
     {
@@ -3290,7 +3290,7 @@
       "signatureText": "pure flow checkQualifierInvariants(qualifier: String, hasAudit: Bool) -> Bool",
       "lineStart": 22,
       "lineEnd": 22,
-      "indexedAt": "2026-06-03T12:01:49.165Z",
+      "indexedAt": "2026-06-03T20:15:43.279Z",
       "sourceMtime": 1780487987816.6921
     },
     {
@@ -3345,7 +3345,7 @@
       "signatureText": "pure flow classifyGovernanceOutcome(permitted: Bool, invariants: Bool) -> String",
       "lineStart": 36,
       "lineEnd": 36,
-      "indexedAt": "2026-06-03T12:01:49.165Z",
+      "indexedAt": "2026-06-03T20:15:43.279Z",
       "sourceMtime": 1780487987816.6921
     },
     {
@@ -3556,7 +3556,7 @@
       "signatureText": "secure flow verifyFlowGovernance(readonly request: Request) -> VerifyResult",
       "lineStart": 46,
       "lineEnd": 46,
-      "indexedAt": "2026-06-03T12:01:49.165Z",
+      "indexedAt": "2026-06-03T20:15:43.279Z",
       "sourceMtime": 1780487987816.6921
     },
     {
@@ -3677,7 +3677,7 @@
       "signatureText": "secure flow healthCheck(readonly request: Request) -> HealthStatus",
       "lineStart": 7,
       "lineEnd": 7,
-      "indexedAt": "2026-06-03T07:28:35.537Z",
+      "indexedAt": "2026-06-03T20:15:43.281Z",
       "sourceMtime": 1780386290498.4602
     },
     {
@@ -3722,7 +3722,7 @@
       "signatureText": "pure flow isValidManifestVersion(version: String) -> Bool",
       "lineStart": 4,
       "lineEnd": 4,
-      "indexedAt": "2026-06-03T12:01:49.167Z",
+      "indexedAt": "2026-06-03T20:15:43.282Z",
       "sourceMtime": 1780487752826.296
     },
     {
@@ -3762,7 +3762,7 @@
       "signatureText": "pure flow isValidGovernanceFlags(flags: Int) -> Bool",
       "lineStart": 9,
       "lineEnd": 9,
-      "indexedAt": "2026-06-03T12:01:49.167Z",
+      "indexedAt": "2026-06-03T20:15:43.282Z",
       "sourceMtime": 1780487752826.296
     },
     {
@@ -3829,7 +3829,7 @@
       "signatureText": "pure flow manifestTrustLevel(verified: Bool, hasSignature: Bool, flagsValid: Bool) -> Int",
       "lineStart": 14,
       "lineEnd": 14,
-      "indexedAt": "2026-06-03T12:01:49.167Z",
+      "indexedAt": "2026-06-03T20:15:43.282Z",
       "sourceMtime": 1780487752826.296
     },
     {
@@ -4062,7 +4062,7 @@
       "signatureText": "secure flow verifyManifest(readonly request: Request) -> Response",
       "lineStart": 22,
       "lineEnd": 22,
-      "indexedAt": "2026-06-03T12:01:49.167Z",
+      "indexedAt": "2026-06-03T20:15:43.282Z",
       "sourceMtime": 1780487752826.296
     },
     {
@@ -4157,7 +4157,7 @@
       "signatureText": "secure flow processStandardRequest(readonly request: Request) -> Result<String,String>",
       "lineStart": 12,
       "lineEnd": 12,
-      "indexedAt": "2026-06-03T17:16:11.354Z",
+      "indexedAt": "2026-06-03T20:15:43.282Z",
       "sourceMtime": 1780506822430.981
     },
     {
@@ -4276,7 +4276,7 @@
       "signatureText": "secure flow settlementTier1(readonly request: Request) -> Result<String,String>",
       "lineStart": 6,
       "lineEnd": 6,
-      "indexedAt": "2026-06-03T17:16:11.358Z",
+      "indexedAt": "2026-06-03T20:15:43.283Z",
       "sourceMtime": 1780506806520.7546
     },
     {
@@ -4423,7 +4423,7 @@
       "signatureText": "secure flow processHighValueRecord(readonly request: Request) -> Result<String,String>",
       "lineStart": 6,
       "lineEnd": 6,
-      "indexedAt": "2026-06-03T17:16:11.359Z",
+      "indexedAt": "2026-06-03T20:15:43.284Z",
       "sourceMtime": 1780506814865.3596
     },
     {
@@ -4468,7 +4468,7 @@
       "signatureText": "pure flow qualifierToProofLevel(qualifier: String) -> Int",
       "lineStart": 8,
       "lineEnd": 8,
-      "indexedAt": "2026-06-03T12:01:49.168Z",
+      "indexedAt": "2026-06-03T20:15:43.285Z",
       "sourceMtime": 1780487992756.876
     },
     {
@@ -4527,7 +4527,7 @@
       "signatureText": "pure flow proofLevelSufficient(actual: Int, required: Int) -> Bool",
       "lineStart": 21,
       "lineEnd": 21,
-      "indexedAt": "2026-06-03T12:01:49.168Z",
+      "indexedAt": "2026-06-03T20:15:43.285Z",
       "sourceMtime": 1780487992756.876
     },
     {
@@ -4675,7 +4675,7 @@
       "signatureText": "secure flow generateProofSummary(readonly request: Request) -> ProofResult",
       "lineStart": 28,
       "lineEnd": 28,
-      "indexedAt": "2026-06-03T12:01:49.168Z",
+      "indexedAt": "2026-06-03T20:15:43.285Z",
       "sourceMtime": 1780487992756.876
     },
     {
@@ -4724,7 +4724,7 @@
       "signatureText": "pure flow isValidAlgorithm(alg: String) -> Bool",
       "lineStart": 13,
       "lineEnd": 13,
-      "indexedAt": "2026-06-03T12:01:49.169Z",
+      "indexedAt": "2026-06-03T20:15:43.286Z",
       "sourceMtime": 1780487923567.025
     },
     {
@@ -4768,7 +4768,7 @@
       "signatureText": "pure flow proofStrength(algorithm: String) -> Int",
       "lineStart": 26,
       "lineEnd": 26,
-      "indexedAt": "2026-06-03T12:01:49.169Z",
+      "indexedAt": "2026-06-03T20:15:43.286Z",
       "sourceMtime": 1780487923567.025
     },
     {
@@ -4916,7 +4916,7 @@
       "signatureText": "secure flow verifyProof(readonly request: Request) -> Response",
       "lineStart": 39,
       "lineEnd": 39,
-      "indexedAt": "2026-06-03T12:01:49.169Z",
+      "indexedAt": "2026-06-03T20:15:43.286Z",
       "sourceMtime": 1780487923567.025
     },
     {
@@ -5055,7 +5055,7 @@
       "signatureText": "guarded flow rateStatus(readonly request: Request) -> RateStatusResult",
       "lineStart": 6,
       "lineEnd": 6,
-      "indexedAt": "2026-06-03T07:28:35.540Z",
+      "indexedAt": "2026-06-03T20:15:43.287Z",
       "sourceMtime": 1780386290499.4583
     },
     {
@@ -5113,7 +5113,7 @@
       "signatureText": "pure flow pathMatches(requestPath: String, routePath: String) -> Bool",
       "lineStart": 9,
       "lineEnd": 9,
-      "indexedAt": "2026-06-03T12:01:49.170Z",
+      "indexedAt": "2026-06-03T20:15:43.289Z",
       "sourceMtime": 1780487997753.2983
     },
     {
@@ -5195,7 +5195,7 @@
       "signatureText": "pure flow resolveRoute(method: String, path: String) -> String",
       "lineStart": 21,
       "lineEnd": 21,
-      "indexedAt": "2026-06-03T12:01:49.170Z",
+      "indexedAt": "2026-06-03T20:15:43.289Z",
       "sourceMtime": 1780487997753.2983
     },
     {
@@ -5267,7 +5267,7 @@
       "signatureText": "pure flow flowGovernanceProfile(flowName: String) -> String",
       "lineStart": 52,
       "lineEnd": 52,
-      "indexedAt": "2026-06-03T12:01:49.170Z",
+      "indexedAt": "2026-06-03T20:15:43.289Z",
       "sourceMtime": 1780487997753.2983
     },
     {
@@ -5523,7 +5523,7 @@
       "signatureText": "secure flow dispatchRequest(readonly request: Request) -> RouteResult",
       "lineStart": 69,
       "lineEnd": 69,
-      "indexedAt": "2026-06-03T12:01:49.170Z",
+      "indexedAt": "2026-06-03T20:15:43.289Z",
       "sourceMtime": 1780487997753.2983
     },
     {
@@ -5606,7 +5606,7 @@
       "signatureText": "pure flow preferredTier(effectCount: Int, hasAI: Bool, isCritical: Bool) -> String",
       "lineStart": 4,
       "lineEnd": 4,
-      "indexedAt": "2026-06-03T12:01:49.171Z",
+      "indexedAt": "2026-06-03T20:15:43.291Z",
       "sourceMtime": 1780487700374.936
     },
     {
@@ -5655,7 +5655,7 @@
       "signatureText": "pure flow tierGovernanceClass(tier: String) -> Int",
       "lineStart": 14,
       "lineEnd": 14,
-      "indexedAt": "2026-06-03T12:01:49.171Z",
+      "indexedAt": "2026-06-03T20:15:43.291Z",
       "sourceMtime": 1780487700374.936
     },
     {
@@ -5822,7 +5822,7 @@
       "signatureText": "secure flow resolveRoute(readonly request: Request) -> Response",
       "lineStart": 23,
       "lineEnd": 23,
-      "indexedAt": "2026-06-03T12:01:49.171Z",
+      "indexedAt": "2026-06-03T20:15:43.291Z",
       "sourceMtime": 1780487700374.936
     },
     {
@@ -5869,7 +5869,7 @@
       "signatureText": "pure flow profileAllowsRecursion(profile: String) -> Bool",
       "lineStart": 4,
       "lineEnd": 4,
-      "indexedAt": "2026-06-03T12:01:49.173Z",
+      "indexedAt": "2026-06-03T20:15:43.292Z",
       "sourceMtime": 1780487750637.777
     },
     {
@@ -5917,7 +5917,7 @@
       "signatureText": "pure flow profileAllowsUnboundedLoop(profile: String) -> Bool",
       "lineStart": 11,
       "lineEnd": 11,
-      "indexedAt": "2026-06-03T12:01:49.173Z",
+      "indexedAt": "2026-06-03T20:15:43.292Z",
       "sourceMtime": 1780487750637.777
     },
     {
@@ -5964,7 +5964,7 @@
       "signatureText": "pure flow profileRequiresBudget(profile: String) -> Bool",
       "lineStart": 18,
       "lineEnd": 18,
-      "indexedAt": "2026-06-03T12:01:49.173Z",
+      "indexedAt": "2026-06-03T20:15:43.292Z",
       "sourceMtime": 1780487750637.777
     },
     {
@@ -6014,7 +6014,7 @@
       "signatureText": "pure flow profileSecurityLevel(profile: String) -> Int",
       "lineStart": 25,
       "lineEnd": 25,
-      "indexedAt": "2026-06-03T12:01:49.173Z",
+      "indexedAt": "2026-06-03T20:15:43.292Z",
       "sourceMtime": 1780487750637.777
     },
     {
@@ -6201,7 +6201,7 @@
       "signatureText": "secure flow checkProfile(readonly request: Request) -> Response",
       "lineStart": 34,
       "lineEnd": 34,
-      "indexedAt": "2026-06-03T12:01:49.173Z",
+      "indexedAt": "2026-06-03T20:15:43.292Z",
       "sourceMtime": 1780487750637.777
     },
     {
@@ -6390,7 +6390,7 @@
       "signatureText": "secure flow processSovereignTransaction(readonly request: Request) -> TransactionResult",
       "lineStart": 14,
       "lineEnd": 14,
-      "indexedAt": "2026-06-03T17:16:11.361Z",
+      "indexedAt": "2026-06-03T20:15:43.293Z",
       "sourceMtime": 1780506633768.941
     },
     {
@@ -6439,7 +6439,7 @@
       "signatureText": "pure flow strContains(s: String, sub: String) -> Bool",
       "lineStart": 8,
       "lineEnd": 8,
-      "indexedAt": "2026-06-03T12:01:49.174Z",
+      "indexedAt": "2026-06-03T20:15:43.294Z",
       "sourceMtime": 1780488000532.6848
     },
     {
@@ -6492,7 +6492,7 @@
       "signatureText": "pure flow strStartsWith(s: String, prefix: String) -> Bool",
       "lineStart": 14,
       "lineEnd": 14,
-      "indexedAt": "2026-06-03T12:01:49.174Z",
+      "indexedAt": "2026-06-03T20:15:43.294Z",
       "sourceMtime": 1780488000532.6848
     },
     {
@@ -6535,7 +6535,7 @@
       "signatureText": "pure flow strLength(s: String) -> Int",
       "lineStart": 20,
       "lineEnd": 20,
-      "indexedAt": "2026-06-03T12:01:49.174Z",
+      "indexedAt": "2026-06-03T20:15:43.294Z",
       "sourceMtime": 1780488000532.6848
     },
     {
@@ -6579,7 +6579,7 @@
       "signatureText": "pure flow mathMin(a: Int, b: Int) -> Int",
       "lineStart": 27,
       "lineEnd": 27,
-      "indexedAt": "2026-06-03T12:01:49.174Z",
+      "indexedAt": "2026-06-03T20:15:43.294Z",
       "sourceMtime": 1780488000532.6848
     },
     {
@@ -6623,7 +6623,7 @@
       "signatureText": "pure flow mathMax(a: Int, b: Int) -> Int",
       "lineStart": 36,
       "lineEnd": 36,
-      "indexedAt": "2026-06-03T12:01:49.174Z",
+      "indexedAt": "2026-06-03T20:15:43.294Z",
       "sourceMtime": 1780488000532.6848
     },
     {
@@ -6679,7 +6679,7 @@
       "signatureText": "pure flow mathClamp(n: Int, lo: Int, hi: Int) -> Int",
       "lineStart": 45,
       "lineEnd": 45,
-      "indexedAt": "2026-06-03T12:01:49.174Z",
+      "indexedAt": "2026-06-03T20:15:43.294Z",
       "sourceMtime": 1780488000532.6848
     },
     {
@@ -6810,7 +6810,7 @@
       "signatureText": "secure flow stdlibDemo(readonly request: Request) -> StdlibResult",
       "lineStart": 58,
       "lineEnd": 58,
-      "indexedAt": "2026-06-03T12:01:49.174Z",
+      "indexedAt": "2026-06-03T20:15:43.294Z",
       "sourceMtime": 1780488000532.6848
     },
     {
@@ -6871,7 +6871,7 @@
       "signatureText": "pure flow isBuiltinType(name: String) -> Bool",
       "lineStart": 13,
       "lineEnd": 13,
-      "indexedAt": "2026-06-03T12:01:49.175Z",
+      "indexedAt": "2026-06-03T20:15:43.295Z",
       "sourceMtime": 1780487926698.0476
     },
     {
@@ -6947,7 +6947,7 @@
       "signatureText": "pure flow typeCategory(name: String) -> String",
       "lineStart": 31,
       "lineEnd": 31,
-      "indexedAt": "2026-06-03T12:01:49.175Z",
+      "indexedAt": "2026-06-03T20:15:43.295Z",
       "sourceMtime": 1780487926698.0476
     },
     {
@@ -7119,7 +7119,7 @@
       "signatureText": "secure flow resolveType(readonly request: Request) -> Response",
       "lineStart": 54,
       "lineEnd": 54,
-      "indexedAt": "2026-06-03T12:01:49.175Z",
+      "indexedAt": "2026-06-03T20:15:43.295Z",
       "sourceMtime": 1780487926698.0476
     },
     {
@@ -7162,7 +7162,7 @@
       "signatureText": "pure flow countServices() -> Int",
       "lineStart": 8,
       "lineEnd": 8,
-      "indexedAt": "2026-06-03T07:28:35.547Z",
+      "indexedAt": "2026-06-03T20:15:43.296Z",
       "sourceMtime": 1780386290501.4287
     },
     {
@@ -7204,7 +7204,7 @@
       "signatureText": "pure flow runtimePercent() -> Int",
       "lineStart": 14,
       "lineEnd": 14,
-      "indexedAt": "2026-06-03T07:28:35.547Z",
+      "indexedAt": "2026-06-03T20:15:43.296Z",
       "sourceMtime": 1780386290501.4287
     },
     {
@@ -7243,7 +7243,7 @@
       "signatureText": "pure flow currentPhase() -> Int",
       "lineStart": 20,
       "lineEnd": 20,
-      "indexedAt": "2026-06-03T07:28:35.547Z",
+      "indexedAt": "2026-06-03T20:15:43.296Z",
       "sourceMtime": 1780386290501.4287
     },
     {
@@ -7369,7 +7369,7 @@
       "signatureText": "secure flow v1RcStatus(readonly request: Request) -> RcStatusResult",
       "lineStart": 25,
       "lineEnd": 25,
-      "indexedAt": "2026-06-03T07:28:35.547Z",
+      "indexedAt": "2026-06-03T20:15:43.296Z",
       "sourceMtime": 1780386290501.4287
     },
     {
@@ -7433,7 +7433,7 @@
       "signatureText": "pure flow classifyValue(typeName: String) -> Int",
       "lineStart": 4,
       "lineEnd": 4,
-      "indexedAt": "2026-06-03T12:01:49.176Z",
+      "indexedAt": "2026-06-03T20:15:43.297Z",
       "sourceMtime": 1780487705202.934
     },
     {
@@ -7469,7 +7469,7 @@
       "signatureText": "pure flow requiresRedaction(classification: Int) -> Bool",
       "lineStart": 14,
       "lineEnd": 14,
-      "indexedAt": "2026-06-03T12:01:49.176Z",
+      "indexedAt": "2026-06-03T20:15:43.297Z",
       "sourceMtime": 1780487705202.934
     },
     {
@@ -7505,7 +7505,7 @@
       "signatureText": "pure flow requiresEncryption(classification: Int) -> Bool",
       "lineStart": 19,
       "lineEnd": 19,
-      "indexedAt": "2026-06-03T12:01:49.176Z",
+      "indexedAt": "2026-06-03T20:15:43.297Z",
       "sourceMtime": 1780487705202.934
     },
     {
@@ -7650,7 +7650,7 @@
       "signatureText": "secure flow classifyData(readonly request: Request) -> Response",
       "lineStart": 24,
       "lineEnd": 24,
-      "indexedAt": "2026-06-03T12:01:49.176Z",
+      "indexedAt": "2026-06-03T20:15:43.297Z",
       "sourceMtime": 1780487705202.934
     },
     {
@@ -7835,7 +7835,7 @@
       "signatureText": "secure flow verifyPassword(readonly request: Request) -> VerifyPasswordResult",
       "lineStart": 9,
       "lineEnd": 9,
-      "indexedAt": "2026-06-03T07:28:35.549Z",
+      "indexedAt": "2026-06-03T20:15:43.298Z",
       "sourceMtime": 1780386290501.989
     },
     {
@@ -7875,7 +7875,7 @@
       "signatureText": "pure flow fixtureHash() -> String",
       "lineStart": 18,
       "lineEnd": 18,
-      "indexedAt": "2026-06-03T07:28:35.549Z",
+      "indexedAt": "2026-06-03T20:15:43.299Z",
       "sourceMtime": 1780388932569.5598
     },
     {
@@ -7970,7 +7970,7 @@
       "signatureText": "secure flow verifyPassword(readonly request: Request) -> Response",
       "lineStart": 25,
       "lineEnd": 25,
-      "indexedAt": "2026-06-03T07:28:35.549Z",
+      "indexedAt": "2026-06-03T20:15:43.299Z",
       "sourceMtime": 1780388932569.5598
     },
     {
@@ -8019,8 +8019,42 @@
       "signatureText": "pure flow verifyToken(token: String) -> VerifyTokenResult",
       "lineStart": 5,
       "lineEnd": 5,
-      "indexedAt": "2026-06-03T07:28:35.550Z",
+      "indexedAt": "2026-06-03T20:15:43.300Z",
       "sourceMtime": 1780386290501.989
     }
-  ]
+  ],
+  "fileHashes": {
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\auditChainService.lln": "ed7dd784b41dd25c0caf9da980cd6e3e5e550c957a0e7a86c65f11ddec20e264",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\auditWriterService.lln": "fa993a64cbbcbae94f2f1396072439add6faaed04d1bdbd59ada9a262aae0efd",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\bytecodeRouterService.lln": "063edc48559695aa7b94550e624664574c8fde98dbcf797282212d2fa8505f90",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\capabilityHostService.lln": "c1c29d0e9f95f00b6521829dcd69ad408f5479ae35c6eff7b64983a7da2f4c23",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\capabilityResolverService.lln": "fdc9f4c593d0df8cd63554479d05d433a71cf61e01a773fcd645f2790f7bd997",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\compilationService.lln": "15e87ed17513468e8a10b99c4ede98a4d2c75b7cc07d9a611c34ec0fd49b70b0",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\createSession.lln": "1ddb6b5441725f4425688d51dc0ea7019ee93a673c2e628ae242ce5b58bb2a89",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\economicsRouterService.lln": "4a471fb889d4faa3672dc2e194b2d71bcecbf344a25b770860b2dbcd8276e1dc",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\economicsService.lln": "6d8f7366724fcd7a42f0f86b8d585ea03341c2788f49b4468912b6c0e4ab10cb",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\effectCheckerService.lln": "251fb0f51f476e86525a86a19ef2b158353f31c39bcf12eefc6ea7584ac335e9",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\governanceService.lln": "cfcc0f35059d37283ff92a7efca93143a3f5a7acc6e0be3723ff674101f3f9c7",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\governanceVerifierService.lln": "3c939fef64716667202add656c1dbb254b3c7cbeb02eb1c9baef96c9729c9c3e",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\healthCheck.lln": "7775a6f8fba8b8b5b11134b501b8fe0791349f7eececd3956ca74277225a2819",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\manifestVerificationService.lln": "462543a774c17716b82a2ecf4aa5d6ce92fd22382d3dff1c538b953dbb4b8a13",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\physicalHardeningAutoDefault.lln": "a664c023930bc1cdd91b592bda3e6d1b2d7599a1a4cf96f9daf71eb28dc1ebdd",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\physicalHardeningTier1.lln": "4c89c55273769e6c566c9a7f2be2664b4b7082f998155e83dc51a3abfdfdc0c8",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\physicalHardeningTier2.lln": "0d6e09b19d7eff334d168fa68fe0a672c3902b74235703c19f73511977dca68c",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\proofGraphService.lln": "787ab9d680db95e8f7affeba105c3f821720e049b931171092669cf2fb4ff4cd",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\proofVerifierService.lln": "5f2fc15baaaa0dcc8d4400c69ab93af46035e7340df1e2d1fb03c2e05b9f8437",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\rateStatus.lln": "ca3e7b51aa9fadf747e6287343f0d8f257515cab178510f2bd794f405d7a6c89",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\routeDispatcherService.lln": "7ec61f26407e3e0c33569c914be18db56abe0c34bcf0db0c07c5a35d97063c9d",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\routingPolicyService.lln": "0ffa674e4c70f363f9c2d7b9d02f021cad56d27d05a1ae1248f950b2343cdc0a",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\runtimeProfileService.lln": "577671eb4965b1f2299b674669ecc2661901ef14975cca7f117cbeeaccc34547",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\sovereignTransaction.lln": "2fdc19379bae911aacda1bfb1b2e6fcccf5f9d50cf5bab16848ae4889631b2c5",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\stdlibCoreService.lln": "9425defe50b9da1f5f9f57288878a43588cc6e8ade31771e97ef9f147a1d014a",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\typeRegistryService.lln": "c71b98f5fb0b7c9b1c2bb55c924f2229614774220b1ad986d3d068775114a6b2",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\v1RcStatusService.lln": "76fbb3442bb693ac319c65f75de82b1e0a527d511400a175750fc05e0f0102b4",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\valueClassificationService.lln": "1b910855442519b9cba30e7d1b232b7f89896c53050c03424ca09b15da8395f1",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\verifyPassword.lln": "bf774de6f2a8fad1e1cb16a852a1bb0f9e5dbadc36537ddd12eed96159f6e684",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\verifyPasswordService.lln": "334505ce34070b7b9581711a5d0bdf34e593a0e5b9c0b59dc191b32095641caf",
+    "C:\\wwwprojects\\LogicN\\examples\\auth-service\\verifyToken.lln": "0f3597a17d2554a18ebdcb65e03ab64a159d2a4336c9ad4ddecea89c2360ea4e"
+  },
+  "skippedFiles": 31
 }

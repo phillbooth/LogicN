@@ -5,10 +5,15 @@ import {
   checkEffects,
   verifyGovernance,
   extractArenaLimitMB,
+  LLN_GOV_001,
   LLN_GOV_003,
+  LLN_GOV_006,
   LLN_CONTEXT_001,
   LLN_GOV_011,
   LLN_GOV_012,
+  LLN_GOV_019,
+  LLN_GOV_020,
+  LLN_TERM_001,
 } from "../dist/index.js";
 import {
   LLN_GOV_005,
@@ -841,5 +846,368 @@ contract { intent { "Governed flow." }  effects { audit.write } }
     // proofGraphs should contain an entry for the flow
     assert.ok(r.proofGraphs.size > 0, "proofGraphs should be populated");
     assert.ok(r.proofGraphs.has("f"), "proofGraphs should have entry for flow 'f'");
+  });
+});
+
+// =============================================================================
+// Phase 2.1 — LLN-GOV-019: limits {} field validation
+// =============================================================================
+
+describe("Governance verifier — LLN-GOV-019 limits unknown field", () => {
+  it("emits LLN-GOV-019 warning for unrecognised field 'memmory' (typo)", () => {
+    const r = parseAndVerify(`
+secure flow fetchData(req: Request) -> Result<Response, ApiError>
+contract {
+  intent { "Fetch data." }
+  effects { database.read }
+  limits { memmory 64mb }
+}
+{ return Ok(Response.ok({})) }
+`);
+    assert.ok(hasDiag(r, "LLN-GOV-019"), `Expected LLN-GOV-019, got: ${r.diagnostics.map(d=>d.code).join(",")}`);
+    assert.equal(r.diagnostics.find(d => d.code === "LLN-GOV-019")?.severity, "warning");
+  });
+
+  it("does not emit LLN-GOV-019 for known fields: memory, request_time", () => {
+    const r = parseAndVerify(`
+secure flow fetchData(req: Request) -> Result<Response, ApiError>
+contract {
+  intent { "Fetch data." }
+  effects { database.read }
+  limits { memory 64mb  request_time 500ms }
+}
+{ return Ok(Response.ok({})) }
+`);
+    assert.ok(!hasDiag(r, "LLN-GOV-019"), `Unexpected LLN-GOV-019: ${r.diagnostics.map(d=>d.code).join(",")}`);
+  });
+
+  it("does not emit LLN-GOV-019 when no limits block is present", () => {
+    const r = parseAndVerify(`
+pure flow add(a: Int, b: Int) -> Int { return a + b }
+`);
+    assert.ok(!hasDiag(r, "LLN-GOV-019"));
+  });
+
+  it("LLN-GOV-019 constant has correct code and name", () => {
+    assert.equal(LLN_GOV_019.code, "LLN-GOV-019");
+    assert.equal(LLN_GOV_019.name, "LIMITS_UNKNOWN_FIELD");
+    assert.equal(LLN_GOV_019.severity, "warning");
+  });
+});
+
+// =============================================================================
+// Phase 2.2 — LLN-GOV-020: authority overly-broad
+// =============================================================================
+
+describe("Governance verifier — LLN-GOV-020 authority overly broad", () => {
+  it("emits LLN-GOV-020 warning when authority block contains 'require *'", () => {
+    const r = parseAndVerify(`
+secure flow adminOp(req: Request) -> Result<Response, ApiError>
+contract {
+  intent { "Admin operation." }
+  effects { audit.write }
+}
+authority grant AdminService {
+  reason "Bootstrap context."
+  require *
+}
+{ return Ok(Response.ok({})) }
+`);
+    assert.ok(hasDiag(r, "LLN-GOV-020"), `Expected LLN-GOV-020, got: ${r.diagnostics.map(d=>d.code).join(",")}`);
+    assert.equal(r.diagnostics.find(d => d.code === "LLN-GOV-020")?.severity, "warning");
+  });
+
+  it("does not emit LLN-GOV-020 when authority has specific capabilities", () => {
+    const r = parseAndVerify(`
+secure flow fetchRecord(req: Request) -> Result<Response, ApiError>
+contract {
+  intent { "Read record." }
+  effects { database.read }
+}
+authority share RecordService {
+  reason "Read access needed for serving records."
+  require record.read
+}
+{ return Ok(Response.ok({})) }
+`);
+    assert.ok(!hasDiag(r, "LLN-GOV-020"), `Unexpected LLN-GOV-020: ${r.diagnostics.map(d=>d.code).join(",")}`);
+  });
+
+  it("LLN-GOV-020 constant has correct code and name", () => {
+    assert.equal(LLN_GOV_020.code, "LLN-GOV-020");
+    assert.equal(LLN_GOV_020.name, "AUTHORITY_OVERLY_BROAD");
+    assert.equal(LLN_GOV_020.severity, "warning");
+  });
+});
+
+// =============================================================================
+// Phase 2.3 — observability, model, context blocks parse and are retained
+// =============================================================================
+
+describe("Governance verifier — observability/model/context blocks round-trip", () => {
+  it("observability block parses and contract sub-blocks are retained without crashing", () => {
+    const src = `
+secure flow tracedFlow(req: Request) -> Result<Response, ApiError>
+contract {
+  intent { "Traced request handler." }
+  effects { audit.write }
+  observability { trace_level verbose  metrics enabled }
+}
+{ return Ok(Response.ok({})) }
+`;
+    const parsed = parseProgram(src, "test.lln");
+    const effects = checkEffects(parsed.flows, parsed.ast);
+    // Should not throw; governance verifier must handle the block gracefully
+    const r = verifyGovernance(parsed.ast, parsed.flows, effects, "dev");
+    assert.ok(Array.isArray(r.diagnostics), "verifyGovernance should return diagnostics array");
+    // Contract node should include an observability:block child
+    const flowNode = parsed.ast.children?.find(n =>
+      (n.kind === "secureFlowDecl" || n.kind === "flowDecl") && n.value === "tracedFlow"
+    );
+    assert.ok(flowNode !== undefined, "flowNode should be found");
+    const contractNode = flowNode.children?.find(c => c.kind === "contractDecl");
+    assert.ok(contractNode !== undefined, "contractDecl should be present");
+    const hasObs = contractNode.children?.some(c => c.value === "observability:block");
+    assert.ok(hasObs, "observability:block should be retained in AST");
+  });
+
+  it("model block parses and is retained in contract children without crashing", () => {
+    const src = `
+secure flow modelledFlow(req: Request) -> Result<Response, ApiError>
+contract {
+  intent { "Flow with model declaration." }
+  effects { audit.write }
+  model { uses RequestModel  reads ResponseModel }
+}
+{ return Ok(Response.ok({})) }
+`;
+    const parsed = parseProgram(src, "test.lln");
+    const effects = checkEffects(parsed.flows, parsed.ast);
+    const r = verifyGovernance(parsed.ast, parsed.flows, effects, "dev");
+    assert.ok(Array.isArray(r.diagnostics));
+    const flowNode = parsed.ast.children?.find(n => n.value === "modelledFlow");
+    const contractNode = flowNode?.children?.find(c => c.kind === "contractDecl");
+    const hasModel = contractNode?.children?.some(c => c.value === "model:block");
+    assert.ok(hasModel, "model:block should be retained in AST");
+  });
+});
+
+// =============================================================================
+// Phase 3.1 — LLN-GOV-006: high-risk secure flow without epilogue
+// =============================================================================
+
+describe("Governance verifier — LLN-GOV-006 governance proof required but missing", () => {
+  it("emits LLN-GOV-006 warning when secure flow has max_risk_liability >= 5000 and no epilogue", () => {
+    const r = parseAndVerify(`
+secure flow processPayment(req: Request) -> Result<Response, ApiError>
+contract {
+  intent { "Process high-value payment." }
+  effects { database.write audit.write }
+  economics { max_risk_liability "10000" }
+}
+{ return Ok(Response.ok({})) }
+`);
+    assert.ok(hasDiag(r, "LLN-GOV-006"), `Expected LLN-GOV-006, got: ${r.diagnostics.map(d=>d.code).join(",")}`);
+    assert.equal(r.diagnostics.find(d => d.code === "LLN-GOV-006")?.severity, "warning");
+  });
+
+  it("does not emit LLN-GOV-006 when high-risk secure flow has an explicit epilogue block", () => {
+    const r = parseAndVerify(`
+secure flow processPayment(req: Request) -> Result<Response, ApiError>
+contract {
+  intent { "Process high-value payment." }
+  effects { database.write audit.write }
+  economics { max_risk_liability "10000" }
+  epilogue { generate_proof sha256_seal  on_verification_failure log_and_continue }
+}
+{ return Ok(Response.ok({})) }
+`);
+    assert.ok(!hasDiag(r, "LLN-GOV-006"), `Unexpected LLN-GOV-006: ${r.diagnostics.map(d=>d.code).join(",")}`);
+  });
+
+  it("does not emit LLN-GOV-006 when max_risk_liability is below threshold (4000)", () => {
+    const r = parseAndVerify(`
+secure flow smallPayment(req: Request) -> Result<Response, ApiError>
+contract {
+  intent { "Process low-value payment." }
+  effects { database.write audit.write }
+  economics { max_risk_liability "4000" }
+}
+{ return Ok(Response.ok({})) }
+`);
+    assert.ok(!hasDiag(r, "LLN-GOV-006"), `Unexpected LLN-GOV-006`);
+  });
+
+  it("LLN-GOV-006 constant has correct code and name", () => {
+    assert.equal(LLN_GOV_006.code, "LLN-GOV-006");
+    assert.equal(LLN_GOV_006.name, "GOVERNANCE_PROOF_REQUIRED_BUT_MISSING");
+    assert.equal(LLN_GOV_006.severity, "warning");
+  });
+});
+
+// =============================================================================
+// Phase 3.4 — LLN-GOV-001: intent / behaviour mismatch (extended heuristic)
+// =============================================================================
+
+describe("Governance verifier — LLN-GOV-001 intent behaviour mismatch (extended)", () => {
+  it("emits LLN-GOV-001 when intent says 'Read-only query' but effects include database.write", () => {
+    const r = parseAndVerify(`
+secure flow queryOrders(req: Request) -> Result<Response, ApiError>
+contract {
+  intent { "Read-only query of order records." }
+  effects { database.write audit.write }
+}
+{ return Ok(Response.ok({})) }
+`);
+    assert.ok(hasDiag(r, "LLN-GOV-001"), `Expected LLN-GOV-001, got: ${r.diagnostics.map(d=>d.code).join(",")}`);
+    assert.equal(r.diagnostics.find(d => d.code === "LLN-GOV-001")?.severity, "warning");
+  });
+
+  it("does not emit LLN-GOV-001 when intent and effects are consistent (read intent + read effects)", () => {
+    const r = parseAndVerify(`
+secure flow queryOrders(req: Request) -> Result<Response, ApiError>
+contract {
+  intent { "Read-only query of order records." }
+  effects { database.read }
+}
+{ return Ok(Response.ok({})) }
+`);
+    assert.ok(!hasDiag(r, "LLN-GOV-001"), `Unexpected LLN-GOV-001: ${r.diagnostics.map(d=>d.code).join(",")}`);
+  });
+
+  it("emits LLN-GOV-001 when intent claims pure/no side effects but effects are declared", () => {
+    const r = parseAndVerify(`
+secure flow computeHash(req: Request) -> Result<Response, ApiError>
+contract {
+  intent { "Pure computation with no side effects." }
+  effects { database.write }
+}
+{ return Ok(Response.ok({})) }
+`);
+    assert.ok(hasDiag(r, "LLN-GOV-001"), `Expected LLN-GOV-001 for pure intent + write effects`);
+  });
+
+  it("does not emit LLN-GOV-001 when intent has no contradiction keywords", () => {
+    const r = parseAndVerify(`
+secure flow createUser(req: Request) -> Result<Response, ApiError>
+contract {
+  intent { "Create a new user account in the system." }
+  effects { database.write audit.write }
+}
+{ return Ok(Response.ok({})) }
+`);
+    // "create" with write effects is consistent — no GOV-001
+    assert.ok(!hasDiag(r, "LLN-GOV-001"), `Unexpected LLN-GOV-001 for non-contradictory intent`);
+  });
+
+  it("LLN-GOV-001 constant has correct code and name", () => {
+    assert.equal(LLN_GOV_001.code, "LLN-GOV-001");
+    assert.equal(LLN_GOV_001.name, "INTENT_BEHAVIOR_MISMATCH");
+    assert.equal(LLN_GOV_001.severity, "warning");
+  });
+});
+
+// =============================================================================
+// Phase 3.3 — LLN-TERM-001: recursive flow without decreases annotation
+// =============================================================================
+
+describe("Governance verifier — LLN-TERM-001 termination annotation missing", () => {
+  it("emits LLN-TERM-001 when recursive secure flow in deterministic profile has no decreases", () => {
+    // deterministic profile triggers strict treatment; the flow calls itself recursively
+    const r = parseAndVerify(`
+secure flow countdown(n: Int) -> Int
+contract {
+  intent { "Count down to zero." }
+  effects { audit.write }
+}
+{
+  if n <= 0 { return 0 }
+  return countdown(n - 1)
+}
+`, "deterministic");
+    assert.ok(hasDiag(r, "LLN-TERM-001"), `Expected LLN-TERM-001, got: ${r.diagnostics.map(d=>d.code).join(",")}`);
+    assert.equal(r.diagnostics.find(d => d.code === "LLN-TERM-001")?.severity, "warning");
+  });
+
+  it("does not emit LLN-TERM-001 when decreases annotation is present", () => {
+    const parsed = parseProgram(`
+secure flow countdown(n: Int) -> Int decreases n
+contract {
+  intent { "Count down to zero." }
+  effects { audit.write }
+}
+{
+  if n <= 0 { return 0 }
+  return countdown(n - 1)
+}
+`, "test.lln");
+    const effects = checkEffects(parsed.flows, parsed.ast);
+    const r = verifyGovernance(parsed.ast, parsed.flows, effects, "deterministic");
+    assert.ok(!hasDiag(r, "LLN-TERM-001"), `Unexpected LLN-TERM-001: ${r.diagnostics.map(d=>d.code).join(",")}`);
+    // Also verify decreasesMetric is captured in flow meta
+    const flow = parsed.flows.find(f => f.name === "countdown");
+    assert.ok(flow !== undefined, "flow 'countdown' should be parsed");
+    assert.equal(flow.decreasesMetric, "n", "decreasesMetric should be 'n'");
+  });
+
+  it("does not emit LLN-TERM-001 for non-recursive secure flow", () => {
+    const r = parseAndVerify(`
+secure flow greet(name: String) -> String
+contract {
+  intent { "Return a greeting." }
+  effects { audit.write }
+}
+{ return name }
+`, "deterministic");
+    assert.ok(!hasDiag(r, "LLN-TERM-001"), `Unexpected LLN-TERM-001 for non-recursive flow`);
+  });
+
+  it("LLN-TERM-001 constant has correct code and name", () => {
+    assert.equal(LLN_TERM_001.code, "LLN-TERM-001");
+    assert.equal(LLN_TERM_001.name, "TERMINATION_ANNOTATION_MISSING");
+    assert.equal(LLN_TERM_001.severity, "warning");
+  });
+});
+
+// =============================================================================
+// Phase 3.3 — decreases keyword parsing
+// =============================================================================
+
+describe("Parser — decreases keyword parsing", () => {
+  it("parses 'decreases n' annotation without error", () => {
+    const parsed = parseProgram(`
+pure flow factorial(n: Int) -> Int decreases n {
+  if n <= 1 { return 1 }
+  return n * factorial(n - 1)
+}
+`, "test.lln");
+    assert.equal(parsed.diagnostics.filter(d => d.severity === "error").length, 0,
+      `Unexpected parse errors: ${parsed.diagnostics.map(d=>d.message).join("; ")}`);
+    const flow = parsed.flows.find(f => f.name === "factorial");
+    assert.ok(flow !== undefined, "flow 'factorial' should be parsed");
+    assert.equal(flow.decreasesMetric, "n", "decreasesMetric should be 'n'");
+  });
+
+  it("parses 'decreases (m - n)' parenthesised metric without error", () => {
+    const parsed = parseProgram(`
+pure flow gcd(m: Int, n: Int) -> Int decreases (m - n) {
+  return m
+}
+`, "test.lln");
+    assert.equal(parsed.diagnostics.filter(d => d.severity === "error").length, 0,
+      `Unexpected parse errors: ${parsed.diagnostics.map(d=>d.message).join("; ")}`);
+    const flow = parsed.flows.find(f => f.name === "gcd");
+    assert.ok(flow !== undefined, "flow 'gcd' should be parsed");
+    assert.ok(flow.decreasesMetric !== undefined, "decreasesMetric should be set");
+    assert.ok(flow.decreasesMetric.includes("m"), "metric should contain 'm'");
+  });
+
+  it("flow without decreases has undefined decreasesMetric", () => {
+    const parsed = parseProgram(`
+pure flow add(a: Int, b: Int) -> Int { return a + b }
+`, "test.lln");
+    const flow = parsed.flows.find(f => f.name === "add");
+    assert.ok(flow !== undefined);
+    assert.equal(flow.decreasesMetric, undefined, "decreasesMetric should be undefined when not declared");
   });
 });

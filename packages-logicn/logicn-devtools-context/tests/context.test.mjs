@@ -535,6 +535,67 @@ describe("context-receipt: governance code inference", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Test 10a: --summary mode
+// ---------------------------------------------------------------------------
+
+describe("context-receipt: --summary mode", () => {
+  it("--summary output contains flow name and qualifier for a secure flow", () => {
+    const receipts = generateReceipts(SECURE_FLOW_WITH_CONTRACT, { fileName: "auth.lln" });
+    const receipt = receipts.receipts[0];
+    assert.ok(receipt !== undefined, "Should have at least one receipt");
+
+    // Replicate the CLI renderSummaryLine logic to test the data shape
+    const summaryLine = [
+      `${receipt.flowName} (${receipt.qualifier}) -> ${receipt.returnType}`,
+      `[${receipt.contract.effects.length} effects]`,
+      ...(receipt.contract.intent !== undefined ? ["[has-intent]"] : []),
+      ...(receipt.contract.hasSecrets ? ["[has-secrets]"] : []),
+      ...(receipt.contract.hasEpilogue ? ["[has-economics]"] : []),
+      `— estimated ${receipt.tokenEstimate.reductionPct}% token reduction`,
+    ].join(" ");
+
+    assert.ok(summaryLine.includes("verifyPassword"), `Expected flow name in summary: ${summaryLine}`);
+    assert.ok(summaryLine.includes("secure"), `Expected qualifier in summary: ${summaryLine}`);
+    assert.ok(summaryLine.includes("token reduction"), `Expected token reduction in summary: ${summaryLine}`);
+    console.log(`  Summary: ${summaryLine}`);
+  });
+
+  it("--summary output contains has-intent flag when intent is present", () => {
+    const receipts = generateReceipts(SECURE_FLOW_WITH_CONTRACT, { fileName: "auth.lln" });
+    const receipt = receipts.receipts[0];
+    assert.ok(receipt !== undefined);
+
+    const summaryLine = [
+      `${receipt.flowName} (${receipt.qualifier}) -> ${receipt.returnType}`,
+      `[${receipt.contract.effects.length} effects]`,
+      ...(receipt.contract.intent !== undefined ? ["[has-intent]"] : []),
+      ...(receipt.contract.hasSecrets ? ["[has-secrets]"] : []),
+      ...(receipt.contract.hasEpilogue ? ["[has-economics]"] : []),
+      `— estimated ${receipt.tokenEstimate.reductionPct}% token reduction`,
+    ].join(" ");
+
+    assert.ok(summaryLine.includes("[has-intent]"), `Expected [has-intent] flag in summary: ${summaryLine}`);
+  });
+
+  it("--summary for multi-flow file produces one line per flow with distinct names", () => {
+    const receipts = generateReceipts(MULTI_FLOW_SOURCE, { fileName: "multi.lln" });
+    const summaryLines = receipts.receipts.map(r =>
+      [
+        `${r.flowName} (${r.qualifier}) -> ${r.returnType}`,
+        `[${r.contract.effects.length} effects]`,
+        ...(r.contract.intent !== undefined ? ["[has-intent]"] : []),
+        `— estimated ${r.tokenEstimate.reductionPct}% token reduction`,
+      ].join(" "),
+    );
+
+    assert.equal(summaryLines.length, 3, `Expected 3 summary lines for 3 flows`);
+    assert.ok(summaryLines.some(l => l.includes("double")), `Expected 'double' in summaries`);
+    assert.ok(summaryLines.some(l => l.includes("square")), `Expected 'square' in summaries`);
+    assert.ok(summaryLines.some(l => l.includes("processWithAudit")), `Expected 'processWithAudit' in summaries`);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Test 10: Sink type detection
 // ---------------------------------------------------------------------------
 

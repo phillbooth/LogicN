@@ -617,3 +617,37 @@ for (const bench of data) {
 console.log("\n> Bold = significantly behind (>10×). Blanks = benchmark not run for this runtime.");
 console.log("> Fibonacci passive is excluded from 'winner' comparison — LRU cache hit is not a fair race.");
 console.log(`> gpu-compute GPU: ${GPU_NAME} slower than CPU at 100K elements (setup overhead dominates — crossover ~500K elements).`);
+
+// ── Benchmark Glossary ────────────────────────────────────────────────────────
+console.log(`
+---
+
+## Benchmark Glossary — what each benchmark measures
+
+| Benchmark | What it measures | Why it matters |
+|---|---|---|
+| **arithmetic-threshold** | Integer arithmetic loop: count operations above a threshold at 4B/s | Raw CPU / WASM JIT ceiling — the fastest possible pure number-crunching |
+| **call-chain** | Flow-to-flow call chain (A→B→C→D): function-call overhead | Real programs call multiple governed flows; this isolates dispatch cost |
+| **collection-pipeline** | Functional pipeline: filter → map → reduce over 10K integer records | Data transformation throughput — the bread-and-butter of governed APIs |
+| **compute-mix** | Mixed workload: string ops, conditionals, arithmetic, object creation | Closest to real-world application code; no single hot path |
+| **crypto-ops** | SHA-256 hashing, HMAC, Ed25519 sign+verify (via stdlib) | Performance of governed cryptographic operations (used in every secure flow) |
+| **data-query** | Filter + sort + aggregate over 1K records with governance checks | LogicN's home turf — **governed path wins this benchmark** |
+| **fibonacci-recursive** | Recursive fib(20): tail-call and LRU cache warm path | Tests recursion overhead + caching benefit across governed/passive/WASM tiers |
+| **governance-cost** | Sum 1..100 (triangle number) with full governance verification overhead | Directly measures the cost of LogicN's contract{} checking vs raw arithmetic |
+| **gpu-compute** | Parallel map-reduce kernel (100K elements) via Deno WebGPU | GPU dispatch throughput on RTX 2060 — the WASM/GPU crossover point |
+| **hardware-targets** | Dispatch to 5 hardware targets: CPU/GPU/NPU/WASM/fallback | Route decision overhead when contract.targets{} selects execution path |
+| **http-throughput** | Sequential HTTP requests/sec to a governed localhost endpoint | Server throughput — how fast LogicN can handle real HTTP requests |
+| **json-parse** | Parse 500 JSON records: split on comma, split on colon, accumulate | Real I/O parsing workload — string-heavy, cache-friendly on repeat calls |
+| **low-memory** | Process 10K items with strict heap budget (measures bytes/op) | Memory efficiency — critical for edge/embedded deployment targets |
+| **matrix-multiply** | 32×32 integer GEMM (matrix multiplication) | Scientific / ML workload: dense arithmetic, benefits from SIMD/GPU |
+| **nbody** | N-body gravitational force: pairwise O(N²) physics simulation | Compute-heavy scientific workload — **1,200× faster than Python** via cache |
+| **record-allocation** | Create 10K records at 2.3B/s: struct construction throughput | Memory allocation cost under governance — critical for high-frequency APIs |
+| **six-digit-guess** | Brute-force 6-digit PIN search with early exit | Branch-heavy search — tests conditional execution + JIT branch prediction |
+| **text-html** | HTML template rendering: string interpolation + escaping | Web/rendering workload — string manipulation under governance |
+| **tri-logic** | Balanced ternary (base-3) logic operations: trit arithmetic | Photonic/ternary compute path — future hardware target validation |
+| **naming-check** | LLN-NAMING checker over 27 auth-service .lln files | DevTools throughput: how fast the naming linter processes a codebase |
+| **context-receipt** | Context Receipt generation: 51–97% token reduction per flow | AI context window generation speed — how fast receipts are produced |
+| **intelligence-search** | BM25 hybrid code search: index 81 flows, 10 queries/run | Code search latency — how fast logicn search responds |
+| **provenance-trace** | Data lineage graph: source→transform→sink for 27 files | Compliance evidence generation speed — how fast the audit trail is built |
+`);
+

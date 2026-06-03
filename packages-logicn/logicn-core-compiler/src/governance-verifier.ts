@@ -20,9 +20,14 @@
 //   LLN-CONTEXT-001  REQUIRED_CONTEXT_NOT_ACCESSED       (Phase 10C)
 //   LLN-HINT-COMPUTE-001  COMPUTE_TARGET_MISSING_FOR_AI_INFERENCE (planning hint)
 //
-// Deferred (require expression type inference or runtime evidence):
-//   LLN-GOV-001  INTENT_BEHAVIOR_MISMATCH
-//   LLN-GOV-006  GOVERNANCE_PROOF_REQUIRED_BUT_MISSING
+// Phase 2 — Contract Blocks validation (new):
+//   LLN-GOV-019  LIMITS_UNKNOWN_FIELD           (limits {} typo detection)
+//   LLN-GOV-020  AUTHORITY_OVERLY_BROAD         (authority { requires * })
+//
+// Phase 3 — Governance Verifier completion (new):
+//   LLN-GOV-001  INTENT_BEHAVIOR_MISMATCH       (heuristic: read/pure intent + write effects)
+//   LLN-GOV-006  GOVERNANCE_PROOF_REQUIRED_BUT_MISSING (high-risk secure flow, no epilogue)
+//   LLN-TERM-001 TERMINATION_ANNOTATION_MISSING (recursive strict/deterministic flow, no decreases)
 // =============================================================================
 
 import { type AstNode, type AstNodeKind, type FlowMeta, type SourceLocation } from "./parser.js";
@@ -192,6 +197,46 @@ export const LLN_GOV_012 = {
   name: "ContractSetRequirementNotMet",
   severity: "warning" as const,
   message: "Contract set requires audit.write but the flow does not declare it.",
+} as const;
+
+/** LLN-GOV-019: A `limits {}` block contains an unrecognised field name (likely a typo). */
+export const LLN_GOV_019 = {
+  code: "LLN-GOV-019",
+  name: "LIMITS_UNKNOWN_FIELD",
+  severity: "warning" as const,
+  message: "Unrecognised field in limits {} block. Possible typo — check against known fields: memory, request_time, max_request_size, max_response_size.",
+} as const;
+
+/** LLN-GOV-020: authority block uses 'requires *' or 'requires all' — overly broad grant. */
+export const LLN_GOV_020 = {
+  code: "LLN-GOV-020",
+  name: "AUTHORITY_OVERLY_BROAD",
+  severity: "warning" as const,
+  message: "Overly broad authority: 'requires *' grants all capabilities. Declare specific capabilities instead.",
+} as const;
+
+/** LLN-GOV-006: Secure flow with high max_risk_liability has no epilogue {} proof strategy. */
+export const LLN_GOV_006 = {
+  code: "LLN-GOV-006",
+  name: "GOVERNANCE_PROOF_REQUIRED_BUT_MISSING",
+  severity: "warning" as const,
+  message: "Secure flow has high max_risk_liability but no epilogue {} proof strategy declared.",
+} as const;
+
+/** LLN-GOV-001: Detected intent/behaviour mismatch (read/query intent vs write effects, etc.). */
+export const LLN_GOV_001 = {
+  code: "LLN-GOV-001",
+  name: "INTENT_BEHAVIOR_MISMATCH",
+  severity: "warning" as const,
+  message: "Intent declaration contradicts declared effects or behaviour.",
+} as const;
+
+/** LLN-TERM-001: Recursive flow in strict/deterministic profile lacks a decreases annotation. */
+export const LLN_TERM_001 = {
+  code: "LLN-TERM-001",
+  name: "TERMINATION_ANNOTATION_MISSING",
+  severity: "warning" as const,
+  message: "Recursive flow in strict/deterministic profile lacks a 'decreases' annotation.",
 } as const;
 
 /** LLN-GOV-013: A pure flow calls a flow with effects. Pure flows cannot cross into governed boundaries. */
@@ -630,6 +675,195 @@ function isContextFieldAccessed(flowNode: AstNode, fieldName: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 2 — LLN-GOV-019: limits {} field name validation
+// ---------------------------------------------------------------------------
+
+/** Known field names accepted in a `limits {}` contract sub-block. */
+const KNOWN_LIMITS_FIELDS = new Set([
+  "memory", "request_time", "max_request_size", "max_response_size",
+]);
+
+/**
+ * Extracts the `limits {}` block children from a flow's contractDecl and
+ * returns an array of declared field names (the first token on each decl line).
+ *
+ * The AST structure is:
+ *   contractDecl → identifier { value: "limits:block" }
+ *     → identifier { value: "decl:memory 64mb" }
+ *     → identifier { value: "decl:request_time 500ms" }
+ *     ...
+ */
+function extractLimitsFields(flowNode: AstNode): Array<{ field: string; location?: SourceLocation }> {
+  const contractNode = (flowNode.children ?? []).find((c) => c.kind === "contractDecl");
+  if (contractNode === undefined) return [];
+
+  const limitsBlock = (contractNode.children ?? []).find(
+    (c) => c.kind === "identifier" && c.value === "limits:block",
+  );
+  if (limitsBlock === undefined) return [];
+
+  const fields: Array<{ field: string; location?: SourceLocation }> = [];
+  for (const child of limitsBlock.children ?? []) {
+    if (child.kind === "identifier" && (child.value ?? "").startsWith("decl:")) {
+      const decl = (child.value ?? "").slice("decl:".length).trim();
+      const firstToken = decl.split(/\s+/)[0];
+      if (firstToken !== undefined && firstToken.length > 0) {
+        const locPart = child.location !== undefined ? { location: child.location } : {};
+        fields.push({ field: firstToken, ...locPart });
+      }
+    }
+  }
+  return fields;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2 — LLN-GOV-020: authority overly-broad detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Checks whether an authority block's content includes a broad wildcard grant
+ * (`requires *` or `requires all`).
+ *
+ * The authority block stores its line-level content as:
+ *   - identifier children with value "require:<something>" for `require` clauses
+ *   - OR raw decl:... lines for other content
+ *
+ * We scan both patterns.
+ */
+function hasOverlyBroadAuthority(authNode: AstNode): boolean {
+  for (const child of authNode.children ?? []) {
+    // effectRef with empty value → `require *`
+    // (the `*` operator token cannot be read as an identifier by the parser,
+    //  so it produces effectRef with value="" — treat as wildcard)
+    if (child.kind === "effectRef") {
+      const v = (child.value ?? "").trim().toLowerCase();
+      if (v === "" || v === "*" || v === "all") return true;
+    }
+    // Check `require:*` or `require:all`
+    if (child.kind === "identifier") {
+      const v = (child.value ?? "").toLowerCase();
+      if (v === "require:*" || v === "require:all") return true;
+      // Raw decl line: "decl:requires *" or "decl:requires all"
+      if (v.startsWith("decl:")) {
+        const content = v.slice("decl:".length);
+        if (/requires?\s+\*/.test(content) || /requires?\s+all\b/.test(content)) return true;
+      }
+    }
+  }
+  // Also check the raw value of the authority node itself if it encodes content
+  const rawValue = (authNode.value ?? "").toLowerCase();
+  if (/requires?\s+\*/.test(rawValue) || /requires?\s+all\b/.test(rawValue)) return true;
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3 — LLN-GOV-006: economics max_risk_liability extraction
+// ---------------------------------------------------------------------------
+
+/**
+ * Extracts `max_risk_liability` as a number from a flow's contract.economics block.
+ *
+ * The AST structure is:
+ *   contractDecl → identifier { value: "economics:block" }
+ *     → identifier { value: 'decl:max_risk_liability "50000"' }
+ *
+ * Returns the numeric value, or undefined if not declared or unparseable.
+ */
+function extractMaxRiskLiability(flowNode: AstNode): number | undefined {
+  const contractNode = (flowNode.children ?? []).find((c) => c.kind === "contractDecl");
+  if (contractNode === undefined) return undefined;
+
+  const economicsBlock = (contractNode.children ?? []).find(
+    (c) => c.kind === "identifier" && c.value === "economics:block",
+  );
+  if (economicsBlock === undefined) return undefined;
+
+  for (const child of economicsBlock.children ?? []) {
+    if (child.kind === "identifier" && (child.value ?? "").startsWith("decl:")) {
+      const content = (child.value ?? "").slice("decl:".length);
+      if (content.includes("max_risk_liability")) {
+        // Extract the numeric portion — strip quotes, units, etc.
+        const match = content.match(/max_risk_liability\s+"?(\d[\d,]*)"?/);
+        if (match?.[1] !== undefined) {
+          const n = Number(match[1].replace(/,/g, ""));
+          return Number.isFinite(n) ? n : undefined;
+        }
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Returns true if the flow's contractDecl contains an epilogue block
+ * (i.e., an identifier child with value starting "epilogue:block" or "epilogue:").
+ */
+function hasEpilogueBlock(flowNode: AstNode): boolean {
+  const contractNode = (flowNode.children ?? []).find((c) => c.kind === "contractDecl");
+  if (contractNode === undefined) return false;
+
+  return (contractNode.children ?? []).some(
+    (c) => c.kind === "identifier" &&
+      (c.value === "epilogue:block" || (c.value ?? "").startsWith("epilogue:")),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3 — LLN-TERM-001: termination annotation helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true when the flow body contains a direct recursive call to itself.
+ * A call is recursive when callExpr.value === flowName.
+ */
+function hasRecursiveCall(flowNode: AstNode, flowName: string): boolean {
+  function walk(node: AstNode): boolean {
+    if (node.kind === "callExpr" && node.value === flowName) return true;
+    return (node.children ?? []).some(walk);
+  }
+  // Only search inside the body block (last block child)
+  const blocks = (flowNode.children ?? []).filter((c) => c.kind === "block");
+  const body = blocks[blocks.length - 1];
+  return body !== undefined ? walk(body) : false;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3 — LLN-GOV-001: intent/behaviour mismatch (extended heuristic)
+// ---------------------------------------------------------------------------
+
+/**
+ * Checks for clear-cut contradictions between the intent string and declared effects.
+ *
+ * Returns an array of mismatch description strings (one per detected contradiction).
+ * Empty array means no contradiction found.
+ */
+function detectIntentMismatch(
+  intentText: string,
+  declaredEffects: readonly string[],
+): string[] {
+  const mismatches: string[] = [];
+  const text = intentText.toLowerCase();
+
+  // "read" or "query" intent but effects include database.write or audit.write
+  if (
+    (text.includes("read") || text.includes("query")) &&
+    (declaredEffects.includes("database.write"))
+  ) {
+    mismatches.push(`intent suggests read/query but effects include database.write`);
+  }
+
+  // "pure" or "no side effects" intent but effects are non-empty
+  if (
+    (text.includes("pure") || text.includes("no side effect")) &&
+    declaredEffects.length > 0
+  ) {
+    mismatches.push(`intent declares pure/no-side-effects but effects are declared: ${declaredEffects.join(", ")}`);
+  }
+
+  return mismatches;
+}
+
+// ---------------------------------------------------------------------------
 // Phase 22C — Arena memory extraction
 // ---------------------------------------------------------------------------
 
@@ -836,18 +1070,20 @@ class GovernanceVerifier {
       }
     }
 
-    // ── LLN-GOV-001: intent / behaviour mismatch (partial) ────────────────
-    // Can partially detect: if intent contains "local" or "without remote"
-    // but network.outbound is declared
+    // ── LLN-GOV-001: intent / behaviour mismatch (heuristic) ─────────────
+    // Check for clear-cut contradictions between intent text and effects.
+    // Also retain the original "local" vs network.outbound detection.
     if (flowNode !== undefined && hasIntentDecl(flowNode)) {
       const intentNodes = findNodes(flowNode, "intentDecl");
       for (const intentNode of intentNodes) {
-        const intentText = (intentNode.value ?? "").toLowerCase();
-        const hasLocalHint = intentText.includes("local") ||
-          intentText.includes("without remote") ||
-          intentText.includes("on-device");
-        const hasNetworkEffect = flow.declaredEffects.includes("network.outbound");
+        const intentText = (intentNode.value ?? "");
+        const intentLower = intentText.toLowerCase();
 
+        // Original: local/on-device hint + network.outbound
+        const hasLocalHint = intentLower.includes("local") ||
+          intentLower.includes("without remote") ||
+          intentLower.includes("on-device");
+        const hasNetworkEffect = flow.declaredEffects.includes("network.outbound");
         if (hasLocalHint && hasNetworkEffect) {
           this.diagnostics.push(makeGovDiag(
             "LLN-GOV-001",
@@ -856,6 +1092,20 @@ class GovernanceVerifier {
             `Flow '${flow.name}' intent suggests local execution but declares network.outbound. Verify intent matches actual behaviour.`,
             loc,
             `Review whether network.outbound is genuinely needed, or update the intent declaration.`,
+          ));
+          this.intentStatus.set(flow.name, "mismatch");
+        }
+
+        // Extended: read/query intent vs database.write; pure intent vs any effects
+        const mismatches = detectIntentMismatch(intentText, flow.declaredEffects);
+        for (const mismatch of mismatches) {
+          this.diagnostics.push(makeGovDiag(
+            "LLN-GOV-001",
+            "INTENT_BEHAVIOR_MISMATCH",
+            "warning",
+            `Flow '${flow.name}': intent/behaviour mismatch — ${mismatch}.`,
+            loc,
+            `Review the intent declaration or adjust the declared effects to match the intent.`,
           ));
           this.intentStatus.set(flow.name, "mismatch");
         }
@@ -1252,6 +1502,50 @@ class GovernanceVerifier {
       this.verifyLiabilityBlock(flowNode, flow.name);
     }
 
+    // ── Phase 2: LLN-GOV-019 limits block field validation ───────────────────
+    if (flowNode !== undefined) {
+      this.verifyLimitsBlock(flowNode, flow.name);
+    }
+
+    // ── Phase 2: LLN-GOV-020 authority overly-broad detection ────────────────
+    if (flowNode !== undefined) {
+      const authNodes = findNodes(flowNode, "authorityDecl");
+      for (const authNode of authNodes) {
+        if (hasOverlyBroadAuthority(authNode)) {
+          this.diagnostics.push(makeGovDiag(
+            "LLN-GOV-020",
+            "AUTHORITY_OVERLY_BROAD",
+            "warning",
+            `Authority block in flow '${flow.name}' uses 'requires *' or 'requires all', which grants all capabilities. ` +
+            `Declare specific capabilities instead.`,
+            authNode.location ?? loc,
+            `Replace 'requires *' with the specific capabilities this flow needs, e.g. 'require payment.read'.`,
+          ));
+        }
+      }
+    }
+
+    // ── Phase 3: LLN-GOV-006 high-risk secure flow without epilogue ──────────
+    if (flowNode !== undefined && flow.qualifier === "secure") {
+      const maxRisk = extractMaxRiskLiability(flowNode);
+      if (maxRisk !== undefined && maxRisk >= 5000 && !hasEpilogueBlock(flowNode)) {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-GOV-006",
+          "GOVERNANCE_PROOF_REQUIRED_BUT_MISSING",
+          "warning",
+          `Secure flow '${flow.name}' has high max_risk_liability (${maxRisk}) but no epilogue {} proof strategy declared. ` +
+          `Consider adding epilogue { generate_proof sha256_seal } to produce a verifiable receipt.`,
+          loc,
+          `Add: contract { ... epilogue { generate_proof sha256_seal  on_verification_failure log_and_continue } }`,
+        ));
+      }
+    }
+
+    // ── Phase 3: LLN-TERM-001 recursive secure flow without decreases ────────
+    if (flowNode !== undefined) {
+      this.verifyTerminationAnnotation(flow, flowNode);
+    }
+
     // ── LLN-GOV-015/016: epilogue {} strategy validation ─────────────────────
     // When a flow explicitly declares an `epilogue {}` block, validate that the
     // proof strategy and failure action are recognised values.  An omitted block
@@ -1260,6 +1554,78 @@ class GovernanceVerifier {
     if (flowNode !== undefined) {
       this.verifyEpilogueBlock(flowNode, flow.name);
     }
+  }
+
+  // ── Phase 2.1 — LLN-GOV-019: limits {} field name validation ─────────────
+
+  private verifyLimitsBlock(flowNode: AstNode, flowName: string): void {
+    const fields = extractLimitsFields(flowNode);
+    for (const { field, location } of fields) {
+      if (!KNOWN_LIMITS_FIELDS.has(field)) {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-GOV-019",
+          "LIMITS_UNKNOWN_FIELD",
+          "warning",
+          `Flow '${flowName}' limits block contains unrecognised field '${field}'. ` +
+          `Known fields: ${[...KNOWN_LIMITS_FIELDS].join(", ")}. This may be a typo.`,
+          location,
+          `Recognised fields: memory | request_time | max_request_size | max_response_size`,
+        ));
+      }
+    }
+  }
+
+  // ── Phase 3.3 — LLN-TERM-001: termination annotation on recursive flows ──
+
+  private verifyTerminationAnnotation(flow: FlowMeta, flowNode: AstNode): void {
+    // Only applies to strict/deterministic security profile secure flows.
+    // We infer "strict" or "deterministic" from the deployment profile OR
+    // from the flow qualifier being "secure" with a production/deterministic profile.
+    // Since the profile is not available inside verifyFlow directly, we check
+    // the flow's qualifier and the security_profile field if present.
+    const isSecureOrGuarded = flow.qualifier === "secure" || flow.qualifier === "guarded";
+    if (!isSecureOrGuarded) return;
+
+    // Check security_profile in contract (stored as decl: lines in a security or profile block)
+    // or infer from deployment profile.
+    const contractNode = (flowNode.children ?? []).find((c) => c.kind === "contractDecl");
+    let hasStrictProfile = false;
+    if (contractNode !== undefined) {
+      for (const child of contractNode.children ?? []) {
+        const v = (child.value ?? "").toLowerCase();
+        if (v.includes("strict") || v.includes("deterministic")) {
+          hasStrictProfile = true;
+          break;
+        }
+        // Check children of contract sub-blocks for profile hints
+        for (const grandchild of child.children ?? []) {
+          const gv = (grandchild.value ?? "").toLowerCase();
+          if (gv.includes("strict") || gv.includes("deterministic")) {
+            hasStrictProfile = true;
+            break;
+          }
+        }
+        if (hasStrictProfile) break;
+      }
+    }
+    // Also treat production/deterministic deployment profile as strict
+    if (this.currentProfile === "deterministic") hasStrictProfile = true;
+
+    if (!hasStrictProfile) return;
+
+    // Only warn if the flow is recursive and has no decreases annotation
+    if (!hasRecursiveCall(flowNode, flow.name)) return;
+    if (flow.decreasesMetric !== undefined) return;
+
+    this.diagnostics.push(makeGovDiag(
+      "LLN-TERM-001",
+      "TERMINATION_ANNOTATION_MISSING",
+      "warning",
+      `Recursive flow '${flow.name}' in strict/deterministic profile lacks a 'decreases' annotation. ` +
+      `Add 'decreases <metric>' to the flow signature to prove termination.`,
+      flow.location,
+      `Add after the return type: -> ReturnType decreases n`,
+    ));
   }
 
   private verifyPhysicalHardeningBlock(flowNode: AstNode, flowName: string): void {
@@ -1360,7 +1726,26 @@ class GovernanceVerifier {
     const epilogueNode = (contractNode.children ?? []).find(
       (c) => c.kind === "identifier" && (c.value ?? "").startsWith("epilogue"),
     );
-    if (epilogueNode === undefined) return; // auto-by-default → nothing to validate
+
+    // Phase 3.2: auto-assign sha256_seal receipt for high-value flows without
+    // an explicit epilogue block. Threshold: max_risk_liability >= 1000.
+    if (epilogueNode === undefined) {
+      const maxRisk = extractMaxRiskLiability(flowNode);
+      if (maxRisk !== undefined && maxRisk >= 1000) {
+        const receipt = generateEpilogueReceipt({
+          strategy: "sha256_seal",
+          onFailure: "log_and_continue",
+          sourceText: flowName,
+          contractHash: flowName,
+        }) as import("./proof-graph.js").EpilogueReceipt;
+
+        const existingPg = this.proofGraphsByFlow.get(flowName);
+        if (existingPg !== undefined) {
+          this.proofGraphsByFlow.set(flowName, { ...existingPg, epilogueReceipt: receipt });
+        }
+      }
+      return; // no explicit epilogue block → nothing further to validate
+    }
 
     // The content is stored as an identifier child: "decl: generate_proof <strategy> ..."
     const declChild = (epilogueNode.children ?? []).find(

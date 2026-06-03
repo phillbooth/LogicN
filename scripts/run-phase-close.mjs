@@ -67,7 +67,7 @@ function summarise(name, out, ok, code) {
 console.log("══ LogicN phase-close cadence ══");
 
 // ── 1. Core tests (SOT four) ──
-run("tests:core", "node", ["scripts/run-all-tests.js", "--core"]);
+run("tests:core", "node", ["scripts/run-all-tests.cjs", "--core"]);
 
 // ── 2. DevTools + ext package tests ──
 for (const p of ["naming", "context", "intelligence", "provenance", "pci"]) {

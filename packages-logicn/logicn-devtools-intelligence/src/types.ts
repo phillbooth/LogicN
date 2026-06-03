@@ -52,4 +52,8 @@ export interface WorkspaceIndex {
   builtAt: string;
   workspaceDir: string;
   flows: IndexedFlow[];
+  /** SHA-256 content hashes keyed by absolute file path — used for differential re-indexing */
+  fileHashes?: Record<string, string>;
+  /** Number of files skipped (content unchanged) in the last build */
+  skippedFiles?: number;
 }

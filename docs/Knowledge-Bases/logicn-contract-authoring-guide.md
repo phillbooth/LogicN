@@ -56,6 +56,11 @@ Nothing here is *globally* mandatory. Requirement depends on the **flow kind** a
 - **High-trust mutation** (medical ledger, billing, gov record): the full set —
   `authority` + `effects` (explicit) + `privacy` + `secrets` + mandatory `audit` + `limits` +
   `economics`.
+- **Sovereign / defense-grade flow** (Tier 1 ASIC): `cyber_physical_hardening {}` **may**
+  be declared when `economics.max_risk_liability` is high **AND** physical ASIC hardware is
+  confirmed. Under no other circumstance. Even here the runtime can auto-select the correct
+  tier from the ValueGraph — explicit declaration is only required when a regulatory mandate
+  demands attestation proof in the ProofGraph.
 
 ## Verified-minimal templates (these compile — Stage-A ACCEPT)
 
@@ -153,3 +158,9 @@ secure flow recordMedicalTransaction(readonly inputPayload: MedicalPayload) -> T
 - [ ] `types` only when the flow needs local aliases/records.
 - [ ] High-trust data ⇒ add `privacy` + `audit` (+ `secrets` for credentials).
 - [ ] Leave `economics`/`secrets`/`epilogue` out unless overriding the auto behavior.
+- [ ] `cyber_physical_hardening {}` — **do NOT write** unless on Tier 1 ASIC hardware with
+  a regulatory mandate requiring attestation proof. Runtime auto-selects the tier from
+  the ValueGraph. Writing this on a low-risk flow triggers **LLN-GOV-017**.
+- [ ] `liability {}` — **never write in source**. Auto-calculated by the governance verifier
+  from the ValueGraph breach-risk matrix and stored in the ProofGraph. Writing it manually
+  triggers **LLN-GOV-018**.
