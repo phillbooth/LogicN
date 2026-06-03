@@ -142,15 +142,28 @@ LogicN is three things building toward one platform:
 
 ## Code Examples
 
+> **LogicN syntax note:** `contract {}` sits **between** the flow signature and the body `{}`.
+> It is a compile-time declaration — not runtime code — so it lives outside the body, not inside it.
+> Pattern: `flow name(params) -> ReturnType` → `contract { ... }` → `{ body }`.
+
 ```logicn
 // ── Governed secure flow: PII handling ───────────────────────────────────────
-// Data from outside is `unsafe let` — untrusted until validated.
-// The compiler blocks unsafe data reaching governed sinks.
+//
+// contract {} is OUTSIDE the body braces — it is a compile-time declaration.
+// The compiler reads it before any code runs, verifies intent against effects,
+// builds the ProofGraph, and enforces data-flow rules.
+//
+// Anatomy:
+//   secure flow name(params) -> ReturnType    ← signature
+//   contract { ... }                          ← compile-time governance declaration
+//   {                                         ← body opens here
+//     ...runtime code...
+//   }
 
 secure flow createPatient(readonly request: Request) -> CreatePatientResult
 contract {
-  types { type CreatePatientResult = Result<Response, ApiError> }
-  intent { "Create a patient record with protected PII handling." }
+  types   { type CreatePatientResult = Result<Response, ApiError> }
+  intent  { "Create a patient record with protected PII handling." }
   effects { database.write  audit.write }
   privacy { contains PII  require redaction before audit.write }
 }
@@ -184,11 +197,11 @@ contract { intent { "Map a status enum to a display string." } }
 
 
 // ── Secrets: vault-backed, never in plaintext ─────────────────────────────────
-// contract.secrets {} is auto-by-default (.env path).
+// contract.secrets {} is auto-by-default (uses .env).
 // Declare only when vault/KMS rotation is needed.
 secure flow charge(amount: Int) -> Result<Int, String>
 contract {
-  intent { "Charge a customer using a vault-backed API key." }
+  intent  { "Charge a customer using a vault-backed API key." }
   effects { audit.write  network.outbound }
   secrets {
     credential payment_key { provider "hashicorp_vault"  path "secret/data/payment" }

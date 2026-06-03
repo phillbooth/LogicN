@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-06-03T23:11:36.493Z",
+  "generatedAt": "2026-06-03T23:32:09.012Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -5731,6 +5731,15 @@
       "kind": "Document",
       "label": "logicn-route-runtime-spec.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-route-runtime-spec.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "kind": "Document",
+      "label": "logicn-runtime-component-structure.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md",
       "tags": [
         "document"
       ]
@@ -31704,6 +31713,139 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/Knowledge-Bases/logicn-route-runtime-spec.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-core-runtime",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-core-network",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-core-logic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-core-vector",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-core-compute",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-data",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-web",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-target-cpu",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-target-native",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-target-wasm",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-target-gpu",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-target-ai-accelerator",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-target-photonic",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-framework-app-kernel",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-framework-api-server",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "to": "package:logicn-core-cli",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
     },
     {
       "from": "doc:docs/Knowledge-Bases/logicn-runtime-in-logicn-roadmap.md",

@@ -269,6 +269,20 @@ Open any `.lln` file in VS Code to see LogicN source with full governance contra
 
 ## Hello World
 
+> **Important for AI tools and developers coming from TypeScript/Go/Rust:**
+> The `contract {}` block sits **between** the flow signature and the body `{}`.
+> It is NOT inside the body — it is a compile-time declaration that comes before it.
+>
+> ```
+> pure flow name(params) -> ReturnType   ← 1. signature
+> contract { ... }                        ← 2. compile-time declaration (OUTSIDE body)
+> {                                       ← 3. body opens here
+>   ...runtime code...
+> }
+> ```
+>
+> If you write `contract {}` *inside* the body braces, that is the old syntax and will not work correctly.
+
 ```logicn
 // ── hello.lln ─────────────────────────────────────────────────────────────────
 //
@@ -279,7 +293,7 @@ Open any `.lln` file in VS Code to see LogicN source with full governance contra
 //
 // Key ideas:
 //   - `pure flow`  = no side effects, no network, no database. Provably safe.
-//   - `contract`   = machine-verified declaration of intent + rules.
+//   - `contract`   = machine-verified declaration of intent + rules (OUTSIDE body).
 //   - `intent`     = what this flow is FOR (required for secure/governed flows).
 //   - `return`     = explicit return. No hidden control flow.
 // ──────────────────────────────────────────────────────────────────────────────
