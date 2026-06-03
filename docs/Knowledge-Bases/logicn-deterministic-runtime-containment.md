@@ -343,3 +343,69 @@ The research summary (verbatim):
 > *"LogicN occupies a genuinely novel position: no existing system combines governed contract semantics, monotonic policy overlays, and proof-carrying build manifests in a single language-level abstraction."*
 
 The three-tier DRCM model — static governed contracts (Tier 1) + derived data-flow proofs in a signed manifest (Tier 2) + language-level monotonic emergency overlays (Tier 3) — has no documented precedent as a unified system.
+-----------------
+
+Fusing the **Deterministic Runtime Containment Model (DRCM)** with a WebAssembly (WASM) architecture creates a profound hardware-software alignment. In traditional systems, there is an unyielding trade-off: if you want more security and stability, you must spend CPU cycles on runtime checks, interceptors, and virtual memory context switches, which degrades compute speed.
+
+By combining LogicN's **Monotonic Security Rule** with WASM’s low-level structural design, you flip this paradigm. You can actually **increase execution speed** while strictly maintaining safety and stability.
+
+Here is the exact engineering breakdown of how this mechanical synergy achieves high-speed, secure, and stable compute.
+
+---
+
+### 1. Speed: Speculative JIT Optimization via Monotonic Certainty
+
+In standard managed runtimes (like V8 or the JVM), the Just-In-Time (JIT) compiler must constantly emit defensive machine instructions to handle edge cases, dynamic type changes, and boundary checks.
+
+Because LogicN exports its compile-time proofs and Tier 2 derived constraints directly into a signed `.lmanifest` file, the WASM runtime gains **ahead-of-time architectural certainty**.
+
+* **The Optimization:** When the WASM JIT or AOT (Ahead-of-Time) compiler (such as Wasmtime or Cranelift) compiles the WASM bytecode into native machine instructions, it reads the `.lmanifest`. If the manifest proves that a variable is bounded or that an operation cannot leak across linear memory boundaries, the compiler **completely strips out the native CPU boundary-checking instructions**.
+* **Zero-Cost Invariants:** Tier 1 pre/post conditions that are validated at compile time by the `ProofGraph` require exactly **zero instructions** at runtime. The compute engine operates at raw bare-metal speed because the safety proof was paid for entirely at compile time.
+
+---
+
+### 2. Security: Single-Instruction Bitmask Capability Gates
+
+When a Tier 3 Emergency Overlay fires (e.g., a software metric signals anomalous activity and drops capabilities), standard systems require a heavy kernel trap or a complex policy-engine lookup (like evaluating a string-based OPA or Cedar policy).
+
+Under a WASM-backed DRCM model, this is reduced to a **single-cycle hardware bitmask operation**.
+
+* **How it works:** WASM organizes memory into a strictly bounded, isolated linear memory array. The current "Authority Envelope" of the session is stored as a simple 32-bit or 64-bit integer bitmask in a dedicated CPU register.
+* **The Mechanism:** Every time a WASM component attempts a system effect (like an outbound network call or accessing a shared memory table), the WASM host runner performs a bitwise `AND` operation against the session's active capability register.
+* If a Tier 3 overlay has monotonically flipped that capability bit to `0` (revoked), the instruction fails instantly in a single clock cycle. There are no expensive context switches, no external daemon queries, and no parsing of firewall rules. Security enforcement matches native processor speeds.
+
+---
+
+### 3. Stability: Fault Isolation and Localized Rollbacks
+
+In typical monolithic or microservice architectures, an unhandled exception, a memory panic, or an invariant failure (`LLN-INV-001`) often crashes the entire OS process, ruining system availability. WASM introduces **Shared-Nothing Isolate Sandboxing**, which changes how stability is managed under a DRCM.
+
+* **The Epilogue Receipt Guard:** As established in our refined specification, if an anomaly occurs mid-execution, the Tier 3 engine triggers a **Monotonic State Regression**. It instantly restricts the capability envelope.
+* **Localized Containment:** Because the WASM module operates inside its own isolated linear memory sandbox, the runtime doesn't need to kill the host server. The host supervisor traps the execution failure (`LLN-INV-003`), flushes that specific module’s ephemeral linear memory scratchpad back to zero, and rejects the transaction cleanly.
+* **Zero Cascade Failures:** Neighboring WASM components executing unrelated flows continue processing at full speed without interruption. You achieve absolute system availability and blast-radius containment without the multi-millisecond overhead of operating system process forks or container restarts.
+
+---
+
+### 4. Architectural Summary: The Symmetric Pipeline
+
+When you combine these layers, the execution pipeline functions as a highly optimized, hardware-friendly machine:
+
+```
+[ Build Manifest (.lmanifest) ] ──► Instructs WASM JIT to strip redundant safety instructions
+                                                   │
+                                                   ▼
+[ Native Machine Code ] ───────────► Executes at raw bare-metal O3 processor speeds
+                                                   │
+                                                   ▼
+[ WASM Linear Memory Sandbox ] ────► Restricts faults to a single cycle bitmask gate
+                                                   │
+                                                   ▼
+[ Anomaly Flag Tripped ] ──────────► Monotonic capability loss instantly zeroes out memory
+
+```
+
+### The Bottom Line
+
+WASM gives LogicN **near-zero cost memory isolation and lightning-fast instantiation**, while LogicN's DRCM gives WASM **deterministic, compile-verified safety and stateful capability tracking**.
+
+By shifting safety verification from heavy, reactive runtime software checks to **static compile-time proofs and single-cycle bitmask capability gates**, you achieve the holy grail of systems engineering: code that runs at native hardware speeds, remains mathematically secure, and is physically incapable of causing a system-wide crash.
