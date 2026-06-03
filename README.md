@@ -48,42 +48,41 @@ The language is designed from the ground up so that execution intent, capability
 
 | Layer | Status | % |
 |---|---|---|
-| Specification / KB | 370+ docs, 223/223 CEC stable, Phase 13 bridge spec, post-quantum hardware security, photonic/ternary spec | 99% |
-| Lexer | All v1 keywords (`when` Phase 41), TokenKindId, LLN-LEX-001..006, FlatTokenStream | 97% |
-| Parser | Phase 41 syntax: `:` return type, `when` guard arms, integer match, inline contract, `else if` → error | 94% |
-| Type checker | LLN-TYPE-001..022, LLN-TYPE-030/031 (tensor), effects extracted from contract.effects, branded types | 82% |
-| Value-state checker | Taint, 2-hop, ValueStateFlags, SINK_REQUIREMENTS, LLN-GATE-001 | 85% |
-| Effect checker | LLN-EFFECT-001..005, LLN-STDLIB-001 wired, EffectCheckerFlags, 31 legacy regex tracked | 84% |
-| Governance verifier | LLN-GOV-002..014, GovernanceFlags, RuntimeManifest, LLN-HW-001/002/003, ProofGraph caching (67% hit rate) | 85% |
-| GIR emitter | GIR v1, tensor metadata (7 flags), TypedArray lowering plan wired, WAT emitter + SIMD ops | 74% |
-| Stdlib | 35+ functions, path sandbox, regex ReDoS guard, BCrypt/Password/Argon2 APIs, SSRF guard, `when` keyword | 70% |
-| Package resolver | LLN-PKG-001..005, 11-package type registry, cross-module import resolution | 75% |
-| Runtime interpreter | sync fast-path (14×), bytecode VM (14.3×), tier telemetry on every result, per-request cache scoping | 80% |
-| WAT emitter + assembler | i32.add/sub/mul, if/else, while, mut/assign, WASM instantiation via wabt — Phase 27 complete | 88% |
-| WASM Execution | 10/10 benchmarks; arithmetic-threshold 4.0B/s (5.0× faster than Node.js); gpu-compute 4.17M/s (Deno WebGPU) | 96% |
-| Economics Layer | CostGraph, ValueGraph, IBM breach matrix, RouteDecision, auto-inferred economics (Phase 33+44) | 65% |
-| Security (Taint/Profiles) | LLN-TAINT-001..006, LLN-PROFILE-001..007+005B, OWASP 24-boundary catalogue, F1-F8 hardened, rate limiting | 75% |
-| Bytecode VM | Int32Array opcodes, 14.3× over sync tree-walker, `callExpr` support (Phase 45), auto-routed | 50% |
-| Password API | BCrypt (Phase 34) → Password facade (Phase 35) → Argon2id (Phase 36) → auto-migration (Phase 37) | 90% |
-| GovernanceSignature | Ed25519 v1 (Phase 39) + ML-DSA-65 hybrid v2 (Phase 55, NIST FIPS 204) — real post-quantum | 60% |
-| Tier Telemetry | executionTier + fallbackReason on every FlowExecutionResult — 5 tiers: cache/bytecode/sync/egraph/tree | 100% |
-| Governance Diff CLI | logicn diff — governance delta, exit 2 on authority widening | 82% |
-| Type registry | TypeId (56 IDs), EffectFlags (14), GovernanceFlags (8), NativeCapabilityId (6) | 78% |
-| devtools-security | @logicn/devtools-security — runSecurityAudit, path sandbox, regex guard, secret checker, risk calc, CLI | 85% |
-| devtools-graph | BFS/DFS/topo, flag queries, CapabilityGraph, BoundaryGraph, WASMModuleGraph — 95 tests | 74% |
-| Stage B self-hosting | **R6 ACHIEVED** — all 5 corpus flows (strings/Result, records/field-access, array literals, secure+effects, match/Option) run at Stage-A parity via `self-hosted-bootstrap.test.mjs`. Full pipeline: lex→parse→type/effect/govern→GIR→execute | 90% |
-| Live .lln services | 35 files: 27 auth-service routes + 8 aerospace/healthcare/AI/wasm examples — all parse 0 errors | 95% |
-| Passive execution plans | Plan types + builder + attestation + hashPassivePlan + executePlan wired | 40% |
-| SoA Arena | SoANodeArena (Int16/Int32 parallel arrays), FlatTokenStream (stride-4), FusedPass scaffold | 35% |
-| GPU/NPU/APU plans | WebGPUComputePlan, NPUKernelPlan, APUSharedMemoryPlan, NativePluginManifest | 16% |
-| CLI | check, check-strict, build, build-production, build-deterministic, --target wasm-standalone/wasm-wasi/hybrid | 90% |
+| **Specification / KB** | 400+ docs, 223/223 CEC stable, governed-runtime research (Cedar/OPA/Pony/Koka/in-toto), ASIC/cyber-physical hardening spec, C++ bridge spec, fortified typed logic spec | 99% |
+| **Lexer** | All v1 keywords, TokenKindId, LLN-LEX-001..006, FlatTokenStream; generic type param handling (`Array<Int>=` fused-token fix) | 98% |
+| **Parser** | Phase 41 syntax + `for` loops (range + iterator), record literals, `match` constructor patterns (`Some(x)`), cross-module `import` skip, generic type param skip | 96% |
+| **Type checker** | LLN-TYPE-001..022, LLN-TYPE-030/031 (tensor), `Auto` deferral (LLN-TYPE-023), `Int.toStr()` + `String.length()` + method dispatch widened | 84% |
+| **Value-state checker** | Taint, 2-hop, ValueStateFlags, SINK_REQUIREMENTS, LLN-GATE-001; **secret sink trilogy** LLN-SECRET-001/002/003 (log + serialize + network egress); source inference for `secret.get`/`vault.read`/`kms.*` | 90% |
+| **Effect checker** | LLN-EFFECT-001..005, LLN-STDLIB-001 wired, EffectCheckerFlags | 84% |
+| **Governance verifier** | LLN-GOV-002..018; ProofGraph + `EpilogueReceipt` (sha256_seal live, zk stub); `LiabilityProfile` auto-calculated; `cyber_physical_hardening` validation (LLN-GOV-017/018); `decreases` annotation (KB, pending impl) | 88% |
+| **Contract blocks** | `intent` `effects` `authority` `privacy` `limits` `economics` `epilogue` `secrets` `audit` `targets` `types` `request` `response` `cyber_physical_hardening` `liability` — all parsed, auto-by-default where appropriate | 95% |
+| **GIR emitter** | GIR v1, tensor metadata (7 flags), `field`/`arrlit`/`reclit`/`matche`/`arm` ops, WAT emitter + SIMD ops | 80% |
+| **Stdlib** | 40+ functions, path sandbox, regex ReDoS guard, BCrypt/Password/Argon2 APIs, SSRF guard, `Int.toStr()` `String.length()` `contains()` `startsWith()` `List.append()` `unwrapOr()` | 75% |
+| **Runtime interpreter** | sync fast-path (14×), bytecode VM (14.3×), tier telemetry (5 tiers); Stage B: observable effects (`RunResult{retVal, auditLog}`), record literals, for loops, cross-module imports | 85% |
+| **WAT emitter + assembler** | i32.add/sub/mul, if/else, while, mut/assign, WASM instantiation via wabt — Phase 27 complete | 88% |
+| **WASM Execution** | 10/10 benchmarks; arithmetic-threshold 4.0B/s; gpu-compute 4.17M/s (Deno WebGPU RTX 2060); governed wins data-query outright | 96% |
+| **Economics Layer** | CostGraph, ValueGraph, IBM breach-risk matrix, RouteDecision, auto-inferred economics; `contract.economics {}` auto-by-default | 68% |
+| **Governance Signatures** | Ed25519 v1 (Phase 39) + ML-DSA-65 hybrid v2 (Phase 55, NIST FIPS 204) post-quantum; `EpilogueReceipt` sha256_seal live, zk_snark_receipt stub | 65% |
+| **Security (Taint/Profiles)** | LLN-TAINT-001..006, LLN-PROFILE-001..007+005B, OWASP 24-boundary, secret sink trilogy, PCI DSS 4.0.1 audit (LLN-PCI-001..010) | 80% |
+| **Stage B self-hosting** | **100%** — full pipeline runs entirely in LogicN: lex→parse→type/effect/govern→GIR→execute. 21 bootstrap tests. Cross-module imports, record literals, for loops, match destructuring, observable effects. LogicN is its own runtime. | **100%** |
+| **DevTools** | naming (LLN-NAMING-001..005) · context receipts (51–97% token reduction) · intelligence (BM25 hybrid search) · provenance (data lineage) · **PCI DSS 4.0.1 audit** · security (LLN-TAINT/GATE/SECRET/PCI/GOV) | 90% |
+| **Ext packages** | `logicn-ext-secrets-vault` (HashiCorp Vault, dual-token rotation, zero-wipe) · `logicn-ext-proof-snarkjs` (Groth16 prover, `ProverBackend` interface) | 70% |
+| **Live .lln services** | 39 files: 31 auth-service routes (incl. sovereign + physical hardening tier examples) + 8 aerospace/healthcare/AI/wasm examples — all parse 0 errors | 97% |
+| **Password API** | BCrypt → Password facade → Argon2id → auto-migration (Phase 37) | 90% |
+| **Tier Telemetry** | executionTier + fallbackReason on every FlowExecutionResult — 5 tiers: cache/bytecode/sync/egraph/tree | 100% |
+| **Governance Diff CLI** | `logicn diff` — governance delta, exit 2 on authority widening | 82% |
+| **Package resolver** | LLN-PKG-001..005, 11-package type registry, cross-module import resolution | 75% |
+| **Passive execution plans** | Plan types + builder + attestation + hashPassivePlan + executePlan wired | 40% |
+| **Bytecode VM** | Int32Array opcodes, 14.3× over sync tree-walker, `callExpr` support (Phase 45), auto-routed | 50% |
+| **SoA Arena** | SoANodeArena (Int16/Int32 parallel arrays), FlatTokenStream (stride-4), FusedPass scaffold | 35% |
+| **GPU/NPU/APU plans** | WebGPUComputePlan, NPUKernelPlan, APUSharedMemoryPlan, NativePluginManifest | 16% |
+| **CLI** | check, check-strict, build, build-production, build-deterministic, --target wasm-standalone/wasm-wasi/hybrid | 90% |
 
 ---
 
-*Stage A (TypeScript Runtime) and Stage B (Runtime in LogicN) proceed in parallel.
-Stage A is the production path; Stage B proves the governance model by applying it
-to the compiler itself. When Stage B is complete, the TypeScript bootstrap is no
-longer needed.*
+*Stage A (TypeScript Runtime) remains the production path.
+Stage B (Runtime in LogicN) is now **100% complete** — LogicN compiles and runs itself end-to-end with no TypeScript in the pipeline.
+The TypeScript bootstrap is the production-hardened entry point; Stage B proves the governance model applies to the compiler itself.*
 
 ---
 
@@ -114,9 +113,7 @@ LogicN is three things building toward one platform:
 **1. A language** — strict typing, explicit errors, explicit memory ownership,
 declared effects, no hidden nulls, no silent failures. Source files use `.lln`.
 
-**2. A compiler and checker** — a pipeline that enforces the language rules
-before code runs. Phases 3–15, 16A, 17A, 17C, 18A–32, and R1-R7 runtime enforcement are complete (2,605 tests, 0 failures, 223/223 CEC stable). The
-HTTP service (Phase 34) and Stage B self-hosting compiler are the current focus.
+**2. A compiler and checker** — a multi-pass static pipeline that enforces language rules before code runs: lexer → parser → type checker → value-state/taint checker (secret sink trilogy) → effect checker → governance verifier (ProofGraph, epilogue receipts, liability auto-calculation, cyber-physical hardening validation) → GIR emitter → tiered runtime. **3,194 tests, 0 failures** (core suite). **Stage B self-hosting is 100% complete** — LogicN now runs itself.
 
 **3. A governed runtime architecture** — a model for coordinating compute
 across targets (CPU, WASM, GPU, accelerators) with capability-based authority,
