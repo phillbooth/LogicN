@@ -5,6 +5,40 @@ generating LogicN, and humans reviewing it, should follow this. It corrects the 
 mistakes of treating `types` / `request` / `response` as globally mandatory, and of letting an
 AI silently widen its own authority/effects/secrets.
 
+## ⚠️ Syntax: contract {} is OUTSIDE the body — not inside it
+
+This is the most common mistake made by AI tools and developers coming from TypeScript/Go/Rust.
+
+```logicn
+// ✅ CORRECT — contract between signature and body
+pure flow greet(name: String) -> String
+contract {
+  intent { "Greet the user." }
+}
+{
+  return "Hello, " + name
+}
+
+// ❌ WRONG — contract inside body (old syntax, AI default, does not work)
+pure flow greet(name: String) -> String {
+  contract {
+    intent { "Greet the user." }
+  }
+  return "Hello, " + name
+}
+```
+
+The `contract {}` block is a **compile-time declaration** — the compiler reads it before any code runs. It belongs between the flow signature and the body `{ }`, not inside the body. Think of it like a Rust `#[attribute]` or Java `@Annotation` — it annotates the function, it is not part of the function body.
+
+**Pattern to remember:**
+```
+flow-qualifier flow name(params) -> ReturnType   ← signature
+contract { ... }                                  ← compile-time declaration
+{                                                 ← body opens here
+  ...runtime code...
+}
+```
+
 ## The single most important rule (AI safety)
 
 **An AI may only PROPOSE a widening of `authority`, `effects`, or `secrets`. It must never
@@ -102,19 +136,21 @@ contract {
 
 ### A. Hardened API route — safe input parsing
 ```logicn
-secure flow parseInput(readonly request: Request) -> ParseInputResult {
-  contract {
-    types {
-      type RawInput { data: String }
-      type ParsedOutput { tokens: Array<String> }
-      type ParseInputResult = Result<ParsedOutput, ApiError>
-    }
-    intent   { "Parse untrusted input into a token list." }
-    request  { accepts json  requires body }      // required: this is an API/route flow
-    response { returns json }                      // required: API/route flow
-    limits   { memory 16mb  request_time 1s }
-    // audit omitted: standard web API, no specialized logging needed
+// contract {} is OUTSIDE the body — between signature and { body }
+secure flow parseInput(readonly request: Request) -> ParseInputResult
+contract {
+  types {
+    type RawInput { data: String }
+    type ParsedOutput { tokens: Array<String> }
+    type ParseInputResult = Result<ParsedOutput, ApiError>
   }
+  intent   { "Parse untrusted input into a token list." }
+  request  { accepts json  requires body }      // required: this is an API/route flow
+  response { returns json }                      // required: API/route flow
+  limits   { memory 16mb  request_time 1s }
+  // audit omitted: standard web API, no specialized logging needed
+}
+{
   unsafe let rawBody: String = request.body
   unsafe let decoded = json.decode<RawInput>(rawBody)
   match decoded {
@@ -129,22 +165,24 @@ secure flow parseInput(readonly request: Request) -> ParseInputResult {
 
 ### B. Governed high-trust mutation — medical ledger
 ```logicn
-secure flow recordMedicalTransaction(readonly inputPayload: MedicalPayload) -> TransactionResult {
-  contract {
-    types {
-      type MedicalPayload { patient_id: String  treatment_code: String  billing_amount: Int64 }
-      type TransactionResult = Result<String, GovernanceError>
-    }
-    intent { "Record an encrypted billing event to the ledger and verify actor authorization." }
-    // internal pipeline invocation: request/response omitted (not an external route)
-    authority { requires capability.billing.mutate  signed_by actor.system.billing_agent }
-    effects   { mutates state.billing.ledger  network allow "vault.internal.net:8200" }
-    privacy   { mask patient_id  strategy transform.crypto_pseudonymize }
-    secrets   { bind "LEDGER_WRITE_KEY" from provider.vault }
-    audit     { level cryptographic_state_hash  target storage.tpm_backed_log  track [ effects.mutates ] }
-    limits    { memory 64mb  request_time 500ms }
-    economics { max_gas 500_units  allocation profile.billing_operations }
+// contract {} is OUTSIDE the body — between signature and { body }
+secure flow recordMedicalTransaction(readonly inputPayload: MedicalPayload) -> TransactionResult
+contract {
+  types {
+    type MedicalPayload { patient_id: String  treatment_code: String  billing_amount: Int64 }
+    type TransactionResult = Result<String, GovernanceError>
   }
+  intent { "Record an encrypted billing event to the ledger and verify actor authorization." }
+  // internal pipeline invocation: request/response omitted (not an external route)
+  authority { requires capability.billing.mutate  signed_by actor.system.billing_agent }
+  effects   { mutates state.billing.ledger  network allow "vault.internal.net:8200" }
+  privacy   { mask patient_id  strategy transform.crypto_pseudonymize }
+  secrets   { bind "LEDGER_WRITE_KEY" from provider.vault }
+  audit     { level cryptographic_state_hash  target storage.tpm_backed_log  track [ effects.mutates ] }
+  limits    { memory 64mb  request_time 500ms }
+  economics { max_gas 500_units  allocation profile.billing_operations }
+}
+{
   // compiler enforces: only state.billing.ledger may mutate; only vault.internal.net reachable.
 }
 ```
