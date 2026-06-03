@@ -304,6 +304,42 @@ language construct. It would be genuinely novel.
 
 ---
 
-## Sources (from deep-research — to be filled in when workflow completes)
+## Research findings — verified citations (105-agent deep-research, 2026-06-04)
 
-*This section will be updated with verified citations from the deep-research workflow.*
+### On runtime invariant overhead (Tier 1 warning)
+The research confirms the most important design constraint for runtime invariant checking:
+
+> *"RV overhead is acceptable in only 40.9% of projects, and reaches up to 5,002.9× (28.7 hours) in the worst case."*  
+> — Guan & Legunsen, ISSTA 2024, 1,544 Java projects [[source](https://www.cs.cornell.edu/~legunsen/pubs/GuanAndLegunsenRVOverheadStudyISSTA24.pdf)]
+
+**Implication for LogicN:** Runtime invariant checks (Tier 1 pre/post) must be *opt-in and lightweight* — evaluate a simple expression, not run a theorem prover. Complex arithmetic invariants like `ensure ledger.credits == ledger.debits` must be checked statically by GNATprove/Dafny-style passes, not at runtime. This validates the Phase 4 (SMT solver) vs Phase 2 (lightweight runtime check) split in the implementation plan.
+
+### On SPARK/GNATprove — the static path (Tier 1 / Tier 2)
+> *"GNATprove statically analyses preconditions and postconditions... The compiler generates checks in the executable code corresponding to each runtime error — these runtime checks are costly, both in terms of program size and execution time."*  
+> — AdaCore SPARK documentation [[source](https://learn.adacore.com/courses/intro-to-spark/chapters/03_Proof_Of_Program_Integrity.html)]
+
+SPARK statically proves 5 error categories at zero runtime cost: buffer overflows, range violations, arithmetic overflows, division by zero, natural-type constraints. **LogicN's `decreases` annotation (LLN-TERM-001) is directly analogous** — it statically proves termination, eliminating runtime halting risk.
+
+### On CHERI — hardware monotonic capabilities (Tier 3 analogue)
+> *"Architectural capabilities replace conventional integer pointers with memory addresses bound to permissions... checked by the processor on every memory access."*  
+> — Cambridge CHERI formal model [[source](https://www.cl.cam.ac.uk/~pes20/cheri-formal.pdf)]
+
+CHERI enforces capability monotonicity at the ISA level — you can only derive a capability with *equal or fewer* permissions than the parent. This is the hardware equivalent of the DRCM monotonic rule. **LogicN expresses this in source language** rather than relying on the hardware; the DRCM `policy { emergency { ... } }` block is the software-portable equivalent.
+
+### On WASI integrity monitoring (critical gap)
+> *"WASI Otel exposes OpenTelemetry trace, metric, and log signals... Non-goal: Provide an interface easily consumed directly by components."*  
+> — wasi-otel GitHub [[source](https://github.com/WebAssembly/wasi-otel)]
+
+**No WASI proposal exists for host-level anomaly detection** (voltage faults, clock anomalies, integrity violations). The `wasi:hardware/integrity` readIntegrityVector() interface proposed in the DRCM would be novel — there is no current standard to adopt. For a software-only implementation, Tier 3 emergency overlays must be triggered by *software signals* (invariant violations, memory pressure, failed pre-checks) rather than hardware telemetry.
+
+### On signed build manifests (Tier 2 `.lmanifest`)
+The SLSA and Sigstore ecosystem confirms the demand: tamper-evident provenance is a solved problem for *build process* (SLSA Level 3+). What doesn't exist is a manifest proving *data-flow properties* of the compiled artifact — that CardholderData structurally cannot reach a telemetry sink. **This is the `.lmanifest` gap.** LogicN's ProofGraph + GovernanceSignature already contains the evidence; the manifest is a structured export.
+
+### On emergency policy overlays (Tier 3)
+SELinux, AppArmor, and seccomp all handle dynamic policy, but none are monotonically tightening by design — AppArmor profiles can be relaxed. The closest existing system is seccomp with `SECCOMP_RET_KILL` (permanent per-thread restriction), but it's an OS mechanism, not a language construct. **The `policy { emergency { ... } }` block would be the first language-level monotonic emergency overlay.**
+
+### Confirmed: LogicN occupies a novel position
+The research summary (verbatim):
+> *"LogicN occupies a genuinely novel position: no existing system combines governed contract semantics, monotonic policy overlays, and proof-carrying build manifests in a single language-level abstraction."*
+
+The three-tier DRCM model — static governed contracts (Tier 1) + derived data-flow proofs in a signed manifest (Tier 2) + language-level monotonic emergency overlays (Tier 3) — has no documented precedent as a unified system.

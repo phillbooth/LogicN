@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-06-03T23:00:13.884Z",
+  "generatedAt": "2026-06-03T23:11:36.493Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -27339,13 +27339,6 @@
     },
     {
       "from": "doc:README.md",
-      "to": "package:logicn-core-reports",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "README.md"
-    },
-    {
-      "from": "doc:README.md",
       "to": "package:logicn-core-logic",
       "kind": "documents",
       "confidence": "INFERRED",
@@ -27368,20 +27361,6 @@
     {
       "from": "doc:README.md",
       "to": "package:logicn-core-cli",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "README.md"
-    },
-    {
-      "from": "doc:README.md",
-      "to": "package:logicn-core-tasks",
-      "kind": "documents",
-      "confidence": "INFERRED",
-      "evidencePath": "README.md"
-    },
-    {
-      "from": "doc:README.md",
-      "to": "package:logicn-devtools-graph-project",
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "README.md"
