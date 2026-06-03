@@ -86,6 +86,13 @@ secure flow checkCapability(readonly request: Request): Response
   let allowed: Bool = isEffectAllowedInContext(effect, context)
   let govClass: Int = effectGovernanceClass(effect)
 
+  let retEffect: String = effect
+  let retContext: String = context
+  let retAllowed: Bool = allowed
+  safe mut effect = redact(effect)
+  safe mut context = redact(context)
+  safe mut allowed = redact(allowed)
+
   AuditLog.write({
     event: "CapabilityCheck",
     effect: effect,
@@ -94,9 +101,9 @@ secure flow checkCapability(readonly request: Request): Response
   })
 
   return {
-    effect: effect,
-    context: context,
-    allowed: allowed,
+    effect: retEffect,
+    context: retContext,
+    allowed: retAllowed,
     governanceClass: govClass
   }
 }

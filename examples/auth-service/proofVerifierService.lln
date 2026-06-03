@@ -52,6 +52,13 @@ secure flow verifyProof(readonly request: Request): Response
   let valid: Bool = isValidAlgorithm(algorithm)
   let strength: Int = proofStrength(algorithm)
 
+  let retAlgorithm: String = algorithm
+  let retValid: Bool = valid
+  let retStrength: Int = strength
+  safe mut algorithm = redact(algorithm)
+  safe mut valid = redact(valid)
+  safe mut strength = redact(strength)
+
   AuditLog.write({
     event: "ProofVerify",
     algorithm: algorithm,
@@ -60,10 +67,10 @@ secure flow verifyProof(readonly request: Request): Response
   })
 
   return {
-    algorithm: algorithm,
-    valid: valid,
-    strength: strength,
-    phase39Ready: valid
+    algorithm: retAlgorithm,
+    valid: retValid,
+    strength: retStrength,
+    phase39Ready: retValid
   }
 }
 

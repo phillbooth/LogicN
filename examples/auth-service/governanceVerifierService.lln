@@ -62,6 +62,11 @@ secure flow verifyFlowGovernance(readonly request: Request): VerifyResult {
   let invariants: Bool = checkQualifierInvariants(rawQualifier, hasAudit)
   let outcome: String = classifyGovernanceOutcome(permitted, invariants)
 
+  let retRawQualifier: String = rawQualifier
+  let retOutcome: String = outcome
+  safe mut rawQualifier = redact(rawQualifier)
+  safe mut outcome = redact(outcome)
+
   AuditLog.write({
     eventName: "GovernanceVerified"
     qualifier: rawQualifier
@@ -69,10 +74,10 @@ secure flow verifyFlowGovernance(readonly request: Request): VerifyResult {
   })
 
   return Ok({
-    qualifier: rawQualifier
+    qualifier: retRawQualifier
     effect: rawEffect
     profile: rawProfile
-    outcome: outcome
+    outcome: retOutcome
     phase: 56
   })
 }

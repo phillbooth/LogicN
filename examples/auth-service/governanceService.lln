@@ -55,6 +55,11 @@ secure flow verifyGovernance(readonly request: Request): Response
 
   let qualifierValid: Bool = qualifier == "pure" || qualifier == "guarded" || qualifier == "secure"
 
+  let retLevel: Int = level
+  safe mut effectTag = redact(effectTag)
+  safe mut qualifier = redact(qualifier)
+  safe mut level = redact(level)
+
   AuditLog.write({
     event: "GovernanceVerify",
     effectTag: effectTag,
@@ -63,7 +68,7 @@ secure flow verifyGovernance(readonly request: Request): Response
   })
 
   return {
-    level: level,
+    level: retLevel,
     requiresAudit: requiresAudit,
     qualifierValid: qualifierValid,
     governed: true

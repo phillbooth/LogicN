@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-06-03T07:55:58.485Z",
+  "generatedAt": "2026-06-03T19:53:13.637Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -4044,6 +4044,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-asic-cyber-physical.md",
+      "kind": "Document",
+      "label": "logicn-asic-cyber-physical.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-asic-cyber-physical.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-ast-published-schema.md",
       "kind": "Document",
       "label": "logicn-ast-published-schema.md",
@@ -4665,6 +4674,24 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-cpp-bridge.md",
+      "kind": "Document",
+      "label": "logicn-cpp-bridge.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-cpp-bridge.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-cross-layer-resilience.md",
+      "kind": "Document",
+      "label": "logicn-cross-layer-resilience.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-cross-layer-resilience.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-data-layout-memory-hints.md",
       "kind": "Document",
       "label": "logicn-data-layout-memory-hints.md",
@@ -4804,6 +4831,15 @@
       "kind": "Document",
       "label": "logicn-flow-entry-points.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-flow-entry-points.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-fortified-typed-logic.md",
+      "kind": "Document",
+      "label": "logicn-fortified-typed-logic.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-fortified-typed-logic.md",
       "tags": [
         "document"
       ]
@@ -6001,6 +6037,15 @@
       "kind": "Document",
       "label": "logicn-value-state-checker-architecture.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-value-state-checker-architecture.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-zk-proof-plan.md",
+      "kind": "Document",
+      "label": "logicn-zk-proof-plan.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-zk-proof-plan.md",
       "tags": [
         "document"
       ]
@@ -10331,6 +10376,16 @@
       ]
     },
     {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/f_f.egraph.json",
+      "kind": "Document",
+      "label": "f_f.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/f_f.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/getActor_getActor.egraph.json",
       "kind": "Document",
       "label": "getActor_getActor.egraph.json",
@@ -10405,6 +10460,16 @@
       "kind": "Document",
       "label": "guardedCount_guardedCount.egraph.json",
       "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/guardedCount_guardedCount.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/g_g.egraph.json",
+      "kind": "Document",
+      "label": "g_g.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/g_g.egraph.json",
       "tags": [
         "report",
         "logicn-core-compiler"
@@ -15711,6 +15776,56 @@
       ]
     },
     {
+      "id": "type:logicn-core-compiler:EpilogueProofStrategy",
+      "kind": "Type",
+      "label": "EpilogueProofStrategy",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:EpilogueFailureAction",
+      "kind": "Type",
+      "label": "EpilogueFailureAction",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ZkProof",
+      "kind": "Type",
+      "label": "ZkProof",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:EpilogueReceipt",
+      "kind": "Type",
+      "label": "EpilogueReceipt",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:generateEpilogueReceipt",
+      "kind": "Flow",
+      "label": "generateEpilogueReceipt",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "type:logicn-core-compiler:HardwareSealedDispatch",
       "kind": "Type",
       "label": "HardwareSealedDispatch",
@@ -15784,6 +15899,46 @@
       "id": "type:logicn-core-compiler:ProofGraph",
       "kind": "Type",
       "label": "ProofGraph",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LiabilityTier",
+      "kind": "Type",
+      "label": "LiabilityTier",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LiabilityProfile",
+      "kind": "Type",
+      "label": "LiabilityProfile",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:PhysicalHardeningTier",
+      "kind": "Type",
+      "label": "PhysicalHardeningTier",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:TamperResponseStrategy",
+      "kind": "Type",
+      "label": "TamperResponseStrategy",
       "sourcePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts",
       "tags": [
         "type",
@@ -30058,6 +30213,27 @@
       "evidencePath": "docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/logicn-cpp-bridge.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-cpp-bridge.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-cpp-bridge.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-cpp-bridge.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-cpp-bridge.md",
+      "to": "package:logicn-core-runtime",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-cpp-bridge.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/logicn-data-layout-memory-hints.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -31855,6 +32031,20 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/Knowledge-Bases/logicn-v1-memory-model.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-zk-proof-plan.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-zk-proof-plan.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-zk-proof-plan.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-zk-proof-plan.md"
     },
     {
       "from": "doc:docs/Knowledge-Bases/mathematics-and-tri-logic.md",
@@ -38053,6 +38243,13 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/f_f.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/f_f.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/getActor_getActor.egraph.json",
       "kind": "owns",
       "confidence": "EXTRACTED",
@@ -38106,6 +38303,13 @@
       "kind": "owns",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/guardedCount_guardedCount.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/g_g.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/g_g.egraph.json"
     },
     {
       "from": "package:logicn-core-compiler",
@@ -41868,6 +42072,41 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:EpilogueProofStrategy",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:EpilogueFailureAction",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ZkProof",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:EpilogueReceipt",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:generateEpilogueReceipt",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:HardwareSealedDispatch",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -41918,6 +42157,34 @@
     {
       "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:ProofGraph",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LiabilityTier",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LiabilityProfile",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:PhysicalHardeningTier",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:TamperResponseStrategy",
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts"

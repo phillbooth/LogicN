@@ -181,6 +181,42 @@ describe("SecurityAuditRunner: full pipeline", () => {
     const report = await runSecurityAudit("pure flow f() -> Int contract { effects {} } { return 1 }", {});
     assert.equal(report.schemaVersion, "lln.security-audit.v1");
   });
+
+  it("invalid cyber_physical_hardening value → LLN-GOV-017 (hardware checker)", async () => {
+    // enclosure_shielding with an unrecognised tier should fire LLN-GOV-017 as an error.
+    const src = [
+      `secure flow hardenedFlow(x: Int) -> Int`,
+      `contract {`,
+      `  intent { "High-risk financial transaction requiring physical hardening." }`,
+      `  effects { audit.write }`,
+      `  economics { max_risk_liability "50000" }`,
+      `  cyber_physical_hardening { enclosure_shielding supershield  on_tamper_signal zeroize }`,
+      `}`,
+      `{ return x }`,
+    ].join("\n");
+    const report = await runSecurityAudit(src, { governanceProfile: "production" });
+    const gov017 = report.findings.find(f => f.code === "LLN-GOV-017");
+    assert.ok(gov017 !== undefined, `Expected LLN-GOV-017 in findings. Got: ${report.findings.map(f => f.code).join(", ")}`);
+    assert.equal(gov017.checker, "hardware", `GOV-017 checker should be 'hardware', got '${gov017.checker}'`);
+  });
+
+  it("manual liability {} block → LLN-GOV-018 (governance checker)", async () => {
+    // Manually declaring liability {} should trigger LLN-GOV-018 as a warning.
+    const src = [
+      `secure flow liableFlow(x: Int) -> Int`,
+      `contract {`,
+      `  intent { "Payment flow with manually declared liability." }`,
+      `  effects { audit.write }`,
+      `  liability { max_exposure 10000 }`,
+      `}`,
+      `{ return x }`,
+    ].join("\n");
+    const report = await runSecurityAudit(src, { governanceProfile: "production" });
+    const gov018 = report.findings.find(f => f.code === "LLN-GOV-018");
+    assert.ok(gov018 !== undefined, `Expected LLN-GOV-018 in findings. Got: ${report.findings.map(f => f.code).join(", ")}`);
+    assert.equal(gov018.checker, "governance", `GOV-018 checker should be 'governance', got '${gov018.checker}'`);
+    assert.equal(gov018.severity, "medium", `GOV-018 is a warning → medium severity, got '${gov018.severity}'`);
+  });
 });
 
 // ---------------------------------------------------------------------------

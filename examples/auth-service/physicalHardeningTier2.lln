@@ -1,0 +1,26 @@
+// Tier 2 Physical Hardening — Governed Execution Engine (Deep Trench Isolation)
+// USE CASE: Healthcare record processing, high-value financial APIs, PCI-DSS Tier 1
+// REMINDER: The runtime auto-selects shielding from ValueGraph risk tier.
+// Only write this block when deep_trench hardware is confirmed available.
+
+secure flow processHighValueRecord(readonly request: Request) -> Result<String, String>
+contract {
+  intent { "Process a high-value record with Deep Trench Isolation side-channel protection." }
+  effects { audit.write  network.inbound  database.write }
+  economics { max_risk_liability "10000"  optimize balanced }
+  cyber_physical_hardening {
+    enclosure_shielding deep_trench
+    fault_mitigation scalar_single
+    side_channel_protection constant_row
+    on_tamper_signal quarantine_core
+  }
+  privacy {
+    mask patient_id
+    strategy transform.crypto_pseudonymize
+  }
+  audit { level cryptographic_state_hash  target storage.tpm_backed_log }
+}
+{
+  AuditLog.write("High-value record processed under Tier 2 shielding")
+  return Ok("record_processed")
+}

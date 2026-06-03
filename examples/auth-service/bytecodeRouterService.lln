@@ -39,8 +39,10 @@ secure flow resolveBytecodeRoute(readonly request: Request): TierResult {
   let isIntegerOnly: Bool = rawIsIntegerOnly == "true"
   let tier: String = selectExecutionTier(rawQualifier, hasEffects, isIntegerOnly)
   let light: String = tierTrafficLight(tier)
+  let retTier: String = tier
+  safe mut tier = redact(tier)
   AuditLog.write({ eventName: "TierSelected" tier: tier })
-  return Ok({ tier: tier trafficLight: light phase: 59 })
+  return Ok({ tier: retTier trafficLight: light phase: 59 })
 }
 
 route POST "/tier/select" {

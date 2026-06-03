@@ -17,11 +17,20 @@ prints `3133 tests total`, matching the table below. (Per package: build, then `
 
 | Package | Tests | Pass | Fail | Prior doc claimed |
 |---|---|---|---|---|
-| logicn-core-compiler | 3,041 | 3,041 | 0 | 2,810 |
+| logicn-core-compiler | 3,065 | 3,065 | 0 | 2,810 |
 | logicn-core-economics | 15 | 15 | 0 | 15 ✓ |
 | logicn-devtools-graph-algorithms | 95 | 95 | 0 | 95 ✓ |
 | logicn-core-security | 14 | 14 | 0 | **32 ✗** |
-| **TOTAL** | **3,165** | **3,165** | **0** | 2,952 |
+| **SOT FOUR TOTAL** | **3,189** | **3,189** | **0** | 2,952 |
+| *(devtools — supplementary)* | | | | |
+| logicn-devtools-naming | 12 | 12 | 0 | — |
+| logicn-devtools-context | 32 | 32 | 0 | — |
+| logicn-devtools-intelligence | 15 | 15 | 0 | — |
+| logicn-devtools-provenance | 16 | 16 | 0 | — |
+| logicn-devtools-pci | 12 | 12 | 0 | — |
+| logicn-ext-secrets-vault | 12 | 12 | 0 | — |
+| logicn-ext-proof-snarkjs | 10 | 10 | 0 | — |
+| **FULL PROJECT TOTAL** | **3,287** | **3,287** | **0** | — |
 
 Corrections vs `logicn-audit-2026-06-02.md`:
 - Compiler 2,810 → **2,869** (includes +10 self-hosted runtime tests, +9

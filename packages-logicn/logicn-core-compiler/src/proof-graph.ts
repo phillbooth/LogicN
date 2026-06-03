@@ -24,7 +24,7 @@
 import { canonicalHash } from "./runtime/canonicalHash.js";
 import type { EffectFlagsMask, GovernanceFlagsMask, ProofLevelId } from "./type-registry.js";
 import type { ValueStateFlagsMask } from "./value-state-checker.js";
-import { generateKeyPairSync, sign as nodeCryptoSign, verify as nodeCryptoVerify } from "node:crypto";
+import { createHash, generateKeyPairSync, sign as nodeCryptoSign, verify as nodeCryptoVerify } from "node:crypto";
 
 // ---------------------------------------------------------------------------
 // ExecutionSignature
@@ -136,6 +136,186 @@ export interface ImmutableInputSeal {
   readonly dispatchAt:  string;       // ISO-8601 timestamp of dispatch
   readonly returnAt?:   string;       // ISO-8601 timestamp of return
   readonly sealAlgorithm: "sha256";   // future-proof: algorithm used for sealing
+}
+
+// ---------------------------------------------------------------------------
+// EpilogueReceipt — Phase 40 epilogue {} auto-policy
+//
+// When a contract declares `epilogue { generate_proof <strategy> }`, the
+// GovernancePlane produces an EpilogueReceipt and attaches it to the
+// flow's ProofGraph.  The receipt is the machine-verifiable record of which
+// proof strategy was selected and what seals (if any) were computed.
+//
+// sha256_seal  — fully implemented: computes SHA-256 of source+contractHash.
+// zk_snark_receipt — explicit stub: prover backend not yet integrated.
+// ---------------------------------------------------------------------------
+
+/**
+ * Prover backend interface (for future snarkjs / bellman integration):
+ *   Input:  { sourceText: string; contractHash: string; resultJson?: string }
+ *   Output: { proof: object; publicSignals: string[]; verificationKey: object }
+ *   Receipt: zkReceiptStub → replace with base64-encoded proof + vk hash
+ *
+ * Integration path:
+ *   Phase 1 (snarkjs): logicn-ext-proof-snarkjs — pure JS, Groth16 circuit over
+ *     sha256(sourceText + contractHash). No build toolchain needed.
+ *   Phase 2 (bellman): logicn-ext-proof-bellman — Rust napi-rs addon, fastest prover.
+ *   Plug-in API: replace generateEpilogueReceipt's zk_snark_receipt branch by calling
+ *     an injected ProverBackend interface:
+ *       interface ProverBackend { prove(input: ProverInput): Promise<ZkProof> }
+ *     The stub (current) satisfies this interface with a pending placeholder.
+ */
+
+/** Recognised proof-generation strategies for the epilogue {} block. */
+export type EpilogueProofStrategy = "auto" | "sha256_seal" | "zk_snark_receipt" | "none";
+
+/** Action to take when epilogue proof verification fails at runtime. */
+export type EpilogueFailureAction = "halt_pipeline" | "quarantine_payload" | "log_and_continue";
+
+/**
+ * A completed zero-knowledge proof produced by a wired ProverBackend.
+ * Replaces zkReceiptStub on EpilogueReceipt once logicn-ext-proof-snarkjs is integrated.
+ *
+ * Encoding:
+ *   proofBase64          — base64-encoded JSON of the snarkjs/bellman proof object
+ *   verificationKeyHash  — sha256 hex of the serialised verification key
+ *   publicSignalsHash    — sha256 hex of the JSON-serialised public signals array
+ */
+export interface ZkProof {
+  readonly protocol:            "groth16" | "plonk";
+  readonly curve:               "bn128" | "bls12-381";
+  readonly proofBase64:         string;   // base64-encoded proof object
+  readonly verificationKeyHash: string;   // sha256 of the verification key
+  readonly publicSignalsHash:   string;   // sha256 of the public signals array
+}
+
+/**
+ * Machine-verifiable receipt produced by the GovernancePlane for every flow
+ * that declares an `epilogue { generate_proof <strategy> }` block.
+ *
+ * Stored in ProofGraph.epilogueReceipt (optional — only present when a
+ * non-default epilogue strategy is explicitly declared).
+ */
+export interface EpilogueReceipt {
+  readonly strategy:       EpilogueProofStrategy;
+  readonly sealAlgorithm?: "sha256";               // present when strategy=sha256_seal
+  readonly inputSeal?:     string;                 // sha256:<hex> of source+contract hash
+  readonly outputSeal?:    string;                 // sha256:<hex> of result (populated post-execution)
+  readonly zkReceiptStub?: string;                 // "zk_snark_receipt:PENDING — prover not yet integrated"
+  readonly zkProof?:       ZkProof;                // present when prover backend is wired (replaces zkReceiptStub)
+  readonly generatedAt:    string;                 // ISO timestamp
+  readonly onFailure:      EpilogueFailureAction;
+}
+
+/**
+ * Generate an EpilogueReceipt for a flow based on its declared proof strategy.
+ *
+ * - `"none"` or `"auto"` with no explicit escalation → strategy=none, no seals
+ * - `"sha256_seal"` or `"auto"` (treated as sha256_seal) → SHA-256 of
+ *   `opts.sourceText + (opts.contractHash ?? "")` stored as `inputSeal`.
+ *   If `opts.resultJson` is provided, also computes `outputSeal`.
+ * - `"zk_snark_receipt"` with no backend → sets `zkReceiptStub` to a clearly-labelled
+ *   PENDING message (intentional stub, does not throw).
+ * - `"zk_snark_receipt"` with `opts.proverBackend` injected → calls the backend's
+ *   `prove()` and stores the resulting `ZkProof` in the receipt (replaces stub).
+ *
+ * When a `proverBackend` is provided and `strategy === "zk_snark_receipt"`, this
+ * function returns a Promise. For all other strategies it returns synchronously.
+ * Callers that may inject a backend should `await` the result regardless.
+ */
+export function generateEpilogueReceipt(opts: {
+  strategy: EpilogueProofStrategy;
+  onFailure: EpilogueFailureAction;
+  sourceText: string;
+  contractHash?: string;
+  resultJson?: string;
+  /** Optional injected prover backend (e.g. logicn-ext-proof-snarkjs). When provided
+   *  and strategy === "zk_snark_receipt", the backend's prove() is called and the
+   *  resulting ZkProof is stored in the receipt instead of the PENDING stub. */
+  proverBackend?: {
+    prove(input: {
+      sourceText: string;
+      contractHash: string;
+      resultJson?: string;
+    }): Promise<{
+      protocol: string;
+      curve: string;
+      proofBase64: string;
+      verificationKeyHash: string;
+      publicSignalsHash: string;
+    }>;
+  };
+}): EpilogueReceipt | Promise<EpilogueReceipt> {
+  const generatedAt = new Date().toISOString();
+  const { strategy, onFailure, sourceText, contractHash, resultJson } = opts;
+
+  if (strategy === "none") {
+    return { strategy: "none", generatedAt, onFailure };
+  }
+
+  if (strategy === "zk_snark_receipt") {
+    // If a real prover backend is injected, call it and return a Promise<EpilogueReceipt>.
+    if (opts.proverBackend !== undefined) {
+      const backend = opts.proverBackend;
+      return (async (): Promise<EpilogueReceipt> => {
+        const proveInput: { sourceText: string; contractHash: string; resultJson?: string } = {
+          sourceText,
+          contractHash: contractHash ?? "",
+        };
+        if (resultJson !== undefined) {
+          proveInput.resultJson = resultJson;
+        }
+        const rawProof = await backend.prove(proveInput);
+        const zkProof: ZkProof = {
+          protocol: rawProof.protocol as ZkProof["protocol"],
+          curve: rawProof.curve as ZkProof["curve"],
+          proofBase64: rawProof.proofBase64,
+          verificationKeyHash: rawProof.verificationKeyHash,
+          publicSignalsHash: rawProof.publicSignalsHash,
+        };
+        return {
+          strategy: "zk_snark_receipt",
+          zkProof,
+          generatedAt,
+          onFailure,
+        };
+      })();
+    }
+    // No backend injected — return the PENDING stub (existing behavior).
+    return {
+      strategy: "zk_snark_receipt",
+      zkReceiptStub:
+        "zk_snark_receipt:PENDING — prover not yet integrated. Planned: snarkjs/bellman backend.",
+      generatedAt,
+      onFailure,
+    };
+  }
+
+  // sha256_seal (and "auto" which defaults to sha256_seal)
+  const effectiveStrategy: EpilogueProofStrategy =
+    strategy === "auto" ? "sha256_seal" : strategy;
+
+  const inputMaterial = sourceText + (contractHash ?? "");
+  const inputHex = createHash("sha256").update(Buffer.from(inputMaterial, "utf8")).digest("hex");
+  const inputSeal = `sha256:${inputHex}`;
+
+  let outputSeal: string | undefined;
+  if (resultJson !== undefined) {
+    const outputHex = createHash("sha256").update(Buffer.from(resultJson, "utf8")).digest("hex");
+    outputSeal = `sha256:${outputHex}`;
+  }
+
+  const receipt: EpilogueReceipt = {
+    strategy:       effectiveStrategy,
+    sealAlgorithm:  "sha256",
+    inputSeal,
+    generatedAt,
+    onFailure,
+  };
+  if (outputSeal !== undefined) {
+    return { ...receipt, outputSeal };
+  }
+  return receipt;
 }
 
 /**
@@ -269,6 +449,12 @@ export interface ProofGraph {
    */
   readonly hardwareSeal?: HardwareSealedDispatch;
   /**
+   * Phase 40: EpilogueReceipt — machine-verifiable proof of epilogue strategy execution.
+   * Present when the flow explicitly declares `epilogue { generate_proof <strategy> }`.
+   * Absent when no epilogue block is declared (auto-by-default, no receipt emitted).
+   */
+  readonly epilogueReceipt?: EpilogueReceipt;
+  /**
    * Phase 39: GovernanceSignature — quantum-resistant proof certificate.
    * Present in production profile. algorithm: "lln.gov.sig.v1".
    * See logicn-governance-signature.md for full spec.
@@ -279,7 +465,34 @@ export interface ProofGraph {
     readonly signature: string;
     readonly signedAt: string;
   };
+  /**
+   * Auto-calculated liability profile — computed from the ValueGraph breach-risk matrix.
+   * NEVER written by developers in source code; the governance verifier emits this.
+   * Stored here for audit trail and compliance reporting.
+   */
+  readonly liabilityProfile?: LiabilityProfile;
+  /**
+   * Cyber-physical shielding tier auto-selected or explicitly declared.
+   * Auto-by-default: the runtime selects from ValueGraph risk tier.
+   */
+  readonly physicalHardeningTier?: PhysicalHardeningTier;
 }
+
+/** Auto-calculated maximum legal/financial liability exposure. Never written in source. */
+export type LiabilityTier = "negligible" | "low" | "medium" | "high" | "critical";
+
+export interface LiabilityProfile {
+  readonly tier: LiabilityTier;
+  readonly estimatedMaxExposureUsd: number;  // from breach-risk matrix
+  readonly dataClassifications: readonly string[];  // PII, PHI, financial, etc.
+  readonly regulatoryFrameworks: readonly string[];  // GDPR, HIPAA, PCI-DSS, etc.
+  readonly autoCalculated: true;              // sentinel — never set by source code
+}
+
+/** Physical shielding tier selected by the runtime or declared in contract.target */
+export type PhysicalHardeningTier = "standard" | "deep_trench" | "active_mesh";
+
+export type TamperResponseStrategy = "halt" | "zeroize" | "quarantine_core" | "demote_to_local";
 
 /**
  * Build a minimal ProofGraph from governance verify results and evidence.

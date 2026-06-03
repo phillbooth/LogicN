@@ -28,7 +28,7 @@
 import { type AstNode, type AstNodeKind, type FlowMeta, type SourceLocation } from "./parser.js";
 import { type EffectCheckResult } from "./effect-checker.js";
 import { GovernanceFlags, type GovernanceFlagsMask, type RuntimeManifest } from "./type-registry.js";
-import { buildProofGraphCached, computeExecutionSignature, type ProofGraph, type ProofObligation, LLN_HW_001, LLN_HW_002, LLN_HW_003 } from "./proof-graph.js";
+import { buildProofGraphCached, computeExecutionSignature, generateEpilogueReceipt, type EpilogueFailureAction, type EpilogueProofStrategy, type ProofGraph, type ProofObligation, LLN_HW_001, LLN_HW_002, LLN_HW_003 } from "./proof-graph.js";
 import { HARDWARE_TRUST_PROFILES, ProofLevel } from "./type-registry.js";
 
 // ---------------------------------------------------------------------------
@@ -1241,6 +1241,17 @@ class GovernanceVerifier {
       this.proofGraphsByFlow.set(flow.name, pg);
     }
 
+    // ── LLN-GOV-017: cyber_physical_hardening {} value validation ────────────
+    // Validates that if a flow explicitly declares cyber_physical_hardening {},
+    // the values are recognised. Also warns if declared on a low-risk flow
+    // (auto-by-default is preferred; manual declaration should have good reason).
+    // ── LLN-GOV-018: manual liability {} block warning ────────────────────────
+    // liability {} is auto-calculated — writing it manually is a design smell.
+    if (flowNode !== undefined) {
+      this.verifyPhysicalHardeningBlock(flowNode, flow.name);
+      this.verifyLiabilityBlock(flowNode, flow.name);
+    }
+
     // ── LLN-GOV-015/016: epilogue {} strategy validation ─────────────────────
     // When a flow explicitly declares an `epilogue {}` block, validate that the
     // proof strategy and failure action are recognised values.  An omitted block
@@ -1249,6 +1260,97 @@ class GovernanceVerifier {
     if (flowNode !== undefined) {
       this.verifyEpilogueBlock(flowNode, flow.name);
     }
+  }
+
+  private verifyPhysicalHardeningBlock(flowNode: AstNode, flowName: string): void {
+    const contractNode = (flowNode.children ?? []).find((c) => c.kind === "contractDecl");
+    if (contractNode === undefined) return;
+
+    const hardeningNode = (contractNode.children ?? []).find(
+      (c) => c.kind === "identifier" && (c.value ?? "").startsWith("cyber_physical_hardening"),
+    );
+    if (hardeningNode === undefined) return; // auto-by-default → nothing to validate
+
+    // Content stored as one or more `decl:` children (one per directive line).
+    // Join them all into a single flat string for keyword extraction.
+    const content = (hardeningNode.children ?? [])
+      .filter((c) => c.kind === "identifier" && (c.value ?? "").startsWith("decl:"))
+      .map((c) => (c.value ?? "").slice("decl:".length))
+      .join(" ")
+      .toLowerCase();
+
+    const VALID_SHIELDING = new Set(["active_mesh", "deep_trench", "standard_fabric"]);
+    const VALID_FAULT_MIT = new Set(["lockstep", "scalar_single", "none"]);
+    const VALID_SIDE_CH  = new Set(["constant_row", "differential_masking", "none"]);
+    const VALID_TAMPER   = new Set(["zeroize", "quarantine_core", "halt", "demote_to_local"]);
+
+    // Extract keyword=value pairs from the flattened content string
+    const extractValue = (keyword: string): string | undefined => {
+      const idx = content.indexOf(keyword);
+      if (idx === -1) return undefined;
+      const after = content.slice(idx + keyword.length).trim().split(/\s+/);
+      return after[0];
+    };
+
+    const shielding = extractValue("enclosure_shielding");
+    if (shielding !== undefined && !VALID_SHIELDING.has(shielding)) {
+      this.diagnostics.push(makeGovDiag(
+        "LLN-GOV-017", "InvalidPhysicalHardeningValue", "error",
+        `Flow '${flowName}' declares cyber_physical_hardening { enclosure_shielding ${shielding} } but '${shielding}' is not a recognised shielding tier.`,
+        hardeningNode.location,
+        `Valid values: active_mesh | deep_trench | standard_fabric`,
+      ));
+    }
+
+    const tamper = extractValue("on_tamper_signal");
+    if (tamper !== undefined && !VALID_TAMPER.has(tamper)) {
+      this.diagnostics.push(makeGovDiag(
+        "LLN-GOV-017", "InvalidPhysicalHardeningValue", "error",
+        `Flow '${flowName}' declares cyber_physical_hardening { on_tamper_signal ${tamper} } but '${tamper}' is not a recognised tamper response.`,
+        hardeningNode.location,
+        `Valid values: zeroize | quarantine_core | halt | demote_to_local`,
+      ));
+    }
+
+    // Warn if declared on a low-risk flow — auto-by-default is preferred
+    // (absence of a high max_risk_liability in economics is a proxy for low risk)
+    const economicsNode = (contractNode.children ?? []).find(
+      (c) => c.kind === "identifier" && (c.value ?? "").startsWith("economics"),
+    );
+    const hasHighRisk = economicsNode !== undefined &&
+      (economicsNode.children ?? []).some((c) =>
+        (c.value ?? "").includes("max_risk_liability") && /\d{4,}/.test(c.value ?? ""),
+      );
+    if (!hasHighRisk) {
+      this.diagnostics.push(makeGovDiag(
+        "LLN-GOV-017", "PhysicalHardeningOnLowRiskFlow", "warning",
+        `Flow '${flowName}' explicitly declares cyber_physical_hardening {} but has no high max_risk_liability in economics {}. ` +
+        `The runtime auto-selects the appropriate shielding tier from the ValueGraph. ` +
+        `Omit this block unless operating on Tier 1 hardware with proven physical-breach risk.`,
+        hardeningNode.location,
+        `Remove the cyber_physical_hardening {} block and let the runtime select the tier automatically.`,
+      ));
+    }
+  }
+
+  private verifyLiabilityBlock(flowNode: AstNode, flowName: string): void {
+    const contractNode = (flowNode.children ?? []).find((c) => c.kind === "contractDecl");
+    if (contractNode === undefined) return;
+
+    const liabilityNode = (contractNode.children ?? []).find(
+      (c) => c.kind === "identifier" && (c.value ?? "").startsWith("liability"),
+    );
+    if (liabilityNode === undefined) return; // not present → no issue
+
+    // liability {} is auto-calculated — writing it manually is a design smell.
+    this.diagnostics.push(makeGovDiag(
+      "LLN-GOV-018", "ManualLiabilityDeclaration", "warning",
+      `Flow '${flowName}' manually declares a liability {} contract block. ` +
+      `liability {} is auto-calculated from the ValueGraph breach-risk matrix and stored in the ProofGraph. ` +
+      `Declaring it manually couples your source code to a specific risk assessment that may go stale.`,
+      liabilityNode.location,
+      `Remove the liability {} block. The governance verifier computes and records it automatically.`,
+    ));
   }
 
   private verifyEpilogueBlock(flowNode: AstNode, flowName: string): void {
@@ -1267,39 +1369,61 @@ class GovernanceVerifier {
     const content = declChild !== undefined ? (declChild.value ?? "").slice("decl:".length).trim() : "";
     const tokens = content.split(/\s+/);
 
-    const VALID_STRATEGIES = new Set(["auto", "sha256_seal", "zk_snark_receipt", "none"]);
-    const VALID_FAILURES  = new Set(["halt_pipeline", "quarantine_payload", "log_and_continue"]);
+    const VALID_STRATEGIES = new Set<string>(["auto", "sha256_seal", "zk_snark_receipt", "none"]);
+    const VALID_FAILURES   = new Set<string>(["halt_pipeline", "quarantine_payload", "log_and_continue"]);
 
     // Parse generate_proof <strategy>
+    let strategy: EpilogueProofStrategy | "" = "";
     const gpIdx = tokens.indexOf("generate_proof");
     if (gpIdx !== -1) {
-      const strategy = tokens[gpIdx + 1] ?? "";
-      if (!VALID_STRATEGIES.has(strategy)) {
+      const rawStrategy = tokens[gpIdx + 1] ?? "";
+      if (!VALID_STRATEGIES.has(rawStrategy)) {
         this.diagnostics.push(makeGovDiag(
           "LLN-GOV-015",
           "EpilogueInvalidStrategy",
           "error",
-          `Flow '${flowName}' declares epilogue { generate_proof ${strategy || "<missing>"} } but '${strategy || "<missing>"}' is not a recognised proof strategy.`,
+          `Flow '${flowName}' declares epilogue { generate_proof ${rawStrategy || "<missing>"} } but '${rawStrategy || "<missing>"}' is not a recognised proof strategy.`,
           epilogueNode.location,
           `Valid strategies: auto | sha256_seal | zk_snark_receipt | none`,
         ));
+        return; // invalid strategy — skip receipt generation
       }
+      strategy = rawStrategy as EpilogueProofStrategy;
     }
 
     // Parse on_verification_failure <action>
+    let onFailure: EpilogueFailureAction = "log_and_continue";
     const ovfIdx = tokens.indexOf("on_verification_failure");
     if (ovfIdx !== -1) {
-      const action = tokens[ovfIdx + 1] ?? "";
-      if (!VALID_FAILURES.has(action)) {
+      const rawAction = tokens[ovfIdx + 1] ?? "";
+      if (!VALID_FAILURES.has(rawAction)) {
         this.diagnostics.push(makeGovDiag(
           "LLN-GOV-016",
           "EpilogueInvalidFailureAction",
           "error",
-          `Flow '${flowName}' declares epilogue { on_verification_failure ${action || "<missing>"} } but '${action || "<missing>"}' is not a recognised failure action.`,
+          `Flow '${flowName}' declares epilogue { on_verification_failure ${rawAction || "<missing>"} } but '${rawAction || "<missing>"}' is not a recognised failure action.`,
           epilogueNode.location,
           `Valid actions: halt_pipeline | quarantine_payload | log_and_continue`,
         ));
+        return; // invalid failure action — skip receipt generation
       }
+      onFailure = rawAction as EpilogueFailureAction;
+    }
+
+    // Validation passed — generate and store the EpilogueReceipt on the ProofGraph.
+    if (strategy === "") return; // no generate_proof clause declared; nothing to do
+
+    // No proverBackend injected here — generateEpilogueReceipt returns synchronously.
+    const receipt = generateEpilogueReceipt({
+      strategy,
+      onFailure,
+      sourceText: flowName, // use flowName as a stable source identifier at compile time
+      contractHash: flowName,
+    }) as import("./proof-graph.js").EpilogueReceipt;
+
+    const existingPg = this.proofGraphsByFlow.get(flowName);
+    if (existingPg !== undefined) {
+      this.proofGraphsByFlow.set(flowName, { ...existingPg, epilogueReceipt: receipt });
     }
   }
 }

@@ -52,6 +52,12 @@ secure flow chainAuditEntry(readonly request: Request): Response
   let eventId: String = auditEventId(flowName, timestamp)
   let statusValid: Bool = isValidAuditStatus(status)
 
+  let retEventId: String = eventId
+  let retStatusValid: Bool = statusValid
+  safe mut eventId = redact(eventId)
+  safe mut status = redact(status)
+  safe mut statusValid = redact(statusValid)
+
   AuditLog.write({
     event: "AuditChain",
     eventId: eventId,
@@ -60,8 +66,8 @@ secure flow chainAuditEntry(readonly request: Request): Response
   })
 
   return {
-    eventId: eventId,
-    statusValid: statusValid,
+    eventId: retEventId,
+    statusValid: retStatusValid,
     schemaVersion: "lln.runtime.audit.v1",
     chained: true
   }

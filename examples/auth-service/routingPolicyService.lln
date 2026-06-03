@@ -29,8 +29,10 @@ secure flow resolveRoute(readonly request: Request): Response
   unsafe let isCritical: Bool = request.jsonBody.isSafetyCritical
   let tier: String = preferredTier(effectCount, hasAI, isCritical)
   let govClass: Int = tierGovernanceClass(tier)
+  let retTier: String = tier
+  safe mut tier = redact(tier)
   AuditLog.write({ event: "RouteDecision", tier: tier })
-  return { tier: tier, governanceClass: govClass, decided: true }
+  return { tier: retTier, governanceClass: govClass, decided: true }
 }
 
 route POST "/routing/resolve" { request Request  response Response  flow resolveRoute }

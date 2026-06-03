@@ -40,8 +40,12 @@ secure flow checkProfile(readonly request: Request): Response
   let allowsUnbounded: Bool = profileAllowsUnboundedLoop(profile)
   let requiresBudget: Bool = profileRequiresBudget(profile)
   let securityLevel: Int = profileSecurityLevel(profile)
+  let retProfile: String = profile
+  let retSecurityLevel: Int = securityLevel
+  safe mut profile = redact(profile)
+  safe mut securityLevel = redact(securityLevel)
   AuditLog.write({ event: "ProfileCheck", profile: profile, level: securityLevel })
-  return { profile: profile, allowsRecursion: allowsRecursion, allowsUnboundedLoop: allowsUnbounded, requiresBudget: requiresBudget, securityLevel: securityLevel }
+  return { profile: retProfile, allowsRecursion: allowsRecursion, allowsUnboundedLoop: allowsUnbounded, requiresBudget: requiresBudget, securityLevel: retSecurityLevel }
 }
 
 route POST "/profile/check" { request Request  response Response  flow checkProfile }

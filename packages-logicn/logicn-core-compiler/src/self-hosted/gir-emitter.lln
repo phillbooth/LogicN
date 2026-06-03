@@ -307,6 +307,22 @@ contract { intent { "Recursively lower a parser Expr AST node into a GIRExpr." }
     return { op: "field", ty: "", value: expr.value, kids: kids }
   }
 
+  // Record literal — `{ x: 1, y: n }` → op:"reclit", kids:[nameConst,valExpr,nameConst,valExpr,...]
+  if kind == "record-lit" {
+    let children: Array = expr.children
+    mut kids: Array<GIRExpr> = Array.empty()
+    mut ri: Int = 0
+    while ri < children.count() {
+      let cOpt = children.get(ri)
+      match cOpt {
+        Some(c) => { kids = kids.append(lowerExpr(c)) }
+        None => {}
+      }
+      ri = ri + 1
+    }
+    return { op: "reclit", ty: "Record", value: "", kids: kids }
+  }
+
   // R2: array literal — `[1, 2, 3]` → op:"arrlit", kids:[lowered elements]
   if kind == "array" {
     let children: Array = expr.children
@@ -328,10 +344,11 @@ contract { intent { "Recursively lower a parser Expr AST node into a GIRExpr." }
 
 // ── GIR statement node ────────────────────────────────────────
 record GIRStmt {
-  op: String               // "store" | "ret" | "branch" | "loop" | "eval"
-  name: String             // store: target name; else ""
-  expr: Array<GIRExpr>     // 0/1 element: lowered init/return/cond/eval value
-  body: Array<GIRStmt>     // branch/loop: lowered nested block (then-block); else empty
+  op: String               // "store" | "ret" | "branch" | "loop" | "eval" | "matche" | "arm"
+  name: String             // store: target binding; arm: pattern name ("Some"/"Ok"/int/string/"_")
+  name2: String            // arm: optional payload-binding name for constructor patterns (e.g. "x" in Some(x))
+  expr: Array<GIRExpr>     // 0/1 element: lowered init/return/cond/eval/matche-subject value
+  body: Array<GIRStmt>     // branch/loop/arm: lowered nested block (then-block or arm body); matche: arms
   elseBody: Array<GIRStmt> // branch: lowered else-block; else empty
 }
 
@@ -358,7 +375,7 @@ contract { intent { "Lower a single body statement into a GIRStmt." } }
       Some(rhs) => { exprs = exprs.append(lowerExpr(rhs)) }
       None => {}
     }
-    return { op: "store", name: stmt.name, expr: exprs, body: Array.empty(), elseBody: Array.empty() }
+    return { op: "store", name: stmt.name, name2: "", expr: exprs, body: Array.empty(), elseBody: Array.empty() }
   }
 
   if kind == "mut" {
@@ -368,7 +385,7 @@ contract { intent { "Lower a single body statement into a GIRStmt." } }
       Some(rhs) => { exprs = exprs.append(lowerExpr(rhs)) }
       None => {}
     }
-    return { op: "store", name: stmt.name, expr: exprs, body: Array.empty(), elseBody: Array.empty() }
+    return { op: "store", name: stmt.name, name2: "", expr: exprs, body: Array.empty(), elseBody: Array.empty() }
   }
 
   if kind == "assign" {
@@ -378,7 +395,7 @@ contract { intent { "Lower a single body statement into a GIRStmt." } }
       Some(rhs) => { exprs = exprs.append(lowerExpr(rhs)) }
       None => {}
     }
-    return { op: "store", name: stmt.name, expr: exprs, body: Array.empty(), elseBody: Array.empty() }
+    return { op: "store", name: stmt.name, name2: "", expr: exprs, body: Array.empty(), elseBody: Array.empty() }
   }
 
   if kind == "return" {
@@ -388,7 +405,7 @@ contract { intent { "Lower a single body statement into a GIRStmt." } }
       Some(value) => { exprs = exprs.append(lowerExpr(value)) }
       None => {}
     }
-    return { op: "ret", name: "", expr: exprs, body: Array.empty(), elseBody: Array.empty() }
+    return { op: "ret", name: "", name2: "", expr: exprs, body: Array.empty(), elseBody: Array.empty() }
   }
 
   if kind == "if" {
@@ -400,7 +417,7 @@ contract { intent { "Lower a single body statement into a GIRStmt." } }
     }
     let lowered: Array = lowerBody(stmt.body)
     let loweredElse: Array = lowerBody(stmt.elseBody)
-    return { op: "branch", name: "", expr: exprs, body: lowered, elseBody: loweredElse }
+    return { op: "branch", name: "", name2: "", expr: exprs, body: lowered, elseBody: loweredElse }
   }
 
   if kind == "while" {
@@ -411,7 +428,7 @@ contract { intent { "Lower a single body statement into a GIRStmt." } }
       None => {}
     }
     let lowered: Array = lowerBody(stmt.body)
-    return { op: "loop", name: "", expr: exprs, body: lowered, elseBody: Array.empty() }
+    return { op: "loop", name: "", name2: "", expr: exprs, body: lowered, elseBody: Array.empty() }
   }
 
   if kind == "exprStmt" {
@@ -421,7 +438,7 @@ contract { intent { "Lower a single body statement into a GIRStmt." } }
       Some(e) => { exprs = exprs.append(lowerExpr(e)) }
       None => {}
     }
-    return { op: "eval", name: "", expr: exprs, body: Array.empty(), elseBody: Array.empty() }
+    return { op: "eval", name: "", name2: "", expr: exprs, body: Array.empty(), elseBody: Array.empty() }
   }
 
   // R5: match statement — emit a "matche" GIR op carrying the subject in `expr`
@@ -443,17 +460,17 @@ contract { intent { "Lower a single body statement into a GIRStmt." } }
         Some(arm) => {
           // arm is an "if" stmt: name=pattern, expr=[pat-expr], body=arm-body
           let armBody: Array<GIRStmt> = lowerBody(arm.body)
-          let armNode: GIRStmt = { op: "arm", name: arm.name, expr: Array.empty(), body: armBody, elseBody: Array.empty() }
+          let armNode: GIRStmt = { op: "arm", name: arm.name, name2: arm.typeName, expr: Array.empty(), body: armBody, elseBody: Array.empty() }
           loweredArms = loweredArms.append(armNode)
         }
         None => {}
       }
       mai = mai + 1
     }
-    return { op: "matche", name: "", expr: subjectExprs, body: loweredArms, elseBody: Array.empty() }
+    return { op: "matche", name: "", name2: "", expr: subjectExprs, body: loweredArms, elseBody: Array.empty() }
   }
 
-  return { op: "unknown", name: "", expr: Array.empty(), body: Array.empty(), elseBody: Array.empty() }
+  return { op: "unknown", name: "", name2: "", expr: Array.empty(), body: Array.empty(), elseBody: Array.empty() }
 }
 
 // Lower a statement list (a flow body or nested if/while block) into GIRStmt nodes.

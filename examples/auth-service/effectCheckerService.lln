@@ -70,6 +70,11 @@ secure flow checkEffectDeclaration(readonly request: Request): EffectCheckResult
   let severity: String = classifyEffectSeverity(capability)
   let complete: Bool = effectsAreComplete(rawEffect, rawQualifier)
 
+  let retRawEffect: String = rawEffect
+  let retCapability: String = capability
+  safe mut rawEffect = redact(rawEffect)
+  safe mut capability = redact(capability)
+
   AuditLog.write({
     eventName: "EffectChecked"
     effectName: rawEffect
@@ -77,9 +82,9 @@ secure flow checkEffectDeclaration(readonly request: Request): EffectCheckResult
   })
 
   return Ok({
-    effect: rawEffect
+    effect: retRawEffect
     qualifier: rawQualifier
-    capability: capability
+    capability: retCapability
     severity: severity
     complete: complete
     phase: 57

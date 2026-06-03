@@ -181,6 +181,52 @@ LogicN gate call = `Activity`; DB write = `wasUsedBy` an `Agent`).
 
 ---
 
+---
+
+## Second-run addendum (112-agent re-run, 790 tool calls, 2026-06-03)
+
+Three high-confidence findings from the second independent adversarial run that add to the first:
+
+### A. Cedar Lean mechanization as the top-priority formal-proof template (3-0, HIGH)
+Cedar's Lean mechanization (arXiv:2403.04651, OOPSLA 2024) catches 4 bugs in the policy
+validator that testing missed, and provides machine-checked proofs of: sound-and-complete
+logical encoding; refactoring safety (authorized permissions provably unchanged); validator
+properties. The **verification-guided development (VGD)** methodology (arXiv:2407.01688)
+is a replicable process — an executable Lean model tested against the production compiler
+via differential random testing. **LogicN is AHEAD**: it combines economics + secrets +
+epilogue in one block; Cedar only covers authorization. A Lean mechanization of LogicN's
+governance verifier would be novel academic and industrial work.
+
+### B. WASM Component Model shared-nothing memory for cross-flow isolation (3-0, MEDIUM)
+The WASM Component Model mandates that every component gets its own isolated linear memory;
+sharing data requires explicit typed interfaces (WIT bindings). This maps directly onto
+LogicN's governed flow boundaries: a `secure` flow calling an `effects { database.write }`
+sub-flow could be compiled to separate WASM components with typed WIT interfaces, making
+capability-boundary crossings **physically enforced** by the runtime rather than only
+checked at compile time. Adoption difficulty: MEDIUM (requires GIR emitter to target
+WASM Component Model, not just WAT modules).
+
+### C. CapTP-style capability delegation for governed cross-node flows (2-1, MEDIUM)
+CapTP (from Spritely Goblins / E language) enables **capability delegation across trust
+boundaries** using promise-based message passing — a remote capability is a first-class
+object whose authority can be selectively delegated. For LogicN's governed distributed
+runtime (multi-node deployments in healthcare/finance), this maps onto: a governed flow
+running on Node A can delegate a capability handle to Node B without exposing the
+underlying resource; the delegation itself is a governance event tracked in the ProofGraph.
+Adoption difficulty: MEDIUM-HIGH (requires a distributed runtime extension). The 2-1 vote
+(vs 3-0 for others) reflects that CapTP's production maturity is less established than
+the other referenced systems.
+
+### Second-run top-6 ranking (overlaps with + confirms first-run)
+1. Cedar Lean mechanization for governance verifier — HIGH difficulty, HIGH benefit (new #1)
+2. OPA-style structured decision telemetry + masking — LOW difficulty, HIGH benefit (= first-run #2)
+3. Koka load-bearing effect-type guarantees — HIGH difficulty, HIGH benefit (= first-run #6)
+4. Sigstore-compatible self-contained governance bundles — LOW-MEDIUM difficulty, HIGH benefit
+5. WASM Component Model shared-nothing isolation — MEDIUM difficulty, HIGH benefit (new)
+6. CapTP capability delegation for distributed flows — MEDIUM-HIGH difficulty, MEDIUM benefit (new)
+
+---
+
 ## §Refuted (did not survive adversarial verification)
 - Cedar objectively outperforms OPA/OpenFGA on request evaluation (0-3)
 - Cedar VGD methodology discovers 25 bugs through proofs + DRT combined (1-2)

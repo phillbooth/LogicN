@@ -36,14 +36,14 @@ The language is designed from the ground up so that execution intent, capability
 **Runtime written in LogicN** — Stage B: LogicN compiler compiles itself ← Major achievement milestone
 
 ```
-████████████████████████████░░  90%  (R6 ACHIEVED — all 5 corpus flows (strings/records/lists/match/effects) run at full Stage-A parity via self-hosted-bootstrap.test.mjs)
+████████████████████████████████  100%  (cross-module imports, record literals, for loops, observable effects, String/Int methods. 21 bootstrap tests. LogicN is its own runtime.)
 ```
 
 
 **TypeScript Runtime** — Stage A: compiler pipeline + execution engine running on Node.js
 
 ```
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (3,041 compiler · 15 economics · 95 graph · 14 security = 3,165 total · 0 failures · reproduce: `node scripts/run-all-tests.js --core`)
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (3,070 compiler · 15 economics · 95 graph · 14 security = 3,194 (core) · 109 devtools/ext = 3,288 full total · 0 failures · reproduce: `node scripts/run-all-tests.js --core`)
 ```
 
 | Layer | Status | % |

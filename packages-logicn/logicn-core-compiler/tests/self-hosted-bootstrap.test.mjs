@@ -101,7 +101,10 @@ async function stageB(src, flow, rtArgs) {
   const flows = (pr.value ?? pr).fields.get("flows");
   const tbl = await executeFlow("buildFlowTable", new Map([["flows", flows]]), gir.ast);
   const res = await executeFlow("runProgram", new Map([["flows", tbl.value ?? tbl], ["entryName", vStr(flow)], ["args", vList(rtArgs)]]), rt.ast);
-  return normB(res.value ?? res);
+  // runProgram now returns RunResult { retVal, auditLog } — extract retVal
+  const runResult = res.value ?? res;
+  const retVal = runResult.fields?.get("retVal") ?? runResult;
+  return normB(retVal);
 }
 
 // Assert Stage A and Stage B agree, and (optionally) match an expected canonical value.
@@ -167,5 +170,138 @@ describe("R6 bootstrap conformance — Stage A == Stage B (full parity)", () => 
     it("nameOf(9) → None", async () => {
       await conform("r6-005-name-of.lln", "nameOf", { code: vInt(9) }, [rtInt(9)], "None");
     });
+  });
+});
+
+// ── Widening tests — features beyond the 5-corpus-flow subset ─────────────────
+// These confirm Stage B handles the full language, not just the corpus.
+describe("Stage B widening — full language coverage (Stage A == Stage B)", () => {
+  async function runB(src, flow, rtArgs) {
+    const lx = await executeFlow("tokenize", new Map([["source", vStr(src)]]), lexer.ast);
+    let toks = lx.value ?? lx; if (toks.__tag === "ok") toks = toks.value;
+    const pr = await executeFlow("parseFlows", new Map([["tokens", toks]]), parser.ast);
+    const flows = (pr.value ?? pr).fields.get("flows");
+    const tbl = await executeFlow("buildFlowTable", new Map([["flows", flows]]), gir.ast);
+    const res = await executeFlow("runProgram", new Map([["flows", tbl.value ?? tbl], ["entryName", vStr(flow)], ["args", vList(rtArgs)]]), rt.ast);
+    const runResult = res.value ?? res;
+    const retVal = runResult.fields?.get("retVal") ?? runResult;
+    return normB(retVal);
+  }
+  async function runBFull(src, flow, rtArgs) {
+    const lx = await executeFlow("tokenize", new Map([["source", vStr(src)]]), lexer.ast);
+    let toks = lx.value ?? lx; if (toks.__tag === "ok") toks = toks.value;
+    const pr = await executeFlow("parseFlows", new Map([["tokens", toks]]), parser.ast);
+    const flows = (pr.value ?? pr).fields.get("flows");
+    const tbl = await executeFlow("buildFlowTable", new Map([["flows", flows]]), gir.ast);
+    const res = await executeFlow("runProgram", new Map([["flows", tbl.value ?? tbl], ["entryName", vStr(flow)], ["args", vList(rtArgs)]]), rt.ast);
+    const runResult = res.value ?? res;
+    // Return the full RunResult for audit log access
+    return runResult;
+  }
+
+  it("list.append + count — Array grows correctly", async () => {
+    const src = `pure flow f() -> Int\ncontract{intent{"x"}}\n{let xs: Array<Int> = [1,2]\nlet ys = xs.append(3)\nreturn ys.count()}`;
+    const a = await stageA(src, "f", {}); const b = await runB(src, "f", []);
+    assert.equal(b, a); assert.equal(a, "3");
+  });
+
+  it("match Some(x) destructuring — payload binding works", async () => {
+    const src = `pure flow f(v: Int) -> Int\ncontract{intent{"x"}}\n{let opt = Some(v)\nmatch opt{Some(x)=>{return x}None=>{return 0}}}`;
+    const a = await stageA(src, "f", { v: vInt(99) }); const b = await runB(src, "f", [rtInt(99)]);
+    assert.equal(b, a); assert.equal(a, "99");
+  });
+
+  it("String.length() method", async () => {
+    const src = `pure flow f(s: String) -> Int\ncontract{intent{"x"}}\n{return s.length()}`;
+    const a = await stageA(src, "f", { s: vStr("hello") }); const b = await runB(src, "f", [vRec({ ty: vStr("String"), i: vInt(0), b: vBool(false), s: vStr("hello"), tag: vStr(""), payload: emptyList, fields: emptyList })]);
+    assert.equal(b, a); assert.equal(a, "5");
+  });
+
+  it("Int.toStr() method — 42 → \"42\" (full parity Stage A == Stage B)", async () => {
+    const src = `pure flow f(n: Int) -> String\ncontract{intent{"x"}}\n{return n.toStr()}`;
+    const a = await stageA(src, "f", { n: vInt(42) }); const b = await runB(src, "f", [rtInt(42)]);
+    assert.equal(b, a, `Stage A/B mismatch: A=${a} B=${b}`);
+    assert.equal(a, '"42"');
+  });
+
+  it("Option.unwrapOr — Some returns payload, None returns default", async () => {
+    const src = `pure flow f() -> Int\ncontract{intent{"x"}}\n{let opt = Some(7)\nreturn opt.unwrapOr(0)}`;
+    const a = await stageA(src, "f", {}); const b = await runB(src, "f", []);
+    assert.equal(b, a); assert.equal(a, "7");
+  });
+
+  it("record literal construction — { x: n, y: 0 } builds a record and p.x reads the field", async () => {
+    const src = `record Point{x:Int y:Int}\npure flow f(n: Int) -> Int\ncontract{intent{"x"}}\n{let p: Point = {x: n, y: 0}\nreturn p.x}`;
+    const a = await stageA(src, "f", { n: vInt(5) }); const b = await runB(src, "f", [rtInt(5)]);
+    assert.equal(b, a, `Stage A/B mismatch: A=${a} B=${b}`); assert.equal(a, "5");
+  });
+
+  it("cross-module imports — multi-file program runs correctly in Stage B", async () => {
+    // FILE B: a helper module
+    const fileB = `pure flow double(n: Int) -> Int
+contract { intent { "Double a number." } }
+{ return n * 2 }`;
+
+    // FILE A: imports and calls FILE B's flow
+    const fileA = `import flow double from "./mathUtils.lln"
+
+pure flow compute(x: Int) -> Int
+contract { intent { "Use the imported double flow." } }
+{ return double(x) + 1 }`;
+
+    // Host-side multi-file pipeline: parse B → buildFlowTable B, parse A → buildFlowTable A, merge, run
+    async function runMultiFile(mainSrc, importedSrcs, flowName, rtArgs) {
+      let allItems = [];
+      for (const src of importedSrcs) {
+        const lx = await executeFlow("tokenize", new Map([["source", vStr(src)]]), lexer.ast);
+        let toks = lx.value ?? lx; if (toks.__tag === "ok") toks = toks.value;
+        const pr = await executeFlow("parseFlows", new Map([["tokens", toks]]), parser.ast);
+        const flows = (pr.value ?? pr).fields.get("flows");
+        const tbl = await executeFlow("buildFlowTable", new Map([["flows", flows]]), gir.ast);
+        allItems = [...allItems, ...(tbl.value ?? tbl).items];
+      }
+      const lx = await executeFlow("tokenize", new Map([["source", vStr(mainSrc)]]), lexer.ast);
+      let toks = lx.value ?? lx; if (toks.__tag === "ok") toks = toks.value;
+      const pr = await executeFlow("parseFlows", new Map([["tokens", toks]]), parser.ast);
+      const mainFlows = (pr.value ?? pr).fields.get("flows");
+      const tbl = await executeFlow("buildFlowTable", new Map([["flows", mainFlows]]), gir.ast);
+      const merged = vList([...(tbl.value ?? tbl).items, ...allItems]);
+      const res = await executeFlow("runProgram", new Map([["flows", merged], ["entryName", vStr(flowName)], ["args", vList(rtArgs)]]), rt.ast);
+      const runResult = res.value ?? res;
+      const v = runResult.fields?.get("retVal") ?? runResult;
+      return normB(v);
+    }
+
+    const result = await runMultiFile(fileA, [fileB], "compute", [rtInt(5)]);
+    assert.equal(result, "11", `expected 11, got ${result}`);
+    // Stage A doesn't support multi-file execution natively — verify Stage B independently.
+    // The host-side merge pattern is the canonical Stage-B multi-file approach.
+    assert.equal(result, "11", `expected 11 (double(5)+1), got ${result}`);
+  });
+
+  it("for i in 0..n range loop — sums 0+1+2+3+4 = 10 (Stage B; for not yet in Stage-A tree-walker)", async () => {
+    const src = `pure flow f() -> Int\ncontract{intent{"x"}}\n{mut acc: Int = 0\nfor i in 0..5 { acc = acc + i }\nreturn acc}`;
+    const b = await runB(src, "f", []);
+    assert.equal(b, "10", `expected 10, got ${b}`);
+  });
+
+  it("for item in collection iterator — sums list [1,2,3] = 6", async () => {
+    const src = `pure flow f() -> Int\ncontract{intent{"x"}}\n{let xs: Array<Int> = [1, 2, 3]\nmut acc: Int = 0\nfor item in xs { acc = acc + item }\nreturn acc}`;
+    // Stage A may not support for loops yet — verify Stage B at minimum
+    const b = await runB(src, "f", []);
+    assert.equal(b, "6", `expected 6, got ${b}`);
+  });
+
+  it("AuditLog.write — produces an observable audit entry in Stage B", async () => {
+    const src = readFileSync(join(CORPUS, "r6-004-record-amount.lln"), "utf8");
+    const full = await runBFull(src, "recordAmount", [rtInt(5)]);
+    const auditLog = full.fields?.get("auditLog");
+    assert.ok(auditLog, "auditLog field must exist on RunResult");
+    const entries = auditLog.items ?? [];
+    assert.ok(entries.length >= 1, `Expected at least 1 audit entry, got ${entries.length}`);
+    const first = entries[0];
+    const effect = first?.fields?.get("effect")?.value ?? first?.fields?.get("effect");
+    assert.ok(effect === "audit.write" || String(effect).includes("audit"),
+      `Expected audit.write effect, got: ${JSON.stringify(effect)}`);
   });
 });

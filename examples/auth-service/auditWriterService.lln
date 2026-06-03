@@ -58,6 +58,12 @@ secure flow writeAuditEvent(readonly request: Request): AuditWriteResult
 
   let severity: String = classifyAuditSeverity(rawEvent)
 
+  let retRawEvent: String = rawEvent
+  let retSeverity: String = severity
+  safe mut rawEvent = redact(rawEvent)
+  safe mut rawLevel = redact(rawLevel)
+  safe mut severity = redact(severity)
+
   AuditLog.write({
     event: rawEvent
     level: rawLevel
@@ -66,8 +72,8 @@ secure flow writeAuditEvent(readonly request: Request): AuditWriteResult
 
   return Ok({
     written: true
-    event: rawEvent
-    severity: severity
+    event: retRawEvent
+    severity: retSeverity
     phase: 52
   })
 }

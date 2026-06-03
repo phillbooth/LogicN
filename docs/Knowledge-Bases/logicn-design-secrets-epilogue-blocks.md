@@ -255,6 +255,20 @@ Ranked by leverage × buildability against today's codebase:
    the §Tail-adjacent piece (real KMS, real rotation).
 5. **`zk_snark_receipt` proof engine** — external prover/hardware; pure §Tail until a backend
    executes (do not count toward in-repo completion).
+   - **Path confirmed:** snarkjs (Groth16, pure JavaScript) — Phase 1; bellman (Rust napi-rs) — Phase 2.
+   - **Package:** `logicn-ext-proof-snarkjs` (non-core, same tier as `logicn-ext-secrets-vault`).
+   - **Interface:** `ProverBackend` plug-in contract so `logicn-core-compiler` never imports snarkjs
+     directly. Core defines the interface; ext package provides the implementation.
+     ```ts
+     interface ProverInput  { sourceText: string; contractHash: string; resultJson?: string }
+     interface ProverBackend { prove(input: ProverInput): Promise<ZkProof> }
+     ```
+   - **Circuit design:** Groth16 over sha256(sourceText + contractHash) as witness; public input =
+     inputSeal; output = proof object + verification key hash.
+   - **Upgrade path:** replace `zkReceiptStub` field in `EpilogueReceipt` with `zkProof: ZkProof`
+     once the backend is wired. The `ZkProof` interface and `ProverBackend` contract are already
+     defined in `proof-graph.ts`. See `docs/Knowledge-Bases/logicn-zk-proof-plan.md` for full spec.
+   - **Status:** stub live (produces clearly-labelled PENDING receipt). Real prover = Task #29.
 
 Items 1–2 strengthen LogicN's core differentiator (declared-and-enforced governance, fail
 before execution) with no new infrastructure; 3–5 are host/ext/backend work.

@@ -109,6 +109,7 @@ export {
 
 // Execution Graph Kernel — ProofGraph, ExecutionSignature, GraphFingerprint
 // Phase 26B: ImmutableInputSeal, HardwareSealedDispatch, LLN-HW-001/002/003
+// Phase 40: EpilogueReceipt, generateEpilogueReceipt
 export {
   computeExecutionSignature,
   executionSignatureHash,
@@ -125,6 +126,7 @@ export {
   verifyGovernanceSignatureHybrid,
   generateGovernanceKeyPair,
   generateHybridGovernanceKeyPair,
+  generateEpilogueReceipt,
   type GovernanceAlgorithm,
   LLN_HW_001,
   LLN_HW_002,
@@ -139,6 +141,9 @@ export {
   type ImmutableInputSeal,
   type HardwareSealedDispatch,
   type GovernanceKeyPair,
+  type EpilogueReceipt,
+  type EpilogueProofStrategy,
+  type EpilogueFailureAction,
 } from "./proof-graph.js";
 
 // Phase 18D / 18E / 18F / Hybrid WASM — Type Registry

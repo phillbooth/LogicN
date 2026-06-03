@@ -37,8 +37,10 @@ secure flow routeByEconomics(readonly request: Request): EconomicsResult {
   let hasDB: Bool = rawHasDB == "true"
   let target: String = inferTarget(hasAI, isCritical, hasDB)
   let riskTier: String = inferRiskTier(target)
+  let retTarget: String = target
+  safe mut target = redact(target)
   AuditLog.write({ eventName: "EconomicsRouted" target: target })
-  return Ok({ target: target riskTier: riskTier phase: 59 })
+  return Ok({ target: retTarget riskTier: riskTier phase: 59 })
 }
 
 route POST "/economics/route" {

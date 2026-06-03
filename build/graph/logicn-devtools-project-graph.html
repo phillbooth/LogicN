@@ -7,7 +7,7 @@
 </head>
 <body>
 <h1>LogicN Project Graph</h1>
-<p>2778 nodes, 3511 relationships.</p>
+<p>2794 nodes, 3527 relationships.</p>
 <h2>Nodes</h2>
 <ul><li><strong>logicn-core</strong> <span>Package</span></li>
 <li><strong>logicn-core-compiler</strong> <span>Package</span></li>
@@ -452,6 +452,7 @@
 <li><strong>logicn-architecture-direction-v2.md</strong> <span>Document</span></li>
 <li><strong>logicn-architecture-high-roi-ideas.md</strong> <span>Document</span></li>
 <li><strong>logicn-architecture-layers.md</strong> <span>Document</span></li>
+<li><strong>logicn-asic-cyber-physical.md</strong> <span>Document</span></li>
 <li><strong>logicn-ast-published-schema.md</strong> <span>Document</span></li>
 <li><strong>logicn-ast-to-gir.md</strong> <span>Document</span></li>
 <li><strong>logicn-audit-2026-06-01.md</strong> <span>Document</span></li>
@@ -521,6 +522,8 @@
 <li><strong>logicn-core-syntax-bindings-pipeline.md</strong> <span>Document</span></li>
 <li><strong>logicn-core-syntax-typed-content-blocks.md</strong> <span>Document</span></li>
 <li><strong>logicn-core-vector-photonic-governance.md</strong> <span>Document</span></li>
+<li><strong>logicn-cpp-bridge.md</strong> <span>Document</span></li>
+<li><strong>logicn-cross-layer-resilience.md</strong> <span>Document</span></li>
 <li><strong>logicn-data-layout-memory-hints.md</strong> <span>Document</span></li>
 <li><strong>logicn-design-primitive-obsession.md</strong> <span>Document</span></li>
 <li><strong>logicn-design-secrets-epilogue-blocks.md</strong> <span>Document</span></li>
@@ -537,6 +540,7 @@
 <li><strong>logicn-explicitness-principles.md</strong> <span>Document</span></li>
 <li><strong>logicn-flow-contracts.md</strong> <span>Document</span></li>
 <li><strong>logicn-flow-entry-points.md</strong> <span>Document</span></li>
+<li><strong>logicn-fortified-typed-logic.md</strong> <span>Document</span></li>
 <li><strong>logicn-framework-api-server-implementation.md</strong> <span>Document</span></li>
 <li><strong>logicn-framework-api-server-v02.md</strong> <span>Document</span></li>
 <li><strong>logicn-gir-emitter-architecture.md</strong> <span>Document</span></li>
@@ -670,6 +674,7 @@
 <li><strong>logicn-unified-syntax-governance-and-target-bridge-plan.md</strong> <span>Document</span></li>
 <li><strong>logicn-v1-memory-model.md</strong> <span>Document</span></li>
 <li><strong>logicn-value-state-checker-architecture.md</strong> <span>Document</span></li>
+<li><strong>logicn-zk-proof-plan.md</strong> <span>Document</span></li>
 <li><strong>lsgr-runtime-components.md</strong> <span>Document</span></li>
 <li><strong>malicious-data-and-exploit-resistance.md</strong> <span>Document</span></li>
 <li><strong>match-catch-all-branch.md</strong> <span>Document</span></li>
@@ -1119,6 +1124,7 @@
 <li><strong>forEarlyExit_forEarlyExit.egraph.json</strong> <span>Document</span></li>
 <li><strong>freqMapGet_freqMapGet.egraph.json</strong> <span>Document</span></li>
 <li><strong>freqMapSize_freqMapSize.egraph.json</strong> <span>Document</span></li>
+<li><strong>f_f.egraph.json</strong> <span>Document</span></li>
 <li><strong>getActor_getActor.egraph.json</strong> <span>Document</span></li>
 <li><strong>getAmount_getAmount.egraph.json</strong> <span>Document</span></li>
 <li><strong>getTrace_getTrace.egraph.json</strong> <span>Document</span></li>
@@ -1127,6 +1133,7 @@
 <li><strong>greet_greet.egraph.json</strong> <span>Document</span></li>
 <li><strong>grossPrice_grossPrice.egraph.json</strong> <span>Document</span></li>
 <li><strong>guardedCount_guardedCount.egraph.json</strong> <span>Document</span></li>
+<li><strong>g_g.egraph.json</strong> <span>Document</span></li>
 <li><strong>handleEmail_handleEmail.egraph.json</strong> <span>Document</span></li>
 <li><strong>httpStatus_httpStatus.egraph.json</strong> <span>Document</span></li>
 <li><strong>h_h.egraph.json</strong> <span>Document</span></li>
@@ -1657,6 +1664,11 @@
 <li><strong>computeExecutionSignature</strong> <span>Flow</span></li>
 <li><strong>executionSignatureHash</strong> <span>Flow</span></li>
 <li><strong>ImmutableInputSeal</strong> <span>Type</span></li>
+<li><strong>EpilogueProofStrategy</strong> <span>Type</span></li>
+<li><strong>EpilogueFailureAction</strong> <span>Type</span></li>
+<li><strong>ZkProof</strong> <span>Type</span></li>
+<li><strong>EpilogueReceipt</strong> <span>Type</span></li>
+<li><strong>generateEpilogueReceipt</strong> <span>Flow</span></li>
 <li><strong>HardwareSealedDispatch</strong> <span>Type</span></li>
 <li><strong>LLN_HW_001</strong> <span>Type</span></li>
 <li><strong>LLN_HW_002</strong> <span>Type</span></li>
@@ -1665,6 +1677,10 @@
 <li><strong>ProofObligation</strong> <span>Type</span></li>
 <li><strong>ProofEvidence</strong> <span>Type</span></li>
 <li><strong>ProofGraph</strong> <span>Type</span></li>
+<li><strong>LiabilityTier</strong> <span>Type</span></li>
+<li><strong>LiabilityProfile</strong> <span>Type</span></li>
+<li><strong>PhysicalHardeningTier</strong> <span>Type</span></li>
+<li><strong>TamperResponseStrategy</strong> <span>Type</span></li>
 <li><strong>buildProofGraph</strong> <span>Flow</span></li>
 <li><strong>sharesGovernanceShape</strong> <span>Flow</span></li>
 <li><strong>GovernanceAlgorithm</strong> <span>Type</span></li>
@@ -3223,6 +3239,9 @@
 <li>doc:docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md <code>documents</code> package:logicn-core-vector</li>
 <li>doc:docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md <code>documents</code> package:logicn-core-photonic</li>
 <li>doc:docs/Knowledge-Bases/logicn-core-vector-photonic-governance.md <code>documents</code> package:logicn-target-photonic</li>
+<li>doc:docs/Knowledge-Bases/logicn-cpp-bridge.md <code>documents</code> package:logicn-core</li>
+<li>doc:docs/Knowledge-Bases/logicn-cpp-bridge.md <code>documents</code> package:logicn-core-compiler</li>
+<li>doc:docs/Knowledge-Bases/logicn-cpp-bridge.md <code>documents</code> package:logicn-core-runtime</li>
 <li>doc:docs/Knowledge-Bases/logicn-data-layout-memory-hints.md <code>documents</code> package:logicn-core</li>
 <li>doc:docs/Knowledge-Bases/logicn-data-layout-memory-hints.md <code>documents</code> package:logicn-core-compiler</li>
 <li>doc:docs/Knowledge-Bases/logicn-data-layout-memory-hints.md <code>documents</code> package:logicn-core-runtime</li>
@@ -3284,9 +3303,6 @@
 <li>doc:docs/Knowledge-Bases/logicn-intent-graph.md <code>documents</code> package:logicn-core-security</li>
 <li>doc:docs/Knowledge-Bases/logicn-intent-graph.md <code>documents</code> package:logicn-core-reports</li>
 <li>doc:docs/Knowledge-Bases/logicn-intent-graph.md <code>documents</code> package:logicn-core-compute</li>
-<li>doc:docs/Knowledge-Bases/logicn-intent-graph.md <code>documents</code> package:logicn-framework-app-kernel</li>
-<li>doc:docs/Knowledge-Bases/logicn-intent-graph.md <code>documents</code> package:logicn-core-cli</li>
-<li>doc:docs/Knowledge-Bases/logicn-javascript-escape-hatch.md <code>documents</code> package:logicn-core</li>
-<li>doc:docs/Knowledge-Bases/logicn-javascript-escape-hatch.md <code>documents</code> package:logicn-core-security</li></ul>
+<li>doc:docs/Knowledge-Bases/logicn-intent-graph.md <code>documents</code> package:logicn-framework-app-kernel</li></ul>
 </body>
 </html>

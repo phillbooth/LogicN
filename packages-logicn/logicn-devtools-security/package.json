@@ -24,7 +24,8 @@
   },
   "dependencies": {
     "@logicn/core-compiler": "file:../logicn-core-compiler",
-    "@logicn/core-economics": "file:../logicn-core-economics"
+    "@logicn/core-economics": "file:../logicn-core-economics",
+    "@logicn/devtools-pci": "file:../logicn-devtools-pci"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",

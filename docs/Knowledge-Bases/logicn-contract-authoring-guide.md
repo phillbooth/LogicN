@@ -43,6 +43,8 @@ Nothing here is *globally* mandatory. Requirement depends on the **flow kind** a
 | `economics` | **Optional, auto-by-default** | cost/resource budget | auto-inferred from CostGraph/ValueGraph when omitted |
 | `epilogue` | **Optional, auto-by-default** | post-exec proof strategy | auto-tier from value when omitted; declare to pin a strategy |
 | `targets` | Optional | execution preference/fallback | hardware/TEE/WASM isolation hints; never grants authority |
+| `cyber_physical_hardening` | **Strongly discouraged unless Tier 1 ASIC** | physical shielding directives | auto-selected by runtime from ValueGraph. Only declare with high `economics.max_risk_liability` AND physical ASIC hardware. LLN-GOV-017 warns if declared without need. |
+| `liability` | **NEVER write manually** | max legal/financial exposure | auto-calculated by governance verifier from breach-risk matrix → stored in ProofGraph. LLN-GOV-018 warns if declared in source. |
 
 ## Decision guide by flow kind
 

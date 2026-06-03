@@ -66,6 +66,13 @@ secure flow resolveType(readonly request: Request): Response
   let isBuiltin: Bool = isBuiltinType(typeName)
   let category: String = typeCategory(typeName)
 
+  let retTypeName: String = typeName
+  let retIsBuiltin: Bool = isBuiltin
+  let retCategory: String = category
+  safe mut typeName = redact(typeName)
+  safe mut isBuiltin = redact(isBuiltin)
+  safe mut category = redact(category)
+
   AuditLog.write({
     event: "TypeResolve",
     typeName: typeName,
@@ -74,9 +81,9 @@ secure flow resolveType(readonly request: Request): Response
   })
 
   return {
-    typeName: typeName,
-    isBuiltin: isBuiltin,
-    category: category,
+    typeName: retTypeName,
+    isBuiltin: retIsBuiltin,
+    category: retCategory,
     resolved: true
   }
 }

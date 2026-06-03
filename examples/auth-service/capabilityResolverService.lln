@@ -62,13 +62,16 @@ secure flow resolveCapability(readonly request: Request): CapabilityResolveResul
   let available: Bool = isEffectAvailable(rawEffect)
   let tier: String = effectTier(rawEffect)
 
+  let retRawEffect: String = rawEffect
+  safe mut rawEffect = redact(rawEffect)
+
   AuditLog.write({
     event: "CapabilityResolved",
     effectName: rawEffect
   })
 
   return Ok({
-    effectName: rawEffect
+    effectName: retRawEffect
     available: available
     tier: tier
     phase: 51

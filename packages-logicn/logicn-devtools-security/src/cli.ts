@@ -19,6 +19,7 @@ import { checkPathSandbox } from "./path-sandbox.js";
 import { validateRegexPattern } from "./regex-guard.js";
 import { assessRisk, formatRiskAssessment, DataClassification } from "./risk-calculator.js";
 import type { RuntimeProfile } from "@logicn/core-compiler";
+import { runPciAudit } from "@logicn/devtools-pci";
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -28,11 +29,12 @@ async function main(): Promise<number> {
     case "audit": {
       const filePath = args[1];
       if (!filePath) {
-        process.stderr.write("Usage: logicn-security audit <file.lln> [--profile strict,...] [--governance dev|production|deterministic|check-only] [--json] [--strict]\n");
+        process.stderr.write("Usage: logicn-security audit <file.lln> [--profile strict,...] [--governance dev|production|deterministic|check-only] [--json] [--strict] [--pci]\n");
         return 1;
       }
       const wantJson    = args.includes("--json");
       const strictMode  = args.includes("--strict");
+      const wantPci     = args.includes("--pci");
       const profileIdx  = args.indexOf("--profile");
       const profiles: RuntimeProfile[] = profileIdx >= 0
         ? (args[profileIdx + 1] ?? "strict").split(",") as RuntimeProfile[]
@@ -56,8 +58,15 @@ async function main(): Promise<number> {
       const opts: SecurityAuditOptions = { profiles, governanceProfile, fileName: filePath, strict: strictMode };
       const report = await runSecurityAudit(source, opts);
 
+      // Run PCI audit if --pci flag is present
+      const pciReport = wantPci ? runPciAudit(source, filePath) : null;
+
       if (wantJson) {
-        process.stdout.write(JSON.stringify(report, null, 2) + "\n");
+        if (pciReport !== null) {
+          process.stdout.write(JSON.stringify({ security: report, pci: pciReport }, null, 2) + "\n");
+        } else {
+          process.stdout.write(JSON.stringify(report, null, 2) + "\n");
+        }
       } else {
         process.stdout.write(`\nLogicN Security Audit — ${filePath}\n`);
         process.stdout.write(`Profile: ${profiles.join(", ")} | Governance: ${governanceProfile} | ${report.summary}\n\n`);
@@ -70,9 +79,26 @@ async function main(): Promise<number> {
           }
         }
         process.stdout.write("\n");
+
+        if (pciReport !== null) {
+          const pciStatus = pciReport.passed ? "PASS" : "FAIL";
+          process.stdout.write(`PCI DSS 4.0.1 Audit — ${pciStatus} | ${pciReport.findings.length} finding(s)\n\n`);
+          if (pciReport.findings.length === 0) {
+            process.stdout.write("  ✓ No PCI findings\n");
+          } else {
+            for (const f of pciReport.findings) {
+              const icon = f.severity === "critical" ? "🔴" : f.severity === "high" ? "🟠" : "🟡";
+              process.stdout.write(`  ${icon} [${f.code}] PCI Req ${f.pciRequirement} ${f.flowName ? `(${f.flowName}) ` : ""}${f.message}\n`);
+            }
+            process.stdout.write(`\n  Failed PCI requirements: ${pciReport.failedRequirements.join(", ")}\n`);
+          }
+          process.stdout.write("\n");
+        }
       }
 
-      return report.passed ? 0 : 2;
+      const securityPassed = report.passed;
+      const pciPassed = pciReport === null || pciReport.passed;
+      return (securityPassed && pciPassed) ? 0 : 2;
     }
 
     case "path-check": {
@@ -125,7 +151,7 @@ async function main(): Promise<number> {
     default:
       process.stdout.write(`logicn-security — LogicN Security Devtools\n\n`);
       process.stdout.write(`Commands:\n`);
-      process.stdout.write(`  audit <file.lln> [--profile strict,...] [--json] [--strict]   Run security audit\n`);
+      process.stdout.write(`  audit <file.lln> [--profile strict,...] [--json] [--strict] [--pci]   Run security audit (add --pci for PCI DSS 4.0.1 checks)\n`);
       process.stdout.write(`  path-check <root> <path>                                      Check path confinement\n`);
       process.stdout.write(`  regex-check <pattern>                                         Check regex for ReDoS\n`);
       process.stdout.write(`  risk <classification> <records> <probability>                 Calculate breach risk\n\n`);

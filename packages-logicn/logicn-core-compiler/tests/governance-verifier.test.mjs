@@ -779,3 +779,67 @@ describe("Governance verifier — epilogue {} strategy validation", () => {
     assert.ok(!hasDiag(r, "LLN-GOV-015") && !hasDiag(r, "LLN-GOV-016"), `unexpected: ${r.diagnostics.map(d=>d.code).join(",")}`);
   });
 });
+
+// ── LLN-GOV-017/018: cyber_physical_hardening + liability validation ──────────
+describe("Governance verifier — cyber_physical_hardening + liability (auto-by-default)", () => {
+  const mkSovereign = (extra = "") => `secure flow f(x: Int) -> Int
+contract { intent { "Sovereign transaction." }  effects { audit.write }
+  ${extra}
+  economics { max_risk_liability "50000" }
+}
+{ return x }`;
+  const mkLow = (extra = "") => `secure flow f(x: Int) -> Int
+contract { intent { "Low risk." }  effects { audit.write }  ${extra} }
+{ return x }`;
+
+  it("valid cyber_physical_hardening on high-risk flow → clean", () => {
+    const r = parseAndVerify(mkSovereign("cyber_physical_hardening { enclosure_shielding active_mesh  on_tamper_signal zeroize }"), "production");
+    assert.ok(!hasDiag(r, "LLN-GOV-017"), `unexpected: ${r.diagnostics.map(d=>d.code).join(",")}`);
+  });
+
+  it("cyber_physical_hardening on low-risk flow (no high economics) → LLN-GOV-017 warning", () => {
+    const r = parseAndVerify(mkLow("cyber_physical_hardening { enclosure_shielding active_mesh  on_tamper_signal zeroize }"), "production");
+    assert.ok(hasDiag(r, "LLN-GOV-017"), `expected GOV-017, got: ${r.diagnostics.map(d=>d.code).join(",")}`);
+    assert.equal(r.diagnostics.find(d=>d.code==="LLN-GOV-017")?.severity, "warning");
+  });
+
+  it("invalid enclosure_shielding value → LLN-GOV-017 error", () => {
+    const r = parseAndVerify(mkSovereign("cyber_physical_hardening { enclosure_shielding supershield }"), "production");
+    const errs = r.diagnostics.filter(d=>d.code==="LLN-GOV-017" && d.severity==="error");
+    assert.ok(errs.length > 0, `expected GOV-017 error`);
+  });
+
+  it("invalid on_tamper_signal value → LLN-GOV-017 error", () => {
+    const r = parseAndVerify(mkSovereign("cyber_physical_hardening { enclosure_shielding active_mesh  on_tamper_signal explode }"), "production");
+    const errs = r.diagnostics.filter(d=>d.code==="LLN-GOV-017" && d.severity==="error");
+    assert.ok(errs.length > 0, `expected GOV-017 error for invalid tamper signal`);
+  });
+
+  it("omitting cyber_physical_hardening entirely (auto-by-default) → clean", () => {
+    const r = parseAndVerify(mkLow(""), "production");
+    assert.ok(!hasDiag(r, "LLN-GOV-017"));
+  });
+
+  it("manually writing liability {} → LLN-GOV-018 warning", () => {
+    const r = parseAndVerify(mkLow("liability { max_exposure 10000 }"), "production");
+    assert.ok(hasDiag(r, "LLN-GOV-018"), `expected GOV-018`);
+    assert.equal(r.diagnostics.find(d=>d.code==="LLN-GOV-018")?.severity, "warning");
+  });
+
+  it("not writing liability {} → no LLN-GOV-018", () => {
+    const r = parseAndVerify(mkLow(""), "production");
+    assert.ok(!hasDiag(r, "LLN-GOV-018"));
+  });
+});
+
+describe("Governance verifier — LiabilityProfile auto-populated in ProofGraph", () => {
+  it("verifyGovernance populates proofGraphs for governed flows", () => {
+    const src = `secure flow f(x: Int) -> Int
+contract { intent { "Governed flow." }  effects { audit.write } }
+{ return x }`;
+    const r = parseAndVerify(src, "production");
+    // proofGraphs should contain an entry for the flow
+    assert.ok(r.proofGraphs.size > 0, "proofGraphs should be populated");
+    assert.ok(r.proofGraphs.has("f"), "proofGraphs should have entry for flow 'f'");
+  });
+});

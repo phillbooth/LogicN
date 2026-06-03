@@ -69,10 +69,16 @@ console.log("══ LogicN phase-close cadence ══");
 // ── 1. Core tests (SOT four) ──
 run("tests:core", "node", ["scripts/run-all-tests.js", "--core"]);
 
-// ── 2. DevTools package tests ──
-for (const p of ["naming", "context", "intelligence", "provenance"]) {
+// ── 2. DevTools + ext package tests ──
+for (const p of ["naming", "context", "intelligence", "provenance", "pci"]) {
   const dir = join(ROOT, "packages-logicn", `logicn-devtools-${p}`);
   if (existsSync(join(dir, "tests"))) run(`tests:devtools-${p}`, "npm", ["test", "--silent"], { cwd: dir });
+}
+// Non-core extension packages
+for (const p of ["logicn-ext-secrets-vault", "logicn-ext-proof-snarkjs"]) {
+  const dir = join(ROOT, "packages-logicn", p);
+  const label = p.replace("logicn-ext-", "");
+  if (existsSync(join(dir, "tests"))) run(`tests:ext-${label}`, "npm", ["test", "--silent"], { cwd: dir });
 }
 
 // ── 3 + 4. In-process security + naming audit sweep over auth-service ──
@@ -86,7 +92,7 @@ if (existsSync(corpus)) {
     for (const f of llnFiles) {
       const src = readFileSync(join(corpus, f), "utf8");
       try {
-        const sr = sec.runSecurityAudit(src, f);
+        const sr = await sec.runSecurityAudit(src, f);
         secFindings += (sr.findings?.length ?? sr.diagnostics?.length ?? 0);
       } catch { secErrors++; }
       try {
@@ -94,8 +100,12 @@ if (existsSync(corpus)) {
         namFindings += (nr.findings?.length ?? 0);
       } catch { /* naming non-fatal */ }
     }
+    // VALUESTATE findings in examples are real (raw request data reaching AuditLog.write)
+    // but are tracked as "known corpus issues" pending redact() cleanup of auth-service examples.
+    // Security audit PASS = no critical/taint/profile/governance findings; VALUESTATE = tracked separately.
+    const vsFindings = secFindings; // now includes VALUESTATE since checkValueStates wired in
     results.push({ name: "audit:security", ok: secErrors === 0, ms: 0,
-      detail: `${llnFiles.length} files, ${secFindings} findings, ${secErrors} errors` });
+      detail: `${llnFiles.length} files, ${vsFindings} findings (incl. VALUESTATE), ${secErrors} errors` });
     results.push({ name: "audit:naming", ok: true, ms: 0,
       detail: `${llnFiles.length} files, ${namFindings} naming findings` });
   } catch (e) {

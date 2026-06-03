@@ -34,8 +34,10 @@ secure flow estimateCost(readonly request: Request): Response
   let risk: Int = estimateRiskCost(recordCount, classificationLevel)
   let audit: Int = 5
   let total: Int = totalCost(compute, risk, audit)
+  let retTotal: Int = total
+  safe mut total = redact(total)
   AuditLog.write({ event: "CostEstimate", total: total })
-  return { computeCost: compute, riskCost: risk, auditCost: audit, totalCost: total }
+  return { computeCost: compute, riskCost: risk, auditCost: audit, totalCost: retTotal }
 }
 
 route POST "/economics/estimate" { request Request  response Response  flow estimateCost }

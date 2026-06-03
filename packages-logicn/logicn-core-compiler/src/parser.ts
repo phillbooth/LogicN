@@ -2711,6 +2711,28 @@ class Parser {
         continue;
       }
 
+      // `cyber_physical_hardening { enclosure_shielding active_mesh fault_mitigation lockstep
+      //   side_channel_protection constant_row on_tamper_signal zeroize }` —
+      // Physical ASIC shielding directives. AUTO-BY-DEFAULT: the runtime selects the
+      // appropriate shielding tier from the ValueGraph risk classification. Only declare
+      // explicitly for sovereign/defense-grade flows with high economics.max_risk_liability.
+      // Both AI and human authors should omit this block unless operating on Tier 1
+      // hardware (active shielding mesh) with proven physical-breach risk.
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "cyber_physical_hardening") {
+        children.push(this.parseContractSubBlock("cyber_physical_hardening"));
+        this.skipNewlines();
+        continue;
+      }
+
+      // `liability {}` — auto-calculated max legal/financial exposure from the ValueGraph
+      // breach-risk matrix. NEVER written in source — the governance verifier computes and
+      // stores it in the ProofGraph. If a developer writes it manually a LLN-GOV warning fires.
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "liability") {
+        children.push(this.parseContractSubBlock("liability"));
+        this.skipNewlines();
+        continue;
+      }
+
       // `secrets { credential <name> { provider ... } rotation { ... } }` — sealed
       // credentials topology. Optional + AUTO-by-default: when omitted, the runtime
       // handles config via standard env mapping (no sealed block). When declared, the

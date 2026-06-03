@@ -60,3 +60,48 @@ describe("contract sub-blocks — secrets / epilogue / economics", () => {
     assert.equal(errs.length, 0, errs.map((e) => e.code).join(", "));
   });
 });
+
+describe("contract sub-blocks — cyber_physical_hardening + liability (auto-by-default)", () => {
+  // Test: cyber_physical_hardening parses and is retained
+  it("cyber_physical_hardening {} parses and is retained in contractDecl", () => {
+    const p = parseProgram(`secure flow f(x: Int) -> Int
+contract {
+  intent { "Tier 1 sovereign flow." }
+  effects { audit.write }
+  economics { max_risk_liability "50000" }
+  cyber_physical_hardening {
+    enclosure_shielding active_mesh
+    fault_mitigation lockstep
+    on_tamper_signal zeroize
+  }
+}
+{ return x }`, "t.lln");
+    const errs = p.diagnostics.filter(d => d.severity === "error");
+    assert.equal(errs.length, 0, errs.map(e => e.code).join(", "));
+    const blocks = contractSubBlocks(p.ast);
+    assert.ok(blocks.includes("cyber_physical_hardening:block"), `cyber_physical_hardening missing: ${JSON.stringify(blocks)}`);
+  });
+
+  // Test: liability {} parses (even though writing it manually is discouraged)
+  it("liability {} parses (though writing it manually triggers GOV-018 warning)", () => {
+    const p = parseProgram(`secure flow f(x: Int) -> Int
+contract { intent { "x." }  effects { audit.write }  liability { max_exposure 10000 } }
+{ return x }`, "t.lln");
+    const errs = p.diagnostics.filter(d => d.severity === "error");
+    assert.equal(errs.length, 0, errs.map(e => e.code).join(", "));
+    const blocks = contractSubBlocks(p.ast);
+    assert.ok(blocks.includes("liability:block"), `liability missing: ${JSON.stringify(blocks)}`);
+  });
+
+  // Test: omitting both blocks is correct (auto-by-default)
+  it("omitting cyber_physical_hardening and liability is correct for normal flows (auto-by-default)", () => {
+    const p = parseProgram(`pure flow f(x: Int) -> Int
+contract { intent { "Standard flow — no manual hardening needed." } }
+{ return x }`, "t.lln");
+    const errs = p.diagnostics.filter(d => d.severity === "error");
+    assert.equal(errs.length, 0);
+    const blocks = contractSubBlocks(p.ast);
+    assert.ok(!blocks.includes("cyber_physical_hardening:block"), "cyber_physical_hardening should be absent");
+    assert.ok(!blocks.includes("liability:block"), "liability should be absent");
+  });
+});

@@ -19,6 +19,7 @@ import {
   verifyGovernance,
   checkTaint,
   checkProfiles,
+  checkValueStates,
   type ProfileDiagnostic,
   type TaintDiagnostic,
   type GovernanceDiagnostic,
@@ -95,6 +96,20 @@ const SEVERITY_MAP: ReadonlyMap<string, SecuritySeverity> = new Map([
   ["LLN-HW-001", "high"],
   ["LLN-HW-002", "medium"],
   ["LLN-HW-003", "medium"],
+  // Value-state / taint-sink (unsafe bindings reaching governed sinks)
+  ["LLN-VALUESTATE-001", "high"],
+  ["LLN-VALUESTATE-002", "medium"],
+  ["LLN-VALUESTATE-003", "high"],    // unsafe value reached governed sink — unredacted PII/data
+  ["LLN-VALUESTATE-004", "medium"],
+  ["LLN-VALUESTATE-005", "high"],    // derived-unsafe reached sink
+  ["LLN-VALUESTATE-006", "medium"],
+  ["LLN-VALUESTATE-007", "medium"],
+  // Gate violations
+  ["LLN-GATE-001", "high"],
+  // Secret sink violations
+  ["LLN-SECRET-001", "critical"],   // secret logged
+  ["LLN-SECRET-002", "critical"],   // secret sent to network
+  ["LLN-SECRET-003", "critical"],   // secret serialized
   // Governance
   ["LLN-GOV-002", "high"],
   ["LLN-GOV-009", "high"],
@@ -118,6 +133,8 @@ function mapCheckerType(
   if (code.startsWith("LLN-PROFILE")) return "profile";
   if (code.startsWith("LLN-VAL")) return "value-safety";
   if (code.startsWith("LLN-HW")) return "hardware";
+  // GOV-017 covers cyber_physical_hardening validation — a hardware-domain concern.
+  if (code === "LLN-GOV-017") return "hardware";
   return "governance";
 }
 
@@ -128,7 +145,7 @@ function mapCheckerType(
 /**
  * Run all security checks on a LogicN source string.
  *
- * Orchestrates: taint checker → profile checker → governance verifier.
+ * Orchestrates: value-state checker → taint checker → profile checker → governance verifier.
  * Returns a structured SecurityAuditReport usable in CI.
  *
  * @param source  - LogicN source code (.lln content)
@@ -166,7 +183,21 @@ export async function runSecurityAudit(
     return buildReport(source, profiles, findings, checkedAt);
   }
 
-  // Taint check
+  // Value-state / taint-sink check (LLN-VALUESTATE, LLN-GATE, LLN-SECRET codes)
+  // Tracks unsafe bindings flowing to governed sinks (AuditLog.write, DB, network).
+  // Distinct from checkTaint (LLN-TAINT capability flags) — both are needed.
+  const vsResult = checkValueStates(parsed.ast);
+  for (const d of vsResult.diagnostics ?? []) {
+    findings.push({
+      code: d.code,
+      name: (d as any).name ?? d.code,
+      severity: classifySeverity(d.code, d.severity === "error" ? "error" : "warning"),
+      message: d.message,
+      checker: "value-safety" as const,
+    });
+  }
+
+  // Capability-flag taint check (LLN-TAINT codes)
   const taintDiags: TaintDiagnostic[] = checkTaint(parsed.ast, parsed.flows);
   for (const d of taintDiags) {
     findings.push({ code: d.code, name: d.name, severity: classifySeverity(d.code, d.severity === "error" ? "error" : "warning"), message: d.message, checker: "taint" as const, ...(d.flowName !== undefined ? { flowName: d.flowName } : {}) });

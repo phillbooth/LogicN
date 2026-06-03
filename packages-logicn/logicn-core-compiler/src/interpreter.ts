@@ -660,9 +660,11 @@ const STD_METHOD_NAMES = new Set([
   // String
   "length", "charCount", "toLower", "toUpper", "trim", "trimStart", "trimEnd",
   "startsWith", "endsWith", "contains", "includes", "split", "replace", "replaceAll",
-  "slice", "encode", "encodedLength", "codePoints", "isEmpty", "toString", "toText",
+  "slice", "encode", "encodedLength", "codePoints", "isEmpty", "toString", "toStr", "toText",
   "charAt", "indexOf", "lastIndexOf", "padStart", "padEnd", "repeat", "toChars",
   "toInt", "toFloat", "toDecimal",
+  // Int / Float / Bool methods
+  "abs",
   // Array
   "first", "last", "push", "append", "filter", "reduce", "sum", "reverse", "join", "find",
   "toList", "toArray", "take", "drop", "flatMap", "zip", "sortBy", "sort",
@@ -1535,12 +1537,42 @@ class Interpreter {
       }
     }
 
+    if (receiver.__tag === "int" || receiver.__tag === "float") {
+      const n = receiver.value as number;
+      switch (method) {
+        case "toStr":
+        case "toString": return { __tag: "string", value: String(n) };
+        case "toFloat":  return { __tag: "float", value: n };
+        case "toInt":    return { __tag: "some" as const, value: intVal(Math.trunc(n)) };
+        case "abs":      return receiver.__tag === "int" ? intVal(Math.abs(n)) : { __tag: "float" as const, value: Math.abs(n) };
+      }
+    }
+
+    if (receiver.__tag === "bool") {
+      switch (method) {
+        case "toStr":
+        case "toString": return { __tag: "string", value: receiver.value ? "true" : "false" };
+      }
+    }
+
     if (receiver.__tag === "list") {
       switch (method) {
         case "length": return { __tag: "int", value: receiver.items.length };
+        case "count":  return { __tag: "int", value: receiver.items.length };
         case "isEmpty": return { __tag: "bool", value: receiver.items.length === 0 };
         case "first": return receiver.items.length > 0 ? { __tag: "some", value: receiver.items[0] ?? LLN_VOID } : LLN_NONE;
         case "last": return receiver.items.length > 0 ? { __tag: "some", value: receiver.items[receiver.items.length - 1] ?? LLN_VOID } : LLN_NONE;
+        case "append": {
+          const elem = args[0] ?? LLN_VOID;
+          return { __tag: "list", items: [...receiver.items, elem] };
+        }
+        case "get": {
+          const idx = (args[0] as { __tag: "int"; value: number } | undefined)?.value ?? 0;
+          const item = receiver.items[idx];
+          return item !== undefined ? { __tag: "some", value: item } : LLN_NONE;
+        }
+        case "toStr":
+        case "toString": return { __tag: "string", value: `[${receiver.items.map((it) => safeDisplay(it)).join(", ")}]` };
       }
     }
 

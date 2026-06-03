@@ -121,7 +121,9 @@ async function runGIR(stmts, env = []) {
     "runGIRBody", new Map([["stmts", vList(stmts)], ["env", vList(env)]]),
     program.ast, program.flows, undefined, undefined, { pureFastPath: false }, undefined, undefined,
   );
-  const v = r.value ?? r;
+  const runResult = r.value ?? r;
+  // runProgram returns RunResult { retVal, auditLog } — extract retVal
+  const v = runResult.fields?.get("retVal") ?? runResult;
   return { ty: v.fields.get("ty").value, i: v.fields.get("i").value, b: v.fields.get("b").value };
 }
 
@@ -206,7 +208,9 @@ async function runProgram(table, entryName, args) {
     new Map([["flows", vList(table)], ["entryName", vStr(entryName)], ["args", vList(args)]]),
     program.ast, program.flows, undefined, undefined, { pureFastPath: false }, undefined, undefined,
   );
-  const v = r.value ?? r;
+  const runResult = r.value ?? r;
+  // runProgram returns RunResult { retVal, auditLog } — extract retVal
+  const v = runResult.fields?.get("retVal") ?? runResult;
   return { ty: v.fields.get("ty").value, i: v.fields.get("i").value, b: v.fields.get("b").value };
 }
 

@@ -1,0 +1,22 @@
+// Tier 1 Physical Hardening — Sovereign Core (Active Shielding Mesh)
+// USE CASE: Military, central bank settlement, intelligence-grade crypto
+// REMINDER: The runtime auto-selects shielding from ValueGraph risk tier.
+// Only write this block with Tier 1 ASIC hardware + regulatory mandate.
+
+secure flow settlementTier1(readonly request: Request) -> Result<String, String>
+contract {
+  intent { "Tier 1 sovereign settlement requiring Active Shielding Mesh ASIC protection." }
+  effects { audit.write  network.inbound }
+  economics { max_risk_liability "100000"  optimize performance }
+  cyber_physical_hardening {
+    enclosure_shielding active_mesh
+    fault_mitigation lockstep
+    side_channel_protection constant_row
+    on_tamper_signal zeroize
+  }
+  audit { level cryptographic_state_hash  target storage.tpm_backed_log }
+}
+{
+  AuditLog.write("Tier 1 settlement initiated")
+  return Ok("settlement_accepted")
+}

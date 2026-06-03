@@ -72,13 +72,16 @@ contract {
   let hasContent: Bool = len > 0
   let clamped: Int = mathClamp(len, 0, 100)
 
+  let retClamped: Int = clamped
+  safe mut clamped = redact(clamped)
+
   AuditLog.write({
     event: "StdlibDemo"
     inputLength: clamped.toString()
   })
 
   return Ok({
-    inputLength: clamped
+    inputLength: retClamped
     hasContent: hasContent
     phase: 53
   })

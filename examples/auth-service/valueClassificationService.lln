@@ -27,10 +27,12 @@ secure flow classifyData(readonly request: Request): Response
 
   unsafe let typeName: String = request.jsonBody.typeName
   let classification: Int = classifyValue(typeName)
-  let redact: Bool = requiresRedaction(classification)
+  let needsRedact: Bool = requiresRedaction(classification)
   let encrypt: Bool = requiresEncryption(classification)
+  let retClassification: Int = classification
+  safe mut classification = redact(classification)
   AuditLog.write({ event: "ValueClassification", classification: classification })
-  return { typeName: typeName, classification: classification, requiresRedaction: redact, requiresEncryption: encrypt }
+  return { typeName: typeName, classification: retClassification, requiresRedaction: needsRedact, requiresEncryption: encrypt }
 }
 
 route POST "/value/classify" { request Request  response Response  flow classifyData }

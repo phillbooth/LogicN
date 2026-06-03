@@ -92,6 +92,15 @@ contract {
   let profile: String = flowGovernanceProfile(resolvedFlow)
   let denied: Bool = profile == "denied"
 
+  let retRawMethod: String = rawMethod
+  let retRawPath: String = rawPath
+  let retResolvedFlow: String = resolvedFlow
+  let retProfile: String = profile
+  safe mut rawMethod = redact(rawMethod)
+  safe mut rawPath = redact(rawPath)
+  safe mut resolvedFlow = redact(resolvedFlow)
+  safe mut profile = redact(profile)
+
   AuditLog.write({
     event: "RouteDispatched"
     method: rawMethod
@@ -101,14 +110,14 @@ contract {
   })
 
   if denied {
-    return Err("Route not found: " + rawMethod + " " + rawPath)
+    return Err("Route not found: " + retRawMethod + " " + retRawPath)
   }
 
   return Ok({
-    method: rawMethod
-    path: rawPath
-    resolvedFlow: resolvedFlow
-    governanceProfile: profile
+    method: retRawMethod
+    path: retRawPath
+    resolvedFlow: retResolvedFlow
+    governanceProfile: retProfile
     dispatched: true
     phase: 54
   })

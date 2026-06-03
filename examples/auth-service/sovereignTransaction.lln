@@ -1,0 +1,77 @@
+// Phase 26B+ - Sovereign Financial Transaction
+// Demonstrates: cyber_physical_hardening {} (Tier 1 ASIC shielding)
+//
+// IMPORTANT: Most flows should NOT declare cyber_physical_hardening.
+// The runtime auto-selects the shielding tier from the ValueGraph.
+// Only declare explicitly when ALL of the following are true:
+//   (a) economics.max_risk_liability is high (>$10,000)
+//   (b) You have physical ASIC hardware with active shielding mesh
+//   (c) A regulatory mandate requires explicit shielding attestation
+//
+// For standard APIs, healthcare flows, and financial reporting:
+// omit cyber_physical_hardening entirely. The runtime handles it.
+
+secure flow processSovereignTransaction(readonly request: Request) -> TransactionResult
+contract {
+  intent { "Process a high-value sovereign financial transaction requiring Tier 1 ASIC shielding." }
+
+  request  { accepts json  requires body }
+  response { returns json }
+
+  effects {
+    network.inbound
+    audit.write
+  }
+
+  authority {
+    requires capability.billing.sovereign
+    signed_by actor.system.certified_settlement_agent
+    reason "Sovereign transactions require pre-approved agent certification."
+  }
+
+  privacy {
+    mask account_number
+    mask pan
+    strategy transform.crypto_pseudonymize
+  }
+
+  secrets {
+    credential settlement_signing_key { provider "hashicorp_vault"  path "secret/data/settlement/key" }
+    rotation { interval 1h  strategy smooth_handshake  on_rotation_fault halt }
+  }
+
+  epilogue {
+    generate_proof zk_snark_receipt
+    on_verification_failure halt_pipeline
+  }
+
+  economics {
+    max_risk_liability "50000"
+    optimize balanced
+  }
+
+  // cyber_physical_hardening is AUTO-BY-DEFAULT for 99% of flows.
+  // Only include this block when you have Tier 1 ASIC hardware AND a
+  // regulatory mandate for explicit shielding attestation.
+  // Valid values:
+  //   enclosure_shielding: active_mesh | deep_trench | standard_fabric
+  //   fault_mitigation:    lockstep | scalar_single | none
+  //   side_channel_protection: constant_row | differential_masking | none
+  //   on_tamper_signal:    zeroize | quarantine_core | halt | demote_to_local
+  cyber_physical_hardening {
+    enclosure_shielding active_mesh
+    fault_mitigation lockstep
+    side_channel_protection constant_row
+    on_tamper_signal zeroize
+  }
+
+  audit {
+    level cryptographic_state_hash
+    target storage.tpm_backed_log
+    track [ effects.network.inbound  effects.audit.write ]
+  }
+}
+{
+  AuditLog.write("Sovereign transaction initiated")
+  return Ok(request)
+}

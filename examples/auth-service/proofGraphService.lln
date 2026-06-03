@@ -34,8 +34,10 @@ secure flow generateProofSummary(readonly request: Request): ProofResult {
   unsafe let rawEffectCount: String = request.jsonBody.effectCount
   let level: Int = qualifierToProofLevel(rawQualifier)
   let sufficient: Bool = proofLevelSufficient(level, 1)
+  let retRawQualifier: String = rawQualifier
+  safe mut rawQualifier = redact(rawQualifier)
   AuditLog.write({ eventName: "ProofGenerated" qualifier: rawQualifier })
-  return Ok({ qualifier: rawQualifier proofLevel: level sufficient: sufficient phase: 59 })
+  return Ok({ qualifier: retRawQualifier proofLevel: level sufficient: sufficient phase: 59 })
 }
 
 route POST "/proof/generate" {

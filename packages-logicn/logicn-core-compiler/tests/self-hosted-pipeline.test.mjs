@@ -296,7 +296,9 @@ describe("self-hosted pipeline — multi-flow + recursion (M-C: LogicN runs Logi
     const res = await executeFlow(
       "runProgram", new Map([["flows", table], ["entryName", vStr(entry)], ["args", vList(args)]]), runtime.ast,
     );
-    const v = res.value ?? res;
+    const runResult = res.value ?? res;
+    // runProgram now returns RunResult { retVal, auditLog } — extract retVal
+    const v = runResult.fields?.get("retVal") ?? runResult;
     return { ty: v.fields.get("ty").value, i: v.fields.get("i").value, b: v.fields.get("b").value };
   }
 
