@@ -748,3 +748,34 @@ contract {
     assert.ok(!hasDiag(result, "LLN-GOV-003"), "Unexpected LLN-GOV-003 when email is wrapped in redact()");
   });
 });
+
+// ── LLN-GOV-015/016: epilogue {} strategy validation ─────────────────────────
+describe("Governance verifier — epilogue {} strategy validation", () => {
+  const mk = (epi) =>
+    `secure flow f(x: Int) -> Int\ncontract { intent { "test" }  ${epi} }\n{ return x }`;
+
+  it("a valid epilogue (sha256_seal + halt_pipeline) produces no diagnostic", () => {
+    const r = parseAndVerify(mk("epilogue { generate_proof sha256_seal  on_verification_failure halt_pipeline }"), "production");
+    assert.ok(!hasDiag(r, "LLN-GOV-015") && !hasDiag(r, "LLN-GOV-016"), `unexpected: ${r.diagnostics.map(d=>d.code).join(",")}`);
+  });
+
+  it("epilogue with generate_proof auto is valid", () => {
+    const r = parseAndVerify(mk("epilogue { generate_proof auto }"), "production");
+    assert.ok(!hasDiag(r, "LLN-GOV-015"));
+  });
+
+  it("an unrecognised proof strategy → LLN-GOV-015", () => {
+    const r = parseAndVerify(mk("epilogue { generate_proof unknown_algo }"), "production");
+    assert.ok(hasDiag(r, "LLN-GOV-015"), `expected GOV-015, got: ${r.diagnostics.map(d=>d.code).join(",")}`);
+  });
+
+  it("an unrecognised failure action → LLN-GOV-016", () => {
+    const r = parseAndVerify(mk("epilogue { generate_proof sha256_seal  on_verification_failure explode }"), "production");
+    assert.ok(hasDiag(r, "LLN-GOV-016"), `expected GOV-016`);
+  });
+
+  it("omitting the epilogue block entirely is auto-by-default (no diagnostic)", () => {
+    const r = parseAndVerify(mk(""), "production");
+    assert.ok(!hasDiag(r, "LLN-GOV-015") && !hasDiag(r, "LLN-GOV-016"), `unexpected: ${r.diagnostics.map(d=>d.code).join(",")}`);
+  });
+});

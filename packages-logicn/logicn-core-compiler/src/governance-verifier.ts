@@ -1240,6 +1240,67 @@ class GovernanceVerifier {
       );
       this.proofGraphsByFlow.set(flow.name, pg);
     }
+
+    // ── LLN-GOV-015/016: epilogue {} strategy validation ─────────────────────
+    // When a flow explicitly declares an `epilogue {}` block, validate that the
+    // proof strategy and failure action are recognised values.  An omitted block
+    // is AUTO-by-default (the runtime selects the tier from the ValueGraph) and
+    // emits no diagnostic. Only an invalid explicit value is an error.
+    if (flowNode !== undefined) {
+      this.verifyEpilogueBlock(flowNode, flow.name);
+    }
+  }
+
+  private verifyEpilogueBlock(flowNode: AstNode, flowName: string): void {
+    const contractNode = (flowNode.children ?? []).find((c) => c.kind === "contractDecl");
+    if (contractNode === undefined) return;
+
+    const epilogueNode = (contractNode.children ?? []).find(
+      (c) => c.kind === "identifier" && (c.value ?? "").startsWith("epilogue"),
+    );
+    if (epilogueNode === undefined) return; // auto-by-default → nothing to validate
+
+    // The content is stored as an identifier child: "decl: generate_proof <strategy> ..."
+    const declChild = (epilogueNode.children ?? []).find(
+      (c) => c.kind === "identifier" && (c.value ?? "").startsWith("decl:"),
+    );
+    const content = declChild !== undefined ? (declChild.value ?? "").slice("decl:".length).trim() : "";
+    const tokens = content.split(/\s+/);
+
+    const VALID_STRATEGIES = new Set(["auto", "sha256_seal", "zk_snark_receipt", "none"]);
+    const VALID_FAILURES  = new Set(["halt_pipeline", "quarantine_payload", "log_and_continue"]);
+
+    // Parse generate_proof <strategy>
+    const gpIdx = tokens.indexOf("generate_proof");
+    if (gpIdx !== -1) {
+      const strategy = tokens[gpIdx + 1] ?? "";
+      if (!VALID_STRATEGIES.has(strategy)) {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-GOV-015",
+          "EpilogueInvalidStrategy",
+          "error",
+          `Flow '${flowName}' declares epilogue { generate_proof ${strategy || "<missing>"} } but '${strategy || "<missing>"}' is not a recognised proof strategy.`,
+          epilogueNode.location,
+          `Valid strategies: auto | sha256_seal | zk_snark_receipt | none`,
+        ));
+      }
+    }
+
+    // Parse on_verification_failure <action>
+    const ovfIdx = tokens.indexOf("on_verification_failure");
+    if (ovfIdx !== -1) {
+      const action = tokens[ovfIdx + 1] ?? "";
+      if (!VALID_FAILURES.has(action)) {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-GOV-016",
+          "EpilogueInvalidFailureAction",
+          "error",
+          `Flow '${flowName}' declares epilogue { on_verification_failure ${action || "<missing>"} } but '${action || "<missing>"}' is not a recognised failure action.`,
+          epilogueNode.location,
+          `Valid actions: halt_pipeline | quarantine_payload | log_and_continue`,
+        ));
+      }
+    }
   }
 }
 

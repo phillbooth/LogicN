@@ -17,11 +17,11 @@ prints `3133 tests total`, matching the table below. (Per package: build, then `
 
 | Package | Tests | Pass | Fail | Prior doc claimed |
 |---|---|---|---|---|
-| logicn-core-compiler | 3,014 | 3,014 | 0 | 2,810 |
+| logicn-core-compiler | 3,041 | 3,041 | 0 | 2,810 |
 | logicn-core-economics | 15 | 15 | 0 | 15 ✓ |
 | logicn-devtools-graph-algorithms | 95 | 95 | 0 | 95 ✓ |
 | logicn-core-security | 14 | 14 | 0 | **32 ✗** |
-| **TOTAL** | **3,138** | **3,138** | **0** | 2,952 |
+| **TOTAL** | **3,165** | **3,165** | **0** | 2,952 |
 
 Corrections vs `logicn-audit-2026-06-02.md`:
 - Compiler 2,810 → **2,869** (includes +10 self-hosted runtime tests, +9
@@ -55,7 +55,7 @@ service facades do not advance Axis B, so counting them inflated the figure.
 | Axis | Honest current state | Basis |
 |---|---|---|
 | A — governed decision logic in `.lln` | **14 governed services tested** (of 25 `.lln` service files) | §4 |
-| B — engine self-hosting (THE goal) | **≈ 75–80%** — 1 functional + 7 partial + 0 stub (8 modules); **M-C reached for the subset — LogicN compiles AND runs LogicN end-to-end**: source → lex → parse → type/effect/govern → emit GIR → **run a recursive MULTI-FLOW program** (`runtime.lln` `runProgram` + `gir-emitter` `buildFlowTable`). Proven by `self-hosted-pipeline.test.mjs`: `fib(15)=610`, `sumTo(100)=5050`, nested calls — no TS in the pipeline. Remaining: widen runtime coverage (strings/records/lists, runtime effects) | §3 |
+| B — engine self-hosting (THE goal) | **≈ 90%** — **R6 ACHIEVED: Stage A == Stage B on all 5 corpus flows** (`self-hosted-bootstrap.test.mjs`, 11 tests). Grammar widened: member access, array literals, generic return types, match/Option, if/else, logical/unary. Parser/GIR/runtime handle records+lists+strings+Result+Option+effects. Epistemic gap to 100%: wider non-Int match patterns, lists-in-bodies, runtime effect dispatch, `else` on while — all polish, no new pipeline stages needed | §3 |
 
 So against the actual goal we are at roughly **35–40%**, not 55%. Milestone 2026-06-02:
 **no Stage-B stubs remain** — all 8 files run a real subset through the interpreter.

@@ -1,0 +1,8 @@
+// EXPECT: ACCEPT
+// R6 corpus 003 — R2: lists (array literal + .count())
+pure flow listLen() -> Int
+contract { intent { "Return the length of a literal list." } }
+{
+  let xs: Array<Int> = [1, 2, 3, 4]
+  return xs.count()
+}

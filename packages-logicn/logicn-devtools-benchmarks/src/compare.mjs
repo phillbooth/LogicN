@@ -179,8 +179,14 @@ console.log("> **🏆 Winner** = fastest runtime for that workload. Medals (🥇
 console.log(`> 🖥️ CPU = CPU execution | 🎮 GPU = real GPU dispatch (Deno WebGPU on ${GPU_NAME})\n`);
 
 // ── Winner summary first ──────────────────────────────────────────────────────
-console.log("| Benchmark | 🏆 Winner | Speed | Device | Notes |");
-console.log("|---|---|---|---|---|");
+// Columns now centre on the LogicN *governed* tier (the honest always-on path):
+//   • "LogicN (governed)" — governed throughput
+//   • "gov ÷ Winner"      — governed as a multiple of the fastest runtime (≤1×, shows the gap)
+//   • "gov ÷ Python"      — governed vs Python, the FLOOR LogicN must beat (✅ ≥1× / ❌ <1×)
+// Rationale: LogicN's Stage-A runtime is still TypeScript-interpreted (Stage B < 100%),
+// so Python is the fair like-for-like floor; Rust/Zig/WASM are the aspirational ceiling.
+console.log("| Benchmark | 🏆 Winner | Winner Speed | LogicN (governed) | gov ÷ Winner | gov ÷ Python (floor) | Why the winner wins |");
+console.log("|---|---|---|---|---|---|---|");
 
 for (const bench of data) {
   const m = {};
@@ -191,11 +197,39 @@ for (const bench of data) {
   for (const rt of ORDER) {
     if (m[rt] && m[rt] > winnerSpeed) { winnerSpeed = m[rt]; winnerRt = rt; }
   }
-  if (!winnerRt) { console.log(`| ${bench.benchmark} | — | — | — | No data |`); continue; }
+  if (!winnerRt) { console.log(`| ${bench.benchmark} | — | — | — | — | — | No data |`); continue; }
 
   const winnerLabel = LABEL[winnerRt] ?? winnerRt;
-  const device = (winnerRt === "denoWebGpu") ? "🎮 GPU" : "🖥️ CPU";
+  const deviceEmoji = (winnerRt === "denoWebGpu") ? "🎮" : "🖥️";
   const speedStr = fmtT(winnerSpeed);
+
+  // ── LogicN governed tier vs winner + vs Python floor ──
+  const gov = m.logicnGoverned ?? 0;
+  const py  = m.python ?? 0;
+  const govStr = gov ? fmtT(gov) : "—";
+
+  let govVsWinner = "—";
+  if (gov && winnerSpeed) {
+    if (winnerRt === "logicnGoverned") {
+      govVsWinner = "🏆 1.00× (is winner)";
+    } else {
+      const r = gov / winnerSpeed;          // always ≤ 1 unless governed is winner
+      const slower = (1 / r);
+      govVsWinner = r >= 0.1
+        ? `${r.toFixed(2)}× (${slower.toFixed(1)}× slower)`
+        : `${r.toFixed(r < 0.001 ? 5 : 4)}× (${slower >= 1000 ? (slower/1000).toFixed(1)+"K" : slower.toFixed(0)}× slower)`;
+    }
+  }
+
+  let govVsPython = "—";
+  if (gov && py) {
+    const r = gov / py;
+    govVsPython = r >= 1
+      ? `✅ **${r.toFixed(2)}×** faster`
+      : `❌ ${r.toFixed(2)}× (${(1/r).toFixed(1)}× slower)`;
+  } else if (gov && !py) {
+    govVsPython = "n/a (no Python)";
+  }
 
   // Short note explaining why this runtime wins
   let note = "";
@@ -206,8 +240,6 @@ for (const bench of data) {
   } else if (winnerRt === "nodejs") {
     note = "V8 JIT — wins when WASM N/A or string/async workload";
   } else if (winnerRt === "logicnPassive") {
-    // Passive = LRU cache warm hit (same input). Only meaningful for steady-state throughput.
-    // The 'real' winner for first-call or varied inputs is the next fastest runtime.
     const nextBest = ORDER.filter(r => r !== "logicnPassive" && m[r]).sort((a,b) => (m[b]??0)-(m[a]??0))[0];
     const nb = nextBest ? ` (first-call winner: ${LABEL[nextBest]} at ${fmtT(m[nextBest])})` : "";
     note = `LRU cache warm path${nb}`;
@@ -219,7 +251,21 @@ for (const bench of data) {
     note = "Python wins (C-backed lib or small-N setup overhead)";
   }
 
-  console.log(`| **${bench.benchmark}** | **${winnerLabel}** | **${speedStr}** | ${device} | ${note} |`);
+  console.log(`| **${bench.benchmark}** | **${winnerLabel}** ${deviceEmoji} | **${speedStr}** | ${govStr} | ${govVsWinner} | ${govVsPython} | ${note} |`);
+}
+
+// Floor-pass summary: how many benchmarks does governed LogicN beat Python on?
+{
+  let beatsPython = 0, comparedToPython = 0;
+  for (const bench of data) {
+    const gov = throughput(bench.results?.logicnGoverned);
+    const py  = throughput(bench.results?.python);
+    if (gov && py) { comparedToPython++; if (gov >= py) beatsPython++; }
+  }
+  if (comparedToPython > 0) {
+    console.log(`\n> **Python floor check:** LogicN (governed) beats Python on **${beatsPython}/${comparedToPython}** benchmarks where both ran. ` +
+      `Python is the like-for-like floor while the Stage-A runtime is still TypeScript-interpreted; Rust/Zig/WASM are the ceiling.`);
+  }
 }
 
 // ── Full table ────────────────────────────────────────────────────────────────

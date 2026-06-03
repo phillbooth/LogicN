@@ -268,6 +268,20 @@ function isLogCall(node: AstNode): boolean {
   return false;
 }
 
+// Network / egress sinks — a raw secret transmitted off-host is an exfiltration path.
+// Recognised: http.* / https.* / net.* / socket.* / ws.* / websocket.* method calls,
+// standalone fetch(...), and email/EmailService.send.
+function isNetworkSink(node: AstNode): boolean {
+  const methodName = node.value ?? "";
+  if (methodName === "fetch") return true;
+  const receiver = node.children?.[0];
+  if (receiver?.kind !== "identifier") return false;
+  const r = (receiver.value ?? "").toLowerCase();
+  if (r === "http" || r === "https" || r === "net" || r === "socket" || r === "ws" || r === "websocket") return true;
+  if ((r === "email" || r === "emailservice") && methodName === "send") return true;
+  return false;
+}
+
 // ---------------------------------------------------------------------------
 // Governance qualifier helpers
 //
@@ -307,6 +321,26 @@ function isProtectedValueExpression(node: AstNode): boolean {
   // Fully-qualified validate method names (method itself starts with "validate.")
   if (methodName.startsWith("validate.")) return true;
   return false;
+}
+
+/**
+ * Returns true when the node reads a value out of a `secrets {}`-declared credential —
+ * a secret SOURCE. A binding initialised from such a source is treated as a secret
+ * (SecureString-equivalent), so the existing LLN-SECRET-001 (logging) and LLN-SECRET-003
+ * (serialization) sink guards fire if that binding ever reaches a log / serialize / audit
+ * sink. Recognised accessors (receiver namespace . method):
+ *   secret.get / secret.read / vault.read / vault.get / kms.decrypt / secrets.get  (any case)
+ */
+function isSecretSourceExpression(node: AstNode): boolean {
+  if (node.kind === "errorPropagation") {
+    const inner = node.children?.[0];
+    return inner !== undefined && isSecretSourceExpression(inner);
+  }
+  if (node.kind !== "callExpr") return false;
+  const receiver = node.children?.[0];
+  if (receiver?.kind !== "identifier") return false;
+  const ns = (receiver.value ?? "").toLowerCase();
+  return ns === "secret" || ns === "secrets" || ns === "vault" || ns === "kms";
 }
 
 /**
@@ -853,7 +887,14 @@ class ValueStateChecker {
       }
     }
 
-    this.registerBinding({ ...info, ...locField, ...taintField });
+    // Secret-source inference: a binding read from a `secrets {}` credential accessor
+    // (secret.get / vault.read / kms.decrypt …) is a secret. Tag it as SecureString so the
+    // existing LLN-SECRET-001/003 sink guards block it from logs/serialization/audit output.
+    const secretField =
+      init !== undefined && isSecretSourceExpression(init) && info.typeName !== "SecureString"
+        ? { typeName: "SecureString" }
+        : {};
+    this.registerBinding({ ...info, ...locField, ...taintField, ...secretField });
     // Walk the init expression
     if (init !== undefined) this.walkNode(init);
   }
@@ -961,6 +1002,48 @@ class ValueStateChecker {
         this.checkArgForSecretSerialization(child, sinkName, node.location);
       }
     }
+
+    // Secret → network egress: LLN-SECRET-002 — a raw secret transmitted off-host.
+    if (isNetworkSink(node)) {
+      const callName = buildFullCallName(node);
+      for (const child of node.children ?? []) {
+        this.checkArgForSecretNetwork(child, callName, node.location);
+      }
+    }
+  }
+
+  /**
+   * LLN-SECRET-002: a SecureString (incl. a value read from a `secrets {}` credential)
+   * must not be transmitted to a network/egress sink — that is an exfiltration path.
+   * `redact()` / sealing breaks the chain. Mirrors checkArgForSecretLogging.
+   */
+  private checkArgForSecretNetwork(
+    node: AstNode,
+    callName: string,
+    location: SourceLocation | undefined,
+  ): void {
+    if (node.kind === "callExpr" && isRedactCall(node)) return;
+    if (node.kind === "identifier") {
+      const binding = this.lookupBinding(node.value ?? "");
+      if (binding?.typeName === "SecureString") {
+        this.diagnostics.push(makeVSDiag(
+          "LLN-SECRET-002",
+          "SecretSentToNetwork",
+          `SecureString binding '${binding.name}' must not be transmitted to network sink '${callName}'.`,
+          location,
+          `Send a sealed/redacted form instead, e.g. redact(${binding.name}), or use a capability-scoped secret channel.`,
+          `redact(${binding.name})`,
+          {
+            why: `'${binding.name}' is a secret — transmitting its raw value off-host is an exfiltration path.`,
+            risk: `Sending credentials/keys/tokens to a network egress in plaintext leaks them to anyone observing the channel or endpoint.`,
+          },
+        ));
+      }
+      return;
+    }
+    for (const child of node.children ?? []) {
+      this.checkArgForSecretNetwork(child, callName, location);
+    }
   }
 
   /**
@@ -1037,6 +1120,9 @@ class ValueStateChecker {
     callName: string,
     location: SourceLocation | undefined,
   ): void {
+    // A redact(...) wrapper produces a safe '[REDACTED]' placeholder — honor it at log
+    // sinks just as checkArgForSecretSerialization does (do not recurse into its child).
+    if (node.kind === "callExpr" && isRedactCall(node)) return;
     if (node.kind === "identifier") {
       const binding = this.lookupBinding(node.value ?? "");
       if (binding?.typeName === "SecureString") {

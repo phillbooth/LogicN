@@ -1,0 +1,12 @@
+// EXPECT: ACCEPT
+// R6 corpus 002 — R2: records (field access on a record param)
+record Point {
+  x: Int
+  y: Int
+}
+
+pure flow distanceSq(p: Point) -> Int
+contract { intent { "Read record fields and combine them." } }
+{
+  return p.x * p.x + p.y * p.y
+}

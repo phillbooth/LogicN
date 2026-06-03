@@ -69,6 +69,13 @@ const BENCHMARKS = [
   // One run = scanRecords(500) = 500 records parsed. split/length match JS/Python exactly,
   // so the checksum (12500) is identical across Node, Python and the LogicN string path.
   { id: "json-parse", dir: "json-parse", logicnOpsPerRun: 500, passiveCallCount: 20 },
+  // ── DevTools benchmarks — measure tool throughput over auth-service corpus ──
+  // These run node.mjs only (no .lln / Rust / WASM path). Key metric: files/sec
+  // or queries/sec. Added 2026-06-03 with the 4 new devtools packages.
+  { id: "naming-check",       dir: "naming-check",       devtoolsOnly: true },
+  { id: "context-receipt",    dir: "context-receipt",    devtoolsOnly: true },
+  { id: "intelligence-search",dir: "intelligence-search", devtoolsOnly: true },
+  { id: "provenance-trace",   dir: "provenance-trace",   devtoolsOnly: true },
 ];
 
 // Resolve a usable Deno executable path on this machine.

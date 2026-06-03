@@ -83,9 +83,13 @@ contract {
 // ════════════════════════════════════════════════════════════
 
 record RtValue {
-  ty: String   // "Int" | "Bool"
+  ty: String                // "Int" | "Bool" | "String" | "tag" | "record" | "list"
   i: Int
   b: Bool
+  s: String                 // ty=="String": the string value
+  tag: String               // ty=="tag": "Ok" | "Err" | "Some" | "None"
+  payload: Array<RtValue>   // ty=="tag": 0/1 wrapped value; ty=="list": elements
+  fields: Array<RtValue>    // ty=="record": alternating [name-as-String-val, value] pairs
 }
 
 record Binding {
@@ -102,13 +106,71 @@ record ExecResult {
 pure flow rtInt(n: Int) -> RtValue
 contract { intent { "Build an Int runtime value." } }
 {
-  return { ty: "Int", i: n, b: false }
+  return { ty: "Int", i: n, b: false, s: "", tag: "", payload: Array.empty(), fields: Array.empty() }
 }
 
 pure flow rtBool(x: Bool) -> RtValue
 contract { intent { "Build a Bool runtime value." } }
 {
-  return { ty: "Bool", i: 0, b: x }
+  return { ty: "Bool", i: 0, b: x, s: "", tag: "", payload: Array.empty(), fields: Array.empty() }
+}
+
+pure flow rtStr(x: String) -> RtValue
+contract { intent { "Build a String runtime value." } }
+{
+  return { ty: "String", i: 0, b: false, s: x, tag: "", payload: Array.empty(), fields: Array.empty() }
+}
+
+// Build a tagged value (Result Ok/Err, Option Some) wrapping one inner value.
+pure flow rtTag(tagName: String, inner: RtValue) -> RtValue
+contract { intent { "Build a tagged runtime value (Ok/Err/Some) around an inner value." } }
+{
+  mut p: Array<RtValue> = Array.empty()
+  p = p.append(inner)
+  return { ty: "tag", i: 0, b: false, s: "", tag: tagName, payload: p, fields: Array.empty() }
+}
+
+// Build the empty-payload None value.
+pure flow rtNone() -> RtValue
+contract { intent { "Build the Option None runtime value (no payload)." } }
+{
+  return { ty: "tag", i: 0, b: false, s: "", tag: "None", payload: Array.empty(), fields: Array.empty() }
+}
+
+// Build a list runtime value from an array of RtValues.
+pure flow rtList(items: Array) -> RtValue
+contract { intent { "Build a List runtime value." } }
+{
+  return { ty: "list", i: 0, b: false, s: "", tag: "", payload: items, fields: Array.empty() }
+}
+
+// Look up a field name in a record's fields array (alternating name/value pairs).
+// Returns rtInt(0) when the field is absent.
+pure flow recordGet(rec: RtValue, fieldName: String) -> RtValue
+contract { intent { "Read a named field from a record runtime value." } }
+{
+  let flds: Array = rec.fields
+  let n: Int = flds.count()
+  mut i: Int = 0
+  mut result: RtValue = rtInt(0)
+  mut scanning: Bool = true
+  while i + 1 < n and scanning {
+    let kOpt = flds.get(i)
+    match kOpt {
+      Some(k) => {
+        if k.s == fieldName {
+          let vOpt = flds.get(i + 1)
+          match vOpt {
+            Some(v) => { result = v  scanning = false }
+            None => {}
+          }
+        }
+      }
+      None => {}
+    }
+    i = i + 2
+  }
+  return result
 }
 
 // Look up the most-recent binding of `name`; rtInt(0) when unbound.
@@ -141,7 +203,10 @@ contract { intent { "Append a name→value binding to the environment." } }
 pure flow applyBinop(op: String, a: RtValue, b: RtValue) -> RtValue
 contract { intent { "Evaluate a GIR binop opcode over two runtime values." } }
 {
-  if op == "add" { return rtInt(a.i + b.i) }
+  if op == "add" {
+    if a.ty == "String" { return rtStr(a.s + b.s) }
+    return rtInt(a.i + b.i)
+  }
   if op == "sub" { return rtInt(a.i - b.i) }
   if op == "mul" { return rtInt(a.i * b.i) }
   if op == "div" {
@@ -152,10 +217,12 @@ contract { intent { "Evaluate a GIR binop opcode over two runtime values." } }
   // pinned to 0), so comparing `.i` would make every Bool compare equal.
   if op == "eq" {
     if a.ty == "Bool" { return rtBool(a.b == b.b) }
+    if a.ty == "String" { return rtBool(a.s == b.s) }
     return rtBool(a.i == b.i)
   }
   if op == "ne" {
     if a.ty == "Bool" { return rtBool(a.b != b.b) }
+    if a.ty == "String" { return rtBool(a.s != b.s) }
     return rtBool(a.i != b.i)
   }
   if op == "lt" { return rtBool(a.i < b.i) }
@@ -196,10 +263,15 @@ contract { intent { "Recursively evaluate a GIR expression node to an Int/Bool r
       if expr.value == "true" { return rtBool(true) }
       return rtBool(false)
     }
+    if expr.ty == "String" {
+      return rtStr(expr.value)
+    }
     return rtInt(expr.value.toInt().unwrapOr(0))
   }
 
   if op == "load" {
+    // Built-in zero-arity constructors: None (and similar sentinels)
+    if expr.value == "None" { return rtNone() }
     return envLookup(env, expr.value)
   }
 
@@ -248,6 +320,63 @@ contract { intent { "Recursively evaluate a GIR expression node to an Int/Bool r
       ai = ai + 1
     }
 
+    // Built-in value constructors (Result / Option) — these are NOT flow-table
+    // entries; they wrap their argument into a tagged runtime value.
+    if expr.value == "None" {
+      return rtNone()
+    }
+    if expr.value == "Ok" or expr.value == "Err" or expr.value == "Some" {
+      mut inner: RtValue = rtInt(0)
+      let a0 = argVals.get(0)
+      match a0 {
+        Some(v) => { inner = v }
+        None => {}
+      }
+      return rtTag(expr.value, inner)
+    }
+
+    // R2: built-in list / record method calls.
+    // `count` (no extra args): the first argVal is the receiver list/record.
+    // `get` (1 extra arg): first argVal = list, second = index.
+    if expr.value == "count" {
+      let recvOpt = argVals.get(0)
+      match recvOpt {
+        Some(recv) => {
+          if recv.ty == "list" { return rtInt(recv.payload.count()) }
+          if recv.ty == "record" {
+            // record fields are stored as alternating name/value pairs → /2
+            return rtInt(recv.fields.count() / 2)
+          }
+        }
+        None => {}
+      }
+      return rtInt(0)
+    }
+
+    if expr.value == "get" {
+      let recvOpt = argVals.get(0)
+      let idxOpt = argVals.get(1)
+      match recvOpt {
+        Some(recv) => {
+          match idxOpt {
+            Some(idx) => {
+              if recv.ty == "list" {
+                let items: Array = recv.payload
+                let elemOpt = items.get(idx.i)
+                match elemOpt {
+                  Some(elem) => { return rtTag("Some", elem) }
+                  None => { return rtNone() }
+                }
+              }
+            }
+            None => {}
+          }
+        }
+        None => {}
+      }
+      return rtNone()
+    }
+
     let entry: Any = lookupFlow(flows, expr.value)
     let params: Array = entry.params
     mut calleeEnv: Array = Array.empty()
@@ -271,7 +400,35 @@ contract { intent { "Recursively evaluate a GIR expression node to an Int/Bool r
     return sub.retVal
   }
 
-  // unknown opcode — out of scope for the S7 subset.
+  // R2: field access — op:"field", value:fieldName, kids:[receiver]
+  if op == "field" {
+    let kids: Array = expr.kids
+    mut recv: RtValue = rtInt(0)
+    let rOpt = kids.get(0)
+    match rOpt {
+      Some(r) => { recv = evalGIRExpr(r, env, flows) }
+      None => {}
+    }
+    return recordGet(recv, expr.value)
+  }
+
+  // R2: array literal — op:"arrlit", kids:[elements]
+  if op == "arrlit" {
+    let kids: Array = expr.kids
+    mut items: Array<RtValue> = Array.empty()
+    mut ai: Int = 0
+    while ai < kids.count() {
+      let kOpt = kids.get(ai)
+      match kOpt {
+        Some(k) => { items = items.append(evalGIRExpr(k, env, flows)) }
+        None => {}
+      }
+      ai = ai + 1
+    }
+    return rtList(items)
+  }
+
+  // unknown opcode — out of scope for the current subset.
   return rtInt(0)
 }
 
@@ -327,6 +484,51 @@ contract { intent { "Execute a GIR statement body; thread the env, short-circuit
           if sub.returned {
             returned = true
             retVal = sub.retVal
+          }
+        }
+
+        // R5: match statement — evaluate subject, compare to each arm's pattern.
+        // Arms are GIRStmt { op:"arm", name:pattern-or-"_", body:[arm stmts] }.
+        // The first arm whose pattern equals the subject (or "_" wildcard) executes.
+        if op == "matche" {
+          let subjVal: RtValue = evalFirst(s.expr, curEnv, flows)
+          let armList: Array = s.body
+          mut ai2: Int = 0
+          mut matched: Bool = false
+          while ai2 < armList.count() and matched == false and returned == false {
+            let armOpt = armList.get(ai2)
+            match armOpt {
+              Some(armNode) => {
+                let pat2: String = armNode.name
+                let isWild: Bool = pat2 == "_"
+                mut armFires: Bool = isWild
+                if isWild == false {
+                  // Compare pattern (stored as Int literal string) to subject
+                  let patVal: Int = pat2.toInt().unwrapOr(0)
+                  if subjVal.ty == "Int" {
+                    armFires = subjVal.i == patVal
+                  }
+                  if subjVal.ty == "String" {
+                    armFires = subjVal.s == pat2
+                  }
+                  if subjVal.ty == "Bool" {
+                    if pat2 == "true" { armFires = subjVal.b }
+                    if pat2 == "false" { armFires = subjVal.b == false }
+                  }
+                }
+                if armFires {
+                  matched = true
+                  let mSub: ExecResult = execGIRBody(armNode.body, curEnv, flows)
+                  curEnv = mSub.env
+                  if mSub.returned {
+                    returned = true
+                    retVal = mSub.retVal
+                  }
+                }
+              }
+              None => {}
+            }
+            ai2 = ai2 + 1
           }
         }
 

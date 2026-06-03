@@ -1,0 +1,11 @@
+// EXPECT: ACCEPT
+// R6 corpus 004 — R4: effects{} block + member call (audit)
+secure flow recordAmount(amount: Int) -> Result<Int, String>
+contract {
+  intent { "Record an amount to the audit log." }
+  effects { audit.write }
+}
+{
+  AuditLog.write("amount recorded")
+  return Ok(amount)
+}

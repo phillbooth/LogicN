@@ -1,5 +1,10 @@
 # auth-service example
 
+> **✍️ Writing or AI-generating contracts? Follow the [Contract Authoring Guide](../../docs/Knowledge-Bases/logicn-contract-authoring-guide.md).**
+> These route services correctly put `request`/`response` on the **secure route flow** (external
+> ingress/egress) while their `pure` helper flows omit them. `effects` is deny-by-default. An AI
+> may only **propose** widening `authority`/`effects`/`secrets`, never apply it.
+
 This example demonstrates a `secure flow` that verifies user credentials and
 issues a short-lived authentication token. It covers Phase 25A of the LogicN
 roadmap: the full pipeline from `.lln` source through WAT emission to a

@@ -295,6 +295,34 @@ contract { intent { "Recursively lower a parser Expr AST node into a GIRExpr." }
     return { op: "unop", ty: "", value: expr.value, kids: kids }
   }
 
+  // R2: member field access — `p.x` → op:"field", value:"x", kids:[lowered receiver]
+  if kind == "member" {
+    let children: Array = expr.children
+    mut kids: Array<GIRExpr> = Array.empty()
+    let recvOpt = children.get(0)
+    match recvOpt {
+      Some(recv) => { kids = kids.append(lowerExpr(recv)) }
+      None => {}
+    }
+    return { op: "field", ty: "", value: expr.value, kids: kids }
+  }
+
+  // R2: array literal — `[1, 2, 3]` → op:"arrlit", kids:[lowered elements]
+  if kind == "array" {
+    let children: Array = expr.children
+    mut kids: Array<GIRExpr> = Array.empty()
+    mut ai: Int = 0
+    while ai < children.count() {
+      let cOpt = children.get(ai)
+      match cOpt {
+        Some(c) => { kids = kids.append(lowerExpr(c)) }
+        None => {}
+      }
+      ai = ai + 1
+    }
+    return { op: "arrlit", ty: "Array", value: "", kids: kids }
+  }
+
   return { op: "unknown", ty: "", value: kind, kids: Array.empty() }
 }
 
@@ -394,6 +422,35 @@ contract { intent { "Lower a single body statement into a GIRStmt." } }
       None => {}
     }
     return { op: "eval", name: "", expr: exprs, body: Array.empty(), elseBody: Array.empty() }
+  }
+
+  // R5: match statement — emit a "matche" GIR op carrying the subject in `expr`
+  // and the lowered arms in `body`. Each arm is a GIRStmt with op="arm", name=pattern,
+  // body=lowered arm-body. The runtime iterates arms, evaluating subject==pattern.
+  if kind == "match" {
+    mut subjectExprs: Array = Array.empty()
+    let sOpt = firstExprOf(stmt)
+    match sOpt {
+      Some(se) => { subjectExprs = subjectExprs.append(lowerExpr(se)) }
+      None => {}
+    }
+    let armStmts: Array = stmt.body
+    mut loweredArms: Array<GIRStmt> = Array.empty()
+    mut mai: Int = 0
+    while mai < armStmts.count() {
+      let armOpt = armStmts.get(mai)
+      match armOpt {
+        Some(arm) => {
+          // arm is an "if" stmt: name=pattern, expr=[pat-expr], body=arm-body
+          let armBody: Array<GIRStmt> = lowerBody(arm.body)
+          let armNode: GIRStmt = { op: "arm", name: arm.name, expr: Array.empty(), body: armBody, elseBody: Array.empty() }
+          loweredArms = loweredArms.append(armNode)
+        }
+        None => {}
+      }
+      mai = mai + 1
+    }
+    return { op: "matche", name: "", expr: subjectExprs, body: loweredArms, elseBody: Array.empty() }
   }
 
   return { op: "unknown", name: "", expr: Array.empty(), body: Array.empty(), elseBody: Array.empty() }

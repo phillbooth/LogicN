@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-06-02T20:02:38.192Z",
+  "generatedAt": "2026-06-03T07:55:58.485Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -4269,6 +4269,24 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-contract-authoring-guide.md",
+      "kind": "Document",
+      "label": "logicn-contract-authoring-guide.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-contract-authoring-guide.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-contract-economics.md",
+      "kind": "Document",
+      "label": "logicn-contract-economics.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-contract-economics.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-contract-errors.md",
       "kind": "Document",
       "label": "logicn-contract-errors.md",
@@ -4665,6 +4683,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-design-secrets-epilogue-blocks.md",
+      "kind": "Document",
+      "label": "logicn-design-secrets-epilogue-blocks.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-design-secrets-epilogue-blocks.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-deterministic-selfhost-verification.md",
       "kind": "Document",
       "label": "logicn-deterministic-selfhost-verification.md",
@@ -4939,6 +4966,15 @@
       "kind": "Document",
       "label": "logicn-governed-resource-contracts.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-governed-resource-contracts.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-governed-runtime-research-2026-06-03.md",
+      "kind": "Document",
+      "label": "logicn-governed-runtime-research-2026-06-03.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-governed-runtime-research-2026-06-03.md",
       "tags": [
         "document"
       ]
@@ -5542,6 +5578,15 @@
       "kind": "Document",
       "label": "logicn-quantum-target-bridge.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-quantum-target-bridge.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-r6-bootstrap-corpus.md",
+      "kind": "Document",
+      "label": "logicn-r6-bootstrap-corpus.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-r6-bootstrap-corpus.md",
       "tags": [
         "document"
       ]
@@ -9866,6 +9911,16 @@
       ]
     },
     {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/countArms_countArms.egraph.json",
+      "kind": "Document",
+      "label": "countArms_countArms.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/countArms_countArms.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/countBoundary_countBoundary.egraph.json",
       "kind": "Document",
       "label": "countBoundary_countBoundary.egraph.json",
@@ -10020,6 +10075,16 @@
       "kind": "Document",
       "label": "directWhileReturn_directWhileReturn.egraph.json",
       "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/directWhileReturn_directWhileReturn.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/distanceSq_distanceSq.egraph.json",
+      "kind": "Document",
+      "label": "distanceSq_distanceSq.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/distanceSq_distanceSq.egraph.json",
       "tags": [
         "report",
         "logicn-core-compiler"
@@ -10456,6 +10521,16 @@
       ]
     },
     {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/listLen_listLen.egraph.json",
+      "kind": "Document",
+      "label": "listLen_listLen.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/listLen_listLen.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/logEmail_logEmail.egraph.json",
       "kind": "Document",
       "label": "logEmail_logEmail.egraph.json",
@@ -10590,6 +10665,16 @@
       "kind": "Document",
       "label": "m_m.egraph.json",
       "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/m_m.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/nameOf_nameOf.egraph.json",
+      "kind": "Document",
+      "label": "nameOf_nameOf.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/nameOf_nameOf.egraph.json",
       "tags": [
         "report",
         "logicn-core-compiler"
@@ -10806,6 +10891,16 @@
       ]
     },
     {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/recordAmount_recordAmount.egraph.json",
+      "kind": "Document",
+      "label": "recordAmount_recordAmount.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/recordAmount_recordAmount.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/resolveRoute_resolveRoute.egraph.json",
       "kind": "Document",
       "label": "resolveRoute_resolveRoute.egraph.json",
@@ -10980,6 +11075,16 @@
       "kind": "Document",
       "label": "simple_simple.egraph.json",
       "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/simple_simple.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/simulateLoop_simulateLoop.egraph.json",
+      "kind": "Document",
+      "label": "simulateLoop_simulateLoop.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/simulateLoop_simulateLoop.egraph.json",
       "tags": [
         "report",
         "logicn-core-compiler"
@@ -11206,10 +11311,100 @@
       ]
     },
     {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testETok_testETok.egraph.json",
+      "kind": "Document",
+      "label": "testETok_testETok.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testETok_testETok.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testExprNextPos_testExprNextPos.egraph.json",
+      "kind": "Document",
+      "label": "testExprNextPos_testExprNextPos.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testExprNextPos_testExprNextPos.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testInner2_testInner2.egraph.json",
+      "kind": "Document",
+      "label": "testInner2_testInner2.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testInner2_testInner2.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testInner_testInner.egraph.json",
+      "kind": "Document",
+      "label": "testInner_testInner.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testInner_testInner.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testIsKw_testIsKw.egraph.json",
+      "kind": "Document",
+      "label": "testIsKw_testIsKw.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testIsKw_testIsKw.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testMatchBody_testMatchBody.egraph.json",
+      "kind": "Document",
+      "label": "testMatchBody_testMatchBody.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testMatchBody_testMatchBody.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testPos_testPos.egraph.json",
+      "kind": "Document",
+      "label": "testPos_testPos.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testPos_testPos.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testRedact_testRedact.egraph.json",
       "kind": "Document",
       "label": "testRedact_testRedact.egraph.json",
       "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testRedact_testRedact.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testTokAt_testTokAt.egraph.json",
+      "kind": "Document",
+      "label": "testTokAt_testTokAt.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testTokAt_testTokAt.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testWhile_testWhile.egraph.json",
+      "kind": "Document",
+      "label": "testWhile_testWhile.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testWhile_testWhile.egraph.json",
       "tags": [
         "report",
         "logicn-core-compiler"
@@ -11300,6 +11495,16 @@
       "kind": "Document",
       "label": "twoMuts_twoMuts.egraph.json",
       "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/twoMuts_twoMuts.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/t_t.egraph.json",
+      "kind": "Document",
+      "label": "t_t.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/t_t.egraph.json",
       "tags": [
         "report",
         "logicn-core-compiler"
@@ -29972,6 +30177,34 @@
       "evidencePath": "docs/Knowledge-Bases/logicn-design-primitive-obsession.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/logicn-design-secrets-epilogue-blocks.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-design-secrets-epilogue-blocks.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-design-secrets-epilogue-blocks.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-design-secrets-epilogue-blocks.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-design-secrets-epilogue-blocks.md",
+      "to": "package:logicn-core-runtime",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-design-secrets-epilogue-blocks.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-design-secrets-epilogue-blocks.md",
+      "to": "package:logicn-data",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-design-secrets-epilogue-blocks.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/logicn-developer-tooling-advanced.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -31167,6 +31400,20 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/Knowledge-Bases/logicn-quantum-target-bridge.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-r6-bootstrap-corpus.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-r6-bootstrap-corpus.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-r6-bootstrap-corpus.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-r6-bootstrap-corpus.md"
     },
     {
       "from": "doc:docs/Knowledge-Bases/logicn-resource-governance.md",
@@ -37512,6 +37759,13 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/countArms_countArms.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/countArms_countArms.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/countBoundary_countBoundary.egraph.json",
       "kind": "owns",
       "confidence": "EXTRACTED",
@@ -37621,6 +37875,13 @@
       "kind": "owns",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/directWhileReturn_directWhileReturn.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/distanceSq_distanceSq.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/distanceSq_distanceSq.egraph.json"
     },
     {
       "from": "package:logicn-core-compiler",
@@ -37925,6 +38186,13 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/listLen_listLen.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/listLen_listLen.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/logEmail_logEmail.egraph.json",
       "kind": "owns",
       "confidence": "EXTRACTED",
@@ -38020,6 +38288,13 @@
       "kind": "owns",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/m_m.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/nameOf_nameOf.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/nameOf_nameOf.egraph.json"
     },
     {
       "from": "package:logicn-core-compiler",
@@ -38170,6 +38445,13 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/recordAmount_recordAmount.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/recordAmount_recordAmount.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/resolveRoute_resolveRoute.egraph.json",
       "kind": "owns",
       "confidence": "EXTRACTED",
@@ -38293,6 +38575,13 @@
       "kind": "owns",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/simple_simple.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/simulateLoop_simulateLoop.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/simulateLoop_simulateLoop.egraph.json"
     },
     {
       "from": "package:logicn-core-compiler",
@@ -38450,10 +38739,73 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testETok_testETok.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testETok_testETok.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testExprNextPos_testExprNextPos.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testExprNextPos_testExprNextPos.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testInner2_testInner2.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testInner2_testInner2.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testInner_testInner.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testInner_testInner.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testIsKw_testIsKw.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testIsKw_testIsKw.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testMatchBody_testMatchBody.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testMatchBody_testMatchBody.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testPos_testPos.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testPos_testPos.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testRedact_testRedact.egraph.json",
       "kind": "owns",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testRedact_testRedact.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testTokAt_testTokAt.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testTokAt_testTokAt.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/testWhile_testWhile.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/testWhile_testWhile.egraph.json"
     },
     {
       "from": "package:logicn-core-compiler",
@@ -38517,6 +38869,13 @@
       "kind": "owns",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/twoMuts_twoMuts.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/t_t.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/t_t.egraph.json"
     },
     {
       "from": "package:logicn-core-compiler",

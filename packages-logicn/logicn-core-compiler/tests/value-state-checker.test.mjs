@@ -984,3 +984,58 @@ contract { effects { database.write } }
     );
   });
 });
+
+// ── Secret taint guard: secrets {} accessors are SecureString-equivalent ──────
+// A binding read from a secret accessor (secret.get / vault.read / kms / secrets.*)
+// is inferred SecureString, so the existing LLN-SECRET-001 (log) / LLN-SECRET-003
+// (serialize) sink guards block it from leaking. redact() is the safe escape.
+describe("Value-state checker — secret-source taint (secrets {} credentials)", () => {
+  const mk = (body) => `secure flow f() -> Int
+contract { intent { "x" }  secrets { credential k { provider "vault" } } }
+{
+${body}
+  return 0
+}`;
+  it("a secret read then logged → LLN-SECRET-001", () => {
+    const r = parseAndCheck(mk('  let key = secret.get("LEDGER_WRITE_KEY")\n  log.info(key)'));
+    assert.ok(hasDiag(r, "LLN-SECRET-001"), `expected SECRET-001, got: ${r.diagnostics.map((d) => d.code).join(", ")}`);
+  });
+  it("a secret read then serialized → LLN-SECRET-003", () => {
+    const r = parseAndCheck(mk('  let key = vault.read("K")\n  let s = json.encode(key)'));
+    assert.ok(hasDiag(r, "LLN-SECRET-003"), `expected SECRET-003, got: ${r.diagnostics.map((d) => d.code).join(", ")}`);
+  });
+  it("redact(secret) before logging → clean (redact is the safe escape)", () => {
+    const r = parseAndCheck(mk('  let key = secret.get("K")\n  log.info(redact(key))'));
+    assert.ok(!hasDiag(r, "LLN-SECRET-001"), `redact must clear the secret, got: ${r.diagnostics.map((d) => d.code).join(", ")}`);
+  });
+  it("a non-secret value logged → no SECRET diagnostic", () => {
+    const r = parseAndCheck(mk('  let x = compute(1)\n  log.info(x)'));
+    assert.ok(!hasDiag(r, "LLN-SECRET-001") && !hasDiag(r, "LLN-SECRET-003"));
+  });
+});
+
+// ── Secret → network egress guard (LLN-SECRET-002) ───────────────────────────
+describe("Value-state checker — secret to network egress", () => {
+  const mk = (body) => `secure flow f() -> Int
+contract { intent { "x" }  secrets { credential k { provider "vault" } } }
+{
+${body}
+  return 0
+}`;
+  it("a secret sent to http.post → LLN-SECRET-002", () => {
+    const r = parseAndCheck(mk('  let key = secret.get("K")\n  let r = http.post("https://x", key)'));
+    assert.ok(hasDiag(r, "LLN-SECRET-002"), `expected SECRET-002, got: ${r.diagnostics.map((d) => d.code).join(", ")}`);
+  });
+  it("a secret sent to fetch(...) → LLN-SECRET-002", () => {
+    const r = parseAndCheck(mk('  let key = vault.read("K")\n  let r = fetch(key)'));
+    assert.ok(hasDiag(r, "LLN-SECRET-002"));
+  });
+  it("redact(secret) to http.post → clean", () => {
+    const r = parseAndCheck(mk('  let key = secret.get("K")\n  let r = http.post("u", redact(key))'));
+    assert.ok(!hasDiag(r, "LLN-SECRET-002"));
+  });
+  it("a non-secret value to http.post → clean", () => {
+    const r = parseAndCheck(mk('  let x = build(1)\n  let r = http.post("u", x)'));
+    assert.ok(!hasDiag(r, "LLN-SECRET-002"));
+  });
+});

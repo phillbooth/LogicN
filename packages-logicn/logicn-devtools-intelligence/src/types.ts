@@ -1,0 +1,55 @@
+// =============================================================================
+// logicn-devtools-intelligence — Core types
+//
+// IndexedFlow: the unit of search. One flow = one AST-complete unit.
+// SearchResult: ranked result with BM25 + structural match info.
+// =============================================================================
+
+export interface IndexedFlow {
+  /** sha256 hash of filePath + flowName (stable ID) */
+  id: string;
+  flowName: string;
+  qualifier: string;                 // 'flow' | 'secure' | 'pure' | 'guarded'
+  filePath: string;
+  // BM25 inverted index tokens (all identifiers, fully spelled)
+  lexicalTokens: string[];
+  // Structural metadata for filtered search
+  declaredEffects: string[];
+  economicsHints: string[];          // raw contract.economics content strings
+  hasTaint: boolean;
+  governanceCodes: string[];         // LLN-GOV-xxx etc codes that fire
+  hasSecrets: boolean;
+  qualifier_tags: string[];          // ['secure', 'has-intent', 'has-economics'] etc
+  // Source info
+  contractText: string;              // the contract block text (for display)
+  signatureText: string;             // "flow name(params) -> RetType"
+  lineStart: number;
+  lineEnd: number;
+  indexedAt: string;
+  /** Mtime of the source file at index time (ms since epoch) — used for incremental update */
+  sourceMtime: number;
+}
+
+export interface SearchResult {
+  flow: IndexedFlow;
+  bm25Score: number;
+  structuralMatch: boolean;
+  rankScore: number;                 // combined rank
+}
+
+export interface SearchFilters {
+  /** Only flows declaring ALL of these effects */
+  effects?: string[];
+  /** 'secure' | 'pure' | 'guarded' | 'flow' */
+  qualifier?: string;
+  hasTaint?: boolean;
+  maxRiskTier?: 'low' | 'medium' | 'high';
+}
+
+/** The on-disk .lindex file format */
+export interface WorkspaceIndex {
+  version: 1;
+  builtAt: string;
+  workspaceDir: string;
+  flows: IndexedFlow[];
+}

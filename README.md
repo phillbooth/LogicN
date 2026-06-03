@@ -36,14 +36,14 @@ The language is designed from the ground up so that execution intent, capability
 **Runtime written in LogicN** — Stage B: LogicN compiler compiles itself ← Major achievement milestone
 
 ```
-███████████████████████░░░░░░░  78%  (the Stage B engine now COMPILES AND RUNS LogicN — source → lex → parse → type/effect/govern → emit GIR → execute, all in LogicN)
+████████████████████████████░░  90%  (R6 ACHIEVED — all 5 corpus flows (strings/records/lists/match/effects) run at full Stage-A parity via self-hosted-bootstrap.test.mjs)
 ```
 
 
 **TypeScript Runtime** — Stage A: compiler pipeline + execution engine running on Node.js
 
 ```
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (3,014 compiler · 15 economics · 95 graph · 14 security = 3,138 total · 0 failures · reproduce: `node scripts/run-all-tests.js --core`)
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (3,041 compiler · 15 economics · 95 graph · 14 security = 3,165 total · 0 failures · reproduce: `node scripts/run-all-tests.js --core`)
 ```
 
 | Layer | Status | % |
@@ -71,7 +71,7 @@ The language is designed from the ground up so that execution intent, capability
 | Type registry | TypeId (56 IDs), EffectFlags (14), GovernanceFlags (8), NativeCapabilityId (6) | 78% |
 | devtools-security | @logicn/devtools-security — runSecurityAudit, path sandbox, regex guard, secret checker, risk calc, CLI | 85% |
 | devtools-graph | BFS/DFS/topo, flag queries, CapabilityGraph, BoundaryGraph, WASMModuleGraph — 95 tests | 74% |
-| Stage B self-hosting | 8 files · **executes end-to-end in LogicN**: lexer (string/char/comments), parser (full Stmt/Expr AST + if/else/unary/logical), type/effect/governance checks on the body AST, GIR emitter (expr+stmt), runtime GIR interpreter w/ cross-flow calls + recursion (`fib`, `sumTo`) | 80% |
+| Stage B self-hosting | **R6 ACHIEVED** — all 5 corpus flows (strings/Result, records/field-access, array literals, secure+effects, match/Option) run at Stage-A parity via `self-hosted-bootstrap.test.mjs`. Full pipeline: lex→parse→type/effect/govern→GIR→execute | 90% |
 | Live .lln services | 35 files: 27 auth-service routes + 8 aerospace/healthcare/AI/wasm examples — all parse 0 errors | 95% |
 | Passive execution plans | Plan types + builder + attestation + hashPassivePlan + executePlan wired | 40% |
 | SoA Arena | SoANodeArena (Int16/Int32 parallel arrays), FlatTokenStream (stride-4), FusedPass scaffold | 35% |

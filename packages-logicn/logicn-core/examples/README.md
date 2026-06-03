@@ -1,5 +1,11 @@
 # LogicN Examples
 
+> **✍️ Writing or AI-generating contracts? Follow the [Contract Authoring Guide](../../../docs/Knowledge-Bases/logicn-contract-authoring-guide.md).**
+> `types` / `request` / `response` are **not** globally mandatory — omit on pure/internal flows
+> (only API/route flows need `request`/`response`). `effects` is **deny-by-default** (omitted ⇒
+> strictly pure). An AI may only **propose** widening `authority` / `effects` / `secrets`, never
+> apply it (propose → compiler-verify → policy → human-approve).
+
 These examples are source fixtures for the prototype CLI, package tests and
 documentation. The directory currently contains 24 `.lln` fixtures covering the
 v1 syntax subset and target/report planning examples.

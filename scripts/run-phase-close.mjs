@@ -1,0 +1,125 @@
+#!/usr/bin/env node
+// =============================================================================
+// run-phase-close.mjs — LogicN full phase-close cadence
+// =============================================================================
+// Runs the standard end-of-stage sweep:
+//   1. Core tests        (SOT four packages — compiler/economics/graph/security)
+//   2. DevTools tests    (naming / context / intelligence / provenance)
+//   3. Security audit    (auth-service corpus — in-process, fast)
+//   4. DevTools audits   (naming sweep + provenance directory audit)
+//   5. Graph re-index    (full project graph)
+//
+// Wired as a Stop hook in .claude/settings.json — runs at the end of every
+// response. Always exits 0 (informational); prints a PASS/FAIL summary so a
+// regression is visible without blocking the session.
+//
+// Skip with:  LOGICN_SKIP_PHASE_CLOSE=1   (env)   — e.g. for rapid iteration.
+// Run manually:  node scripts/run-phase-close.mjs
+// Benchmarks are intentionally EXCLUDED (multi-minute) — run on demand.
+// =============================================================================
+
+import { spawnSync } from "node:child_process";
+import { readdirSync, readFileSync, existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+if (process.env.LOGICN_SKIP_PHASE_CLOSE === "1") {
+  console.log("⏭️  phase-close skipped (LOGICN_SKIP_PHASE_CLOSE=1)");
+  process.exit(0);
+}
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const isWin = process.platform === "win32";
+const results = [];
+
+function run(name, cmd, args, { cwd = ROOT, okCodes = [0] } = {}) {
+  const t0 = Date.now();
+  const r = spawnSync(cmd, args, { cwd, encoding: "utf8", shell: isWin, timeout: 180000 });
+  const ms = Date.now() - t0;
+  const code = r.status;
+  const ok = okCodes.includes(code);
+  const out = `${r.stdout || ""}${r.stderr || ""}`;
+  results.push({ name, ok, ms, code, detail: summarise(name, out, ok, code) });
+  return { ok, out, code };
+}
+
+function summarise(name, out, ok, code) {
+  // graph
+  const nodes = out.match(/Nodes:\s*(\d+)/);
+  const edges = out.match(/Edges:\s*(\d+)/);
+  if (nodes && edges) return `${nodes[1]} nodes / ${edges[1]} edges`;
+  // run-all-tests.js total row
+  const total = out.match(/(?:TOTAL|total)[^\d]*(\d[\d,]+)\b/);
+  if (total) return `${total[1]} tests pass`;
+  // node --test summary
+  const pass = out.match(/(?:^|\n)[^\n]*\bpass\s+(\d[\d,]*)/i);
+  const fail = out.match(/(?:^|\n)[^\n]*\bfail\s+(\d+)/i);
+  if (pass) return `${pass[1]} tests${fail && fail[1] !== "0" ? `, ${fail[1]} FAIL` : " pass"}`;
+  // provenance directory audit: exit 2 = risk flows found (informational)
+  if (name === "audit:provenance") {
+    const risk = out.match(/HIGH RISK[^\d]*(\d+)/i) || out.match(/risk[^\d]*(\d+)/i);
+    if (code === 2) return `${risk ? risk[1] : "some"} ungated-sink risk flow(s) — informational`;
+    return code === 0 ? "0 risk flows" : `exit ${code}`;
+  }
+  return ok ? "ok" : `FAILED (exit ${code})`;
+}
+
+console.log("══ LogicN phase-close cadence ══");
+
+// ── 1. Core tests (SOT four) ──
+run("tests:core", "node", ["scripts/run-all-tests.js", "--core"]);
+
+// ── 2. DevTools package tests ──
+for (const p of ["naming", "context", "intelligence", "provenance"]) {
+  const dir = join(ROOT, "packages-logicn", `logicn-devtools-${p}`);
+  if (existsSync(join(dir, "tests"))) run(`tests:devtools-${p}`, "npm", ["test", "--silent"], { cwd: dir });
+}
+
+// ── 3 + 4. In-process security + naming audit sweep over auth-service ──
+const corpus = join(ROOT, "examples", "auth-service");
+if (existsSync(corpus)) {
+  const llnFiles = readdirSync(corpus).filter((f) => f.endsWith(".lln"));
+  try {
+    const sec = await import(pathToFileURL(join(ROOT, "packages-logicn/logicn-devtools-security/dist/index.js")).href);
+    const nam = await import(pathToFileURL(join(ROOT, "packages-logicn/logicn-devtools-naming/dist/index.js")).href);
+    let secFindings = 0, secErrors = 0, namFindings = 0;
+    for (const f of llnFiles) {
+      const src = readFileSync(join(corpus, f), "utf8");
+      try {
+        const sr = sec.runSecurityAudit(src, f);
+        secFindings += (sr.findings?.length ?? sr.diagnostics?.length ?? 0);
+      } catch { secErrors++; }
+      try {
+        const nr = nam.runNamingAudit(src, f);
+        namFindings += (nr.findings?.length ?? 0);
+      } catch { /* naming non-fatal */ }
+    }
+    results.push({ name: "audit:security", ok: secErrors === 0, ms: 0,
+      detail: `${llnFiles.length} files, ${secFindings} findings, ${secErrors} errors` });
+    results.push({ name: "audit:naming", ok: true, ms: 0,
+      detail: `${llnFiles.length} files, ${namFindings} naming findings` });
+  } catch (e) {
+    results.push({ name: "audit:devtools", ok: false, ms: 0, detail: `import failed: ${e.message}` });
+  }
+  // provenance directory audit — exit 2 = "risk flows found" is INFORMATIONAL, not a failure.
+  run("audit:provenance", "node",
+    ["packages-logicn/logicn-devtools-provenance/dist/cli.js", "audit", corpus], { okCodes: [0, 2] });
+}
+
+// ── 5. Full graph re-index ──
+run("graph:reindex", "node",
+  ["packages-logicn/logicn-core-cli/dist/index.js", "graph", "--out", "build/graph"]);
+
+// ── Summary ──
+console.log("\n── phase-close summary ──");
+let anyFail = false;
+for (const r of results) {
+  const icon = r.ok ? "✅" : "❌";
+  if (!r.ok) anyFail = true;
+  const t = r.ms ? ` (${(r.ms / 1000).toFixed(1)}s)` : "";
+  console.log(`${icon} ${r.name.padEnd(26)} ${r.detail}${t}`);
+}
+console.log(anyFail
+  ? "\n⚠️  phase-close: one or more checks FAILED — review above."
+  : "\n✅ phase-close: all gates green.");
+process.exit(0); // informational hook — never block the session

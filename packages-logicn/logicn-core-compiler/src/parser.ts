@@ -2711,6 +2711,27 @@ class Parser {
         continue;
       }
 
+      // `secrets { credential <name> { provider ... } rotation { ... } }` — sealed
+      // credentials topology. Optional + AUTO-by-default: when omitted, the runtime
+      // handles config via standard env mapping (no sealed block). When declared, the
+      // core parses + retains the block and stamps secret taint; vault/KMS mechanics
+      // live in a non-core `logicn-ext-*` driver. See logicn-design-secrets-epilogue-blocks.md.
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "secrets") {
+        children.push(this.parseContractSubBlock("secrets"));
+        this.skipNewlines();
+        continue;
+      }
+
+      // `epilogue { generate_proof <strategy> on_verification_failure <action> }` — post-
+      // execution proof strategy. Optional + AUTO-by-default: when omitted, the runtime
+      // selects the proof tier from the CostGraph/ValueGraph (sha256_seal vs zk_snark_receipt),
+      // mirroring `economics`. When declared, the explicit strategy is enforced.
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "epilogue") {
+        children.push(this.parseContractSubBlock("epilogue"));
+        this.skipNewlines();
+        continue;
+      }
+
       // Skip unrecognised content gracefully
       if (this.currentIs("symbol", "{")) {
         this.skipBalancedBraces();

@@ -90,6 +90,15 @@ Hit writing the lexer's own quote/backslash detection (2026-06-02):
 
 ---
 
+### A4 — `mut p = p + 1` inside a deeply-nested `if`/`while` block silently has no effect (CORRECTNESS hazard, HIGH-IMPACT)
+
+Discovered implementing `match` arm parsing inside the self-hosted `parseStmt` flow (2026-06-03):
+- A `mut p: Int = EXPR` declared inside an `if` block, then mutated via `p = p + 1` inside a **nested** `while` → `if` → `if` block hierarchy, silently **does not update the outer `p`**. The assignment executes (no error) but the mutation is lost; the outer `p` retains its original value indefinitely.
+- **Root cause:** the LogicN interpreter appears to stop propagating mutation across a certain nesting depth or block-scope boundary. Mutation one or two levels deep works; mutation at four-plus levels (while → if → if → while) does not. This was confirmed by exhaustive isolation: moving the exact same loop logic into a standalone dedicated flow with its own clean scope fixed it immediately.
+- **Hazard:** silent wrong output — the loop appears to run (no error, the flow returns) but all the mutations are invisible to the outer scope, so the result is as if the loop body never executed. An AI will write natural, imperative loops with a shared `p` counter without knowing this limit exists.
+- **Fix (for now):** if a loop needs to mutate a variable through more than ~2 levels of nested blocks, **extract it into a separate flow** with its own scope. The `parseMatchArms` flow is the canonical example — it took `p` out of `parseStmt`'s deeply-nested scope and gave it a clean top-level home. **Longer-term:** fix the interpreter's mutation propagation across nested scopes, or document the exact nesting depth where mutation breaks and emit a warning.
+- **Workaround confirmed working:** isolate any loop with a shared mutable cursor into a standalone helper flow. Pass the starting position as a param, return the ending position + result as a record.
+
 ## Known limitations of the self-hosted Stage-B subset (documented, by-design / deferred)
 
 Surfaced by a 3-agent review of the self-hosted modules (2026-06-02). These are NOT
@@ -175,3 +184,4 @@ wrong (this was the real runtime.lln cache bug).
 | 2026-06-02 | A2c (LLN-LEX-001 false positive on `a < b`), A2d (escaped char literals) surfaced completing lexer S5 | self-hosting push S5+S6 |
 | 2026-06-02 | A2c root-caused (global genericDepth never reset) and FIXED; +4 regression tests; 7 operand-swap workarounds reverted | interpreter/lexer fix |
 | 2026-06-02 | B1 extended (`block` reserved); confirmed recursion + self-referential record types work; Symbol-vs-Operator token note | M-A body parser |
+| 2026-06-03 | **A4** — `p = p + 1` inside deeply-nested if/while blocks silently doesn't update outer `p`; fix = extract into a standalone flow | R6 match parsing |

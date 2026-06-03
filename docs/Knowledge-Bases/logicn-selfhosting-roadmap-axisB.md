@@ -148,7 +148,12 @@ exit = executing `.test.mjs` assertions (parse-clean never counts).
 Phases are mostly **independent** and can run in parallel (separate files); the bootstrap
 test (R6) is the final barrier. Rough % weights in brackets.
 
-### R1 — Runtime value model: strings  *(≈78 → 84%)*
+### R1 — Runtime value model: strings  *(≈78 → 84%)* — **DONE 2026-06-02**
+> `runtime.lln` `RtValue` widened: String + tagged Result/Option (`Ok`/`Err`/`Some`/`None`)
+> constructors; string concat/eq. Also fixed a real parser bug — `parseFlows` didn't skip
+> newlines before `contract`/body, so every multi-line governed flow parsed an empty body.
+> **R6-001 `classify` now passes the full-parity conformance gate** (Stage A == Stage B):
+> `tests/self-hosted-bootstrap.test.mjs`.
 - **Why:** the GIR interpreter's `RtValue` is Int/Bool only; string-returning flows can be
   parsed/checked/emitted but not executed.
 - **Deliver:** `RtValue` gains a String case; `runtime.lln` handles `const` String,
@@ -188,6 +193,10 @@ test (R6) is the final barrier. Rough % weights in brackets.
 - **Exit:** representative flows using each new construct parse, check, emit, and run e2e.
 
 ### R6 — Bootstrap conformance gate  *(≈98 → 100%)*
+> **Corpus authored 2026-06-02** (5/5 Stage-A ACCEPT): `tests/r6-corpus/r6-001..005-*.lln`,
+> spec + coverage matrix in `logicn-r6-bootstrap-corpus.md`. Gate = **full parity** (value +
+> diagnostics + governance/effects) Stage A == Stage B, via `tests/self-hosted-bootstrap.test.mjs`.
+> R6-001→R1, R6-002/003→R2, R6-004→R4, R6-005→R5.
 - **Deliver:** one test that takes a representative governed `.lln` flow, runs it through
   **all 8 self-hosted files** (lex → parse → type/effect/govern → emit GIR → run) AND
   through Stage A, and asserts identical output + identical diagnostics.
@@ -230,3 +239,5 @@ all verifiable by tests here.
 | 2026-06-02 | downstream | new forms wired into all consumers (3 parallel workers): gir-emitter unary→`unop` + else lowering; type/effect/govern recurse `elseBody`; pipeline proves else-branch effect/audit handling | 60–63% |
 | 2026-06-02 | S7 ✓ | `runtime.lln` GIR interpreter (`runGIRBody`): const/load/binop/unop + store/ret/branch/loop + env. **Full pipeline executes source→…→run in LogicN** (`sum 1..5=15`, etc.). Remaining: cross-flow `call` | 68–72% |
 | 2026-06-02 | **M-C ✓** | cross-flow `call` execution: `runtime.lln` `runProgram` + flow table; `gir-emitter` `buildFlowTable` (parallel workers). **Recursive multi-flow LogicN runs in LogicN**: `fib(15)=610`, `sumTo(100)=5050`, `twice(40)=42` end-to-end | 75–80% |
+| 2026-06-03 | **R6 ✓ 100% (subset)** | Full parity gate `self-hosted-bootstrap.test.mjs` (11 tests, all 5 corpus flows). R1–R5 widening: member access, array literals, generic type params, match/Option (`parseMatchArms` isolated flow), `None` as zero-arity constructor, records+lists+strings in runtime, epilogue guard (GOV-015/016), secret sink trilogy. Scope bug root-caused: `while COND { p=p+1 }` inside `parseStmt` silently doesn't update `p` — fixed by delegating to a standalone flow | 90% |
+| 2026-06-02 | **R1 ✓** | `runtime.lln` strings + Result/Option constructors; fixed parser newline-skip (multi-line governed flows were parsing empty bodies). R6-001 `classify` passes full-parity Stage A==Stage B gate (`self-hosted-bootstrap.test.mjs`) | 80–84% |

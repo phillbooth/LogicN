@@ -385,6 +385,9 @@ contract { intent { "Parse a primary expression: literal, name, call, or ( group
           if eTokVal(tokens, p + 1) == "(" {
             return parseCallArgs(tokens, p + 1, tok.value)
           }
+          // Member access / method call: identifier.field or identifier.method(args)
+          // Handle by returning the name here, then the parseUnary caller chains dots
+          // via parseMemberChain (see below).
           return { expr: { kind: "name", value: tok.value, litType: "", children: Array.empty() }, nextPos: p + 1 }
         }
         Symbol => {
@@ -396,10 +399,14 @@ contract { intent { "Parse a primary expression: literal, name, call, or ( group
             }
             return { expr: inner.expr, nextPos: afterPos }
           }
+          // Array literal: [ e1, e2, ... ]
+          if tok.value == "[" {
+            return parseArrayLiteral(tokens, p + 1)
+          }
           // Terminator tokens are NOT primaries — a dangling operator (`return a +`)
           // must NOT consume the closing "}"/")"/"," (doing so swallowed a following
           // flow). Return an empty node WITHOUT advancing so the caller stops here.
-          if tok.value == "}" or tok.value == ")" or tok.value == "," {
+          if tok.value == "}" or tok.value == ")" or tok.value == "," or tok.value == "]" {
             return { expr: { kind: "name", value: "", litType: "", children: Array.empty() }, nextPos: p }
           }
           return { expr: { kind: "name", value: tok.value, litType: "", children: Array.empty() }, nextPos: p + 1 }
@@ -410,6 +417,114 @@ contract { intent { "Parse a primary expression: literal, name, call, or ( group
       }
     }
   }
+}
+
+// Parse an array literal from the first element position (just past the opening "[").
+// Returns an Expr{ kind:"array", children:[element exprs] }.
+pure flow parseArrayLiteral(tokens: Array<Token>, startPos: Int) -> ExprParse
+contract { intent { "Parse a [...] array literal; startPos is just past the opening '['." } }
+{
+  let total: Int = tokens.count()
+  mut elements: Array<Expr> = Array.empty()
+  mut p: Int = startPos
+  mut scanning: Bool = true
+
+  let firstVal: String = eTokVal(tokens, skipNewlines(tokens, p))
+  if firstVal == "]" {
+    p = skipNewlines(tokens, p) + 1
+    scanning = false
+  }
+
+  while scanning and p < total {
+    let elemParse: ExprParse = parseExpr(tokens, p)
+    elements = elements.append(elemParse.expr)
+    let afterElem: Int = skipNewlines(tokens, elemParse.nextPos)
+    let sep: String = eTokVal(tokens, afterElem)
+    if sep == "," {
+      p = afterElem + 1
+    }
+    if sep == "]" {
+      p = afterElem + 1
+      scanning = false
+    }
+    let isSep: Bool = sep == "," or sep == "]"
+    if isSep == false {
+      p = afterElem
+      scanning = false
+    }
+  }
+
+  return { expr: { kind: "array", value: "", litType: "Array", children: elements }, nextPos: p }
+}
+
+// Wrap parsePrimary with member-access chaining: `p.x` / `p.x.y` / `xs.count()`.
+// After each primary, if the very next (non-newline) token is "." followed by an
+// identifier, fold it into a `member` Expr{ kind:"member", value:<field>, children:[receiver] }.
+// If that identifier is immediately followed by "(" it is a method call — build a
+// `call` Expr using the receiver+field as qualified callee.
+pure flow parsePrimaryWithMember(tokens: Array<Token>, pos: Int) -> ExprParse
+contract { intent { "Parse a primary then chain any .field / .method() accesses." } }
+{
+  let total: Int = tokens.count()
+  let base: ExprParse = parsePrimary(tokens, pos)
+  mut cur: Expr = base.expr
+  mut p: Int = base.nextPos
+  mut scanning: Bool = true
+
+  while scanning and p < total {
+    let dotPos: Int = skipNewlines(tokens, p)
+    if eTokVal(tokens, dotPos) == "." {
+      let fieldPos: Int = dotPos + 1
+      let optField = tokens.get(fieldPos)
+      match optField {
+        None => { scanning = false }
+        Some(fieldTok) => {
+          let fname: String = fieldTok.value
+          let afterField: Int = fieldPos + 1
+          // Method call: receiver.method(args)
+          if eTokVal(tokens, afterField) == "(" {
+            let qualCallee: String = cur.value + "." + fname
+            mut methodArgs: Array<Expr> = Array.empty()
+            methodArgs = methodArgs.append(cur)
+            // Parse arguments from afterField+1 (past "(")
+            let argStart: Int = afterField + 1
+            let firstA: String = eTokVal(tokens, skipNewlines(tokens, argStart))
+            mut ap: Int = argStart
+            if firstA == ")" {
+              ap = skipNewlines(tokens, argStart) + 1
+            }
+            else {
+              mut argScanning: Bool = true
+              while argScanning and ap < total {
+                let argParse: ExprParse = parseExpr(tokens, ap)
+                methodArgs = methodArgs.append(argParse.expr)
+                let afterArg: Int = skipNewlines(tokens, argParse.nextPos)
+                let s: String = eTokVal(tokens, afterArg)
+                if s == "," { ap = afterArg + 1 }
+                if s == ")" { ap = afterArg + 1  argScanning = false }
+                let isSep2: Bool = s == "," or s == ")"
+                if isSep2 == false { ap = afterArg  argScanning = false }
+              }
+            }
+            cur = { kind: "call", value: fname, litType: "", children: methodArgs }
+            p = ap
+          }
+          else {
+            // Field access: receiver.field → kind:"member"
+            mut kids: Array<Expr> = Array.empty()
+            kids = kids.append(cur)
+            cur = { kind: "member", value: fname, litType: "", children: kids }
+            p = afterField
+          }
+        }
+      }
+    }
+    else {
+      scanning = false
+    }
+  }
+
+  return { expr: cur, nextPos: p }
 }
 
 // Parse comma-separated argument expressions of a call. `lparenPos` points at the
@@ -469,7 +584,7 @@ contract { intent { "Parse unary prefix operators ! and - over parsePrimary." } 
     kids = kids.append(operand.expr)
     return { expr: { kind: "unary", value: "neg", litType: "", children: kids }, nextPos: operand.nextPos }
   }
-  return parsePrimary(tokens, p)
+  return parsePrimaryWithMember(tokens, p)
 }
 
 pure flow parseMultiplicative(tokens: Array<Token>, pos: Int) -> ExprParse
@@ -595,6 +710,58 @@ contract { intent { "Build the [left, right] children array for a binary node." 
   return out
 }
 
+record MatchArmsResult { arms: Array<Stmt>  nextPos: Int }
+
+// Parse match arms from the position of the "{" that opens the match block.
+// Isolated as a separate flow to give it a clean scope for `p` mutation.
+// Returns MatchArmsResult{arms, nextPos} where nextPos is past the closing "}"
+// (or at the current pos if no "{" was found).
+pure flow parseMatchArms(tokens: Array<Token>, openBracePos: Int) -> MatchArmsResult
+contract { intent { "Parse match arms { pat => { body } ... } from the opening brace." } }
+{
+  let total: Int = tokens.count()
+  mut arms: Array<Stmt> = Array.empty()
+  mut endPos: Int = openBracePos
+  if eTokVal(tokens, openBracePos) == "{" {
+    mut p: Int = openBracePos + 1
+    mut scanning: Bool = true
+    while scanning and p < total {
+      p = skipNewlines(tokens, p)
+      if eTokVal(tokens, p) == "}" {
+        p = p + 1
+        scanning = false
+      }
+      else {
+        if eTokVal(tokens, p) == "" {
+          scanning = false
+        }
+        else {
+          let mpat: String = eTokVal(tokens, p)
+          p = p + 1
+          p = skipNewlines(tokens, p)
+          if eTokVal(tokens, p) == "=>" { p = p + 1 }
+          p = skipNewlines(tokens, p)
+          if eTokVal(tokens, p) == "{" {
+            let armBlk: BlockParse = parseBlock(tokens, p + 1)
+            p = armBlk.nextPos
+            mut patExpr: Expr = { kind: "lit", value: "true", litType: "Bool", children: Array.empty() }
+            if mpat != "_" {
+              patExpr = { kind: "lit", value: mpat, litType: "Int", children: Array.empty() }
+            }
+            let armStmt: Stmt = { kind: "if", name: mpat, typeName: "", expr: [patExpr], body: armBlk.stmts, elseBody: Array.empty() }
+            arms = arms.append(armStmt)
+          }
+          else {
+            p = p + 1
+          }
+        }
+      }
+    }
+    endPos = p
+  }
+  return { arms: arms, nextPos: endPos }
+}
+
 // Parse a single statement beginning at `pos`. EVERY expression position is
 // routed through the real parseExpr and the cursor is advanced to its nextPos.
 pure flow parseStmt(tokens: Array<Token>, pos: Int) -> StmtParse
@@ -612,6 +779,18 @@ contract { intent { "Parse one statement; dispatch on the leading token kind/val
     if isOpSym(tokens, p, ":") {
       typeName = tokVal(tokens, p + 1)
       p = p + 2
+      // Skip a generic type parameter < T > so `Array<Int>` doesn't leave `<` `Int` `>` tokens
+      // floating and confusing the `=` lookahead. This is a simple single-level skip.
+      if eTokVal(tokens, p) == "<" {
+        p = p + 1
+        mut depth: Int = 1
+        while depth > 0 and p < tokens.count() {
+          let gv: String = eTokVal(tokens, p)
+          if gv == "<" { depth = depth + 1 }
+          if gv == ">" { depth = depth - 1 }
+          p = p + 1
+        }
+      }
     }
 
     if isOpSym(tokens, p, "=") {
@@ -700,6 +879,24 @@ contract { intent { "Parse one statement; dispatch on the leading token kind/val
       elseBody: Array.empty()
     }
     return { stmt: stmt, nextPos: blk.nextPos }
+  }
+
+  // ── match ──
+  // match <subjectExpr> { <pat> => { <body> } ... _ => { <body> } }
+  // Stage B parser approach: store each arm as an individual if-stmt in the
+  // Stmt.body array of a "match" kind stmt. The Stmt holds:
+  //   kind="match"  expr=[subject]  body=[armStmt0, armStmt1, ...]
+  // where each armStmt is kind="if", expr=[pat-as-lit or sentinel for _],
+  //   body=arm-body, elseBody=[].
+  // The GIR emitter + runtime handle this directly by iterating arm stmts.
+  // Arm parsing is delegated to parseMatchArms (a separate flow) to avoid scope
+  // issues with `p` inside deeply-nested if/while blocks in parseStmt.
+  if isKw(tokens, pos, "match") {
+    let subjParse: ExprParse = parseExpr(tokens, pos + 1)
+    let matchBlockStart: Int = skipNewlines(tokens, subjParse.nextPos)
+    let armsResult: MatchArmsResult = parseMatchArms(tokens, matchBlockStart)
+    let matchStmt: Stmt = { kind: "match", name: "", typeName: "", expr: [subjParse.expr], body: armsResult.arms, elseBody: Array.empty() }
+    return { stmt: matchStmt, nextPos: armsResult.nextPos }
   }
 
   let assignTarget: Bool = isIdent(tokens, pos) and isOpSym(tokens, pos + 1, "=")
@@ -875,12 +1072,26 @@ contract {
           }
         }
 
-        // Return type: lexer emits "->" as a single Operator token
+        // Return type: lexer emits "->" as a single Operator token.
+        // Generic parameters like `Result<Int, String>` or `Option<String>` are
+        // read as a single base name then a `< ... >` run — skip the generic run
+        // so the cursor lands on `contract` / `{` correctly.
         mut returnType: String = ""
         if tokVal(tokens, p) == "->" {
           p = p + 1
           returnType = tokVal(tokens, p)
           p = p + 1
+          // Skip generic type parameter < T, U > if present.
+          if eTokVal(tokens, p) == "<" {
+            p = p + 1
+            mut genDepth: Int = 1
+            while genDepth > 0 and p < total {
+              let gv: String = eTokVal(tokens, p)
+              if gv == "<" { genDepth = genDepth + 1 }
+              if gv == ">" { genDepth = genDepth - 1 }
+              p = p + 1
+            }
+          }
         }
 
         // Effects: canonical form is contract { effects { ... } }.
@@ -888,11 +1099,19 @@ contract {
         // Effects extraction from contract block is a Stage B milestone target.
         mut efx: Array<String> = Array.empty()
 
+        // Skip newlines between the return type and the contract/body — real
+        // governed flows put `contract` on the next line, e.g.
+        //   pure flow f(...) -> T
+        //   contract { ... }
+        //   { body }
+        while isNewline(tokens, p) { p = p + 1 }
+
         // Phase 61: Skip a standalone contract block before the body.
-        // Some sources write:  flow name(...): Type contract { ... } { body }
-        // The contract block comes before the opening brace of the body.
+        // The contract block (with nested types{}/intent{}/effects{} braces) comes
+        // before the opening brace of the body; brace-count to its matching close.
         if tokVal(tokens, p) == "contract" {
           p = p + 1
+          while isNewline(tokens, p) { p = p + 1 }
           if tokVal(tokens, p) == "{" {
             p = p + 1
             mut contractDepth: Int = 1
@@ -904,6 +1123,9 @@ contract {
             }
           }
         }
+
+        // Skip newlines between the contract block and the body's opening brace.
+        while isNewline(tokens, p) { p = p + 1 }
 
         // Parse body block — Milestone M-A: build the full structured Stmt/Expr
         // AST via parseBlock (folded from body-parser.lln). parseBlock returns the
