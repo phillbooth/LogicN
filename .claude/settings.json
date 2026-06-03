@@ -1,0 +1,47 @@
+{
+  "description": "LogicN project Claude Code settings — devtools hooks and standard toolchain",
+
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/run-phase-close.mjs",
+            "description": "Full phase-close cadence at the end of every stage: core tests + devtools tests + security/naming audit sweep + provenance audit + full graph re-index. Always exits 0 (informational). Set LOGICN_SKIP_PHASE_CLOSE=1 to skip during rapid iteration. Benchmarks are intentionally NOT included (multi-minute) — run `npm run run` in logicn-devtools-benchmarks on demand."
+          }
+        ]
+      }
+    ]
+  },
+
+  "env": {
+    "LOGICN_DEVTOOLS_NAMING_CLI":      "packages-logicn/logicn-devtools-naming/dist/cli.js",
+    "LOGICN_DEVTOOLS_CONTEXT_CLI":     "packages-logicn/logicn-devtools-context/dist/cli.js",
+    "LOGICN_DEVTOOLS_INTELLIGENCE_CLI":"packages-logicn/logicn-devtools-intelligence/dist/cli.js",
+    "LOGICN_DEVTOOLS_PROVENANCE_CLI":  "packages-logicn/logicn-devtools-provenance/dist/cli.js",
+    "LOGICN_DEVTOOLS_SECURITY_CLI":    "packages-logicn/logicn-devtools-security/dist/cli.js"
+  },
+
+  "notes": {
+    "devtools-standard-commands": {
+      "naming-check":   "node packages-logicn/logicn-devtools-naming/dist/cli.js check <file.lln>",
+      "context-receipt":"node packages-logicn/logicn-devtools-context/dist/cli.js receipt <file.lln> [--markdown]",
+      "intelligence":   "node packages-logicn/logicn-devtools-intelligence/dist/cli.js search \"<query>\" [--effects <effect>]",
+      "provenance":     "node packages-logicn/logicn-devtools-provenance/dist/cli.js audit <directory>",
+      "security-audit": "node packages-logicn/logicn-devtools-security/dist/cli.js audit <file.lln>",
+      "test-core":      "node scripts/run-all-tests.js --core",
+      "test-all":       "node scripts/run-all-tests.js",
+      "benchmark":      "cd packages-logicn/logicn-devtools-benchmarks && npm run run",
+      "benchmark-quick":"cd packages-logicn/logicn-devtools-benchmarks && npm run run:quick",
+      "graph":          "node packages-logicn/logicn-core-cli/dist/index.js graph --out build/graph"
+    },
+    "devtools-added-2026-06-03": [
+      "logicn-devtools-naming       — LLN-NAMING-001..005 naming standard enforcement (abbreviations, missing intent, generic types)",
+      "logicn-devtools-context      — Context Receipt generator: 51-97% token reduction for AI code windows",
+      "logicn-devtools-intelligence — BM25 hybrid code search: indexes .lln files, queries by semantic tokens + structural filters",
+      "logicn-devtools-provenance   — Data lineage tracker: maps source→transform→sink with trust boundary visualization"
+    ]
+  }
+}
