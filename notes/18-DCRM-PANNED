@@ -1,0 +1,84 @@
+To choose the best approach for managing forward-looking syntax in documentation and examples, it is helpful to look at it through the lens of your **AI Authoring** and **Syntax** categories.
+
+A central goal of LogicN’s design is providing an unambiguous, machine-readable developer experience. This structure must cater to both human developers and downstream automated code-generation systems (like LLMs parsing your `app.ai-guide.md`).
+
+---
+
+### The Verdict: Retain Forward-Looking Syntax, but Upgrade the Convention
+
+You should **not** remove DRCM syntax from examples entirely. Doing so creates a major documentation gap for the higher-level patterns (Patterns 4, 7, 8, 9) that rely on constraints like `limits {}` or `economics {}` to prove their architectural value.
+
+However, loose comments or arbitrary marker conventions run the risk of confusing compiler telemetry tools, test runners, and AI authoring engines that attempt to parse example files.
+
+Instead of a generic `DRCM-PLANNED` comment string, the most robust solution is to formalize forward-looking blocks using **conditional feature gates** directly inside the `.lln` grammar. This turns a simple documentation marker into a verifiable syntax feature.
+
+---
+
+### The Hardened Implementation: Feature-Gated Profiles
+
+By wrapping future blocks in a built-in compiler directive—such as `@experimental_profile` or `@requires_feature`—the code remains valid syntax today. It also provides an explicit semantic signal to both the compiler and AI tools.
+
+#### How Pattern 7 (Governed WASM Module) Should Look Today:
+
+```rust
+;; Location: packages-logicn/logicn-core-examples/src/patterns/pattern7_governed_wasm.lln
+
+secure flow processCorporateInvoicing(merchantId: String, invoiceBatch: List<Invoice>) -> Result<Void, Fault>
+contract {
+  intent { "Execute corporate invoicing with multi-tenant guardrails." }
+  effects { gateway.charge }
+  
+  types {
+    type Invoice = { id: String, amount_cents: U64 }
+  }
+
+  request { merchantId, invoiceBatch }
+  response { Result<Void, Fault> }
+
+  ;; --- STABLE COMPILATION LAYER ---
+  ;; Patterns 1-3 & 5 pass through the active compiler pipeline today.
+  authority {
+    allow_call: "gateway::charge_endpoint"
+  }
+
+  ;; --- FUTURE ROBUSTNESS LAYER ---
+  ;; The compiler parses this block as valid grammar but skips static verification 
+  ;; and WAT assertion injection until the Phase 4/5 DRCM runtimes ship.
+  @experimental_profile(name: "drcm_core_v1", status: "planned_phase_5") {
+    limits {
+      max_memory: 4MB,
+      max_instructions: 5_000_000
+    }
+    economics {
+      currency: "USD",
+      max_billing_quota_per_call: 500_00,
+      max_aggregate_flow_budget: 10000_00
+    }
+    audit {
+      receipt_format: "canonical_cbor",
+      signing_algorithm: "ml-dsa-65"
+    }
+  }
+}
+{
+  ;; Pure transform business logic runs here
+  return Ok(Void);
+}
+
+```
+
+---
+
+### Architectural Advantages of the Feature-Gate Convention
+
+#### 1. Zero-Bypass AI Context Tracking
+
+If examples completely strip out `limits {}` or `economics {}`, AI code generators will learn to write bare, unguarded workflow modules. Using an explicit directive forces code generation engines to treat these primitives as mandatory structural dependencies for high-assurance code, even if the underlying compiler flag defaults to an inactive state today.
+
+#### 2. Clean Negative Test Matrix Processing
+
+During Phase 7 hardening, your negative test suite must verify that the compiler successfully rejects invalid or malformed capability blocks. A feature directive allows your test suites to toggle verification behavior dynamically (`--enable-experimental-profile=drcm_core_v1`), making it easy to test parser compatibility during development.
+
+#### 3. Graceful Syntax Evolution
+
+When a DRCM phase ships (such as Phase 4's structured capabilities or Phase 5's self-hosted DSS), you don't have to rewrite or re-import all your sample files. Graduating a feature flag simply requires changing the directive status or removing the attribute entirely, transforming the example into a production-ready template.

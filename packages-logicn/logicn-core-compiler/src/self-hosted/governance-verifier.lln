@@ -224,6 +224,110 @@ contract {
   return false
 }
 
+// ── Domain Guard Differential Proof (task #56) ────────────────
+//
+// The canonical .lln implementation of LLN-GOV-004.
+// Stage A TypeScript in governance-verifier.ts is a bootstrap mirror of this logic.
+
+pure flow findPolicyExists(policies: Array, name: String) -> Bool
+contract {
+  intent { "Return true if a policy with the given name exists in the policies array." }
+}
+{
+  mut i: Int = 0
+  while i < policies.count() {
+    let pOpt = policies.get(i)
+    match pOpt {
+      Some(pol) => { if pol.name == name { return true } }
+      None => {}
+    }
+    i = i + 1
+  }
+  return false
+}
+
+pure flow effectIsPermitted(policies: Array, policyName: String, effect: String) -> Bool
+contract {
+  intent { "Return true if the given effect is in the named policy's permitted_effects." }
+}
+{
+  mut i: Int = 0
+  while i < policies.count() {
+    let pOpt = policies.get(i)
+    match pOpt {
+      Some(pol) => {
+        if pol.name == policyName {
+          mut j: Int = 0
+          while j < pol.permittedEffects.count() {
+            let eOpt = pol.permittedEffects.get(j)
+            match eOpt {
+              Some(e) => { if e == effect { return true } }
+              None => {}
+            }
+            j = j + 1
+          }
+          return false
+        }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return false
+}
+
+pure flow verifyDomainGuardConformance(flows: Array, policies: Array) -> GovResult
+contract {
+  intent { "LLN-GOV-004: verify declared effects ⊆ permitted_effects for each [conforms_to: X] contract." }
+}
+{
+  mut allDiags: Array = Array.empty()
+  mut passed: Int = 0
+  mut failed: Int = 0
+  mut i: Int = 0
+  while i < flows.count() {
+    let fdOpt = flows.get(i)
+    match fdOpt {
+      Some(fd) => {
+        let ct: String = fd.conformsTo
+        if ct != "" {
+          let polExists: Bool = findPolicyExists(policies, ct)
+          if polExists == false {
+            let msg: String = "flow '" + fd.name + "' declares [conforms_to: " + ct + "] but no policy '" + ct + "' was found"
+            allDiags = allDiags.append({ code: "LLN-GOV-004", message: msg, flowName: fd.name })
+            failed = failed + 1
+          } else {
+            mut flowDiags: Array = Array.empty()
+            mut j: Int = 0
+            while j < fd.effects.count() {
+              let effOpt = fd.effects.get(j)
+              match effOpt {
+                Some(eff) => {
+                  let permitted: Bool = effectIsPermitted(policies, ct, eff)
+                  if permitted == false {
+                    let msg: String = "LLN-GOV-004: effect '" + eff + "' is not permitted by policy '" + ct + "' in flow '" + fd.name + "'"
+                    flowDiags = flowDiags.append({ code: "LLN-GOV-004", message: msg, flowName: fd.name })
+                  }
+                }
+                None => {}
+              }
+              j = j + 1
+            }
+            if flowDiags.count() == 0 { passed = passed + 1 }
+            if flowDiags.count() > 0 {
+              failed = failed + 1
+              allDiags = appendAll(allDiags, flowDiags)
+            }
+          }
+        }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return { diagnostics: allDiags, passed: passed, failed: failed }
+}
+
 // ── Body-governance verification pass ─────────────────────────
 
 pure flow checkBodyGovernance(flows: Array) -> GovResult

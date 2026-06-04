@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "lln.manifest.v1",
+  "sourceHash": "sha256:e45d3a2d88bf61087bf6557148dcfd9039698f0974b038c6439c89c8525e221d",
+  "sourceFile": "tests/patterns/pattern-03-high-trust-mutation.lln",
+  "flowCount": 1,
+  "derivedConstraints": [
+    "transferFunds: Flow transferFunds declares required effects [via contract.effects]",
+    "transferFunds: Flow transferFunds has a contract declaration [via contract]",
+    "transferFunds: SecureString never_reaches [network.outbound, audit.log, serialization]"
+  ],
+  "proofObligations": [
+    {
+      "flowName": "transferFunds",
+      "kind": "effect-safety",
+      "description": "secure flow declares effects [database.write, audit.write, secret.read]",
+      "verified": "static"
+    },
+    {
+      "flowName": "intent_declared:transferFunds",
+      "kind": "governance-obligation",
+      "description": "intent_declared:transferFunds",
+      "verified": "static"
+    },
+    {
+      "flowName": "audit_required:transferFunds",
+      "kind": "governance-obligation",
+      "description": "audit_required:transferFunds",
+      "verified": "static"
+    }
+  ],
+  "generatedAt": "2026-06-04T20:28:38.463Z",
+  "governanceSignature": {
+    "algorithm": "Ed25519+ML-DSA-65",
+    "ed25519": "placeholder:sha256:721fd1f0ffc28ba0371e5c64f1bafe8eea1d8563cd8af1fe0f647cfbf19d0ec0",
+    "mlDsa65": "placeholder:sha256:721fd1f0ffc28ba0371e5c64f1bafe8eea1d8563cd8af1fe0f647cfbf19d0ec0",
+    "signerNote": "Placeholder signatures — real ML-DSA-65 signing requires key custody spec (DRCM task #34). The canonical JSON body hash above is stable and verifiable today."
+  }
+}

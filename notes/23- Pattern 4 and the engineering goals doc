@@ -1,0 +1,107 @@
+The discrepancy you spotted highlights a subtle but critical shift in how your system handles permission management.
+
+Instead of adding a completely new clause or falling back on a loose string-based approach, this design actually represents a fundamental transition: moving from raw string-based capabilities to **explicitly typed System Capability Objects.** This shift is essential to prevent text-parsing vulnerabilities like the wildcard (`*`) host leak.
+
+The best path forward is to use **strongly typed, structured definitions.** This satisfies the rules in the *Contract Authoring Guide* while providing the granular control required by advanced architectures like Pattern 4.
+
+---
+
+### The Evolution: Why Loose Strings are Banned
+
+The existing `requires capability.X` pattern works well for broad, boolean permissions (e.g., `requires capability.network`). However, it lacks the precision needed to secure complex workflows, such as restricting a system call to a specific network endpoint or domain.
+
+Using raw text parameters inside a permission statement introduces severe architectural risks:
+
+```rust
+;; 🔴 VULNERABLE APPROACH (Banned per Phase 1 Architecture rules)
+authority {
+  allow_call: "gateway::charge_endpoint" ;; Loose text string can trigger parsing exploits
+}
+
+```
+
+If an execution string is malformed or altered by an input payload, it can bypass simple string-matching logic, inadvertently dropping ambient privileges to the underlying guest isolate.
+
+---
+
+### The Solution: Strongly Typed System Capability Objects
+
+To achieve high-speed validation while maintaining strict security boundaries, your **Capability** category mandates that permissions be declared using explicit algebraic variant types.
+
+The compiler processes these structures directly within the **Governance Verifier** pipeline. This approach validates target constraints at compile time, eliminating the need for runtime string parsing.
+
+#### How to Structure the Capability Object in Code Examples:
+
+```rust
+;; Syntax Location Reference: packages-logicn/logicn-core-compiler/src/parser/contract.lln
+
+secure flow processCorporateInvoicing(merchantId: String, invoiceBatch: List<Invoice>) -> Result<Void, Fault> 
+contract {
+  intent { "Execute corporate invoicing with multi-tenant guardrails." }
+  effects { gateway.charge }
+
+  ;; --- HARDENED CONFIGURATION LAYOUT ---
+  ;; Complies with the Contract Authoring Guide by declaring explicit objects 
+  ;; instead of using raw text strings or un-typed allow clauses.
+  requires {
+    SystemCapability.CallGate(
+      module: "gateway",
+      function: "charge_endpoint",
+      enforce_tls: true
+    ),
+    SystemCapability.NetworkEgress(
+      target: NetworkTarget.ExplicitHost("api.gateway.internal"),
+      port: 443
+    )
+  }
+
+  limits {
+    max_memory: 4MB
+  }
+}
+{
+  ;; Ephemeral execution logic safely isolates here
+  return Ok(Void);
+}
+
+```
+
+---
+
+### How the Compiler Validates Typed Capabilities
+
+When this configuration block is compiled, the system processes the permission metadata through a rigid, multi-layered validation sequence:
+
+```
+┌────────────────────────────────────────────────────────┐
+│ 1. GRAMMAR COMPLIANCE PASS                            │
+│  Parser verifies SystemCapability matches EBNF shapes   │
+└───────────────────────────┬────────────────────────────┘
+                            │
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│ 2. GOVERNANCE VERIFIER (Static Proof)                 │
+│  Cross-references targets against the .lmanifest map   │
+└───────────────────────────┬────────────────────────────┘
+                            │
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│ 3. WAT EMITTER PIPELINE                                │
+│  Converts Enums to a strict 32-bit Sovereign Bitmask   │
+└───────────────────────────┬────────────────────────────┘
+                            │
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│ 4. RUNTIME MEDIATION GATE                             │
+│  DSS supervisor executes a single-cycle bitwise AND    │
+└────────────────────────────────────────────────────────┘
+
+```
+
+1. **The Static Proof Pass:** The *Governance Verifier* scans the declared capability objects and matches them directly against your dependency graph metadata inside the compilation manifest (`.lmanifest`). If a module attempts to invoke a function that is not explicitly registered in the `requires {}` block, the compiler rejects the build.
+2. **Bitmask Allocation:** The compiler's code-emission pipeline translates the validated algebraic objects into a precise **32-bit sovereign bitmask**. This bitmask is loaded directly into the private $V_{\text{DPM}}$ register of the `DSS.wasm` supervisor module.
+3. **Single-Cycle Enforcement:** At runtime, checking a capability completely bypasses slow software string comparisons. The supervisor evaluates the system call parameter using a single-cycle bitwise `AND` operation at the hardware level, protecting execution speed while ensuring absolute isolation.
+
+### Recommendation for Documentation Updates
+
+To maintain a single source of truth across your knowledge base, you should update both **Pattern 4** and the **Engineering Goals Document** to remove loose text strings like `allow_call: "string"`. Replacing them with the structured `requires { SystemCapability.X(...) }` syntax brings your examples into alignment with the *Contract Authoring Guide* and reinforces your design principles.

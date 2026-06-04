@@ -1,0 +1,120 @@
+This is a definitive, high-assurance critique of the pure-WASM architecture. Your roadmap and component structure establish an un-bypasable, complete mediation model for LogicN.
+
+By shifting the Deterministic State Sentinel (DSS) into a pure `.lln` module compiled down to WebAssembly, you eliminate any reliance on a custom native codebase (such as Rust), making **Wasmtime's WASI declarative runtime your absolute Trusted Computing Base (TCB)**.
+
+Here is the deep structural critique of your roadmap, the architectural remediation of your two critical flaws, and a breakdown of the tighter constraints introduced by this pure-WASM posture.
+
+---
+
+### 1. Root-Cause Remediation of Critical Vulnerabilities
+
+#### 🔴 Defect 1: The Wildcard (`*`) Host Leak
+
+**Architectural Risk:** Allowing a structural capability type to interpret a `*` string variable introduces a failure mode if parsing anomalies or state confusion occur within the `.lln` execution loop. If an attacker controls input metadata, they can inject `*` to bypass destination controls.
+**The Pure `.lln` Fix:** We remove string wildcards entirely. Universal egress requires an explicit, immutable algebraic variant type.
+
+```rust
+;; Core Capability Model: Packages-logicn/logicn-core-security/src/capabilities.lln
+
+type NetworkTarget =
+  | ExplicitHost(String)  ;; Must match FQDN or literal IP exactly
+  | UnrestrictedInternet  ;; Only valid if bound to a high-audit explicit policy
+
+type NetworkConstraint = {
+  target: NetworkTarget,
+  allowed_port: U16,
+  require_tls: Bool
+}
+
+```
+
+#### 🔴 Defect 2: Broken `scanForSecretLiteral` Substring Hashing
+
+**Architectural Risk:** Comparing SHA-256 hashes of out-of-band secrets against a streaming cleartext data block does not work. A substring cannot be extracted by hashing a subset of an un-fragmented text payload.
+**The Pure `.lln` Fix:** When the DSS maps a secret credential, it extracts a fixed length-prefix token (minimum 8 characters) into an isolated, write-only lookaside memory segment within the monitor.
+
+```rust
+;; Location: packages-logicn/logicn-core-security/src/sink-monitor.lln
+
+type SecretSinkCache = mut {
+  ;; Stores cleartext prefix tokens under memory protection (Never signed or outputted)
+  tracked_prefixes: List<String> 
+}
+
+global active_sink_monitor: SecretSinkCache = SecretSinkCache { tracked_prefixes: List.new() }
+
+flow registerSecretTrackingPrefix(rawSecret: String) -> Void {
+  if (String.length(rawSecret) >= 12) {
+    ;; Capture a signature slice long enough to prevent accidental false-positives
+    let fingerprintPrefix = String.substring(rawSecret, 0, 8); 
+    active_sink_monitor.tracked_prefixes.append(fingerprintPrefix);
+  }
+}
+
+flow evaluateStreamingSinkBytes(rawPayload: String) -> String {
+  for prefix in active_sink_monitor.tracked_prefixes {
+    if (crypto::contains_substring_match(rawPayload, prefix)) {
+      ;; Instantly trigger a hardware fault exception trap to abort execution
+      runtime::triggerHardwareTrap(3001); ;; Trap Code: LLN-SECRET-BREACH
+    }
+  }
+  return rawPayload;
+}
+
+```
+
+---
+
+### 2. The Pure WASI Constraint & Capability Mapping
+
+Moving from custom Rust host extensions to a pure declarative WASI framework is a major security improvement, but it introduces strict technical boundaries. Since the DSS is itself a WebAssembly module running inside Wasmtime, it cannot dynamically generate native kernel extensions or arbitrary socket hooks at runtime. It is bounded entirely by the capability configuration passed to it by the outer OCI container engine.
+
+We map our structured capability types onto the standard declarative constraints of **WASI Preview 2 (Wasmtime 22+)** to ensure completeness:
+
+| LogicN Capability Object | Underlyling WASI Core Interface Requirement | Native Host Enforcement Mechanic |
+| --- | --- | --- |
+| `FileSystem(FileSystemConstraint)` | `wasi:cli/environment`, `wasi:filesystem/preopens` | Wasmtime CLI mapping locks directories to individual paths using read-only filesystem markers. |
+| `Network(NetworkConstraint)` | `wasi:sockets/tcp`, `wasi:http/outgoing-handler` | The OCI runtime restricts outgoing traffic to specified host network targets at the container level. |
+| `EnvironmentKey(String)` | `wasi:cli/environment` | Dropping environment variables isolates execution context entirely from the parent machine. |
+| `AuditAppendOnly` | `wasi:cli/stdout`, `wasi:cli/stderr` | System execution data streams directly into an un-spoofable, append-only container log collector. |
+
+*Warning for Phase 5 Component Design:* Because pure WASI does not support real-time path configuration adjustments mid-execution, your Dynamic Posture Matrix (DPM) can change state during execution, but it cannot expand its base permissions beyond what the host container allowed when the process launched. **The DPM functions purely as a monotonic subtraction engine—it can drop permissions instantly, but it can never expand them.**
+
+---
+
+### 3. Verification of the Layered Architecture
+
+Your updated component layout shows exactly how the execution layers isolate state across runtime boundaries:
+
+```
++------------------------------------------------------------------------+
+| LAYER 2: HOST OS / OCI LAYER (gVisor Sandbox Boundary)                 |
+| - Drops root privileges, configures seccomp system call profiles       |
+| - Controls network interface cards and maps file system paths          |
++------------------------------------------------------------------------+
+       │
+       ▼
++------------------------------------------------------------------------+
+| LAYER 1: WASMTIME VIRTUAL MACHINE HOUSING THE DSS (Pure .lln -> WASM)  |
+| - Enforces virtual memory guard pages, tracks fuel/instruction counts   |
+| - Cleanses outbound data streams via Secret Sink Monitor functions     |
++------------------------------------------------------------------------+
+       │
+       ▼
++------------------------------------------------------------------------+
+| LAYER 0: EPHEMERAL WORKFLOW ISOLATES (DWI, One Module Per Step Execution) |
+| - Runs business code inside individual shared-nothing memory blocks    |
++------------------------------------------------------------------------+
+
+```
+
+---
+
+### 4. Implementation Validation Procedures
+
+To verify your Phase 1 security milestones before proceeding to compiler updates, execute these validation procedures against your Wasmtime runtime engine configuration:
+
+1. **The WASI Directory Leak Test:** Attempt to run a compiled `.lln` module that explicitly tries to read the host engine system paths (such as `wasi:filesystem/preopens.get_directories`). The Wasmtime configuration pass must fail with an instantiation trap or return a zero-length array, validating complete filesystem containment.
+2. **The Zero-Prefix Sink Trap:** Insert a dummy credential into the Secret Signature Cache monitor (e.g., `supersecretkey`). Execute a routine that formats a long diagnostic block containing that substring mixed into a text trace. The sink pipeline must capture the substring prefix and trigger an immediate termination exception, proving that data scrubbing happens before the payload reaches an external device.
+
+This architecture locks LogicN into an ironclad containment model. Your roadmap addresses foundational risks first, ensuring that when the compilation pipelines are built, they are anchored by a hardened, predictable runtime layer.

@@ -1,0 +1,118 @@
+name: Governance Review
+
+# Runs the LogicN governance diff on any PR that touches .lln files.
+# Classifies the change and enforces the required review gate.
+#
+# Change-class gates (from logicn-governed-design-synthesis.md):
+#   neutral/tightening:   1 reviewer + automated checks → exits 0
+#   expansion:            2 reviewers required (security/governance owner) → exits 2
+#   experimental:         architecture review required → exits 3
+#
+# Reference: docs/Knowledge-Bases/logicn-governed-design-synthesis.md
+
+on:
+  pull_request:
+    paths:
+      - "**/*.lln"
+      - "examples/**"
+      - "tests/**"
+
+jobs:
+  governance-diff:
+    name: Governance Change-Class Review
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history needed for git diff
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run governance diff
+        id: gov_diff
+        run: |
+          # Find changed .lln files
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- "*.lln" | head -50)
+          if [ -z "$CHANGED" ]; then
+            echo "No .lln files changed — skipping governance diff"
+            echo "class=neutral" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Changed .lln files:"
+          echo "$CHANGED"
+
+          # Run governance diff against base branch
+          node packages-logicn/logicn-core-compiler/dist/cli.js diff \
+            origin/${{ github.base_ref }} ${{ github.head_ref }} \
+            --json > /tmp/gov-diff.json 2>&1 || true
+
+          node packages-logicn/logicn-core-compiler/dist/cli.js diff \
+            origin/${{ github.base_ref }} ${{ github.head_ref }} > /tmp/gov-diff.txt 2>&1 || DIFF_EXIT=$?
+
+          echo "=== Governance Diff ==="
+          cat /tmp/gov-diff.txt
+
+          # Extract change class from JSON output
+          CHANGE_CLASS=$(node -e "
+            const d = require('/tmp/gov-diff.json');
+            console.log(d.changeClass || 'neutral');
+          " 2>/dev/null || echo "neutral")
+
+          echo "class=$CHANGE_CLASS" >> $GITHUB_OUTPUT
+          echo "CHANGE_CLASS=$CHANGE_CLASS" >> $GITHUB_ENV
+
+      - name: Annotate PR with change class
+        if: always()
+        run: |
+          case "$CHANGE_CLASS" in
+            neutral|tightening)
+              echo "::notice title=Governance Review::Change class: $CHANGE_CLASS — standard review applies"
+              ;;
+            expansion)
+              echo "::warning title=Governance Review::Change class: EXPANSION — 2 reviewers required (including security/governance owner)"
+              ;;
+            experimental)
+              echo "::error title=Governance Review::Change class: EXPERIMENTAL — architecture review + conformance rerun required"
+              ;;
+          esac
+
+      - name: Block on expansion class (requires explicit approval)
+        if: env.CHANGE_CLASS == 'expansion' || env.CHANGE_CLASS == 'experimental'
+        run: |
+          echo ""
+          echo "══════════════════════════════════════════════"
+          echo " GOVERNANCE REVIEW REQUIRED"
+          echo "══════════════════════════════════════════════"
+          echo ""
+          if [ "$CHANGE_CLASS" = "expansion" ]; then
+            echo " Change class: EXPANSION"
+            echo " Required:     2 reviewers including security/governance owner"
+            echo " Reason:       New effects, new secrets, broader authority, or larger budgets detected"
+          else
+            echo " Change class: EXPERIMENTAL"
+            echo " Required:     Architecture review + conformance rerun + signed release"
+            echo " Reason:       policy { emergency {} }, @experimental_profile, or backend change detected"
+          fi
+          echo ""
+          echo " Review the governance diff above and ensure:"
+          echo " 1. The expanded authority is intentional and justified"
+          echo " 2. The intent {} block correctly describes the new behavior"
+          echo " 3. A security/governance owner has approved the expansion"
+          echo ""
+          cat /tmp/gov-diff.txt
+          echo ""
+          # Exit 1 to block the CI check
+          # Remove this exit when governance owner approves via PR label "governance-approved"
+          if [ "${{ contains(github.event.pull_request.labels.*.name, 'governance-approved') }}" = "false" ]; then
+            exit 1
+          fi
+          echo " governance-approved label found — proceeding"

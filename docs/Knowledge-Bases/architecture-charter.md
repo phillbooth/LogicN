@@ -304,3 +304,17 @@ LogicN is:
 The goal is not uncontrolled power.
 The goal is controlled, explainable and governable computation.
 ```
+
+---
+
+## Living Documents
+
+These documents translate the charter into concrete rules, patterns, and diagnostics:
+
+| Document | Purpose |
+|---|---|
+| `logicn-governance-rules.md` | Numbered rule registry with LLN codes + enforce status |
+| `logicn-architecture-patterns.md` | 9 copy-paste patterns for common structures |
+| `logicn-contract-authoring-guide.md` | Canonical contract authoring reference |
+| `logicn-deterministic-runtime-containment.md` | DRCM 7-module security architecture |
+| `secure-by-default-syntax-principles.md` | Syntax-level security principles |

@@ -5,10 +5,11 @@
 type VerifyResult = Result<Response, String>
 
 // Check if a declared effect is valid for the given deployment profile
-pure flow isEffectPermittedInProfile(effectName: String, profile: String): Bool {
-  contract {
-    intent { "Return true if effectName is allowed under the given deployment profile." }
-  }
+pure flow isEffectPermittedInProfile(effectName: String, profile: String) -> Bool
+contract {
+  intent { "Return true if effectName is allowed under the given deployment profile." }
+}
+{
   if profile == "deterministic" {
     if effectName == "network.outbound" { return false }
     if effectName == "filesystem.write" { return false }
@@ -19,10 +20,11 @@ pure flow isEffectPermittedInProfile(effectName: String, profile: String): Bool 
 }
 
 // Check if required governance invariants hold for a given qualifier
-pure flow checkQualifierInvariants(qualifier: String, hasAudit: Bool): Bool {
-  contract {
-    intent { "Return true if a flow with this qualifier satisfies the governance invariants." }
-  }
+pure flow checkQualifierInvariants(qualifier: String, hasAudit: Bool) -> Bool
+contract {
+  intent { "Return true if a flow with this qualifier satisfies the governance invariants." }
+}
+{
   if qualifier == "secure" {
     if hasAudit == false { return false }
   }
@@ -33,25 +35,26 @@ pure flow checkQualifierInvariants(qualifier: String, hasAudit: Bool): Bool {
 }
 
 // Classify the governance outcome for a flow
-pure flow classifyGovernanceOutcome(permitted: Bool, invariants: Bool): String {
-  contract {
-    intent { "Map governance check results to a structured outcome label." }
-  }
+pure flow classifyGovernanceOutcome(permitted: Bool, invariants: Bool) -> String
+contract {
+  intent { "Map governance check results to a structured outcome label." }
+}
+{
   if permitted == false { return "DENIED_EFFECT_GATE" }
   if invariants == false { return "DENIED_INVARIANT_VIOLATION" }
   return "APPROVED"
 }
 
 // HTTP endpoint: verify governance for a flow
-secure flow verifyFlowGovernance(readonly request: Request): VerifyResult {
-  contract {
-    effects {
-      network.inbound
-      audit.write
-    }
-    intent { "Accept a governance verification request. Return APPROVED or DENIED with reason." }
+secure flow verifyFlowGovernance(readonly request: Request) -> VerifyResult
+contract {
+  effects {
+    network.inbound
+    audit.write
   }
-
+  intent { "Accept a governance verification request. Return APPROVED or DENIED with reason." }
+}
+{
   unsafe let rawQualifier: String = request.jsonBody.qualifier
   unsafe let rawEffect: String = request.jsonBody.effect
   unsafe let rawProfile: String = request.jsonBody.profile

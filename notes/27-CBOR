@@ -1,0 +1,138 @@
+CBOR (Concise Binary Object Representation, defined in [RFC 8949](https://www.rfc-editor.org/rfc/rfc8949.html)) is a binary serialization format modeled after JSON. It is the backbone of LogicN's `.lmanifest` system because it provides the **compactness** required for low-latency governance checks and the **canonicality** required for cryptographic signature verification.
+
+### 1. Why CBOR is Critical for LogicN
+
+In a high-assurance system, you cannot use formats like JSON because they are ambiguous (e.g., key ordering, whitespace differences). If two different versions of a JSON parser serialize the same contract differently, the cryptographic hash will change, and your `ML-DSA-65` signature will fail.
+
+**CBOR solves this by:**
+
+* **Being Self-Describing:** The binary data contains its own length and type information, so the `DSS.wasm` supervisor doesn't need to guess the structure.
+* **Canonical Ordering:** It supports "Canonical CBOR" (RFC 8949, Section 4.2), which dictates a strict, fixed order for map keys. This ensures that the same `.lmanifest` always produces the exact same hash.
+* **Efficiency:** It uses a single byte to represent small integers and strings, significantly reducing the size of the ProofGraph that the CI/CD pipeline must verify.
+
+---
+
+### 2. The Anatomy of a CBOR Stream
+
+Every CBOR object consists of a **Major Type** (3 bits) and **Additional Information** (5 bits).
+
+1. **Major Type (Header):** Tells the parser if it's a `positive integer`, `negative integer`, `byte string`, `text string`, `array`, `map`, `tag`, or `primitive`.
+2. **Additional Info:** Tells the parser how many bytes follow to read the value or length.
+
+---
+
+### 3. Schematic: How a `.lmanifest` is Encoded
+
+Consider a simplified LogicN manifest containing an `effect` and a `limit`.
+
+```json
+// The LogicN Contract (Conceptual)
+{
+  "effect": "gateway.charge",
+  "limit": 4194304
+}
+
+```
+
+#### The Binary Breakdown (Schematic):
+
+The encoder converts this into a compact byte-stream:
+
+| Segment | Hex Data | Explanation |
+| --- | --- | --- |
+| **Map Header** | `A2` | Map of length 2 |
+| **Key 1** | `66 65 66 66 65 63 74` | "effect" (text, 6 bytes) |
+| **Value 1** | `6E 67 61 74 65 77 79 2E 63 68 61 72 67 65` | "gateway.charge" (text, 14 bytes) |
+| **Key 2** | `65 6C 69 6D 69 74` | "limit" (text, 5 bytes) |
+| **Value 2** | `1A 00 40 00 00` | 4,194,304 (unsigned int, 4 bytes) |
+
+**Total Size:** ~35 bytes (vs ~50+ for minified JSON).
+
+---
+
+### 4. Technical Schematic of the Encoding Pipeline
+
+In your CI/CD pipeline, the `logicn` compiler acts as the CBOR encoder to generate the manifest.
+
+```mermaid
+graph TD
+    A[Governance Contract Block] --> B[Canonicalize Keys]
+    B --> C[Assign Type Major-Bits]
+    C --> D[Pack into Binary Byte-Stream]
+    D --> E[Generate Hash]
+    E --> F[Sign Hash with ML-DSA-65]
+    F --> G[.lmanifest File]
+
+```
+
+### 5. Implementation Watch-outs
+
+* **Floating Point Indeterminacy:** Never use floating-point numbers in your `.lmanifest` if you can avoid it. Floating-point representation can vary slightly across CPU architectures (IEEE 754 nuances), which can break your hash-based signatures. Stick to `Integer` or `Decimal` representations for `economics {}` and `limits {}`.
+* **The Tagging System:** LogicN should use **CBOR Tags** (Major Type 6) to define custom types. For example, you can define a custom tag (e.g., `Tag 400`) for "LogicN Capability." This allows your `DSS.wasm` supervisor to skip over unknown data while immediately identifying critical security capabilities.
+* **Enforcement of Canonicality:** Your `run-phase-close.mjs` script should perform a "Round-Trip Verification":
+1. Read the `.lmanifest` file.
+2. Decode it into an internal data structure.
+3. Re-encode it into CBOR.
+4. Compare the resulting byte-stream with the original. **If they are not identical, the manifest is non-canonical and the build must fail.**
+
+
+
+By utilizing CBOR in this way, you ensure that the governance proof (the `lmanifest`) is not just a document, but a **mathematical artifact** that the `DSS` supervisor can verify in a single pass at runtime.
+
+------------------------------------
+
+While CBOR is highly efficient and standardized, using it as the foundation for a security-critical system like LogicN’s `.lmanifest` means you must be hyper-vigilant about specific "security-at-the-parser-level" risks.
+
+In a high-assurance system, **the parser is often the most dangerous part of the runtime.**
+
+### 1. Depth and Resource Exhaustion (The "Billion Laughs" Attack)
+
+CBOR allows nested maps and arrays. A malicious actor could craft a `.lmanifest` that is only a few hundred bytes on disk but expands into a massive, deeply nested structure in memory when parsed.
+
+* **The Risk:** An attacker could cause the `DSS.wasm` supervisor to run out of memory (OOM) or consume excessive CPU trying to decode the structure.
+* **LogicN Mitigation:** Your `DSS.wasm` parser **must enforce a maximum nesting depth.** If the parser hits a depth of, say, 8 or 10 levels, it must immediately abort and reject the manifest.
+
+### 2. Duplicate Map Keys
+
+The CBOR specification allows duplicate keys in a map. If the manifest has two `limit` keys, does the system use the first or the last one?
+
+* **The Risk:** If your parser uses one logic (e.g., "first one wins") and your validator uses another (e.g., "last one wins"), an attacker could inject a "hidden" permission that the auditor misses but the runtime enforces.
+* **LogicN Mitigation:** Your `DSS.wasm` parser must **reject any CBOR map containing duplicate keys.** This should be a hard requirement for "Canonical CBOR."
+
+### 3. Integer/Length Overflow
+
+CBOR handles arbitrary-length integers. A manifest might claim that a string is $2^{64}$ bytes long. If the parser naively allocates memory based on that length, it will crash or allow a heap-overflow.
+
+* **The Risk:** Integer overflow during length validation is a classic vector for remote code execution.
+* **LogicN Mitigation:** Always use **Checked Arithmetic** when decoding lengths. Ensure the requested length is within the 4MB limit defined for your `DWI.wasm` (Guest Isolate) before attempting any memory allocation.
+
+### 4. Canonicalization Non-Determinism
+
+As mentioned previously, non-canonical CBOR is a security risk. If a manifest is not "Canonical" (as defined in RFC 8949, Section 4.2), different tools might serialize the same manifest differently, changing the cryptographic hash.
+
+* **The Risk:** An attacker could potentially find two different binary representations of a manifest that result in the same hash (a collision), allowing them to swap a "tightened" manifest for an "expanded" one that shares the same signature.
+* **LogicN Mitigation:** Use a **strictly deterministic encoder.** Never use general-purpose CBOR libraries that allow "pretty printing" or flexible key ordering. Your `run-phase-close.mjs` must enforce strict Canonical CBOR by re-encoding and comparing byte-for-byte.
+
+### 5. Type Confusion
+
+CBOR is "self-describing," but the parser must be strictly typed.
+
+* **The Risk:** If your parser expects an `Integer` for `max_memory` but receives a `String` that looks like an integer, an improperly written parser might attempt to convert it, potentially introducing vulnerabilities during type casting.
+* **LogicN Mitigation:** Your parser must implement **Strict Schema Validation.** After the binary is decoded into a structure, the very next step must be a schema-validation pass that confirms:
+* `limit` is *exactly* `Major Type 0` (unsigned int).
+* `effect` is *exactly* `Major Type 3` (text string).
+* Any data that doesn't match the schema must trigger a `LLN-MANIFEST-INVALID` trap.
+
+
+
+### Summary: The Secure Parser Checklist
+
+| Threat | Security Control |
+| --- | --- |
+| **Nested Depth** | Enforce a maximum recursion depth (e.g., 8 levels). |
+| **Duplicate Keys** | Reject the manifest immediately upon finding the first duplicate. |
+| **Memory Exhaustion** | Set strict buffer limits on all `Array` and `Map` decodes. |
+| **Canonicality** | Enforce RFC 8949 canonical ordering for keys. |
+| **Schema Mismatch** | Post-decode type validation before using any value. |
+
+**The Bottom Line:** Your `.lmanifest` is the **Root of Trust.** Treat the CBOR parser in `DSS.wasm` as a "hostile input" environment. If the parser is not hardened against malformed CBOR, the entire LogicN security model—regardless of your high-level governance—is effectively bypassed at the binary layer.

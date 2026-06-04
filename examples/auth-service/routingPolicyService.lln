@@ -1,17 +1,18 @@
 // Phase 47 — Routing Policy Service
 // Governed decision: which execution tier should a flow use?
 
-pure flow preferredTier(effectCount: Int, hasAI: Bool, isCritical: Bool): String
+pure flow preferredTier(effectCount: Int, hasAI: Bool, isCritical: Bool) -> String
+contract {
+  intent { "Choose the best execution tier for a flow given its properties." }
+}
 {
-  contract { intent { "Choose the best execution tier for a flow given its properties." } }
-
   if isCritical { return "enclave" }
   if hasAI { return "gpu" }
   if effectCount == 0 { return "wasm" }
   return "cpu"
 }
 
-pure flow tierGovernanceClass(tier: String): Int
+pure flow tierGovernanceClass(tier: String) -> Int
 {
   if tier.contains("enclave") { return 4 }
   if tier.contains("gpu") { return 3 }
@@ -20,10 +21,12 @@ pure flow tierGovernanceClass(tier: String): Int
   return 0
 }
 
-secure flow resolveRoute(readonly request: Request): Response
+secure flow resolveRoute(readonly request: Request) -> Response
+contract {
+  intent { "Resolve the execution route and tier for a flow from its routing policy." }
+  effects { network.inbound  audit.write }
+}
 {
-  contract { intent { "Resolve the execution route and tier for a flow from its routing policy." } effects { network.inbound  audit.write } }
-
   unsafe let effectCount: Int = request.jsonBody.effectCount
   unsafe let hasAI: Bool = request.jsonBody.hasAI
   unsafe let isCritical: Bool = request.jsonBody.isSafetyCritical

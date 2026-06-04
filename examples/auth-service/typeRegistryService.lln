@@ -10,12 +10,11 @@
 
 // Returns true when the type name is one of the LogicN primitive built-ins.
 // Built-ins: Int, Bool, String, Float, Bytes, Unit, Void.
-pure flow isBuiltinType(name: String): Bool
+pure flow isBuiltinType(name: String) -> Bool
+contract {
+  intent { "Return true when the type name is a LogicN built-in primitive." }
+}
 {
-  contract {
-    intent { "Return true when the type name is a LogicN built-in primitive." }
-  }
-
   if name == "Int" { return true }
   if name == "Bool" { return true }
   if name == "String" { return true }
@@ -28,12 +27,11 @@ pure flow isBuiltinType(name: String): Bool
 
 // Returns the category string for the given type name.
 // Categories: "primitive", "collection", "effect", "governance", "unknown".
-pure flow typeCategory(name: String): String
+pure flow typeCategory(name: String) -> String
+contract {
+  intent { "Return the category for the given type name." }
+}
 {
-  contract {
-    intent { "Return the category for the given type name." }
-  }
-
   if name == "Int" { return "primitive" }
   if name == "Bool" { return "primitive" }
   if name == "String" { return "primitive" }
@@ -51,16 +49,15 @@ pure flow typeCategory(name: String): String
 
 // The governed type resolution endpoint.
 // Accepts { typeName } and returns the resolved type metadata.
-secure flow resolveType(readonly request: Request): Response
-{
-  contract {
-    intent { "Resolve a type name against the governed type registry." }
-    effects {
-      network.inbound
-      audit.write
-    }
+secure flow resolveType(readonly request: Request) -> Response
+contract {
+  intent { "Resolve a type name against the governed type registry." }
+  effects {
+    network.inbound
+    audit.write
   }
-
+}
+{
   unsafe let typeName: String = request.jsonBody.typeName
 
   let isBuiltin: Bool = isBuiltinType(typeName)

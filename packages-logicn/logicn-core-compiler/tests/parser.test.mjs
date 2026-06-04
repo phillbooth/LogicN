@@ -886,3 +886,299 @@ contract { effects { network.outbound, audit.write } }
     assert.ok(found, "Expected typeDecl for ProcessPaymentResult inside contract.types");
   });
 });
+
+// ── @experimental_profile directive (task #51) ───────────────────────────────
+
+describe("Parser — @experimental_profile directive", () => {
+  it("parses @experimental_profile in contract {} block", () => {
+    const result = parseOk(`
+secure flow processInvoice(id: String) -> Result<String, String>
+contract {
+  intent { "Process with forward-looking syntax." }
+  effects { gateway.charge, audit.write }
+  @experimental_profile(name: "drcm_core_v1", status: "planned_phase_2") {
+    invariant { ensure id != "" }
+  }
+}
+{ return Ok(id) }
+`);
+    // Find the attributeDecl node
+    let found = false;
+    function scan(node) {
+      if (node?.kind === "attributeDecl" && node.value === "experimental_profile") found = true;
+      for (const c of node?.children ?? []) scan(c);
+    }
+    scan(result.ast);
+    assert.ok(found, "Expected attributeDecl with value 'experimental_profile'");
+  });
+
+  it("parses @experimental_profile in flow body", () => {
+    const result = parseOk(`
+secure flow fulfillOrder(id: String) -> Result<String, String>
+contract {
+  intent { "Fulfill with step (planned_phase_5)." }
+  effects { network.outbound }
+}
+{
+  @experimental_profile(name: "drcm_core_v1", status: "planned_phase_5") {
+    let result = step external_api::fulfill(id)
+  }
+  return Ok(id)
+}
+`);
+    let found = false;
+    function scan(node) {
+      if (node?.kind === "attributeDecl" && node.value === "experimental_profile") found = true;
+      for (const c of node?.children ?? []) scan(c);
+    }
+    scan(result.ast);
+    assert.ok(found, "Expected attributeDecl in flow body");
+  });
+
+  it("stores attribute name and args correctly", () => {
+    const result = parseOk(`
+pure flow test() -> Int
+contract {
+  intent { "test" }
+  @experimental_profile(name: "drcm_core_v1", status: "planned_phase_5") {
+    limits { max_memory: 4MB }
+  }
+}
+{ return 0 }
+`);
+    let attrNode = undefined;
+    function scan(node) {
+      if (node?.kind === "attributeDecl") attrNode = node;
+      for (const c of node?.children ?? []) scan(c);
+    }
+    scan(result.ast);
+    assert.ok(attrNode !== undefined, "Expected attributeDecl node");
+    assert.equal(attrNode.value, "experimental_profile");
+    // First two children are the args (name, status), last is the body block
+    const nameArg = (attrNode.children ?? []).find(c => c.kind === "identifier" && c.value === "name");
+    const statusArg = (attrNode.children ?? []).find(c => c.kind === "identifier" && c.value === "status");
+    assert.ok(nameArg !== undefined, "Expected 'name' arg");
+    assert.ok(statusArg !== undefined, "Expected 'status' arg");
+  });
+
+  it("existing examples with @experimental_profile compile cleanly", () => {
+    // Pattern 3 already has @experimental_profile in it
+    const result = parseOk(`
+secure flow transferFunds(amount: Int) -> Result<String, String>
+contract {
+  intent { "Transfer funds." }
+  effects { ledger.mutate, audit.write }
+  @experimental_profile(name: "drcm_core_v1", status: "planned_phase_2") {
+    invariant {
+      ensure amount > 0
+    }
+  }
+}
+{ AuditLog.write("transferred")  return Ok("ok") }
+`);
+    assert.ok(result.diagnostics.filter(d => d.severity === "error").length === 0,
+      "Expected no errors with @experimental_profile");
+  });
+});
+
+// ── Named arguments at call sites (task #55) ─────────────────────────────────
+
+describe("Parser + Interpreter — named arguments at call sites", () => {
+  it("named args parse cleanly — no errors", () => {
+    parseOk(`
+pure flow add(a: Int, b: Int) -> Int
+contract { intent { "add" } }
+{ return a + b }
+pure flow test() -> Int
+contract { intent { "test" } }
+{ return add(a: 3, b: 4) }
+`);
+  });
+
+  it("named args produce the same result as positional args", async () => {
+    const { parseProgram, executeFlow } = await import("../dist/index.js");
+    const src = `
+pure flow add(a: Int, b: Int) -> Int
+contract { intent { "add" } }
+{ return a + b }
+pure flow positional() -> Int
+contract { intent { "positional" } }
+{ return add(3, 4) }
+pure flow named() -> Int
+contract { intent { "named" } }
+{ return add(a: 3, b: 4) }
+`;
+    const parsed = parseProgram(src, "test.lln");
+    const r1 = await executeFlow("positional", {}, parsed.ast);
+    const r2 = await executeFlow("named", {}, parsed.ast);
+    assert.deepEqual(r1.value, r2.value, "named and positional should produce same result");
+    assert.equal(r1.value?.__tag, "int", "result should be an int");
+    assert.equal(r1.value?.value, 7, "3 + 4 = 7");
+  });
+
+  it("named args work with string values", async () => {
+    const { parseProgram, executeFlow } = await import("../dist/index.js");
+    const src = `
+pure flow greet(name: String, greeting: String) -> String
+contract { intent { "greet" } }
+{ return greeting + ", " + name + "!" }
+pure flow test() -> String
+contract { intent { "test" } }
+{ return greet(name: "Bob", greeting: "Hi") }
+`;
+    const parsed = parseProgram(src, "test.lln");
+    const r = await executeFlow("test", {}, parsed.ast);
+    assert.equal(r.value?.__tag, "string", "result should be a string");
+    assert.equal(r.value?.value, "Hi, Bob!", `Expected 'Hi, Bob!' got '${r.value?.value}'`);
+  });
+});
+
+// ── :: module path separator (task #61) ──────────────────────────────────────
+
+describe("Parser — :: module path separator", () => {
+  it("parses module::function() as a method call chain", () => {
+    const result = parseOk(`
+pure flow f() -> Int
+contract { intent { "test" } }
+{
+  let x = security::check()
+  return 0
+}
+`);
+    assert.ok(result.ast !== undefined, "Should parse without error");
+  });
+
+  it("parses module::submodule::function() as a nested call", () => {
+    const result = parseOk(`
+pure flow f() -> Int
+contract { intent { "test" } }
+{
+  let x = security::interim::pre_flight_check("caller", "target", 0)
+  return 0
+}
+`);
+    assert.ok(result.ast !== undefined, "Should parse deep :: path without error");
+  });
+
+  it("parses :: member access without a call", () => {
+    const result = parseOk(`
+pure flow f() -> Int
+contract { intent { "test" } }
+{
+  let x = module::constant
+  return 0
+}
+`);
+    assert.ok(result.ast !== undefined, "Should parse :: member expression");
+  });
+
+  it(". and :: are interchangeable path separators", () => {
+    const dotResult = parseOk(`
+pure flow a() -> Int
+contract { intent { "dot" } }
+{ let x = foo.bar.baz()  return 0 }
+`);
+    const colonResult = parseOk(`
+pure flow b() -> Int
+contract { intent { "colon" } }
+{ let x = foo::bar::baz()  return 0 }
+`);
+    assert.ok(dotResult.ast !== undefined, "dot path parses");
+    assert.ok(colonResult.ast !== undefined, ":: path parses");
+  });
+});
+
+// ── Named Record Constructor (task #57) ──────────────────────────────────────
+
+describe("Parser — named record constructor", () => {
+  it("parses TypeName { field: val } in a let binding (single line)", () => {
+    const result = parseOk(`
+pure flow makePoint(x: Int, y: Int) -> Int
+contract { intent { "make a point" } }
+{
+  let p = Point { x: x, y: y }
+  return 0
+}
+`);
+    // Find the #record callExpr with typeName "Point"
+    let found = false;
+    function scan(node) {
+      if (node?.kind === "callExpr" && node.value === "#record" && node.typeName === "Point") found = true;
+      for (const c of node?.children ?? []) scan(c);
+    }
+    scan(result.ast);
+    assert.ok(found, "Expected #record callExpr with typeName 'Point' from named constructor");
+  });
+
+  it("parses TypeName { field: val } in a let binding (multi-line)", () => {
+    const result = parseOk(`
+pure flow makeResult(n: Int) -> Int
+contract { intent { "make result" } }
+{
+  let r = MyResult {
+    status: "ok",
+    code: n
+  }
+  return 0
+}
+`);
+    let found = false;
+    function scan(node) {
+      if (node?.kind === "callExpr" && node.value === "#record" && node.typeName === "MyResult") found = true;
+      for (const c of node?.children ?? []) scan(c);
+    }
+    scan(result.ast);
+    assert.ok(found, "Expected #record callExpr with typeName 'MyResult' from multi-line constructor");
+  });
+
+  it("named constructor fields are stored as identifier children with values", () => {
+    const result = parseOk(`
+pure flow build(a: Int, b: Int) -> Int
+contract { intent { "build" } }
+{
+  let r = Pair { first: a, second: b }
+  return 0
+}
+`);
+    let ctor = undefined;
+    function scan(node) {
+      if (node?.kind === "callExpr" && node.value === "#record" && node.typeName === "Pair") ctor = node;
+      for (const c of node?.children ?? []) scan(c);
+    }
+    scan(result.ast);
+    assert.ok(ctor !== undefined, "Expected named constructor node");
+    const fieldNames = (ctor.children ?? []).map(c => c.value);
+    assert.deepEqual(fieldNames, ["first", "second"], "Expected field names in order");
+  });
+
+  it("still parses anonymous record literals { field: val } correctly", () => {
+    const result = parseOk(`
+pure flow anon(x: Int) -> Int
+contract { intent { "anon" } }
+{
+  let r = { field: x }
+  return 0
+}
+`);
+    let found = false;
+    function scan(node) {
+      // anonymous record has value "#record" with NO typeName
+      if (node?.kind === "callExpr" && node.value === "#record" && node.typeName === undefined) found = true;
+      for (const c of node?.children ?? []) scan(c);
+    }
+    scan(result.ast);
+    assert.ok(found, "Expected anonymous #record without typeName");
+  });
+
+  it("does not interpret TypeName followed by a code block as a constructor", () => {
+    // TypeName { if x > 0 { return 1 } } is NOT a constructor (no field: val inside)
+    const result = parseOk(`
+pure flow notACtor(x: Int) -> Int
+contract { intent { "not a ctor" } }
+{
+  return x
+}
+`);
+    assert.ok(result.ast !== undefined, "Should parse without error");
+  });
+});

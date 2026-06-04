@@ -142,9 +142,13 @@ LogicN is three things building toward one platform:
 
 ## Code Examples
 
-> **LogicN syntax note:** `contract {}` sits **between** the flow signature and the body `{}`.
-> It is a compile-time declaration — not runtime code — so it lives outside the body, not inside it.
-> Pattern: `flow name(params) -> ReturnType` → `contract { ... }` → `{ body }`.
+> **LogicN three-block structure:** every flow has up to three outer blocks:
+> 1. `flow name(params) -> ReturnType` — signature
+> 2. `contract { ... }` — compile-time governance declaration (outside the body, not inside it)
+> 3. `policy { ... }` — runtime monotonic overlay (optional, DRCM Phase 4)
+> 4. `{ body }` — the runtime code
+>
+> `contract {}` and `policy {}` are **separate blocks**, not nested. Most flows only need `contract {}` and `{ body }`.
 
 ```logicn
 // ── Governed secure flow: PII handling ───────────────────────────────────────
@@ -213,6 +217,26 @@ contract {
   return Ok(amount)
 }
 ```
+
+---
+
+## Architecture Patterns
+
+LogicN has nine canonical patterns. Patterns 1–6 compile today (`drcm_stable_v0`). Patterns 7–9 require DRCM phases (marked `drcm_core_v1`). Each has a verified `.lln` example in `tests/patterns/`.
+
+| # | Pattern | Profile | When to use |
+|---|---|---|---|
+| 1 | [Pure Transform](tests/patterns/pattern-01-pure-transform.lln) | stable | Math, string transforms, data mapping — no I/O, no side effects |
+| 2 | [Governed API Route](tests/patterns/pattern-02-governed-api-route.lln) | stable | HTTP routes, webhooks, event handlers — external ingress |
+| 3 | [High-Trust Mutation](tests/patterns/pattern-03-high-trust-mutation.lln) | stable | Payments, medical records, government data — full contract |
+| 4 | [Cross-Boundary Workflow](tests/patterns/pattern-04-cross-boundary-interim.lln) | stable | External APIs / third-party calls — uses `security.interim` until `step` ships |
+| 5 | [Secret-Using Flow](tests/patterns/pattern-05-secret-using-flow.lln) | stable | Any flow that reads a credential — `secrets {}` + `SecureString` taint guards |
+| 6 | [Multi-Tier Service](tests/patterns/pattern-06-multi-tier-service.lln) | stable | API → business logic → data layer — three separate governed flows |
+| 7 | [Governed WASM Module](tests/patterns/pattern-07-governed-wasm-module.lln) | `drcm_core_v1` | DRCM Phase 5 — DSS supervision, DWI isolates, fuel injection |
+| 8 | [Emergency Policy Overlay](tests/patterns/pattern-08-emergency-policy.lln) | `drcm_core_v1` | DRCM Phase 4 — auto-tightening `policy { emergency { ... } }` |
+| 9 | [.lmanifest Compliance](tests/patterns/pattern-09-lmanifest.md) | `drcm_core_v1` | DRCM Phase 3 — machine-verifiable compliance artifact for PCI DSS / SOC 2 |
+
+> Full reference: [`docs/Knowledge-Bases/logicn-architecture-patterns.md`](docs/Knowledge-Bases/logicn-architecture-patterns.md)
 
 ---
 
@@ -305,18 +329,37 @@ node packages-logicn/logicn-devtools-pci/dist/cli.js audit examples/auth-service
 
 ## Key Documents
 
+### Start here
 | Document | What it covers |
 |---|---|
 | [SETUP.md](SETUP.md) | Install on Windows / Linux / macOS, benchmarks, Hello World |
+| [`docs/Knowledge-Bases/KNOWLEDGE-BASE-INDEX.md`](docs/Knowledge-Bases/KNOWLEDGE-BASE-INDEX.md) | **Master navigation guide** — 4-layer KB hierarchy, conflict resolution, feature gate manifest |
+
+### Language reference
+| Document | What it covers |
+|---|---|
+| `docs/Knowledge-Bases/logicn-governance-rules.md` | Numbered rule registry — 35+ LLN codes, enforce status, correct/wrong examples |
+| `docs/Knowledge-Bases/logicn-architecture-patterns.md` | 9 canonical patterns with `@experimental_profile` feature gates |
+| `docs/Knowledge-Bases/logicn-contract-authoring-guide.md` | How to write correct contracts — clause optionality, AI safety pipeline |
+| `docs/Knowledge-Bases/logicn-contract-economics.md` | `economics {}` block — auto-inference, explicit override |
+| `docs/Knowledge-Bases/logicn-design-secrets-epilogue-blocks.md` | `secrets {}` and `epilogue {}` — auto-by-default, vault/KMS rotation |
 | `docs/Knowledge-Bases/logicn-grammar.ebnf` | Authoritative v1 formal grammar |
-| `docs/Knowledge-Bases/logicn-contract-authoring-guide.md` | How to write correct contracts (AI + human guide) |
-| `docs/Knowledge-Bases/logicn-contract-economics.md` | `economics {}` block reference |
-| `docs/Knowledge-Bases/logicn-design-secrets-epilogue-blocks.md` | `secrets {}` and `epilogue {}` design |
-| `docs/Knowledge-Bases/logicn-deterministic-runtime-containment.md` | DRCM — monotonic security overlays, `.lmanifest` |
+
+### Architecture and security
+| Document | What it covers |
+|---|---|
+| `docs/Knowledge-Bases/logicn-engineering-goals.md` | **3 architectural goals** — native speed, single-cycle bitmask, no system crash; acceptance tests |
+| `docs/Knowledge-Bases/logicn-deterministic-runtime-containment.md` | DRCM — DSS, DWI, V_DPM monotonic security, `.lmanifest`, 7-module architecture |
+| `docs/Knowledge-Bases/logicn-domain-guard-policies.md` | Domain guard policies — `[conforms_to: X]` static manifest clamping |
+| `docs/Knowledge-Bases/logicn-governed-design-synthesis.md` | Research synthesis — 14-category mediation model, change-class review workflow |
+| `docs/Knowledge-Bases/logicn-governed-runtime-research-2026-06-03.md` | 113-agent deep research: Cedar/OPA/Pony/Austral/Koka/in-toto/W3C-PROV enhancements |
+
+### Benchmarks and deployment
+| Document | What it covers |
+|---|---|
+| `docs/Knowledge-Bases/logicn-wasmtime-baseline.md` | Benchmark baseline (governance-cost 3.2K/s → 1.88M/s after WASM = 588×) |
 | `docs/Knowledge-Bases/logicn-completion-roadmap-2026-06-03.md` | Six-layer path to full platform |
 | `docs/Knowledge-Bases/logicn-wasmtime-roadmap.md` | Path from Stage B → `wasmtime logicn-runtime.wasm` |
-| `docs/Knowledge-Bases/logicn-governed-runtime-research-2026-06-03.md` | Research: Cedar/OPA/Pony/Koka/in-toto enhancements |
-| `docs/Knowledge-Bases/logicn-wasmtime-baseline.md` | Benchmark baseline (governance-cost 3.2K/s → 1.88M/s after WASM) |
 | `docs/Examples/README.md` | Canonical Example Corpus (223 CEC stable) |
 
 ---

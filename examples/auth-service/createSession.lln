@@ -6,15 +6,14 @@ type Session {
 type SessionId = Brand<String, "SessionId">
 type SessionError = enum { InvalidToken SessionLimitReached }
 
-secure flow createSession(readonly request: Request): CreateSessionResult
+secure flow createSession(readonly request: Request) -> CreateSessionResult
+contract {
+  intent { "Create a new session for a verified user." }
+  effects { database.write audit.write }
+  privacy { pii sessionId deny protected SessionId to response.body }
+  audit { require runtime report }
+}
 {
-  contract {
-    intent { "Create a new session for a verified user." }
-    effects { database.write audit.write }
-    privacy { pii sessionId deny protected SessionId to response.body }
-    audit { require runtime report }
-  }
-
   let session = Session.create(request.body.token)?
   AuditLog.write({ event: "SessionCreated", sessionId: redact(session.sessionId) })
   return Ok(session)

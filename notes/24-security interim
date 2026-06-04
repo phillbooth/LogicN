@@ -1,0 +1,75 @@
+To maintain strict alignment with the baseline compiler capabilities, the interim security fallback must use positional arguments instead of named parameters at call sites.
+
+While named arguments are highly beneficial for readability in configuration blocks (such as limits {} or economics {}), the active Stage A parsing pipeline treats execution functions strictly as ordered positional streams to minimize token-matching overhead in the prototype grammar.
+
+The Risk of Forcing Named Arguments Prematurely
+If you attempt to write pre_flight_check(caller: "order_processor", ...) in an execution block today, you encounter a parsing bottleneck:
+
+Grammar Inflation: Stage A's expression parser is optimized to tokenize functions as a direct identifier followed by a comma-separated list of values. Forcing named matching at call sites requires the tokenizer to anticipate optional parameter labels (Identifier ':' Expression) for every standard function invocation, complicating the core grammar before your syntax stabilizes.
+
+AST Layer Mismatch: If the parser evaluates labels as standalone tokens, it has to map those tokens back to the target function's parameter registry during type-checking. If an automated code generation tool or human developer misorders the labels, the Stage A verifier could throw unhandled translation faults.
+
+The Hardened Specification: Standardized Positional Ordering
+To ensure the interim pattern compiles perfectly under today's rules while remaining clean and understandable, you should standardize the arguments positionally based on increasing variability (placing fixed metadata values first and variable payload dimensions last).
+
+1. The Correct Call-Site Structure:
+Rust
+;; Location: packages-logicn/logicn-core-examples/src/patterns/interim_boundary_call.lln
+
+secure flow processOrderOutbound(orderId: String) -> Result<Void, Fault> 
+contract {
+  intent { "Transmit order data via an interim validated boundary channel." }
+  effects { network.outbound }
+  requires {
+    SystemCapability.CallGate(module: "network_client", function: "transmitOrder")
+  }
+}
+{
+  let sanitizedId = internal_utils::clean(orderId);
+  
+  ;; --- CORRECT STAGE A POSITIONAL CHANNEL PASS ---
+  ;; Position 0: Caller Context Module Identifier
+  ;; Position 1: Target Destination Signature Hook
+  ;; Position 2: Volumetric Inbound Payload Size Counter
+  let validationToken = security::interim::pre_flight_check(
+    "order_processor",
+    "network_client::transmitOrder",
+    String.length(sanitizedId)
+  );
+
+  if (!validationToken.is_approved) {
+    return Fault(3002); ;; Dynamic Permission Violation Fault
+  }
+
+  let networkResult = network_client::transmitOrder(sanitizedId);
+  
+  security::interim::post_flight_cleanup(validationToken);
+  return networkResult;
+}
+2. The Internal Proxy Implementation:
+Rust
+;; Location: packages-logicn/logicn-core-security/src/interim.lln
+
+type ValidationReceipt = {
+  is_approved: Bool,
+  tracking_id: U64
+}
+
+flow pre_flight_check(caller: String, target: String, payload_size_bytes: U64) -> ValidationReceipt {
+  ;; Validate calling scope context boundaries against static capability maps
+  if (String.is_empty(caller) || String.is_empty(target)) {
+    return ValidationReceipt { is_approved: false, tracking_id: 0 };
+  }
+  
+  ;; Run immediate Phase 1 volumetric gating bounds checks
+  if (payload_size_bytes > 4194304) { ;; 4MB Absolute Boundary Constraint
+    return ValidationReceipt { is_approved: false, tracking_id: 0 };
+  }
+  
+  let structuralId = crypto::generate_monotonically_incrementing_id();
+  return ValidationReceipt { is_approved: true, tracking_id: structuralId };
+}
+Summary Rule for Documentation Integrity
+In Configuration Contexts (contract {} / policy {}): Named mapping blocks (max_memory: 4MB) are allowed and parsed as first-class, structured schema records.
+
+In Execution Contexts (Flow Bodies): All function invocations must use strict positional arguments to ensure compatibility with the Stage A parser. You should update your Engineering Master Plan and any transitional codebase examples to reflect this structural standard.

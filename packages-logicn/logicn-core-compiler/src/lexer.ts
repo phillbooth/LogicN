@@ -216,7 +216,7 @@ export const V1_DEPRECATED_RESERVED: ReadonlySet<string> = new Set([
 const ONE_CHAR_OPERATORS = new Set(["+", "-", "*", "/", "%", "=", "<", ">", "!", "&", "|", "?"]);
 
 // Punctuation / symbols
-const SYMBOLS = new Set(["(", ")", "{", "}", "[", "]", ",", ":", ";", "."]);
+const SYMBOLS = new Set(["(", ")", "{", "}", "[", "]", ",", ":", ";", ".", "@"]);
 
 // ---------------------------------------------------------------------------
 // Lexer implementation

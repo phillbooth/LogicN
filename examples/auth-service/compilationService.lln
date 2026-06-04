@@ -10,16 +10,15 @@
 //
 // HTTP POST /compile/tokenize  →  governance  →  Stage B tokenize  →  audit  →  response
 
-secure flow tokenizeSource(readonly request: Request): Response
-{
-  contract {
-    intent { "Tokenize submitted LogicN source and summarise the governed token stream." }
-    effects {
-      network.inbound
-      audit.write
-    }
+secure flow tokenizeSource(readonly request: Request) -> Response
+contract {
+  intent { "Tokenize submitted LogicN source and summarise the governed token stream." }
+  effects {
+    network.inbound
+    audit.write
   }
-
+}
+{
   unsafe let source: String = request.jsonBody.source
 
   let hasFlow: Bool = source.contains("flow ")

@@ -1211,3 +1211,357 @@ pure flow add(a: Int, b: Int) -> Int { return a + b }
     assert.equal(flow.decreasesMetric, undefined, "decreasesMetric should be undefined when not declared");
   });
 });
+
+// ── Domain Guard Policies — task #56 ─────────────────────────────────────────
+
+describe("Governance Verifier — Domain Guard Policies (LLN-GOV-004)", () => {
+  const GUARD_POLICY = `
+policy InvoicingDomainGuard {
+  permitted_effects {
+    gateway.charge,
+    audit.write
+  }
+  enforced_limits {
+    max_memory_ceiling: 4MB
+  }
+}
+`;
+
+  it("compliant contract passes cleanly — no LLN-GOV-004", () => {
+    const result = parseAndVerify(GUARD_POLICY + `
+secure flow processInvoice(id: String) -> Result<String, String>
+contract [conforms_to: InvoicingDomainGuard] {
+  intent { "Process billing under domain guard." }
+  effects { gateway.charge, audit.write }
+  limits  { memory 4mb }
+}
+{ return Ok(id) }
+`);
+    assert.ok(!hasDiag(result, "LLN-GOV-004"), `Expected no LLN-GOV-004 but got: ${result.diagnostics.filter(d=>d.code==="LLN-GOV-004").map(d=>d.message).join("; ")}`);
+  });
+
+  it("forbidden effect triggers LLN-GOV-004", () => {
+    const result = parseAndVerify(GUARD_POLICY + `
+secure flow badInvoice(id: String) -> Result<String, String>
+contract [conforms_to: InvoicingDomainGuard] {
+  intent { "Forbidden effect." }
+  effects { gateway.charge, filesystem.wipe_all }
+  limits  { memory 4mb }
+}
+{ return Ok(id) }
+`);
+    assert.ok(hasDiag(result, "LLN-GOV-004"), "Expected LLN-GOV-004 for filesystem.wipe_all");
+    const diag = result.diagnostics.find(d => d.code === "LLN-GOV-004");
+    assert.ok(diag?.message.includes("filesystem.wipe_all"), `Expected message to mention 'filesystem.wipe_all': ${diag?.message}`);
+  });
+
+  it("multiple forbidden effects each trigger LLN-GOV-004", () => {
+    const result = parseAndVerify(GUARD_POLICY + `
+secure flow multiViolation(id: String) -> Result<String, String>
+contract [conforms_to: InvoicingDomainGuard] {
+  intent { "Multiple violations." }
+  effects { gateway.charge, filesystem.write, database.delete }
+}
+{ return Ok(id) }
+`);
+    const violations = result.diagnostics.filter(d => d.code === "LLN-GOV-004");
+    assert.ok(violations.length >= 2, `Expected >=2 LLN-GOV-004 violations, got ${violations.length}`);
+  });
+
+  it("contract without conforms_to is not checked against any policy", () => {
+    const result = parseAndVerify(GUARD_POLICY + `
+secure flow freeFlow(id: String) -> Result<String, String>
+contract {
+  intent { "No domain guard binding." }
+  effects { gateway.charge, filesystem.wipe_all }
+}
+{ return Ok(id) }
+`);
+    // Without [conforms_to: ...], no domain guard check runs — no LLN-GOV-004
+    assert.ok(!hasDiag(result, "LLN-GOV-004"), "Expected no LLN-GOV-004 for unbound contract");
+  });
+
+  it("conforms_to with missing policy emits a warning, not a hard error", () => {
+    const result = parseAndVerify(`
+secure flow orphanFlow(id: String) -> Result<String, String>
+contract [conforms_to: NonExistentPolicy] {
+  intent { "References a policy that does not exist." }
+  effects { gateway.charge }
+}
+{ return Ok(id) }
+`);
+    const diag = result.diagnostics.find(d => d.code === "LLN-GOV-004");
+    assert.ok(diag !== undefined, "Expected LLN-GOV-004 for missing policy reference");
+    assert.equal(diag?.severity, "warning", "Missing policy should be a warning, not an error");
+  });
+
+  it("policy parser — permitted_effects sub-block is parsed correctly", () => {
+    const { ast } = parseProgram(GUARD_POLICY, "test.lln");
+    const policyNode = (ast.children ?? []).find(c => c.kind === "policyDecl" && c.value === "InvoicingDomainGuard");
+    assert.ok(policyNode !== undefined, "Expected policyDecl for InvoicingDomainGuard");
+    const permEffects = (policyNode.children ?? []).find(c => c.kind === "identifier" && c.value === "permitted_effects");
+    assert.ok(permEffects !== undefined, "Expected permitted_effects sub-block");
+    const effectNames = (permEffects.children ?? []).map(c => c.value);
+    assert.ok(effectNames.includes("gateway.charge"), "Expected gateway.charge in permitted_effects");
+    assert.ok(effectNames.includes("audit.write"), "Expected audit.write in permitted_effects");
+  });
+
+  it("contract [conforms_to: X] attribute is stored on contractDecl node", () => {
+    const { ast } = parseProgram(GUARD_POLICY + `
+secure flow testFlow(id: String) -> Result<String, String>
+contract [conforms_to: InvoicingDomainGuard] {
+  intent { "Test." }
+  effects { gateway.charge }
+}
+{ return Ok(id) }
+`, "test.lln");
+    // Find the contractDecl with conformsTo
+    let found = false;
+    function scan(node) {
+      if (node?.kind === "contractDecl" && node.conformsTo === "InvoicingDomainGuard") found = true;
+      for (const c of node?.children ?? []) scan(c);
+    }
+    scan(ast);
+    assert.ok(found, "Expected contractDecl with conformsTo = 'InvoicingDomainGuard'");
+  });
+});
+
+// ── DRCM Phase 2: invariant {} block (task #36) ──────────────────────────────
+
+describe("Governance Verifier — DRCM Phase 2 invariant {} (LLN-INV-001/002/003)", () => {
+  it("runtime parameter ensure: no error (unknown at compile time → runtime-precheck)", () => {
+    const result = parseAndVerify(`
+secure flow transfer(amount: Int) -> Result<String, String>
+contract {
+  intent { "Transfer." }
+  effects { ledger.mutate, audit.write }
+  invariant { ensure amount > 0; }
+}
+{ return Ok("ok") }
+`);
+    assert.ok(!hasDiag(result, "LLN-INV-001"), "No LLN-INV-001 for runtime parameter");
+  });
+
+  it("ensure false: LLN-INV-001 (statically proved false — invariant can never be satisfied)", () => {
+    const result = parseAndVerify(`
+secure flow broken(n: Int) -> Result<String, String>
+contract {
+  intent { "Broken invariant." }
+  effects { ledger.mutate, audit.write }
+  invariant { ensure false; }
+}
+{ return Ok("ok") }
+`);
+    assert.ok(hasDiag(result, "LLN-INV-001"), "Expected LLN-INV-001 for ensure false");
+  });
+
+  it("ensure 1 > 5: LLN-INV-001 (statically proved false — literal comparison)", () => {
+    const result = parseAndVerify(`
+pure flow impossible(x: Int) -> Int
+contract {
+  intent { "Impossible." }
+  invariant { ensure 1 > 5; }
+}
+{ return x }
+`);
+    assert.ok(hasDiag(result, "LLN-INV-001"), "Expected LLN-INV-001 for ensure 1 > 5");
+  });
+
+  it("ensure 5 > 0: clean (statically proved true — no error, no WAT gate needed)", () => {
+    const result = parseAndVerify(`
+pure flow provable(x: Int) -> Int
+contract {
+  intent { "Statically proved." }
+  invariant { ensure 5 > 0; }
+}
+{ return x }
+`);
+    assert.ok(!hasDiag(result, "LLN-INV-001"), "No error for statically proved true");
+    assert.ok(!hasDiag(result, "LLN-INV-002"), "No post-condition error either");
+  });
+
+  it("empty invariant block: LLN-INV-003 warning", () => {
+    const result = parseAndVerify(`
+pure flow emptyInv(x: Int) -> Int
+contract {
+  intent { "Empty invariant." }
+  invariant {}
+}
+{ return x }
+`);
+    const diag = result.diagnostics.find(d => d.code === "LLN-INV-003");
+    assert.ok(diag !== undefined, "Expected LLN-INV-003 for empty invariant block");
+    assert.equal(diag?.severity, "warning", "Should be a warning");
+  });
+
+  it("multiple ensure statements: each evaluated independently", () => {
+    const result = parseAndVerify(`
+pure flow multiInv(x: Int) -> Int
+contract {
+  intent { "Multi invariant." }
+  invariant {
+    ensure 10 > 5;
+    ensure x >= 0;
+    ensure false;
+  }
+}
+{ return x }
+`);
+    // 10 > 5 = true → clean; x >= 0 = unknown → clean; false → LLN-INV-001
+    const inv001 = result.diagnostics.filter(d => d.code === "LLN-INV-001");
+    assert.equal(inv001.length, 1, "Expected exactly one LLN-INV-001 (for ensure false)");
+  });
+});
+
+// ── DRCM Phase 1: Wildcard ban (task #30) + Prefix scan (task #31) ───────────
+
+describe("DRCM Phase 1 — LLN-CAP-001 network wildcard ban (task #30)", () => {
+  it("emits LLN-CAP-001 for effects { network.* }", () => {
+    const result = parseAndVerify(`
+secure flow bad(id: String) -> Result<String, String>
+contract {
+  intent { "Wildcard test." }
+  effects { network.* }
+}
+{ return Ok(id) }
+`);
+    assert.ok(hasDiag(result, "LLN-CAP-001"), "Expected LLN-CAP-001 for network.*");
+  });
+
+  it("emits LLN-CAP-001 for effects { * } (bare wildcard)", () => {
+    const result = parseAndVerify(`
+secure flow bad2(id: String) -> Result<String, String>
+contract {
+  intent { "Bare wildcard test." }
+  effects { * }
+}
+{ return Ok(id) }
+`);
+    assert.ok(hasDiag(result, "LLN-CAP-001"), "Expected LLN-CAP-001 for bare *");
+  });
+
+  it("no LLN-CAP-001 for specific effects (no wildcard)", () => {
+    const result = parseAndVerify(`
+secure flow good(id: String) -> Result<String, String>
+contract {
+  intent { "Valid effects test." }
+  effects { network.outbound, audit.write }
+}
+{ return Ok(id) }
+`);
+    assert.ok(!hasDiag(result, "LLN-CAP-001"), "No LLN-CAP-001 for specific effects");
+  });
+});
+
+describe("DRCM Phase 1 — SecretSinkMonitor prefix scan (task #31)", () => {
+  it("scan detects secret prefix in payload (LLN-SECRET-BREACH)", async () => {
+    const { activeSinkMonitor } = await import(
+      "../dist/security-sink-monitor.js"
+    );
+    activeSinkMonitor.clear();
+    activeSinkMonitor.register("supersecrettoken123");
+
+    const clean  = activeSinkMonitor.scan("normal log message");
+    const breach = activeSinkMonitor.scan("Error: key=supersecrettoken123 endpoint=api");
+
+    assert.ok(clean.isClean,  "Clean payload should pass scan");
+    assert.ok(!breach.isClean, "Payload containing secret prefix should fail scan");
+    assert.equal(breach.trapCode, 3001, "Breach should emit trap code 3001");
+    activeSinkMonitor.clear();
+  });
+
+  it("secrets shorter than 12 chars are not registered (false positive prevention)", async () => {
+    const { activeSinkMonitor } = await import("../dist/security-sink-monitor.js");
+    activeSinkMonitor.clear();
+    activeSinkMonitor.register("short");  // < 12 chars — should NOT be registered
+
+    const result = activeSinkMonitor.scan("message containing short substring");
+    assert.ok(result.isClean, "Short secret should not be registered (false positive prevention)");
+    assert.equal(activeSinkMonitor.count, 0, "Count should be 0 for short secret");
+    activeSinkMonitor.clear();
+  });
+
+  it("prefix is exactly 8 chars from a longer secret", async () => {
+    const { activeSinkMonitor } = await import("../dist/security-sink-monitor.js");
+    activeSinkMonitor.clear();
+    activeSinkMonitor.register("my-secret-api-key-12345");  // > 12 chars
+
+    // The prefix "my-secre" (8 chars) should be registered
+    const scan1 = activeSinkMonitor.scan("output containing my-secret prefix");
+    assert.ok(!scan1.isClean, "Should detect 8-char prefix 'my-secre' in output");
+    assert.equal(activeSinkMonitor.count, 1, "One prefix registered");
+    activeSinkMonitor.clear();
+  });
+});
+
+// ── Resilience & Observability (task #58) ────────────────────────────────────
+
+describe("Governance Verifier — LLN-RES-001 resilience retry on mutation", () => {
+  it("emits LLN-RES-001 for retry + database.write without idempotent: true", () => {
+    const result = parseAndVerify(`
+secure flow badRetry(id: String) -> Result<String, String>
+contract {
+  intent { "Retry a mutation without idempotent flag." }
+  effects { database.write, audit.write }
+  resilience { retry 3 times }
+}
+{ return Ok(id) }
+`);
+    assert.ok(hasDiag(result, "LLN-RES-001"), "Expected LLN-RES-001 for retry + database.write");
+  });
+
+  it("no LLN-RES-001 when idempotent: true is declared", () => {
+    const result = parseAndVerify(`
+secure flow goodRetry(id: String) -> Result<String, String>
+contract {
+  intent { "Retry an idempotent mutation." }
+  effects { database.write, audit.write }
+  resilience { retry 3 times  idempotent: true }
+}
+{ return Ok(id) }
+`);
+    assert.ok(!hasDiag(result, "LLN-RES-001"), "No LLN-RES-001 when idempotent: true");
+  });
+
+  it("no LLN-RES-001 for network-only flows (no mutation effects)", () => {
+    const result = parseAndVerify(`
+secure flow networkRetry(url: String) -> Result<String, String>
+contract {
+  intent { "Retry a network call." }
+  effects { network.outbound }
+  resilience { retry 3 times  with_backoff exponential }
+}
+{ return Ok(url) }
+`);
+    assert.ok(!hasDiag(result, "LLN-RES-001"), "No LLN-RES-001 for network-only flow");
+  });
+});
+
+describe("Governance Verifier — LLN-OBS-001 observability on pure flow", () => {
+  it("emits LLN-OBS-001 warning for explicit observability on pure flow", () => {
+    const result = parseAndVerify(`
+pure flow pureWithObs(x: Int) -> Int
+contract {
+  intent { "Pure flow with unnecessary observability." }
+  observability { trace enabled }
+}
+{ return x + 1 }
+`);
+    const diag = result.diagnostics.find(d => d.code === "LLN-OBS-001");
+    assert.ok(diag !== undefined, "Expected LLN-OBS-001 warning");
+    assert.equal(diag?.severity, "warning", "Should be a warning not an error");
+  });
+
+  it("no LLN-OBS-001 for secure flow with observability", () => {
+    const result = parseAndVerify(`
+secure flow secureWithObs(id: String) -> Result<String, String>
+contract {
+  intent { "Secure flow with observability." }
+  effects { network.outbound }
+  observability { trace enabled  metrics latency_p99 error_rate }
+}
+{ return Ok(id) }
+`);
+    assert.ok(!hasDiag(result, "LLN-OBS-001"), "No LLN-OBS-001 for secure flow");
+  });
+});

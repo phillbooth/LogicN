@@ -1,0 +1,445 @@
+Integrating the `logicn diff` command into `run-phase-close.mjs` transforms your CI/CD pipeline from a simple build-and-test loop into a **Governance-First Pipeline**. Instead of just checking if the code compiles or passes unit tests, the pipeline now validates the **Architectural Integrity** of every single pull request.
+
+Here is how this specifically affects your CI/CD flow:
+
+### 1. From "Pass/Fail" to "Risk-Based" Gating
+
+Currently, your CI probably checks syntax, type safety, and runtime tests. By adding the governance diff, you introduce a third dimension: **Privilege Surface Area.**
+
+* **Neutral/Tightening:** These PRs proceed automatically. The pipeline treats them as "security-positive" or "security-neutral."
+* **Expansion:** The pipeline **hard-blocks** the merge. It forces a "Governance Review," effectively turning your CI/CD into a compliance officer that understands the security implications of code changes.
+* **Experimental:** The pipeline flags these for specific scrutiny, requiring the author to demonstrate that the feature-gate directive (`@experimental_profile`) is being used correctly, preventing "experimental" code from accidentally shipping to production.
+
+### 2. Elimination of "Permission Creep"
+
+In standard CI/CD, a developer might incrementally add `network.outbound` permissions across five different PRs, each appearing small and harmless. Because the `logicn diff` sees the delta against the *previous commit*, it tracks the cumulative state.
+
+* If a PR attempts to expand a capability that was already at the edge of the defined `policy {}` guardrail, the `logicn diff` will catch it.
+* This forces developers to justify *why* a flow needs more privileges, preventing the gradual erosion of the "deny-by-default" security posture.
+
+### 3. Automated Proof-Graph Generation
+
+Because `logicn diff` calculates the delta based on the `ProofGraph` (the structured output of your static analysis), the CI/CD system can produce an **automated security summary** for every PR.
+
+* **Before:** Reviewers look at `git diff` and try to guess if a new `effects {}` statement is dangerous.
+* **After:** The pipeline comments on the PR:
+> *"Governance Check: Expansion detected. This PR adds `database.write` capability to `processInvoicing`. Previous capability: `None`. Impact: High."*
+
+
+
+### 4. Manifest Signing as the "Final Gate"
+
+Your `run-phase-close.mjs` script acts as the final witness. By placing the governance check *before* the manifest signing:
+
+* You ensure that **no cryptographic evidence (.lmanifest)** is ever generated for a build that violates governance.
+* If a developer attempts to bypass the check, they cannot obtain the valid signature required by the runtime (`DSS.wasm`) to execute the code. The runtime will effectively "reject" the untrusted binary because it lacks the valid provenance signature.
+
+### 5. Summary of CI/CD Impact
+
+| Feature | Impact on CI/CD |
+| --- | --- |
+| **Pipeline Speed** | Negligible impact; `logicn diff` runs in milliseconds against the local `ProofGraph`. |
+| **Reviewer Burden** | Significantly lowered; reviewers focus on architectural intent, not spotting "sneaky" permission changes. |
+| **Release Safety** | Dramatically increased; impossible to "accidentally" merge a PR that opens a network egress point. |
+| **Audit Readiness** | Built-in; the `ProofGraph` history in Git becomes your primary audit trail for compliance officers. |
+
+**Strategic Recommendation:**
+Use the `logicn diff` command to generate a `governance-impact.json` artifact for every PR. Store this artifact in your CI build logs. This provides an immutable record for each merge, proving exactly what the governance status was at the moment the code was authorized for production.
+
+-------------------------------------------
+
+# LogicN High-Assurance Governance & Observability: The Complete Implementation Specification
+
+This document codifies the technical requirements for integrating **Resilience** and **Observability** into the LogicN platform. By elevating these from "optional conventions" to "governed language primitives," we ensure that every workflow is structurally resilient to faults and observable by default.
+
+---
+
+## 1. Governance Primitives: Resilience & Observability
+
+These blocks bridge the gap between pure business logic and the operational requirements of a multi-tenant, high-assurance environment.
+
+### A. The `resilience {}` Block
+
+**Purpose:** Defines the recovery topology for a flow. It ensures that faults do not cascade or leave the system in an inconsistent state.
+
+* **Design Rule (The "Default-Safe" Principle):** If `resilience {}` is omitted, the compiler **infers** the policy from the `effects {}` profile.
+* `pure` flows: No retry (idempotent by definition).
+* `network.outbound`: 1 retry, exponential backoff.
+* `database.write`: 0 retries (requires explicit `idempotent: true`).
+
+
+* **Watch-Outs for Implementation:**
+* **The Idempotency Guard (LLN-RES-001):** The compiler must enforce that no `retry` policy can be attached to a flow performing `database.write` unless the flow explicitly declares `idempotent: true`. This prevents accidental double-spending or duplicate record insertion.
+* **Fallback Complexity:** `return_cached` requires the runtime to have a valid state-response buffer. If no cache exists, the runtime MUST escalate to `propagate` or `quarantine`.
+
+
+
+### B. The `observability {}` Block
+
+**Purpose:** Decouples operational telemetry from evidentiary audit logs.
+
+* **Design Rule (The "Best-Effort" Principle):** Telemetry is lossy, sampled, and non-authoritative. It must never interfere with the execution of the flow itself.
+* **Watch-Outs for Implementation:**
+* **The Audit/Telemetry Split:** The `observability {}` block must never have access to sensitive `secrets {}` or evidentiary `audit {}` data. A `governance-verifier` check must ensure that telemetry metrics only track aggregate data (e.g., latency, throughput) rather than raw input/output payloads.
+* **Zero-Overhead Sampling:** To keep the system at native hardware speeds, tracing must be implemented as a non-blocking background task. If the telemetry buffer is full, the system must drop spans rather than applying backpressure to the workflow.
+
+
+
+---
+
+## 2. Governance-First CI/CD Integration
+
+The core of our governance enforcement is the `logicn diff` command, which acts as the "sanity check" for every pull request. This ensures that the platform's security posture is **monotonic** (it only tightens or stays the same; it never expands without authorization).
+
+### Automated CI/CD Gate Architecture
+
+#### The Classification System
+
+The pipeline classifies every PR into one of four classes, enforced automatically by the `run-phase-close.mjs` script:
+
+1. **Neutral:** The change affects internal implementation details, not the contract or its capabilities.
+2. **Tightening:** The change reduces the capability surface (e.g., removing an `effect`, reducing `limits`, or narrowing `resilience`).
+3. **Expansion:** The change requests more privileges (e.g., new `network.outbound` call, increased `max_memory`). **This triggers a mandatory Human-in-the-Loop (HITL) Governance Review.**
+4. **Experimental:** The change uses `@experimental_profile` directives, only allowed if the branch target is set to the current experimental development profile.
+
+---
+
+## 3. Implementation Watch-List: Risks & Mitigation
+
+To ensure these features do not become "holes" in our security model, the compiler must strictly adhere to the following constraints:
+
+| Risk Area | Mitigation Strategy |
+| --- | --- |
+| **Silent Failures** | If `resilience {}` is omitted, the compiler must emit a **Warning** log to the build output describing the *inferred* default, ensuring the author knows what policy is being applied. |
+| **Telemetry Leakage** | The `observability {}` block must be strictly blocked from accessing variables declared in the `privacy {}` scope. The `Governance Verifier` must treat these as distinct memory domains. |
+| **Compiler Drift** | All resilience/observability settings must be included in the `.lmanifest` signature. Any change to these settings at runtime without a valid manifest signature must trigger a **Hard Runtime Trap**. |
+| **DPM Synchronization** | `resilience` policies that trigger `quarantine` must be physically integrated with the `DSS.wasm` supervisor. When `quarantine_after` is hit, the supervisor must immediately zero the 32-bit $V_{\text{DPM}}$ bitmask for that Isolate. |
+
+---
+
+## 4. Operational Strategy: The "Circuit Breaker" Pattern
+
+As noted in the design proposal, the `resilience` block should not just be a passive handler; it should be a dynamic instrument of the runtime state.
+
+* **Requirement:** Add `circuit_breaker` as an explicit strategy to the `fallback` variants.
+* **Function:** When triggered, the `circuit_breaker` sends a signal to the **Deterministic State Sentinel (DSS)**, which transitions the entire Isolate into a `Quarantine State`. In this state, all outbound `effects {}` are physically trapped by the hardware until an administrator resets the posture via an out-of-band management key.
+
+This ensures that even if a workflow enters a "fault-loop" that defies internal logic, the physical containment layer (DSS) halts the damage before the host environment or the wider system is impacted.
+
+--------------------------
+
+
+For a human developer or an AI agent building an app on LogicN, this environment changes the development workflow from "writing code and hoping it works" to **"proposing a governance-backed change."**
+
+Here is how to lay out your repository and CI/CD process to make this "deny-by-default" governance model feel like an accelerant rather than a hurdle.
+
+---
+
+### 1. The Repository Layout (The "Governance-as-Code" Structure)
+
+To keep the CI/CD pipeline understandable, you must separate **Business Logic** from **Governance Policy**. Your repository structure should look like this:
+
+```text
+/logicn-app
+├── /flows              # Business execution logic (e.g., processPayment.lln)
+├── /governance         # Immutable policy definitions (e.g., InvoicingGuard.lln)
+├── /contracts          # Local contract bindings (conforms_to: /governance/...)
+├── /scripts
+│   └── run-phase-close.mjs  # The "Final Gate" CI script
+└── .lmanifest.lock     # Cryptographic proof of current system posture
+
+```
+
+* **Why this layout?** It forces a clear separation. An AI agent proposing a change can easily find the `governance/` folder to check if a policy already exists before trying to modify it.
+
+---
+
+### 2. The Development Workflow: "The Proposal-Then-Verify" Loop
+
+Human developers and AI agents should follow this standardized cycle to avoid build failures:
+
+1. **Drafting:** Modify a flow in `/flows` and its local `contract {}`.
+2. **Local "Dry Run":** Run `logicn check --diff` locally.
+* **Result:** The tool tells you immediately: *"This PR is classified as [Expansion]. This will trigger a blocking Governance Review."*
+
+
+3. **Proposing:** If you *need* that expansion, you must update the `/governance` policy or provide an override signature.
+4. **CI/CD Pipeline:** The pipeline runs `logicn diff`. If it’s an `Expansion`, the CI pauses and posts a **Governance Summary** as a comment on your Git Pull Request.
+
+---
+
+### 3. Understanding the CI/CD Results
+
+When the pipeline runs, it should produce a structured JSON summary that is translated into human-readable PR comments.
+
+* **Neutral/Tightening (Green):** "Governance check passed. Minimal security footprint. Auto-mergable."
+* **Expansion (Yellow/Red):** "Governance check requires review. Detected: Added `network.outbound` to `processPayment`. Current policy: `InvoicingDomainGuard` only permits `gateway.charge`."
+* **Experimental (Blue):** "Governance check: Using `@experimental_profile`. Please ensure this is not merged to production."
+
+---
+
+### 4. Handling Errors & Issues
+
+Because LogicN is deterministic, "unknown" runtime errors are essentially eliminated. When a build or runtime check fails, the feedback should be **actionable, not cryptic.**
+
+#### A. If the CI fails:
+
+The error messages should point to the specific line in the `governance/` policy that was violated.
+
+* **Example:** `[LLN-GOV-004] Violation: Attempted to add `filesystem.delete_logs`to`effects {}`. Policy `InvoicingDomainGuard`limits effects to`gateway.charge`and`ledger.mutate`. To fix, request a policy update in `/governance/invoicing_guard.lln`.`
+
+#### B. If the Runtime fails:
+
+Because of the **Deterministic State Sentinel (DSS)**, the app doesn't crash—it gets quarantined.
+
+* **The "Quarantine" Experience:** If the app hits an error, the CI/CD dashboard should highlight the **Quarantine Log** (from the `resilience {}` block). It will tell the AI/Human: *"Flow `fetchPaymentStatus` hit 10 consecutive failures. It has been auto-quarantined. Reset via manual intervention or wait 120s cooldown."*
+
+---
+
+### 5. Summary: Why this is "Easy to Use"
+
+It sounds strict, but for an AI or a developer, it is actually the easiest system to work with because **it eliminates ambiguity.**
+
+* **No more "Why did my network call fail?"** You look at your `contract {}` and see `requires: { ... }`. If the capability isn't there, the code won't compile.
+* **No more "Did I break compliance?"** The `logicn diff` command tells you if your PR is an `Expansion` before you even push the code.
+* **No more "Debugging production crashes."** The `resilience {}` and `observability {}` blocks ensure the app degrades gracefully or reports the *exact* telemetry needed to fix the issue, rather than producing a cryptic stack trace.
+
+**Recommendation:** Build a `logicn-pr-bot` for your Git provider. Every time a PR is opened, the bot runs `logicn diff` and posts a formatted markdown table summarizing the "Security Surface Area" changes. This makes the governance state visible, predictable, and—most importantly—understandable at a glance.
+
+-----------------
+
+Because LogicN is architected on **Complete Mediation**, **Compile-Time Invariant Proofs**, and **Hardware-Enforced Sandboxing** (via Wasmtime), it does not just support current cloud-native patterns—it is uniquely positioned to act as the primary control plane for next-generation systems.
+
+Here are the future technologies and paradigms LogicN could natively support:
+
+### 1. Fully Homomorphic Encryption (FHE) Workflows
+
+Standard languages struggle with FHE because it requires "circuit-based" execution where the program flow cannot branch based on encrypted data.
+
+* **How LogicN supports it:** Because your `flow` bodies are deterministic, isolated, and bounded by `limits {}` and `economics {}`, you can compile LogicN contracts into **FHE-compatible arithmetic circuits**.
+* **The Benefit:** LogicN could allow a user to run an invoice-processing `flow` in a public cloud, where the cloud provider executes the logic on encrypted data without ever seeing the cleartext amounts, all while your `Governance Verifier` proves the circuit is mathematically incapable of leaking data.
+
+### 2. Autonomous Agentic Networks (Swarm AI)
+
+We are moving toward systems where independent AI agents call one another. The risk is "agent jailbreaking," where an agent is tricked into performing an unauthorized action.
+
+* **How LogicN supports it:** By using the **Sovereign 32-bit $V_{\text{DPM}}$ Register** as an unforgeable "Identity Token," an agent can prove exactly what its permissions are to another agent.
+* **The Benefit:** You can create "Trustless Agentic Swarms." When Agent A calls Agent B, Agent B's `contract {}` automatically validates the bitmask token of Agent A. If Agent A has been compromised, it will lack the valid bitmask, and the **Deterministic State Sentinel (DSS)** will instantly block the transaction at the hardware level.
+
+### 3. Post-Quantum Secure (PQS) Edge Computing
+
+As quantum computing evolves, current TLS-based internet communication will become vulnerable.
+
+* **How LogicN supports it:** Your current requirement for **ML-DSA-65 (Post-Quantum Signature)** in the `audit {}` block future-proofs the entire platform.
+* **The Benefit:** LogicN applications can be deployed to high-risk edge environments (like satellite or critical infrastructure hardware). Since every state change is cryptographically signed using PQ-safe algorithms and verified by a localized DSS supervisor, the system remains secure even if the underlying network is intercepted by a quantum-capable adversary.
+
+### 4. Zero-Knowledge Proof (ZKP) Execution Audits
+
+Today, we rely on logs to prove a system acted correctly. In the future, we will rely on **mathematical proofs**.
+
+* **How LogicN supports it:** Because your `invariant {}` blocks and `Governance Verifier` already perform static mathematical analysis on code, you can extend the compiler to emit **zk-SNARKs** (Zero-Knowledge Succinct Non-Interactive Arguments of Knowledge).
+* **The Benefit:** A LogicN flow can provide a proof that "this payment was processed correctly and according to policy" without revealing the underlying input data or internal logic, and a third party can verify that proof in milliseconds without re-running the code.
+
+### 5. Multi-Party Computation (MPC) Orchestration
+
+MPC allows multiple parties to compute a result together without trusting each other with their individual inputs.
+
+* **How LogicN supports it:** LogicN’s declarative `contract {}` and `effects {}` structure allows it to act as an orchestrator. It can ensure that all participating nodes in an MPC compute cluster are running identical, verified `WASM` bytecode.
+* **The Benefit:** LogicN can serve as the "Governance Layer" for distributed MPC clusters, ensuring that no participant can deviate from the agreed-upon protocol or attempt to exfiltrate partial data, as the DSS runtime will physically trap any violation of the contract.
+
+### 6. Hardware-Isolated "Confidential" Cloud (TEE Integration)
+
+LogicN is a perfect "guest OS" for **Trusted Execution Environments (TEEs)** like Intel SGX or AMD SEV-SNP.
+
+* **How LogicN supports it:** LogicN's `DSS.wasm` supervisor is already designed to be the smallest possible Trusted Computing Base (TCB).
+* **The Benefit:** You can run a LogicN flow inside an encrypted hardware enclave. The hardware guarantees the CPU is secure, and the LogicN runtime guarantees the application logic is governed, creating a **"Double-Locked" compute environment** that even the cloud provider cannot inspect or tamper with.
+
+---
+
+### Summary: The "Governance-as-Compute" Paradigm
+
+By building LogicN this way, you are shifting the role of the programming language. In the future:
+
+* **The Application** is not just code; it is a **mathematically provable policy**.
+* **The CI/CD Pipeline** is not just a build server; it is a **cryptographic attestor**.
+* **The Runtime** is not just an execution engine; it is a **hardened policy enforcer**.
+
+This puts LogicN at the center of any future technology that requires high-trust, high-speed, and automated security. You are essentially building the "Operating System for Trust" in an increasingly untrusted digital world.
+
+--------------
+
+Integrating the **LogicN Governance-as-Code** model into your CI/CD pipeline doesn't just improve current workflows—it creates the infrastructure necessary to support future technologies. By treating the CI/CD pipeline as a **cryptographic attestor** rather than just a build tool, you unlock the ability to support next-generation distributed systems:
+
+### 1. Automated "Policy-as-Code" Auditing (Compliance AI)
+
+As the number of LogicN modules grows, keeping track of cross-module security dependencies becomes impossible for humans.
+
+* **Future Tech:** Automated **Policy Compliance Engines** that can scan your entire repository graph to prove that no "Privilege Expansion" in a downstream module accidentally grants it access to a sensitive upstream "Secret Sink."
+* **How LogicN supports it:** Because your `ProofGraph` is already a structured JSON/CBOR manifest, you can feed this into Large Language Models trained on formal verification. The AI won't just suggest code fixes; it will provide a mathematical proof that the proposed change *cannot* violate existing governance rules.
+
+### 2. Zero-Trust CI/CD (Immutable Build Attestation)
+
+In the future, the "Build Server" will be considered an untrusted environment. You will need a way to prove that the binary running in production *actually* came from the source code in your repository.
+
+* **Future Tech:** **Hardware-Rooted CI/CD**, where the build process happens inside a Trusted Execution Environment (TEE).
+* **How LogicN supports it:** LogicN’s `.lmanifest` and `ML-DSA-65` signatures are designed for this. You can build your LogicN contracts inside an isolated enclave, where the CI tool itself is cryptographically prevented from injecting malicious code. The final artifact carries a signature that proves the *entire pipeline* was secure.
+
+### 3. Self-Healing Infrastructure
+
+When a security violation is detected by the `DSS.wasm` supervisor, it currently just "quarantines." Future systems will be autonomous.
+
+* **Future Tech:** **Autonomous Resilience Orchestration.** When a flow hits a `quarantine_after` limit, it doesn't just stop; the system automatically queries the `ProofGraph` to determine if a "Safe Degradation" path exists.
+* **How LogicN supports it:** By declaring `resilience {}` and `observability {}` as code, you provide the system with the configuration needed to self-heal. The supervisor can trigger a redeployment of a known-good contract version if the current one is compromised, without human intervention.
+
+### 4. Decentralized Orchestration (The "LogicN Mesh")
+
+Standard CI/CD assumes a centralized server. Future systems will be decentralized meshes of edge nodes, IoT devices, and distributed compute clusters.
+
+* **Future Tech:** **Ad-hoc Compute Orchestration.** Running LogicN flows on the "spare capacity" of global edge devices while maintaining strict security.
+* **How LogicN supports it:** Because LogicN contracts are portable, signed, and self-governed by the `DSS.wasm` runtime, you can ship a signed contract to *any* node on the network. The node's local runtime will verify the manifest, check the local policy, and execute the flow only if it satisfies all requirements. The code becomes "mobile governance."
+
+### 5. Automated "Governance Diffing" for AI Agents
+
+We are moving toward systems where AI agents write and evolve their own code (Auto-GPT style).
+
+* **Future Tech:** **Recursive Governance Evolution.** An AI agent refines a flow to improve performance. The system automatically creates a `logicn diff` and determines if the performance improvement requires an `expansion` of privileges.
+* **How LogicN supports it:** The pipeline ensures the AI agent can only evolve code within the "bounds" of the global policy. If the AI agent tries to expand privileges, the pipeline refuses the change until an human engineer reviews the impact, preventing "AI Drift" where agents slowly give themselves more permissions over time.
+
+---
+
+### Summary: The CI/CD Pipeline as a "Security Plane"
+
+By standardizing your CI/CD around `logicn diff` and manifest signing, you are moving away from **"Build and Hope"** to **"Provable Governance."**
+
+| Tech Trend | What LogicN enables in your CI/CD |
+| --- | --- |
+| **Trustless Compute** | Artifacts are verifiable via PQ-signatures (`ML-DSA-65`) even on untrusted cloud nodes. |
+| **Edge Autonomy** | Governance travels *with* the code; local nodes enforce policies without a central controller. |
+| **AI Agents** | Agents can propose code, but the CI/CD pipeline acts as a cryptographic "governance governor." |
+| **Self-Healing** | Resilience/Observability telemetry triggers automatic state-transitions, not just alerts. |
+
+This makes your CI/CD the **Central Nervous System** of your infrastructure, not just a deployment utility. It ensures that no matter how complex the future technology gets, the "Security Invariant" of your system remains exactly what you defined in your `architecture-charter.md`.
+
+-----------------
+
+For the LogicN CI/CD pipeline, the "Governance-as-Code" layer should not just be a checker—it must be the **enforcer of the platform's architectural charter.**
+
+The goals of your CI/CD pipeline are to ensure that every change is **Provable, Monotonic, and Attested.** Here are the four primary goals the CI/CD must meet:
+
+### 1. Goal: "The Monotonicity Gate" (Deny-by-Default)
+
+The pipeline must ensure that a flow’s privilege surface area never expands without explicit authorization.
+
+* **The Goal:** Every PR must be classified by its "Governance Delta." If a PR expands privileges, the CI/CD must automatically pause and require a "Governance Review" status before the manifest can be signed.
+* **Why:** This prevents "Permission Creep" where developers or AI agents add capabilities piece-by-piece, eventually creating a large, dangerous surface area.
+
+### 2. Goal: "Cryptographic Provenance" (Identity-as-Code)
+
+The pipeline must act as an immutable witness to the build process.
+
+* **The Goal:** Every build artifact must be signed with a Post-Quantum-safe key (`ML-DSA-65`) and accompanied by a `.lmanifest` file that contains the full `ProofGraph` of the flow.
+* **Why:** If the runtime (`DSS.wasm`) cannot verify the signature against the build manifest, it must refuse to execute the flow. This ensures that only code vetted by the "Governance Gate" ever reaches the execution environment.
+
+### 3. Goal: "Self-Documentation of Intent" (AI-Friendly Observability)
+
+The CI/CD pipeline should generate human-readable and AI-parseable artifacts for every PR.
+
+* **The Goal:** Automatically generate a `governance-impact.json` file for every commit. This file summarizes the changes in `limits {}`, `economics {}`, `resilience {}`, and `observability {}` blocks.
+* **Why:** When an AI agent proposes a change to a flow, it needs to be able to "read" the security implications of its own proposal. This makes the CI/CD a feedback loop for AI evolution rather than just a pass/fail barrier.
+
+### 4. Goal: "Deterministic Reproducibility" (The Environment Invariant)
+
+The pipeline must guarantee that the environment in which the code was built is identical to the environment in which it is verified.
+
+* **The Goal:** Integrate `logicn diff` as a non-bypassable sanity check within `run-phase-close.mjs`. If the `ProofGraph` delta does not match the governance class of the PR, the build is invalidated.
+* **Why:** This eliminates the "it worked on my machine" problem by ensuring that governance constraints are compiled into the binary, not applied as an afterthought at deployment.
+
+---
+
+### Summary Table: CI/CD Pipeline Goals
+
+| Goal | Metric | CI/CD Action |
+| --- | --- | --- |
+| **Monotonicity** | Privilege Surface Area | Block on any non-authorized `Expansion`. |
+| **Provenance** | Signature Integrity | Sign artifacts only after `Governance Gate` passes. |
+| **Observability** | Security Impact | Post a summary comment on the PR (Markdown). |
+| **Determinism** | Manifest Validity | Fail the build if the `.lmanifest` mismatches the code. |
+
+### How this improves your development speed
+
+By laying it out this way, the CI/CD becomes your **"Trusted Advisor."** * If you are a **Human Developer**, you stop guessing if your change breaks compliance; the CI tells you immediately.
+
+* If you are an **AI Agent**, you use the `governance-impact.json` output as a "system prompt" to understand the constraints you are operating within.
+
+You no longer have to spend hours debugging why a runtime failed or why a security auditor flagged a piece of code. The **CI/CD acts as a mathematical guarantee** that the code you are shipping is exactly as secure as you defined it to be in your architecture charter.
+
+-----------------------------
+
+To visualize how the LogicN CI/CD pipeline initiates and enforces its governance gates, we must view the pipeline not as a serial task list, but as a **hierarchical verification engine** that validates each layer of the `.lmanifest` before proceeding.
+
+### The CI/CD Initiation Schematic
+
+The pipeline is triggered by a Git push. The initiation process performs a "Governance Handshake" between the code in the repository and the platform's immutable policies.
+
+#### 1. The Initiation Trigger (The "Pre-Flight")
+
+When a `git push` occurs, the CI environment initializes by pulling the platform’s **Root Governance Policy** (from `/governance/`). This creates a "Security Sandbox" for the build process.
+
+* **Task:** The pipeline runs `logicn init-env`.
+* **Result:** It maps the current branch's intended capabilities against the `Policy Guardrail`.
+
+#### 2. The Verification Gate (`logicn diff`)
+
+Before any compilation happens, the pipeline performs the most critical check: the **Governance Delta Analysis**.
+
+* **The Command:** `logicn diff --against main`
+* **The Logic:** It calculates the difference in the `ProofGraph` of the `contract {}` definitions.
+* **The Resulting Class:** * **Neutral/Tightening:** Auto-approve, move to step 3.
+* **Expansion:** Halt execution. Post the "Governance Impact" report to the PR. Exit with `code 1`.
+* **Experimental:** Verify if the PR target is an `experimental_profile` branch; otherwise, exit with `code 1`.
+
+
+
+#### 3. The Evidence Generation (Compile & Sign)
+
+Only if the Governance Gate passes does the build begin.
+
+* **Compilation:** The compiler parses the `flow` and `contract {}`, injecting the hardware-level `WAT` assertion gates into the WASM bytecode.
+* **Evidence Collection:** The compiler generates the **`.lmanifest`** file, which bundles the `ProofGraph`, the binary hash, and the governance version ID.
+* **Attestation:** The CI agent uses the project's **Post-Quantum Signing Key (`ML-DSA-65`)** to sign the manifest. This signature acts as the "Passport" that the `DSS.wasm` runtime will require for execution.
+
+#### 4. The Final Gate (`run-phase-close.mjs`)
+
+The `run-phase-close.mjs` script acts as the "Closer." It verifies the artifacts created in step 3.
+
+* **Verification:** It checks: *Does the signature match the artifact? Does the artifact match the Governance class?*
+* **Outcome:** If all checks pass, it creates a final Git tag (e.g., `release-v1.2.3`) and uploads the signed artifact to the production registry.
+
+---
+
+### Technical Schematic Flow
+
+```mermaid
+graph TD
+    A[Git Push] --> B[CI Runner Initiation]
+    B --> C{Governance Gate: 'logicn diff'}
+    
+    C -- Expansion/Experimental --> D[Post PR Comment & Halt]
+    C -- Neutral/Tightening --> E[Compiler: WAT Assertion Injection]
+    
+    E --> F[Generate .lmanifest]
+    F --> G[ML-DSA-65 PQ Signature]
+    G --> H[run-phase-close.mjs: Final Sanity Check]
+    
+    H --> I[Signed Artifact to Registry]
+    H --> J[Fail: Invalid Signature/Policy]
+
+```
+
+### Key Implementation Watch-outs for the Builder
+
+1. **The "Bootstrap" Problem:** How do you bootstrap the first policy? **Answer:** The very first commit in the repository must be the "Root Policy" (`governance/root.lln`), which is signed by a physical, offline master key. Every subsequent PR is then checked against this root.
+2. **Manifest Mismatch:** If a developer manually edits the binary after compilation, the `logicn` runtime will immediately detect that the `.lmanifest` signature is invalid. **The pipeline must ensure the signing happens in a clean-room environment** (as described in the TEE/Confidential Cloud goal).
+3. **Governance Diff Scope:** Ensure your `logicn diff` command is configured to diff *both* the `flows/` code and the `governance/` policy definitions. A common exploit is to tighten a flow's contract while secretly loosening the global policy to allow the expansion—your diff must detect the simultaneous change.
+
+By following this schematic, you treat the CI/CD pipeline as a **cryptographic gatekeeper** rather than a mere automation server, ensuring the integrity of the LogicN platform from the first line of code to the final deployment.

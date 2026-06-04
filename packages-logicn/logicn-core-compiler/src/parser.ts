@@ -41,6 +41,7 @@ export type AstNodeKind =
   | "typeRef"
   | "effectsDecl"
   | "effectRef"
+  | "ensureDecl"    // invariant { ensure expr; } — DRCM Phase 2 (#36)
   | "block"
   // Statements
   | "letDecl"
@@ -78,7 +79,12 @@ export type AstNodeKind =
   | "charLiteral"
   | "listLiteral"
   // Hardware hints (Phase 18) — parser preserves, backend decides
-  | "preferHint";
+  | "preferHint"
+  // Feature-gate attribute (task #51) — first-class AST node for @experimental_profile(...)
+  // Grammar: @Identifier(key: "val", ...) { ... }
+  // In --release: parsed + grammar-checked; verification/emission skipped
+  // In --enable-experimental-profile=X: full pipeline applies to inner block
+  | "attributeDecl";
 
 export interface SourceLocation {
   readonly file: string;
@@ -115,6 +121,19 @@ export interface AstNode {
    * Absent or undefined means a plain call: all children are arguments.
    */
   readonly callStyle?: "method";
+  /**
+   * Optional type name for named record constructors: `TypeName { field: val }`.
+   * Set on `#record` callExpr nodes that were parsed with an explicit type prefix.
+   * Used by the type checker for structural validation; the interpreter ignores it
+   * (evaluates identically to an anonymous `{ field: val }` record).
+   */
+  readonly typeName?: string;
+  /**
+   * Optional domain guard policy name for `contract [conforms_to: PolicyName] { }`.
+   * Set on `contractDecl` nodes when the `[conforms_to: ...]` attribute is present.
+   * Used by the governance verifier to perform the Differential Proof pass (#56).
+   */
+  readonly conformsTo?: string;
   /**
    * Structural bitmask set by the parser on flow/fn declaration nodes.
    * Encodes: HasContract, HasEffects, HasCompute, TensorCandidate, ReadonlyInputs.
@@ -972,15 +991,28 @@ class Parser {
     this.advance();
 
     // Dot-path: database.read, audit.write, etc.
+    // Also capture wildcards: network.* — preserved in the effect name so
+    // the governance verifier can emit LLN-CAP-001 (wildcard ban, task #30).
     while (this.currentIs("symbol", ".")) {
       this.advance(); // consume dot
       const next = this.current();
       if (next.kind === "identifier" || next.kind === "keyword") {
         value += "." + next.value;
         this.advance();
+      } else if (next.kind === "operator" && next.value === "*") {
+        // Wildcard — include in name so governance verifier can detect and reject it
+        value += ".*";
+        this.advance();
       } else {
         break;
       }
+    }
+
+    // Standalone `*` as an effect name (e.g. `effects { * }`)
+    // Also capture for wildcard detection in governance verifier.
+    if (value === "" && this.current().kind === "operator" && this.current().value === "*") {
+      value = "*";
+      this.advance();
     }
 
     return { kind: "effectRef", value, location: loc };
@@ -1010,6 +1042,12 @@ class Parser {
   private parseStatement(): AstNode | undefined {
     this.skipNewlines();
     const tok = this.current();
+
+    // @attribute_name(key: "val", ...) { ... } — feature-gate directive (task #51)
+    // First-class AST node; grammar validated; verification/emission skipped in --release.
+    if (tok.kind === "symbol" && tok.value === "@") {
+      return this.parseAttributeDirective();
+    }
 
     if (tok.kind === "keyword") {
       switch (tok.value) {
@@ -1408,11 +1446,29 @@ class Parser {
     const patternValue = pattern.value;
     this.advance();
 
+    // Multi-variant match arm: `Pattern1 | Pattern2 => body`
+    // Collect additional | alternatives (no binding allowed on multi-variant arms).
+    // Stored as value="Pattern1|Pattern2" — the interpreter splits on | to try each.
+    const allPatterns: string[] = [patternValue];
+    while (!isWildcard && this.currentIs("operator", "|")) {
+      this.advance(); // consume |
+      this.skipNewlines();
+      const altTok = this.current();
+      if (altTok.kind === "identifier" || altTok.kind === "keyword" ||
+          altTok.kind === "number"     || altTok.kind === "string") {
+        allPatterns.push(altTok.value);
+        this.advance();
+      } else {
+        break;
+      }
+    }
+    const combinedPattern = allPatterns.join("|");
+
     // Capture optional binding variable: Some(user), Ok(value), Err(e)
     // The binding name is stored as an identifier child so downstream passes
     // can register it in scope.
     const bindingChildren: AstNode[] = [];
-    if (!isWildcard && this.currentIs("symbol", "(")) {
+    if (!isWildcard && allPatterns.length === 1 && this.currentIs("symbol", "(")) {
       this.advance(); // consume (
       this.skipNewlines();
       if (this.current().kind === "identifier") {
@@ -1438,7 +1494,7 @@ class Parser {
 
     return {
       kind: "matchArm",
-      value: patternValue,
+      value: combinedPattern,  // "Pattern1" or "Pattern1|Pattern2" for multi-variant
       location: loc,
       children: [...bindingChildren, body],
     };
@@ -1641,16 +1697,28 @@ class Parser {
     let expr = this.parsePrimary();
 
     while (true) {
-      if (this.currentIs("symbol", ".")) {
+      // `.` member access: `receiver.member` or `receiver.method(args)`
+      // `::` path separator: `module::submodule::symbol` — canonical LogicN module path syntax.
+      // `::` is lexed as two consecutive `:` symbol tokens. We detect and consume both here,
+      // treating `::` as structurally identical to `.` for member access resolution.
+      const isDot        = this.currentIs("symbol", ".");
+      const isColonColon = this.currentIs("symbol", ":") && this.peek(1).kind === "symbol" && this.peek(1).value === ":";
+
+      if (isDot || isColonColon) {
         // Member access or method call
         const loc = this.loc();
-        this.advance(); // consume dot
+        if (isDot) {
+          this.advance(); // consume .
+        } else {
+          this.advance(); // consume first :
+          this.advance(); // consume second :
+        }
         const memberTok = this.current();
         const member = memberTok.value;
         this.advance();
 
         if (this.currentIs("symbol", "(")) {
-          // Method call: receiver.method(args)
+          // Method/path call: receiver.method(args) or module::fn(args)
           this.advance(); // (
           const args = this.parseArgList();
           this.expect("symbol", ")");
@@ -1779,6 +1847,50 @@ class Parser {
         const args = this.parseArgList();
         this.expect("symbol", ")");
         return { kind: "callExpr", value: name, location: loc, children: args };
+      }
+
+      // Named record constructor: TypeName { field: val, ... } or TypeName {}
+      // Disambiguate by lookahead: only treat as constructor if contents look
+      // like `field :` pairs (same heuristic as anonymous record literals above).
+      // This allows `let x = TypeName { a: 1, b: 2 }` in any expression position.
+      if (this.currentIs("symbol", "{")) {
+        let peekOff = 1;
+        while (this.peek(peekOff).kind === "newline") peekOff++;
+        const firstInside  = this.peek(peekOff);
+        const secondInside = this.peek(peekOff + 1);
+        const isEmptyCtor  = firstInside.kind === "symbol" && firstInside.value === "}";
+        const isNamedCtor  = !isEmptyCtor &&
+          (firstInside.kind === "identifier" || firstInside.kind === "keyword") &&
+          secondInside.kind === "symbol" && secondInside.value === ":";
+
+        if (isEmptyCtor || isNamedCtor) {
+          const ctorLoc = this.loc();
+          this.advance(); // consume {
+          this.skipNewlines();
+          const fields: AstNode[] = [];
+          while (!this.currentIs("symbol", "}") && !this.isEof()) {
+            this.skipNewlines();
+            if (this.currentIs("symbol", "}")) break;
+            const fieldLoc  = this.loc();
+            const fieldTok  = this.current();
+            const fieldName = (fieldTok.kind === "identifier" || fieldTok.kind === "keyword")
+              ? fieldTok.value : "<field>";
+            this.advance(); // field name
+            this.expect("symbol", ":");
+            this.skipNewlines();
+            const fieldValue = this.parseExpression();
+            fields.push({ kind: "identifier", value: fieldName, location: fieldLoc, children: [fieldValue] });
+            this.skipNewlines();
+            if (this.currentIs("symbol", ",")) {
+              this.advance();
+              this.skipNewlines();
+            }
+          }
+          this.expect("symbol", "}");
+          // Emitted as a #record node — identical to anonymous record in the interpreter.
+          // typeName is stored as metadata for future type-checker use (task #57).
+          return { kind: "callExpr", value: "#record", typeName: name, location: ctorLoc, children: fields };
+        }
       }
 
       return { kind: "identifier", value: name, location: loc };
@@ -1974,6 +2086,89 @@ class Parser {
    * Parses a named block declaration that is not yet fully specified.
    * Consumes until the matching closing `}`.
    */
+  /**
+   * Parses a feature-gate attribute directive:
+   *   @experimental_profile(name: "drcm_core_v1", status: "planned_phase_5") { ... }
+   *
+   * First-class AST node (attributeDecl) — grammar is fully validated.
+   * In --release mode: inner block is stored as children but verification/emission skipped.
+   * In --enable-experimental-profile=X: full pipeline applies to inner block.
+   *
+   * AST: { kind: "attributeDecl", value: "experimental_profile",
+   *        children: [arg1, arg2, ..., blockNode] }
+   * Each arg: { kind: "identifier", value: "key", children: [stringLiteral("val")] }
+   */
+  private parseAttributeDirective(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume @
+
+    // Read attribute name (e.g. "experimental_profile")
+    const nameTok = this.current();
+    const attrName = (nameTok.kind === "identifier" || nameTok.kind === "keyword")
+      ? nameTok.value : "unknown";
+    if (nameTok.kind === "identifier" || nameTok.kind === "keyword") this.advance();
+    this.skipNewlines();
+
+    // Parse attribute argument list: (key: "val", key: "val")
+    const args: AstNode[] = [];
+    if (this.currentIs("symbol", "(")) {
+      this.advance(); // consume (
+      this.skipNewlines();
+      while (!this.currentIs("symbol", ")") && !this.isEof()) {
+        this.skipNewlines();
+        if (this.currentIs("symbol", ")")) break;
+        const argLoc = this.loc();
+        const keyTok = this.current();
+        const key = (keyTok.kind === "identifier" || keyTok.kind === "keyword")
+          ? keyTok.value : "";
+        if (keyTok.kind === "identifier" || keyTok.kind === "keyword") this.advance();
+        if (this.currentIs("symbol", ":")) this.advance();
+        this.skipNewlines();
+        // Value: string literal
+        const valTok = this.current();
+        let val = "";
+        if (valTok.kind === "string") {
+          val = valTok.value;
+          this.advance();
+        } else if (valTok.kind === "identifier" || valTok.kind === "keyword") {
+          val = `"${valTok.value}"`;
+          this.advance();
+        }
+        if (key !== "") {
+          args.push({
+            kind: "identifier",
+            value: key,
+            location: argLoc,
+            children: [{ kind: "stringLiteral", value: val, location: argLoc }],
+          });
+        }
+        this.skipNewlines();
+        if (this.currentIs("symbol", ",")) this.advance();
+      }
+      this.expect("symbol", ")");
+      this.skipNewlines();
+    }
+
+    // Parse the body block { ... }.
+    // The inner content may contain forward-looking DRCM keywords (step, invariant, etc.)
+    // that aren't implemented yet. We skip the content with brace-counting and store it
+    // as a raw "block" placeholder. When each DRCM phase ships, the inner block will be
+    // fully parsed. Grammar errors in the outer structure (@, name, args, braces) ARE caught.
+    let body: AstNode = { kind: "block", location: loc };
+    if (this.currentIs("symbol", "{")) {
+      const blockLoc = this.loc();
+      this.skipBalancedBraces(); // skip inner content — forward-looking syntax not yet parsed
+      body = { kind: "block", value: "__experimental__", location: blockLoc };
+    }
+
+    return {
+      kind: "attributeDecl",
+      value: attrName,
+      location: loc,
+      children: [...args, body],
+    };
+  }
+
   private parseGenericBlock(kind: AstNodeKind): AstNode {
     const loc = this.loc();
     const keyword = this.current().value;
@@ -2266,6 +2461,37 @@ class Parser {
         continue;
       }
 
+      // Domain Guard Policy: permitted_effects { effect.name, ... }
+      // Stores each effect name as an effectRef child of a "permitted_effects" sub-block.
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "permitted_effects") {
+        children.push(this.parseDomainGuardList("permitted_effects"));
+        this.skipNewlines();
+        continue;
+      }
+
+      // Domain Guard Policy: permitted_capabilities { SystemCapability.X(...) }
+      // Stored as a generic sub-block for now; full structured parsing in DRCM Phase 4.
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "permitted_capabilities") {
+        children.push(this.parseContractSubBlock("permitted_capabilities"));
+        this.skipNewlines();
+        continue;
+      }
+
+      // Domain Guard Policy: enforced_limits { max_memory_ceiling: 4MB, ... }
+      // Stores each limit as an identifier child: "max_memory_ceiling:4MB" etc.
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "enforced_limits") {
+        children.push(this.parseDomainGuardLimits());
+        this.skipNewlines();
+        continue;
+      }
+
+      // Emergency overlay: emergency { on X { deny Y } }
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "emergency") {
+        children.push(this.parseContractSubBlock("emergency"));
+        this.skipNewlines();
+        continue;
+      }
+
       // Skip unrecognised content
       if (this.currentIs("symbol", "{")) {
         this.skipBalancedBraces();
@@ -2277,6 +2503,132 @@ class Parser {
 
     this.expect("symbol", "}");
     return { kind: "policyDecl", value: policyName, location: loc, children };
+  }
+
+  /**
+   * Parses a Domain Guard list block: `permitted_effects { effect.name, effect2.name }`.
+   * Returns a node with kind = the blockName and children = effectRef nodes (one per entry).
+   */
+  private parseDomainGuardList(blockName: string): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume block name
+    this.skipNewlines();
+
+    const entries: AstNode[] = [];
+
+    if (!this.currentIs("symbol", "{")) {
+      return { kind: "identifier", value: blockName, location: loc, children: entries };
+    }
+
+    this.advance(); // consume {
+    this.skipNewlines();
+
+    while (!this.currentIs("symbol", "}") && !this.isEof()) {
+      this.skipNewlines();
+      if (this.currentIs("symbol", "}")) break;
+
+      // Consume a dot-path effect name: e.g. gateway.charge, ledger.mutate
+      const entryLoc = this.loc();
+      let name = "";
+      if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+        name = this.current().value;
+        this.advance();
+        while (this.currentIs("symbol", ".")) {
+          this.advance();
+          if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+            name += "." + this.current().value;
+            this.advance();
+          } else break;
+        }
+      }
+      if (name !== "") {
+        entries.push({ kind: "effectRef", value: name, location: entryLoc });
+      }
+
+      this.skipNewlines();
+      if (this.currentIs("symbol", ",")) {
+        this.advance();
+        this.skipNewlines();
+      }
+    }
+
+    this.expect("symbol", "}");
+    return { kind: "identifier", value: blockName, location: loc, children: entries };
+  }
+
+  /**
+   * Parses `enforced_limits { max_memory_ceiling: 4MB, max_instructions_ceiling: 5_000_000 }`.
+   * Each entry is stored as `identifier { value: "max_memory_ceiling", children: [stringLiteral("4MB")] }`.
+   */
+  private parseDomainGuardLimits(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "enforced_limits"
+    this.skipNewlines();
+
+    const entries: AstNode[] = [];
+
+    if (!this.currentIs("symbol", "{")) {
+      return { kind: "identifier", value: "enforced_limits", location: loc, children: entries };
+    }
+
+    this.advance(); // consume {
+    this.skipNewlines();
+
+    while (!this.currentIs("symbol", "}") && !this.isEof()) {
+      this.skipNewlines();
+      if (this.currentIs("symbol", "}")) break;
+
+      const keyLoc = this.loc();
+      // Key: identifier
+      let key = "";
+      if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+        key = this.current().value;
+        this.advance();
+      }
+
+      this.skipNewlines();
+      if (this.currentIs("symbol", ":")) {
+        this.advance(); // consume :
+        this.skipNewlines();
+      }
+
+      // Value: could be "4MB", an identifier, or a number
+      let val = "";
+      if (this.current().kind === "string") {
+        const raw = this.current().value;
+        val = raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw;
+        this.advance();
+      } else if (this.current().kind === "number") {
+        val = this.current().value;
+        this.advance();
+        // Allow a suffix like MB, GB etc.
+        if (this.current().kind === "identifier") {
+          val += this.current().value;
+          this.advance();
+        }
+      } else if (this.current().kind === "identifier") {
+        val = this.current().value;
+        this.advance();
+      }
+
+      if (key !== "") {
+        entries.push({
+          kind: "identifier",
+          value: key,
+          location: keyLoc,
+          children: [{ kind: "stringLiteral", value: val, location: keyLoc }],
+        });
+      }
+
+      this.skipNewlines();
+      if (this.currentIs("symbol", ",")) {
+        this.advance();
+        this.skipNewlines();
+      }
+    }
+
+    this.expect("symbol", "}");
+    return { kind: "identifier", value: "enforced_limits", location: loc, children: entries };
   }
 
   /** Skips a balanced `{ ... }` block without parsing the interior. */
@@ -2600,8 +2952,35 @@ class Parser {
 
     const children: AstNode[] = [];
 
+    // Optional [conforms_to: PolicyName] attribute on the contract block header.
+    // Binds this contract to a domain guard policy (task #56 — Static Manifest Clamping).
+    // The governance verifier performs a Differential Proof: contract ⊆ policy ceiling.
+    let conformsTo: string | undefined;
+    if (this.currentIs("symbol", "[")) {
+      this.advance(); // consume [
+      this.skipNewlines();
+      if (
+        (this.current().kind === "identifier" || this.current().kind === "keyword") &&
+        this.current().value === "conforms_to"
+      ) {
+        this.advance(); // consume "conforms_to"
+        this.skipNewlines();
+        if (this.currentIs("symbol", ":")) {
+          this.advance(); // consume :
+          this.skipNewlines();
+        }
+        if (this.current().kind === "identifier") {
+          conformsTo = this.current().value;
+          this.advance();
+        }
+      }
+      this.skipNewlines();
+      this.expect("symbol", "]");
+      this.skipNewlines();
+    }
+
     if (!this.currentIs("symbol", "{")) {
-      return { kind: "contractDecl", location: loc, children };
+      return { kind: "contractDecl", location: loc, children, ...(conformsTo !== undefined && { conformsTo }) };
     }
 
     this.advance(); // consume {
@@ -2735,6 +3114,31 @@ class Parser {
         continue;
       }
 
+      // `resilience { retry N times with_backoff X fallback Y quarantine_after N ... }`
+      // Auto-by-default (omitted = inferred from effects profile). Task #58.
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "resilience") {
+        children.push(this.parseContractSubBlock("resilience"));
+        this.skipNewlines();
+        continue;
+      }
+
+      // `invariant { ensure expr; ensure expr; }` — DRCM Phase 2 (#36)
+      // Parses each `ensure` as a structured ensureDecl node for static evaluation.
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "invariant") {
+        children.push(this.parseContractSubBlock("invariant"));
+        this.skipNewlines();
+        continue;
+      }
+
+      // `@experimental_profile(name: "drcm_core_v1", status: "planned_phaseN") { ... }`
+      // Feature-gate attribute — wraps forward-looking DRCM syntax inside contract {}.
+      // Parsed as a first-class attributeDecl AST node (task #51).
+      if (tok.kind === "symbol" && tok.value === "@") {
+        children.push(this.parseAttributeDirective());
+        this.skipNewlines();
+        continue;
+      }
+
       // `memory { arena <size> }` — explicit memory budget declaration.
       // Compiler infers arena lifetime automatically; developer declares the bound.
       // Feeds: PassiveExecutionPlan, WASM memory limits, Arena allocation decisions.
@@ -2850,7 +3254,7 @@ class Parser {
     }
 
     this.expect("symbol", "}");
-    return { kind: "contractDecl", location: loc, children };
+    return { kind: "contractDecl", location: loc, children, ...(conformsTo !== undefined && { conformsTo }) };
   }
 
   /**
@@ -3107,23 +3511,59 @@ class Parser {
         continue;
       }
 
+      // For invariant sub-blocks: parse `ensure expr;` as structured nodes (DRCM Phase 2 — #36)
+      // Each `ensure expr` becomes an { kind: "ensureDecl", children: [exprNode] } node.
+      // The governance verifier attempts static constant-fold evaluation:
+      //   - Provably true  → statically_verified in ProofGraph, no WAT gate
+      //   - Provably false → LLN-INV-001 (error — invariant cannot be satisfied)
+      //   - Unknown        → runtime-precheck in ProofGraph, WAT assertion gate injected
+      if (subBlockName === "invariant" && (tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "ensure") {
+        const ensureLoc = this.loc();
+        this.advance(); // consume "ensure"
+        this.skipNewlines();
+        const ensureExpr = this.parseExpression();
+        // Consume trailing semicolon if present
+        this.skipNewlines();
+        if (this.currentIs("symbol", ";")) this.advance();
+        children.push({ kind: "ensureDecl", location: ensureLoc, children: [ensureExpr] });
+        this.skipNewlines();
+        continue;
+      }
+
       // For effects sub-blocks: capture dot-path effect names
+      // Wildcards (network.*) are preserved so LLN-CAP-001 can detect them (task #30).
       if (subBlockName === "effects" && (tok.kind === "identifier" || tok.kind === "keyword")) {
         const effectLoc = this.loc();
         let effectName = tok.value;
         this.advance();
-        // Consume dot-path continuations (e.g. database.write)
+        // Consume dot-path continuations (e.g. database.write) and wildcards (network.*)
         while (this.currentIs("symbol", ".")) {
           this.advance(); // consume dot
           const next = this.current();
           if (next.kind === "identifier" || next.kind === "keyword") {
             effectName += "." + next.value;
             this.advance();
+          } else if (next.kind === "operator" && next.value === "*") {
+            // Wildcard — include so governance verifier can emit LLN-CAP-001
+            effectName += ".*";
+            this.advance();
           } else {
             break;
           }
         }
+        // Comma separator
+        this.skipNewlines();
+        if (this.currentIs("symbol", ",")) this.advance();
         children.push({ kind: "identifier", value: `effect:${effectName}`, location: effectLoc });
+        this.skipNewlines();
+        continue;
+      }
+
+      // Standalone wildcard `*` in effects block (e.g. effects { * })
+      if (subBlockName === "effects" && tok.kind === "operator" && tok.value === "*") {
+        const effectLoc = this.loc();
+        this.advance();
+        children.push({ kind: "identifier", value: "effect:*", location: effectLoc });
         this.skipNewlines();
         continue;
       }

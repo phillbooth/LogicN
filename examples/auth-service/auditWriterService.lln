@@ -5,11 +5,11 @@
 type AuditWriteResult = Result<Response, String>
 
 // Classify an audit event severity
-pure flow classifyAuditSeverity(eventType: String): String
+pure flow classifyAuditSeverity(eventType: String) -> String
+contract {
+  intent { "Map an event type to a severity level for routing and retention." }
+}
 {
-  contract {
-    intent { "Map an event type to a severity level for routing and retention." }
-  }
   match eventType {
     "AuthAttempt"          => return "high"
     "CapabilityResolved"   => return "medium"
@@ -22,11 +22,11 @@ pure flow classifyAuditSeverity(eventType: String): String
 }
 
 // Validate that an audit event has required fields
-pure flow validateAuditEvent(eventName: String, level: String): Bool
+pure flow validateAuditEvent(eventName: String, level: String) -> Bool
+contract {
+  intent { "Ensure required fields are present before writing to the audit log." }
+}
 {
-  contract {
-    intent { "Ensure required fields are present before writing to the audit log." }
-  }
   if eventName == "" {
     return false
   }
@@ -37,16 +37,15 @@ pure flow validateAuditEvent(eventName: String, level: String): Bool
 }
 
 // HTTP endpoint: accept and write an audit event
-secure flow writeAuditEvent(readonly request: Request): AuditWriteResult
-{
-  contract {
-    effects {
-      network.inbound
-      audit.write
-    }
-    intent { "Accept an audit event via HTTP and write it to the governed audit log. Phase 57 completes full governance-verified audit." }
+secure flow writeAuditEvent(readonly request: Request) -> AuditWriteResult
+contract {
+  effects {
+    network.inbound
+    audit.write
   }
-
+  intent { "Accept an audit event via HTTP and write it to the governed audit log. Phase 57 completes full governance-verified audit." }
+}
+{
   unsafe let rawEvent: String = request.jsonBody.event
   unsafe let rawLevel: String = request.jsonBody.level
 

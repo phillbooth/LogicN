@@ -5,46 +5,58 @@
 type StdlibResult = Result<Response, String>
 
 // String operations (LogicN stdlib canonical forms)
-pure flow strContains(s: String, sub: String): Bool
+pure flow strContains(text: String, sub: String) -> Bool
+contract {
+  intent { "Check if text contains substring sub." }
+}
 {
-  contract { intent { "Check if string s contains substring sub." } }
-  return s.contains(sub)
+  return text.contains(sub)
 }
 
-pure flow strStartsWith(s: String, prefix: String): Bool
+pure flow strStartsWith(text: String, prefix: String) -> Bool
+contract {
+  intent { "Check if text starts with prefix." }
+}
 {
-  contract { intent { "Check if string s starts with prefix." } }
-  return s.startsWith(prefix)
+  return text.startsWith(prefix)
 }
 
-pure flow strLength(s: String): Int
+pure flow strLength(text: String) -> Int
+contract {
+  intent { "Return the character length of text." }
+}
 {
-  contract { intent { "Return the character length of string s." } }
-  return s.length()
+  return text.length()
 }
 
 // Math operations
-pure flow mathMin(a: Int, b: Int): Int
+pure flow mathMin(a: Int, b: Int) -> Int
+contract {
+  intent { "Return the minimum of a and b." }
+}
 {
-  contract { intent { "Return the minimum of a and b." } }
   if a < b {
     return a
   }
   return b
 }
 
-pure flow mathMax(a: Int, b: Int): Int
+pure flow mathMax(a: Int, b: Int) -> Int
+contract {
+  intent { "Return the maximum of a and b." }
+}
 {
-  contract { intent { "Return the maximum of a and b." } }
   if a > b {
     return a
   }
   return b
 }
 
-pure flow mathClamp(n: Int, lo: Int, hi: Int): Int
+pure flow mathClamp(n: Int, lo: Int, hi: Int) -> Int
+contract {
+  intent { "Clamp n to the range [lo, hi]." }
+}
 {
-  contract { intent { "Clamp n to the range [lo, hi]." } }
   if n < lo {
     return lo
   }
@@ -55,7 +67,7 @@ pure flow mathClamp(n: Int, lo: Int, hi: Int): Int
 }
 
 // HTTP service endpoint for stdlib exploration
-secure flow stdlibDemo(readonly request: Request): StdlibResult
+secure flow stdlibDemo(readonly request: Request) -> StdlibResult
 contract {
   effects {
     network.inbound

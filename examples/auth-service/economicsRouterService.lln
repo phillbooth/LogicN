@@ -4,8 +4,11 @@
 type EconomicsResult = Result<Response, String>
 
 // Infer preferred target from effects
-pure flow inferTarget(hasAI: Bool, isSafetyCritical: Bool, hasDBWrite: Bool): String {
-  contract { intent { "Auto-infer the preferred execution target from flow properties." } }
+pure flow inferTarget(hasAI: Bool, isSafetyCritical: Bool, hasDBWrite: Bool) -> String
+contract {
+  intent { "Auto-infer the preferred execution target from flow properties." }
+}
+{
   if isSafetyCritical { return "enclave" }
   if hasAI { return "gpu" }
   if hasDBWrite { return "cpu" }
@@ -13,8 +16,11 @@ pure flow inferTarget(hasAI: Bool, isSafetyCritical: Bool, hasDBWrite: Bool): St
 }
 
 // Classify risk tier from execution target
-pure flow inferRiskTier(execTarget: String): String {
-  contract { intent { "Map execution target to risk classification." } }
+pure flow inferRiskTier(execTarget: String) -> String
+contract {
+  intent { "Map execution target to risk classification." }
+}
+{
   match execTarget {
     "enclave" => return "critical"
     "gpu"     => return "elevated"
@@ -24,11 +30,12 @@ pure flow inferRiskTier(execTarget: String): String {
   }
 }
 
-secure flow routeByEconomics(readonly request: Request): EconomicsResult {
-  contract {
-    effects { network.inbound audit.write }
-    intent { "Accept flow economics metadata and return a routing decision." }
-  }
+secure flow routeByEconomics(readonly request: Request) -> EconomicsResult
+contract {
+  effects { network.inbound audit.write }
+  intent { "Accept flow economics metadata and return a routing decision." }
+}
+{
   unsafe let rawHasAI: String = request.jsonBody.hasAI
   unsafe let rawIsCritical: String = request.jsonBody.isSafetyCritical
   unsafe let rawHasDB: String = request.jsonBody.hasDBWrite

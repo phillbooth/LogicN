@@ -107,10 +107,24 @@ function isBuiltin(name: string): boolean {
 /**
  * Scan body source text for `unsafe let` bindings — these are taint sources.
  *
- * Strategy: find the flow declaration line, then scan subsequent lines for
- * `unsafe let <name>` patterns. Track brace depth to stop at the end of the
- * flow body. We wait until the first `{` has been seen before exiting on brace
- * depth drop (avoids false exit on the signature line itself).
+ * Handles both syntax forms:
+ *
+ *   OLD (inside-body contract):
+ *     secure flow f(p): R {
+ *       contract { intent { ... } effects { ... } }
+ *       unsafe let x = ...      ← found here
+ *     }
+ *
+ *   NEW (outside-body contract — canonical form):
+ *     secure flow f(p) -> R
+ *     contract { intent { ... } effects { ... } }
+ *     {
+ *       unsafe let x = ...      ← found here
+ *     }
+ *
+ * In the outside-body form, the contract block opens and closes before the body
+ * `{` is ever seen. We detect this and reset brace tracking so we continue
+ * scanning into the actual body.
  */
 function extractTaintSourcesFromSource(source: string, flowName: string): string[] {
   const taintSources: string[] = [];
@@ -119,6 +133,10 @@ function extractTaintSourcesFromSource(source: string, flowName: string): string
   let braceDepth = 0;
   let flowBraceDepth = -1;
   let seenOpenBrace = false;
+  // Track outside-contract form: once contract {} closes, reset so we
+  // continue into the body rather than exiting prematurely.
+  let outsideContractBlockActive = false;
+  let outsideContractBlockClosed = false;
 
   for (const line of lines) {
     // Detect a new flow declaration
@@ -128,6 +146,8 @@ function extractTaintSourcesFromSource(source: string, flowName: string): string
         inFlow = true;
         flowBraceDepth = braceDepth;
         seenOpenBrace = false;
+        outsideContractBlockActive = false;
+        outsideContractBlockClosed = false;
       } else if (inFlow) {
         break; // next flow started, done
       }
@@ -135,13 +155,30 @@ function extractTaintSourcesFromSource(source: string, flowName: string): string
 
     if (!inFlow) continue;
 
+    // Detect outside-body contract block: `contract [...]? {` before the body opens
+    if (!seenOpenBrace && line.match(/^\s*contract\s*(?:\[.*?\])?\s*\{/)) {
+      outsideContractBlockActive = true;
+    }
+
     // Count braces
     const opens  = (line.match(/\{/g) ?? []).length;
     const closes = (line.match(/\}/g) ?? []).length;
     braceDepth += opens - closes;
     if (opens > 0) seenOpenBrace = true;
 
-    // Detect taint sources
+    // If the outside-contract block just closed: reset tracking so we
+    // continue into the real body rather than exiting.
+    if (outsideContractBlockActive && braceDepth <= flowBraceDepth) {
+      outsideContractBlockActive = false;
+      outsideContractBlockClosed = true;
+      seenOpenBrace = false; // reset — we haven't entered the body yet
+      continue;
+    }
+
+    // While inside the contract block, skip taint scanning
+    if (outsideContractBlockActive) continue;
+
+    // Detect taint sources (only when we're inside the actual body)
     const unsafeMatch = line.match(/^\s*unsafe\s+let\s+(\w+)/);
     if (unsafeMatch?.[1]) {
       taintSources.push(`unsafe let ${unsafeMatch[1]}`);

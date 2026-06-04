@@ -1,0 +1,106 @@
+# LogicN Contract Architecture & Complete Mediation Model
+
+Integrating the newly established architectural categories with the complete language primitives provides a unified view of the LogicN `contract {}` block. This block functions as the **Security and Operations Manifest** for every workflow isolate, establishing complete mediation across twelve distinct pillars of high-assurance software verification.
+
+---
+
+## The 12-Category Complete Mediation Model
+
+By extending the core language mechanics to handle multi-tenant, zero-trust cloud deployment, the platform taxonomy expands into a comprehensive 12-category matrix:
+
+| Category | Primary Architectural Focus | Language Primitive | Structural Engineering Responsibility |
+| --- | --- | --- | --- |
+| **Syntax** | Grammar rules, type signatures, structural blocks, and language keywords. | `types {}`, `flow`, `step` | Establishes static type shapes, algebraic variants, and grammar layout rules required by the flow context. |
+| **Contract** | Human- and machine-readable intent specifications, expectations, and safety proofs. | `intent {}`, `invariant {}` | Houses intent assertions and formal verification statements checked at both compile time and runtime. |
+| **Effect** | Declared out-of-bounds mutations, state writes, and structural side effects. | `effects {}` | Mandates upfront declaration of targeted environment state changes (e.g., `ledger.mutate`). |
+| **Capability** | Strongly typed, non-string resource permissions mapped to declarative host channels. | `authority {}`, `targets {}` | Maps resource authorizations directly onto explicit, variant-backed capability configurations, eliminating text wildcards. |
+| **Isolation** | Shared-nothing memory allocation boundaries, JIT guard pages, and OS containment wrappers. | `limits {}` | Restricts ephemeral memory allocations (e.g., 4MB ceilings), zero-pointer sharing, and host virtual environments. |
+| **Monotonic** | State decay rules ensuring privilege reduction over execution time via CAS atomicity. | *(Implicit)* | Ensures the Dynamic Posture Matrix ($V_{\text{DPM}}$) updates unidirectionally during faults, preventing privilege escalation. |
+| **AI Authoring** | Machine-readable context parsing rules, documentation layout targets, and compliance generation. | *(Implicit)* | Controls structured artifact emissions like `app.ai-guide.md` to feed LLM code-generation tools safe context. |
+| **Process** | Isolate scheduling loops, deterministic execution paths, and asynchronous step trees. | `request {}`, `response {}` | Formulates the I/O payload boundaries and step-to-step messaging boundaries across execution threads. |
+| **Economics 🌟** | Resource cost-containment, usage leases, outbound consumption thresholds, and monetization metrics. | `economics {}` | Regulates financial processing caps, upstream credit spending, and volume-based loop execution boundaries. |
+| **Identity 🌟** | Cryptographic provenance tracking, binary integrity mapping, and post-quantum attestation. | *(Manifest)* | Enforces signature evaluation (`ML-DSA-65`) and content tracking via compilation manifest proofs (`.lmanifest`). |
+| **Auditability 🌟** | Tamper-evident execution trail formulation and un-bypassable text stream scrubbing. | `privacy {}`, `secrets {}`, `audit {}` | Registers tracking tokens within the Secret Sink Monitor and configures framing rules for signed Epilogue Receipts. |
+| **Lifecycle 🌟** | Structural state updates, version deprecation, temporal constraints, and platform epoch management. | *(Policy)* | Manages the atomic migration of long-running contract definitions and runtime initialization sequences. |
+
+---
+
+## Pillar Specifications
+
+### 1. Economics (Resource Optimization & Cost-Containment)
+
+While **Isolation** and **Effect** controls determine *what* a program can touch, the **Economics** category dictates the *operational cost and asset volume bounds* of that execution. In a high-assurance multi-tenant infrastructure, execution loops behave like a micro-economy.
+
+* **Key Invariants:** Financial transaction ceilings per invocation, storage allocation leases, and resource spending rules.
+* **Structural Intent:** A program can remain inside its WASI memory allocation pool (Isolation) and respect its instruction budget (Fuel), but still trigger an accidental or malicious economic denial-of-service attack. This can happen by spawning millions of authorized micro-charges or exhausting paid upstream third-party API quotas. Economics maps physical resource consumption directly to financial cost boundaries.
+
+### 2. Identity & Attestation (Cryptographic Provenance)
+
+The **Capability** category determines *if* a resource action is allowed, but misses *who* is executing the block and *how* the runtime environment proves the underlying guest bytecode was not tampered with post-compilation.
+
+* **Key Invariants:** Manifest hash validation, post-quantum cryptography signatures (`ML-DSA-65`), component-level IDs, and zero-knowledge identity claims.
+* **Structural Intent:** Before a capability can be mediated by the Deterministic State Sentinel (DSS), the environment must verify the absolute cryptographic provenance of the target binary module via signed compilation records (`.lmanifest`).
+
+### 3. Auditability & Observability (Non-Repudiation)
+
+The **Process** and **Effect** categories capture execution branches, but they do not guarantee that the records generated are tamper-proof and mathematically verifiable by an external auditor or client ledger.
+
+* **Key Invariants:** Epilogue Receipt layout construction, length-prefix streaming framing, write-only logging sinks, and cleartext token scrubbing.
+* **Structural Intent:** This pillar ensures absolute operational observability while enforcing strict data leakage prevention. It dictates how execution metadata is bound into deterministic cryptographic receipts without leaking raw secret values.
+
+### 4. Lifecycle & Governance (Temporal Stability & State Upgrades)
+
+The **Monotonic** category tracks runtime state decay ($σ(t+1) ⊑ σ(t)$), but a separate domain is required to manage code upgrades, deprecation, and state schema migrations over time.
+
+* **Key Invariants:** Dynamic Posture Matrix initializations, backward-compatible contract updates, and platform epoch boundaries.
+* **Structural Intent:** Defines how an immutable contract transitions across system versions. It ensures that when a policy grammar or processing rule updates, the migration occurs atomically and cannot be weaponized to bypass active capability constraints.
+
+---
+
+## Deep Dive: Integrating the `economics {}` Syntax Primitive
+
+The `economics {}` block acts as a declarative constraint manager for real-world operational costs. It prevents a guest isolate from executing code that, despite being memory-safe and instruction-bounded, causes financial or operational disruption.
+
+The compiler parses and evaluates the `economics {}` definitions inside the **Governance Verifier** pipeline:
+
+```rust
+;; Syntax Location Reference: packages-logicn/logicn-core-compiler/src/parser/contract.lln
+
+secure flow processCloudInvoicing(merchantId: String, invoiceBatch: List<Invoice>) -> Result<Void, Fault> 
+contract {
+  intent { "Process scheduled client billing batches safely." }
+  effects { gateway.charge }
+  
+  limits {
+    max_memory: 4MB,                    ;; Isolation Category constraint
+    max_instructions: 5_000_000         ;; Pure execution instruction budget
+  }
+  
+  economics {
+    currency: "USD",
+    max_billing_quota_per_call: 500_00, ;; Restricts financial volume ($500.00 max per invoke)
+    max_aggregate_flow_budget: 10000_00,;; Hard block on loop recursion costs across steps
+    charge_failure_tolerance_ratio: 5   ;; Maximum 5% drop rate before auto-tripping DPM
+  }
+}
+{
+  ;; DWI business execution space occurs here
+}
+
+```
+
+### Operational Execution Mechanics
+
+When this block compiles to WebAssembly, the economics metadata is embedded directly into the target `.lmanifest` file. Before initializing a `step` isolate, the Deterministic State Sentinel (DSS) reads the manifest data and enforces safety across three distinct execution boundaries:
+
+#### 1. Static Economic Proof Pass
+
+The compiler evaluates the incoming data structure rules (e.g., estimating the element bounds of `invoiceBatch`). If it discovers that the maximum potential size of the incoming collection can execute more structural loops than the total budget allocated within `max_aggregate_flow_budget`, it rejects completion or triggers a strict compilation optimization fault.
+
+#### 2. Dynamic Volumetric Gating
+
+Every time the guest isolate invokes an external system gateway call via an imported WASI function, the DSS intercepts the payload sequence. The DSS inspects local accumulator registers inside its private, isolated memory space. If a call attempts to pass an execution parameter that pushes the cumulative processing loop value beyond the `$500.00` constraint, the DSS blocks the call and drops the transaction immediately.
+
+#### 3. Dynamic Posture Degradation (DPM)
+
+If downstream payment connectivity fails and drops errors exceeding the `charge_failure_tolerance_ratio` (5%), the DSS updates the local 32-bit Dynamic Posture Matrix register. It sets the isolation posture bitmask into a restricted quarantine state, ensuring the system safely degrades to prevent further financial or operational impact.

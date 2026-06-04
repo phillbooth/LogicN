@@ -1,17 +1,17 @@
 // Phase 51 — Manifest Verification Service (v1.0 RC)
 // The runtime manifest verification endpoint — validates the production deployment contract
 
-pure flow isValidManifestVersion(version: String): Bool
+pure flow isValidManifestVersion(version: String) -> Bool
 {
   return version.contains("lln.") and version.contains(".v1")
 }
 
-pure flow isValidGovernanceFlags(flags: Int): Bool
+pure flow isValidGovernanceFlags(flags: Int) -> Bool
 {
   return flags > 0
 }
 
-pure flow manifestTrustLevel(verified: Bool, hasSignature: Bool, flagsValid: Bool): Int
+pure flow manifestTrustLevel(verified: Bool, hasSignature: Bool, flagsValid: Bool) -> Int
 {
   if verified and hasSignature and flagsValid { return 4 }
   if verified and flagsValid { return 3 }
@@ -19,10 +19,12 @@ pure flow manifestTrustLevel(verified: Bool, hasSignature: Bool, flagsValid: Boo
   return 0
 }
 
-secure flow verifyManifest(readonly request: Request): Response
+secure flow verifyManifest(readonly request: Request) -> Response
+contract {
+  intent { "Verify a runtime manifest's schema version and signature status." }
+  effects { network.inbound  audit.write }
+}
 {
-  contract { intent { "Verify a runtime manifest's schema version and signature status." } effects { network.inbound  audit.write } }
-
   unsafe let schemaVersion: String = request.jsonBody.schemaVersion
   unsafe let verified: Bool = request.jsonBody.verified
   unsafe let hasSignature: Bool = request.jsonBody.hasSignature

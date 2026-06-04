@@ -100,6 +100,29 @@ Baseline comparison (governance-cost):
     mkdirSync("build", { recursive: true });
     writeFileSync(`build/${name}.wasm`, assembled.wasm);
     writeFileSync(`build/${name}.wat`, wat);
+
+    // .lmanifest generation (DRCM Phase 1 task #33 — RFC 8785 canonical JSON)
+    try {
+      const { generateManifest, serializeManifest } = await import(
+        new URL("packages-logicn/logicn-core-compiler/dist/manifest-generator.js", import.meta.url).href
+      );
+      const govResult = m.verifyGovernance(parsed.ast, parsed.flows,
+        m.checkEffects(parsed.flows, parsed.ast), "dev");
+      const source = readFileSync(llnFile, "utf8");
+      const manifest = generateManifest(source, llnFile, parsed.flows, govResult);
+      // Two-format output (per logicn-cbor-manifest-spec.md):
+      //   .lmanifest      = RFC 8785 canonical JSON → signing target (→ binary CBOR when task #67 ships)
+      //   .lmanifest.json = pretty-printed JSON → human inspection
+      const manifestJson = serializeManifest(manifest);
+      const { prettyManifest } = await import(
+        new URL("packages-logicn/logicn-core-compiler/dist/manifest-generator.js", import.meta.url).href
+      );
+      writeFileSync(`build/${name}.lmanifest`, manifestJson);
+      writeFileSync(`build/${name}.lmanifest.json`, prettyManifest(manifest));
+      console.log(`   build/${name}.lmanifest      (canonical — for signing)`);
+      console.log(`   build/${name}.lmanifest.json (human-readable)`);
+    } catch { /* manifest generation non-fatal */ }
+
     console.log(`✅ Compiled ${llnFile}`);
     console.log(`   build/${name}.wasm  (${assembled.wasm.byteLength} bytes)`);
     console.log(`   build/${name}.wat   (${wat.split("\n").length} lines)`);

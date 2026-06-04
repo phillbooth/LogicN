@@ -1,0 +1,73 @@
+Before the Deterministic Runtime Containment Model (DRCM) explicitly ships its automated sandboxing capabilities (Phase 5), allowing developers to write un-gated or poorly polyfilled `step` calls introduces an architectural hazard: it creates the **illusion of containment without physical isolation.**
+
+Because the active compiler today passes Patterns 1–3 and 5, while the runtime operates in a proto-sandbox state, an explicit **Interim Pattern** must be established. This interim pattern bridges the gap safely by executing calls using a **Synchronous Host-Proxied Fallback** that enforces strict validation rules entirely within user-space.
+
+---
+
+### The Interim Strategy: Complete Structural Mediation (User-Space)
+
+Before WebAssembly isolates (`DWI.wasm`) are spun up on-demand via the `step` keyword, all cross-boundary execution must pass through a strict **Validation Proxy Module** inside standard `.lln` space. This approach models the exact security handshake that the self-hosted DSS will eventually perform in linear memory, but forces it to happen via synchronous validation checks today.
+
+Instead of letting developers write native, unmediated inter-module function calls, the interim pattern requires wrapping external boundaries in an explicit `BoundaryProxy` loop.
+
+#### 1. How Developers Should Structure Cross-Boundary Calls Today:
+
+```rust
+;; Location: packages-logicn/logicn-core-examples/src/patterns/interim_boundary_call.lln
+
+secure flow processOrderOutbound(orderId: String) -> Result<Void, Fault> 
+contract {
+  intent { "Transmit order data via an interim validated boundary channel." }
+  effects { network.outbound }
+  authority {
+    allow_call: "network_client::transmitOrder"
+  }
+}
+{
+  let sanitizedId = internal_utils::clean(orderId);
+  
+  ;; --- INTERIM PATTERN: THE PROXIED STEP HANDSHAKE ---
+  ;; Instead of executing a bare, un-sandboxed `step network_client::transmit(sanitizedId)`, 
+  ;; the call is routed through the security layer's interim validation loop.
+  
+  let validationToken = security::interim::pre_flight_check(
+    caller: "order_processor",
+    target: "network_client::transmitOrder",
+    payload_size_bytes: String.length(sanitizedId)
+  );
+
+  if (!validationToken.is_approved) {
+    return Fault(3002); ;; Dynamic Permission Violation
+  }
+
+  ;; Synchronous proxy call executes within the same memory thread, 
+  ;; but its execution metrics are logged into the append-only trail today.
+  let networkResult = network_client::transmitOrder(sanitizedId);
+  
+  security::interim::post_flight_cleanup(validationToken);
+  
+  return networkResult;
+}
+
+```
+
+---
+
+### Mechanics of the Interim Validation Broker
+
+During this transition period, the `security::interim` module behaves like a mock Deterministic State Sentinel, tracking limits through user-space structures:
+
+* **Simulated Memory Trackers (`limits` pre-check):** Because Wasmtime isn't enforcing a strict 4MB hard limit per thread yet, the proxy performs dynamic string and array size checks on parameters before they pass across the function boundary. If a data payload exceeds calculated size maximums, the pre-flight check traps early.
+* **Aggressive Taint Scanning (`secrets` pre-check):** The pre-flight block pipes strings directly to the **Secret Sink Monitor**, checking for unhashed, cleartext prefix matches (the Phase 1 root-cause fix) before the external library receives the variables.
+* **Feature-Gated Mock Errors:** To prepare developer workflows for real-world sandbox behaviors, the interim proxy should randomly inject mock `FuelExhaustion` or `IsolationBreach` faults in non-production environments. This ensures that caller applications are written with robust exception routing and recovery logic from day one.
+
+---
+
+### Compiler Handling of the Future `step` Keyword
+
+If a developer uses the actual `step` keyword ahead of schedule in their code, the compiler pipeline should handle it based on your **AI Authoring** and **Feature-Gating** rules:
+
+1. **Reject Undefined Compilation:** If the binary is compiled with standard production flags (`--release`), encountering a literal `step` token should halt compilation with an explicit diagnostic code: `LLN-DRCM-UNSUPPORTED: Feature 'step' requires Phase 5 runtime support.`
+2. **Transform Under the Experimental Profile:** If the file is running under the `@experimental_profile(name: "drcm_core_v1")` directive we established, the parser should rewrite the AST node under the hood, expanding the single `step` keyword into the synchronous `BoundaryProxy` pipeline described above.
+
+This interim approach keeps code execution stable today while training both your developers and downstream AI context-generation engines to construct secure, bounded applications that are ready for the final pure-WASM container model.

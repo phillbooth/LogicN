@@ -12,12 +12,11 @@
 //   HTTP POST /capability/check  →  governance  →  capability policy check  →  response
 
 // Capability policy: which effects are allowed in which contexts
-pure flow isEffectAllowedInContext(effect: String, context: String): Bool
+pure flow isEffectAllowedInContext(effect: String, context: String) -> Bool
+contract {
+  intent { "Check if an effect is allowed in the given execution context." }
+}
 {
-  contract {
-    intent { "Check if an effect is allowed in the given execution context." }
-  }
-
   // Network effects require explicit context
   if effect.contains("network") {
     if context.contains("production") { return false }
@@ -53,12 +52,11 @@ pure flow isEffectAllowedInContext(effect: String, context: String): Bool
 }
 
 // Returns the governance class for an effect
-pure flow effectGovernanceClass(effect: String): Int
+pure flow effectGovernanceClass(effect: String) -> Int
+contract {
+  intent { "Return the governance class for an effect. 0=denied, 1=read, 2=write, 3=compute, 4=external" }
+}
 {
-  contract {
-    intent { "Return the governance class for an effect. 0=denied, 1=read, 2=write, 3=compute, 4=external" }
-  }
-
   if effect.contains("audit") { return 2 }
   if effect.contains("crypto") { return 3 }
   if effect.contains("secret") { return 1 }
@@ -70,16 +68,15 @@ pure flow effectGovernanceClass(effect: String): Int
 }
 
 // The governed capability check endpoint
-secure flow checkCapability(readonly request: Request): Response
-{
-  contract {
-    intent { "Resolve whether a requested effect is permitted in the caller's capability context." }
-    effects {
-      network.inbound
-      audit.write
-    }
+secure flow checkCapability(readonly request: Request) -> Response
+contract {
+  intent { "Resolve whether a requested effect is permitted in the caller's capability context." }
+  effects {
+    network.inbound
+    audit.write
   }
-
+}
+{
   unsafe let effect: String = request.jsonBody.effect
   unsafe let context: String = request.jsonBody.context
 

@@ -10,23 +10,21 @@
 
 // Produces an audit event identifier by concatenating the flow name and timestamp.
 // This is the stable canonical identifier for an audit entry.
-pure flow auditEventId(flowName: String, timestamp: String): String
+pure flow auditEventId(flowName: String, timestamp: String) -> String
+contract {
+  intent { "Produce a canonical audit event ID from flowName and timestamp." }
+}
 {
-  contract {
-    intent { "Produce a canonical audit event ID from flowName and timestamp." }
-  }
-
   return flowName + ":" + timestamp
 }
 
 // Returns true when the status string is one of the three valid audit statuses.
 // Only "Success", "Denied", and "Failed" are valid for a governed audit entry.
-pure flow isValidAuditStatus(status: String): Bool
+pure flow isValidAuditStatus(status: String) -> Bool
+contract {
+  intent { "Return true when status is a recognised audit status (Success|Denied|Failed)." }
+}
 {
-  contract {
-    intent { "Return true when status is a recognised audit status (Success|Denied|Failed)." }
-  }
-
   if status == "Success" { return true }
   if status == "Denied" { return true }
   if status == "Failed" { return true }
@@ -35,16 +33,15 @@ pure flow isValidAuditStatus(status: String): Bool
 
 // The governed audit chain endpoint.
 // Accepts { flowName, status, timestamp } and returns a chained audit entry.
-secure flow chainAuditEntry(readonly request: Request): Response
-{
-  contract {
-    intent { "Chain a governed audit entry from the request's flowName, status, and timestamp." }
-    effects {
-      network.inbound
-      audit.write
-    }
+secure flow chainAuditEntry(readonly request: Request) -> Response
+contract {
+  intent { "Chain a governed audit entry from the request's flowName, status, and timestamp." }
+  effects {
+    network.inbound
+    audit.write
   }
-
+}
+{
   unsafe let flowName: String = request.jsonBody.flowName
   unsafe let status: String = request.jsonBody.status
   unsafe let timestamp: String = request.jsonBody.timestamp

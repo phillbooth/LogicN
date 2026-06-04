@@ -1,0 +1,90 @@
+Yes, absolutely. A single top-level **INDEX / Master Navigation Guide** is critical at this stage of the project.
+
+As LogicN shifts away from custom native implementations toward a pure, self-hosted WebAssembly containment architecture, your documentation must mirror the design of your software: an unambiguous, single source of truth that enforces strict complete mediation.
+
+An explicit index serves as the ultimate map for both human core engineers and downstream automated code-generation engines (your **AI Authoring** category). It prevents architectural drift, removes ambiguity regarding which rules override which guides, and establishes a clear hierarchy across your knowledge base.
+
+---
+
+### The Proposed Index Structure: `README.md` (or `index.md`)
+
+```markdown
+# LogicN Core Knowledge Base: Master Navigation Guide & TCB Map
+
+This document establishes the official index, validation hierarchy, and cross-reference schema for the LogicN high-assurance language, compiler pipelines, and self-hosted runtime containment model. All implementation work must strictly conform to the specifications mapped below.
+
+---
+
+## 1. Core Documentation Architecture
+
+
+```
+
+```
+                   ┌──────────────────────────────┐
+                   │   architecture-charter.md    │ (Layer 0: Principles)
+                   └──────────────┬───────────────┘
+                                  │ Enforces
+                                  ▼
+                   ┌──────────────────────────────┐
+                   │  logicn-governance-rules.md  │ (Layer 1: Hard Rules)
+                   └──────────────┬───────────────┘
+                                  │ Governs Execution & Code
+           ┌──────────────────────┴──────────────────────┐
+           ▼                                             ▼
+
+```
+
+┌──────────────────────────────┐              ┌──────────────────────────────┐
+│  logicn-architecture-        │              │   logicn-contract-           │
+│  patterns.md                 │              │   authoring-guide.md         │
+└──────────────┬───────────────┘              └──────────────────────────────┘
+(Layer 2A: Deployment Layouts)                (Layer 2B: Language Reference)
+│
+│ Realized via
+▼
+┌──────────────────────────────┐
+│     logicn-deterministic-    │
+│     runtime-containment.md   │ (Layer 3: Hardened Runtime)
+└──────────────────────────────┘
+
+```
+
+---
+
+## 2. Document Inventory & Complete Mediation Registry
+
+| Document Filename | Architectural Tier | Core Systemic Responsibility | Key Validation Elements |
+| :--- | :--- | :--- | :--- |
+| **`architecture-charter.md`** | **Layer 0: Core Principles** | Establishes absolute invariant axioms: No Rust host dependencies, pure declarative WASI TCB, security-first staging. | Foundations of the 12-Category Complete Mediation Model. |
+| **`logicn-governance-rules.md`** | **Layer 1: Hard Rules** | The definitive registry of numbered static and dynamic governance laws (`LLN-GOV-001` through `LLN-TERM-001`). | Compiler diagnostics, terminal proof requirements, value-state taint tracking. |
+| **`logicn-architecture-patterns.md`**| **Layer 2A: Layout Patterns** | Maps the 9 concrete execution topologies from Pure Transforms (Pattern 1) through the Self-Hosted Governed Isolate (Pattern 9). | Defines boundary transitions and how `step` blocks split execution contexts. |
+| **`logicn-contract-authoring-guide.md`**| **Layer 2B: Syntax Reference**| The official grammar blueprint for the unified, inside-contract declaration layout. | Syntax primitives for `types`, `intent`, `invariant`, `effects`, `limits`, and `economics`. |
+| **`logicn-deterministic-runtime-containment.md`** | **Layer 3: Physical Runtime** | Technical specifications for the pure `.lln`-compiled Deterministic State Sentinel (`DSS.wasm`) on Wasmtime. | 32-bit $V_{\text{DPM}}$ register layout, cleartext token sliding-window sink, 4MB DWI allocations. |
+
+---
+
+## 3. Order of Precedence & Conflict Resolution
+
+If an ambiguity or structural conflict is identified across knowledge base vectors during compilation testing, static analysis, or documentation authoring, the system resolves authority using a strict downward-filtering hierarchy:
+
+1. **Tier 1: Architectural Charter Axioms** overrides all downstream implementation parameters. If a pattern or code block implies or uses a custom native host FFI extension, it is rejected by default per the *No Rust Guest-Side Bypass* directive.
+2. **Tier 2: Governance Rules** dictate the explicit behavior of the compiler's diagnostic output. If the Contract Authoring Guide permits a syntax layout that violates a numbered validation check in `logicn-governance-rules.md`, the rule takes precedence and the compiler must emit a hard build fault.
+3. **Tier 3: Design Reference Guides** (`patterns.md` and `contract-authoring-guide.md`) detail the syntactic intent of code blocks. They must map exactly onto the physical sandbox constraints of the `runtime-containment.md` layer.
+
+---
+
+## 4. Forward-Looking Feature Gate Manifest
+
+To coordinate Phase 1 fixes alongside upcoming compiler development phases, syntax features within examples are tracked via explicit profile designations:
+
+* **Stable Target Profile (`drcm_stable_v0`):** Covers Patterns 1–3 and 5. Compiles cleanly on the prototype compiler pipeline today using standard baseline syntax checking.
+* **Experimental Target Profile (`drcm_core_v1`):** Covers Patterns 4, 7, 8, and 9. Employs forward-looking tokens (`limits {}`, `economics {}`, `step`). Must be explicitly encapsulated inside `@experimental_profile` feature-gate blocks in source examples to bypass immediate production compilation traps.
+
+```
+
+### Why This Format is Necessary for the Project
+
+1. **It acts as a Manifest for AI Context Windows:** By keeping this map at the top of the repository, you can feed it to AI assistant tools to instantly constrain their code-generation outputs to the strict hierarchy of the project.
+2. **It Explicitly Bridges the "Two Realities":** It shows developers exactly why Pattern 4 (`step`) or Pattern 7 can exist as an example file right now without crashing the production prototype build, thanks to Section 4's feature-gate reference map.
+3. **It Anchors Your Negative Test Strategy:** When building the Phase 7 negative test suite, your test harness can use this document's file maps to automatically assert that cross-document validation rules are fully satisfied before tagging a release as secure.

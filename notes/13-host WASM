@@ -1,0 +1,107 @@
+To deliver on this architectural pivot cleanly, let's break down exactly what changes structurally when migrating the Deterministic State Sentinel (DSS) from a native Rust framework to a pure `.lln` module compiled to WASM.
+
+By committing to a **Wasmtime-as-the-sole-host** model, your trusted computing base (TCB) shifts entirely to Wasmtime’s native declarative WASI configuration.
+
+---
+
+### The Reality of the Pure WASI Constraint
+
+When the DSS is self-hosted in `.lln` and compiled to WebAssembly, it operates as a guest inside the Wasmtime CLI or engine. It cannot make custom host calls or invoke raw C-FFI layers to alter security postures mid-execution.
+
+Instead, all capability enforcement must be mapped onto standard **WASI Preview 2 (Wasmtime 22+)** declarative capabilities:
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│  LAYER 2: gVisor / OCI Sandbox (Host Kernel Containment)       │
+│  └──────────────────────────────────────────────────────────┐  │
+│  │  LAYER 1: Wasmtime CLI / Core Engine Host Layer          │  │
+│  │  │  - Declarative WASI Preview 2 Imports Only            │  │
+│  │  │  ┌─────────────────────────────────────────────────┐  │  │
+│  │  │  │  Deterministic State Sentinel (DSS.wasm)        │  │  │
+│  │  │  │  └───────────────────────────────────────────┐  │  │  │
+│  │  │  │  │  Layer 0: Guest Workflow Isolate (DWI)    │  │  │  │
+│  │  │  │  └───────────────────────────────────────────┘  │  │  │
+│  │  │  └─────────────────────────────────────────────────┘  │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────┘
+
+```
+
+#### Monotonic Decrement Only
+
+Because WASI pre-opens directories and network sockets at instantiation time, the DSS's Dynamic Posture Matrix (DPM) cannot dynamically create *new* permissions at runtime. The DPM functions strictly as a **monotonic subtraction engine**—it can drop capability flags instantly (e.g., flipping a bit to isolate a worker during a fault), but it can never expand beyond the baseline capabilities passed to the Wasmtime process by Layer 2.
+
+---
+
+### Core Structural Refactoring
+
+#### 1. Eliminating the Wildcard Host Leak (`norust.md` Refactor)
+
+String-based wildcards (`"*"`) introduce structural parsing bugs and ambient authority leaks. The pure `.lln` runtime enforces explicit algebraic variants instead of loose text configuration strings.
+
+```rust
+;; Location: packages-logicn/logicn-core-security/src/capabilities.lln
+
+type NetworkTarget =
+  | ExplicitHost(String)  ;; Must evaluate to an exact FQDN or fixed IP
+  | UnrestrictedInternet  ;; Requires separate explicit policy authorization
+
+type NetworkConstraint = {
+  target: NetworkTarget,
+  allowed_port: U16,
+  require_tls: Bool
+}
+
+flow evaluateNetworkEgress(req: NetworkConstraint, gran: NetworkConstraint) -> Bool {
+  let hostVerified = match (req.target, gran.target) {
+    (NetworkTarget.ExplicitHost(r_host), NetworkTarget.ExplicitHost(g_host)) => r_host == g_host,
+    (_, NetworkTarget.UnrestrictedInternet) => true,
+    _ => false
+  };
+  
+  return hostVerified && (req.allowed_port == gran.allowed_port) && (req.require_tls == gran.require_tls);
+}
+
+```
+
+#### 2. Re-engineering `scanForSecretLiteral` via Cleartext Slices
+
+Comparing cryptographic SHA-256 hashes against a continuous cleartext data stream is mathematically broken for substring lookups. To enforce un-bypassable data scrubbers in pure `.lln` without leaking core credentials to guest registers, the DSS stores short, cleartext prefix tokens (minimum 8 characters) in a dedicated write-only lookup structure.
+
+```rust
+;; Location: packages-logicn/logicn-core-security/src/sink-monitor.lln
+
+type SecretSinkCache = mut {
+  tracked_prefixes: List<String>
+}
+
+global active_sink_monitor: SecretSinkCache = SecretSinkCache { tracked_prefixes: List.new() }
+
+flow registerSecretTrackingPrefix(rawSecret: String) -> Void {
+  if (String.length(rawSecret) >= 12) {
+    ;; Extract an 8-character cleartext window for streaming match interception
+    let signaturePrefix = String.substring(rawSecret, 0, 8);
+    active_sink_monitor.tracked_prefixes.append(signaturePrefix);
+  }
+}
+
+flow evaluateStreamingOutput(rawPayload: String) -> String {
+  for prefix in active_sink_monitor.tracked_prefixes {
+    if (crypto::contains_substring_match(rawPayload, prefix)) {
+      ;; Halt execution across the entire virtual machine loop immediately
+      runtime::triggerHardwareTrap(3001); ;; Trap Code: LLN-SECRET-BREACH
+    }
+  }
+  return rawPayload;
+}
+
+```
+
+---
+
+### Step-by-Step Validation Guide
+
+To prove that the TCB handles containment failures reliably under the pure WASI design before updating your compilation pipeline, run these two validation tests against your staging environment:
+
+1. **WASI Ambient Authority Isolation Test:** Attempt to run a compiled `.lln` test module that calls `wasi:filesystem/preopens.get_directories` without explicit directory args mapped during engine invocation. The initialization must return an empty list or trigger an instantiation panic, proving the guest cannot traverse host execution filesystems.
+2. **Secret Flow Breach Interception Test:** Register a canary secret key (`"supersecuretoken123"`) within the runtime environment. Execute a script that deliberately interpolates this credential into an error stack string routed to stdout. The stream must strike the sink monitor, drop execution mid-operation, and emit `LLN-SECRET-BREACH`, preventing cleartext data leakage outside the sandbox boundary.

@@ -657,10 +657,100 @@ export function emitWATFromFlowAST(
   const bodyLines:  string[] = [];
   const labelCounter = { n: 0 };
 
+  // ── DRCM Phase 2: invariant {} WAT assertion gates (task #36 Unit 3) ──────
+  // Emit pre-condition assertion gates for `runtime-precheck` invariants.
+  // `statically_verified` invariants emit NOTHING (Goal A: zero runtime overhead).
+  // Pre-condition fires before the body; post-condition fires at the single exit.
+  //
+  // Architecture (per notes/28 WAT injection spec):
+  //   1. Pre-condition gates — evaluated before body executes
+  //   2. Body (single-exit via $exit block — early returns become br $exit)
+  //   3. Post-condition gates — evaluated at the single exit point
+  //
+  // Security: `unreachable` is atomic — Wasmtime fires a hardware trap before
+  // the next instruction pointer advances. No TOCTOU window.
+  const ensureNodes = extractInvariantEnsures(flowNode);
+  const preGates:  string[] = [];
+  const postGates: string[] = [];
+  for (const ensureExpr of ensureNodes) {
+    const condWAT = emitWATExpr(ensureExpr, vars);
+    // Assertion pattern: evaluate condition, negate (eqz), trap if false
+    // Stack is neutral: condition consumed by if, unreachable terminates branch
+    const gate = `  (if (i32.eqz ${condWAT}) (then unreachable)) ;; ensure ${describeASTExpr(ensureExpr)}`;
+    preGates.push(gate);
+    postGates.push(gate.replace(";; ensure", ";; post: ensure"));
+  }
+
+  if (preGates.length > 0) {
+    bodyLines.push(`  ;; --- invariant pre-conditions (LLN-INV-001 gate) ---`);
+    bodyLines.push(...preGates);
+  }
   emitBlockStatements(blockNode, vars, localDecls, bodyLines, labelCounter);
+  if (postGates.length > 0) {
+    bodyLines.push(`  ;; --- invariant post-conditions (LLN-INV-002 gate) ---`);
+    bodyLines.push(...postGates);
+  }
 
   if (localDecls.length === 0 && bodyLines.length === 0) return null;
   return [...localDecls, ...bodyLines].join("\n");
+}
+
+/**
+ * Extract `runtime-precheck` ensure expression nodes from a flow's invariant block.
+ * `statically_verified` invariants (constant-fold = true) are excluded — no WAT gate needed.
+ */
+function extractInvariantEnsures(flowNode: AstNode): AstNode[] {
+  const contractNode = (flowNode.children ?? []).find(c => c.kind === "contractDecl");
+  if (contractNode === undefined) return [];
+  const invariantBlock = (contractNode.children ?? []).find(
+    c => c.kind === "identifier" && c.value === "invariant:block"
+  );
+  if (invariantBlock === undefined) return [];
+
+  const ensures: AstNode[] = [];
+  for (const child of invariantBlock.children ?? []) {
+    if (child.kind !== "ensureDecl") continue;
+    const expr = child.children?.[0];
+    if (expr === undefined) continue;
+    // Skip statically provable TRUE (constant fold = true) — no WAT gate needed
+    const staticResult = tryConstantFold(expr);
+    if (staticResult === true) continue;
+    // Skip statically FALSE — governance verifier already emitted LLN-INV-001
+    if (staticResult === false) continue;
+    // Unknown → runtime-precheck → inject WAT gate
+    ensures.push(expr);
+  }
+  return ensures;
+}
+
+/** Lightweight constant-fold for WAT emitter (mirrors governance verifier logic) */
+function tryConstantFold(expr: AstNode): boolean | null {
+  if (expr.kind === "boolLiteral") return expr.value === "true";
+  if (expr.kind === "binaryExpr" && expr.children?.length === 2) {
+    const l = expr.children[0], r = expr.children[1];
+    if (l?.kind === "numberLiteral" && r?.kind === "numberLiteral") {
+      const lv = parseFloat(l.value ?? "0"), rv = parseFloat(r.value ?? "0");
+      switch (expr.value) {
+        case ">": return lv > rv; case "<": return lv < rv;
+        case ">=": return lv >= rv; case "<=": return lv <= rv;
+        case "==": return lv === rv; case "!=": return lv !== rv;
+      }
+    }
+  }
+  return null;
+}
+
+/** Short description of an AST expression for WAT comments */
+function describeASTExpr(expr: AstNode): string {
+  if (expr.kind === "boolLiteral" || expr.kind === "numberLiteral") return expr.value ?? "?";
+  if (expr.kind === "identifier") return expr.value ?? "?";
+  if (expr.kind === "binaryExpr" && expr.children?.length === 2) {
+    return `${describeASTExpr(expr.children[0]!)} ${expr.value ?? "?"} ${describeASTExpr(expr.children[1]!)}`;
+  }
+  if (expr.kind === "memberExpr" && expr.children?.length === 1) {
+    return `${describeASTExpr(expr.children[0]!)}.${expr.value ?? "?"}`;
+  }
+  return "expr";
 }
 
 /**

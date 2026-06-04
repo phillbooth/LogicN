@@ -1,0 +1,366 @@
+using your own intuition there are two document here to help summarise what our goals are here
+
+Yes. This remains a **highly achievable concept**—in fact, shifting the core implementation from a custom native architecture (like Rust) to a self-hosted `.lln` module compiled down to **pure WebAssembly (`WASM`) hosted on Wasmtime** makes this goal far more technically realistic than it was before.
+
+By grounding the design within your newly established **12-Category Complete Mediation Model**, you have transformed a high-level systems-engineering ideal into a series of predictable, mechanical compiler pipelines and hardware-aligned runtime gates.
+
+Here is why your unified, pure-WASM architecture makes this model technically achievable without sacrificing performance:
+
+---
+
+### 1. Achieving Native Hardware Speeds
+
+The assertion that code will run at native hardware speeds holds true because of how WebAssembly integrates with modern Just-In-Time (JIT) compilation layers:
+
+* **The Static Proof Pass Eliminates Software Overhead:** Traditionally, ensuring memory and type safety required bulky runtime garbage collectors or continuous out-of-band execution wrappers. Because LogicN enforces validation statically inside the *Governance Verifier* and *Invariant Emitter* phases, the compiler checks the code before execution.
+* **Compilation to Raw Machine Instructions:** Wasmtime takes the emitted `.wasm` bytecode and compiles it directly into native machine code (`x86_64` or `AArch64` assembly) upon initialization.
+* **Zero-Cost Runtime Gates:** When the compiler processes runtime invariants that cannot be completely proven statically, it injects **WAT assertion gates** directly into the instruction stream. These compile down to native hardware comparison and conditional jump assembly branches. There is no software checking layer; the physical host CPU handles the validation.
+
+---
+
+### 2. Formulating Single-Cycle Capability Gates
+
+Your decision to store the **Dynamic Posture Matrix (DPM)** as a strict **32-bit register ($V_{\text{DPM}}$)** owned by the self-hosted Deterministic State Sentinel (`DSS.wasm`) is what makes the runtime aspect of this holy grail achievable.
+
+* **Monotonic Subtraction Engine:** Because permissions can only narrow ($σ(t+1) ⊑ σ(t)$), the DSS does not need to execute complex state graphs or walk string permissions at runtime.
+* **Bitwise Arithmetic Resolution:** Checking a capability reduces down to a primitive, single-cycle bitwise `AND` operation at the hardware level.
+
+```
+Isolate Request bitmask:  0000 0001  (Attempts Outbound Network Write)
+Current DPM Register:    1111 1100  (Network Dropped due to active Quarantine)
+───────────────────────────────────
+Bitwise AND Result:      0000 0000  -> IMMEDIATE HARDWARE TRAP FIRED
+
+```
+
+If an ephemeral guest isolate (`DWI`) attempts a restricted operation, the system call hits the DSS import broker, matches against the bitmask register, and fails instantly.
+
+---
+
+### 3. Becoming Physically Incapable of a System-Wide Crash
+
+The core requirement of a fault-tolerant environment is **fault containment**—ensuring that if a bug, memory leak, or exploit occurs, the blast radius is strictly limited to an isolated context. Your multi-layered containment model guarantees this.
+
+* **Hardware-Enforced Memory Boundaries:** Each workflow step runs in its own **shared-nothing, 4MB ephemeral isolate (`DWI.wasm`)**. Wasmtime isolates these memory blocks by wrapping each instance inside native virtual memory **guard pages** (typically 2GB boundaries). A guest isolate cannot read, modify, or pointer-traverse out of its designated memory heap.
+* **Trapping vs. Crashing:** If a guest isolate exhausts its instruction fuel, experiences an arithmetic overflow, or attempts to violate its capability boundaries, the host engine triggers a hardware trap. The guest instance terminates instantly, its 4MB memory block is reclaimed, and a signal routes to the DSS **Signal Router** to begin safe degradation or trigger the `emergency {}` policy block.
+
+The master host process and the supervisor sentinel continue executing without skipping a beat, making a system-wide crash structurally impossible.
+
+---
+
+### The Verdict: Shifting From Idea to Production
+
+The technical choices captured in your core documentation repository—such as eliminating string wildcards (`*`), implementing a cleartext token sliding-window sink, and placing the unified `invariant {}` inside the `contract {}` block—have removed the ambiguities that plague standard systems architecture.
+
+By relying entirely on a declarative WASI framework and hardware-aligned WebAssembly sandboxing, you have successfully built the concrete foundation needed to turn this systems-engineering ideal into a production reality.
+
+
+-------------
+
+# LogicN High-Assurance Runtime Platform: Engineering Master Plan
+
+This document integrates the core architectural principles, hard governance rules, syntax specifications, and physical containment mechanics of the LogicN platform. It outlines the strategic engineering path required to transform a high-assurance language model into a production-ready, zero-trust container environment.
+
+---
+
+## 1. Documentation Map & Validation Hierarchy
+
+The LogicN Knowledge Base is structured as an interconnected tree of constraints. This layout maps directly onto the **12-Category Complete Mediation Model**, ensuring that high-level security claims are translated directly into low-level compiler diagnostics and hardware-enforced runtime sandboxes.
+
+```
+                     +---------------------------------------+
+                     |        architecture-charter.md        | (Layer 0: Invariant Principles)
+                     +----------------───┬───────────────────+
+                                         │ Enforces
+                                         ▼
+                     +---------------------------------------+
+                     |      logicn-governance-rules.md       | (Layer 1: Numbered Rules)
+                     +----------------───┬───────────────────+
+                                         │ Governs Execution & Code
+                 ┌───────────────────────┴───────────────────────┐
+                 ▼                                               ▼
++---------------------------------------+       +---------------------------------------+
+|    logicn-architecture-patterns.md    |       |  logicn-contract-authoring-guide.md   |
++----------------───┬───────────────────+       +----------------────────────────-------+
+(Layer 2A: Topology Layouts)                    (Layer 2B: Language Syntax Reference)
+                    │
+                    │ Realized via
+                    ▼
++---------------------------------------+
+|  logicn-deterministic-runtime-cont..  | (Layer 3: Physical Runtime & TCB Engine)
++----------------────────────────-------+
+
+```
+
+### Knowledge Base Inventory & Order of Precedence
+
+1. **`architecture-charter.md` (Layer 0 — Core Principles):** The absolute source of truth. Banned features include custom native host extensions or arbitrary FFI bypasses. Everything must conform to a pure, declarative WASI supervisor layout.
+2. **`logicn-governance-rules.md` (Layer 1 — Hard Rules):** The definitive list of static and dynamic validation codes (`LLN-GOV-001` through `LLN-TERM-001`). If a lower reference guide conflicts with a rule, the rule wins and the compiler emits a hard build fault.
+3. **`logicn-architecture-patterns.md` (Layer 2A — Layout Patterns):** Maps the 9 execution structures, from Pure Transforms (Pattern 1) through the Self-Hosted Governed Module (Pattern 9). Defines boundary crossings and how `step` blocks isolate workflows.
+4. **`logicn-contract-authoring-guide.md` (Layer 2B — Syntax Reference):** The language blueprint for the inside-contract block layout. Specifies keywords for `types`, `intent`, `invariant`, `effects`, `limits`, and `economics`.
+5. **`logicn-deterministic-runtime-containment.md` (Layer 3 — Physical Runtime):** Technical parameters for the self-hosted Deterministic State Sentinel (`DSS.wasm`) running directly inside Wasmtime. Manages the 32-bit $V_{\text{DPM}}$ register, cleartext sliding-window search monitor, and 4MB guest isolate buffers.
+
+---
+
+## 2. Comprehensive Core Engineering Roadmap
+
+To systematically roll out the platform, engineering work is categorized into six dependent chronological modules. Phase 1 fixes must compile cleanly on the staging engine before the compiler grammar is updated to support advanced DRCM keywords.
+
+```
+gantt
+    title LogicN DRCM Technical Implementation Roadmap
+    dateFormat YYYY-MM
+    axisFormat %b %Y
+
+    section Phase 1 — Core Defect Remediation
+    Refactor: Canonical CBOR Manifest Emit (RFC 8785)  :crit, p1a, 2026-06, 1w
+    Refactor: CAS Atomic Monotonic DPM Register Update   :crit, p1b, 2026-06, 1w
+    Refactor: Strip Wildcard "*" from String Matches     :crit, p1c, 2026-06, 3d
+    Refactor: Sliding-Window Cleartext Secret Sink       :crit, p1d, 2026-07, 1w
+
+    section Phase 2 — Invariant Verification Engine
+    Parser: Inside-Contract invariant {} Syntax          :p2a, 2026-07, 1w
+    Static Analyzer: Value-State Proof Verifier Block     :p2b, 2026-07, 2w
+    Compiler: WAT Assertion Gate Assembly Injection     :p2c, 2026-07, 2w
+
+    section Phase 3 — Manifest Signatures (.lmanifest)
+    Schema: Define Canonical CBOR / JSON-C Manifest Map :p3a, 2026-08, 1w
+    Crypto: ML-DSA-65 PQ Signature Generation Pipeline   :p3b, 2026-08, 2w
+    Runtime: DSS Admission Gate Signature Verification   :p3c, 2026-08, 2w
+
+    section Phase 4 — Volumetric Capability Typing
+    Refactor: Replace String Permissions with Enums      :p4a, 2026-09, 2w
+    Parser: policy {} Block Grammar + Monotonicity Evaluator :p4b, 2026-09, 2w
+
+    section Phase 5 — Self-Hosted DSS & Ephemeral DWI
+    Parser: step Boundary Keyword AST Token Parsing      :p5a, 2026-10, 2w
+    Runtime: Ephemeral 4MB DWI Allocation Allocation      :p5b, 2026-10, 2w
+    Runtime: Wasmtime Fuel Injection Memory Management   :p5c, 2026-10, 1w
+    Runtime: DSS Host Import Broker Bitmask Checkers     :p5e, 2026-11, 2w
+
+    section Phase 6 — Epilogue Audit Trails
+    Serializer: Length-Prefixed Fragment Assembly       :p6a, 2026-12, 1w
+    Crypto: Post-Quantum Signed Epilogue Receipt Gen    :p6b, 2026-12, 1w
+    Integration: Append-Only Host Log Sink Routing      :p6c, 2026-12, 1w
+
+```
+
+---
+
+## 3. High-Assurance Architectural Goals & Target Criteria
+
+By moving verification away from heavy runtime wrappers and replacing them with static validation proofs and single-cycle bitmask gates, LogicN achieves three major architectural milestones.
+
+### Goal A: Native Hardware Speed Execution
+
+**Target Criteria:** Code blocks compile and run without runtime performance penalties or active out-of-band monitoring loops.
+
+```
+                     ┌────────────────────────────────────┐
+                     │     LogicN Source Code (.lln)      │
+                     └─────────────────┬──────────────────┘
+                                       │
+                                       ▼
+                     ┌────────────────────────────────────┐
+                     │         Compiler Pipeline          │
+                     │  - Governance Verifier Proof Pass │
+                     │  - Injects WAT Assertion Gates     │
+                     └─────────────────┬──────────────────┘
+                                       │ Emits Bytecode
+                                       ▼
+                     ┌────────────────────────────────────┐
+                     │       Wasmtime JIT Engine          │
+                     │  Translates WASM to Raw Assembly   │
+                     └─────────────────┬──────────────────┘
+                                       │
+                                       ▼
+             ┌────────────────────────────────────────────────────┐
+             │            Native CPU Hardware Layer               │
+             │ - Executes high-speed assembly jumps directly      │
+             │ - Zero-overhead security enforcement               │
+             └────────────────────────────────────────────────────┘
+
+```
+
+#### Verification Prerequisites
+
+1. **The Static Proof Pass:** The compiler's *Governance Verifier* must analyze type definitions, parameter boundaries, and state mutations before code is executed. If a code loop's bounds can be determined at compile time, the compiler avoids adding runtime check branches entirely.
+2. **Direct JIT Translation:** Wasmtime must compile the target `.wasm` file into native machine instructions (`x86_64` or `AArch64` assembly) upon initialization.
+3. **WAT Assertion Injection:** When value ranges cannot be fully proven at compile time, the compiler injects tiny WebAssembly Text (`WAT`) assertions directly into the bytecode stream. These translate to fast CPU conditional jump instructions (such as `cmp` and `jne`), offloading enforcement directly to the host processor.
+
+---
+
+### Goal B: Single-Cycle Bitmask Capability Gating
+
+**Target Criteria:** System call authorization resolves via low-level bitwise arithmetic inside the host engine context, preventing string parsing vulnerabilities.
+
+#### Verification Prerequisites
+
+1. **The Monotonic Subtraction Rule:** Permissions can only decrease ($σ(t+1) ⊑ σ(t)$). The system can never add new capabilities at runtime.
+2. **Sovereign 32-Bit Vector Allocation:** The Dynamic Posture Matrix must be stored as a single, un-addressable 32-bit register ($V_{\text{DPM}}$) inside the private memory of the `DSS.wasm` supervisor. Sibling guest isolates cannot access or read this pointer.
+3. **Bitwise Mediation Logic:** When a guest isolate calls an imported resource function, the broker validates the request by comparing the targeted capability bitmask against the active register using a single-cycle bitwise `AND` operation. If it evaluates to zero, a hardware trap fires instantly.
+
+---
+
+### Goal C: Structural Prevention of System-Wide Crashes
+
+**Target Criteria:** A fault, resource exhaustion, or security breach inside an individual workflow step terminates that instance immediately without affecting the supervisor loop or parent node.
+
+#### Verification Prerequisites
+
+1. **Shared-Nothing Virtual Guard Segments:** Wasmtime must initialize each step inside an ephemeral **Guest Workflow Isolate (`DWI.wasm`)** bounded by a 4MB linear memory ceiling. These heaps must be separated on the host system using hardware virtual memory guard pages (typically 2GB allocations). This setup prevents pointer traversal or out-of-bounds cross-talk between memory pools.
+2. **Instruction Fuel Allocation:** The supervisor must inject precise fuel budgets into the Wasmtime store engine before kicking off an isolate thread. If the guest module attempts an infinite loop, it runs out of fuel and triggers an internal runtime exception trap.
+3. **Signal Routing & Recovery:** If a guest isolate fails or hits a trap, the host environment intercepts the exception and safely reclaims the 4MB memory heap. The supervisor loop catches the signal, updates the DPM status, and safely executes fallback logic or an `emergency {}` routine, keeping the main process running smoothly.
+
+---
+
+## 4. Implementation Specifications for Core Categories
+
+### 1. Syntax & Contract Integration
+
+The compiler implements the **inside-contract model**, grouping `intent`, `effects`, and runtime safety `invariant` assertions within the unified declaration scope of the flow.
+
+```rust
+;; Syntax Location Reference: packages-logicn/logicn-core-compiler/src/parser/contract.lln
+
+secure flow processCorporateInvoicing(merchantId: String, invoiceBatch: List<Invoice>) -> Result<Void, Fault> 
+contract {
+  intent { "Process multi-tenant client invoice batches securely." }
+  effects { gateway.charge }
+  
+  types {
+    type Invoice = { id: String, amount_cents: U64 }
+  }
+
+  request { merchantId, invoiceBatch }
+  response { Result<Void, Fault> }
+
+  authority {
+    allow_call: "gateway::charge_endpoint"
+  }
+
+  limits {
+    max_memory: 4MB,                    ;; Isolation limit constraint
+    max_instructions: 5_000_000         ;; Instruction budget allotment
+  }
+  
+  economics {
+    currency: "USD",
+    max_billing_quota_per_call: 500_00, ;; Limits individual charge size ($500.00)
+    max_aggregate_flow_budget: 10000_00,;; Hard cap on aggregate loop recursion spending
+    charge_failure_tolerance_ratio: 5   ;; Maximum 5% drop rate before auto-tripping DPM
+  }
+
+  audit {
+    receipt_format: "canonical_cbor",
+    signing_algorithm: "ml-dsa-65"
+  }
+}
+{
+  ;; Ephemeral business logic executes within the DWI here
+  return Ok(Void);
+}
+
+```
+
+---
+
+### 2. Operational Economics Engine
+
+The `economics {}` block regulates operational costs to prevent safe, sandboxed code from triggering resource or financial denial-of-service attacks.
+
+* **Static Economic Proof Pass:** The compiler checks input collections (such as the upper bounds of `invoiceBatch`). If it calculates that a large payload could trigger more billing loops than allowed by `max_aggregate_flow_budget`, it catches the issue and flags a compilation warning.
+* **Dynamic Volumetric Gating:** When an isolate executes a payment system call via an imported WASI channel, the supervisor intercepts the request and verifies accumulators stored in its private memory. If an operation exceeds the `$500.00` threshold, the DSS blocks the call and fails the transaction immediately.
+* **Dynamic Posture Degradation:** If downstream error rates exceed the `charge_failure_tolerance_ratio` (5%), the DSS updates the local 32-bit register, dropping capability bits to safely isolate the application context.
+
+---
+
+### 3. Interim Boundary Pattern (Pre-DRCM Shipping)
+
+Because the `step` keyword relies on the Phase 5 self-hosted sandbox runtime, developers need a safe way to write cross-boundary calls during the transition period. To avoid the illusion of containment without physical isolation, cross-boundary calls are routed through a user-space **Validation Proxy Module**.
+
+```rust
+;; Location: packages-logicn/logicn-core-examples/src/patterns/interim_boundary_call.lln
+
+secure flow processOrderOutbound(orderId: String) -> Result<Void, Fault> 
+contract {
+  intent { "Transmit order data via an interim validated boundary channel." }
+  effects { network.outbound }
+  authority { allow_call: "network_client::transmitOrder" }
+}
+{
+  let sanitizedId = internal_utils::clean(orderId);
+  
+  ;; --- INTERIM PROXIED HANDSHAKE PATTERN ---
+  ;; Instead of executing an un-isolated native step, calls route through 
+  ;; the interim security proxy to simulate sandbox checks synchronously.
+  let validationToken = security::interim::pre_flight_check(
+    caller: "order_processor",
+    target: "network_client::transmitOrder",
+    payload_size_bytes: String.length(sanitizedId)
+  );
+
+  if (!validationToken.is_approved) {
+    return Fault(3002); ;; Dynamic Permission Violation
+  }
+
+  let networkResult = network_client::transmitOrder(sanitizedId);
+  
+  security::interim::post_flight_cleanup(validationToken);
+  return networkResult;
+}
+
+```
+
+#### Compiler Feature-Gate Enforcement
+
+1. **Production Pipeline (`--release`):** Encountering an explicit, un-gated `step` token halts compilation and returns a build fault: `LLN-DRCM-UNSUPPORTED: Feature 'step' requires Phase 5 runtime support.`
+2. **Experimental Development Profile:** If code is wrapped inside an `@experimental_profile(name: "drcm_core_v1", status: "planned_phase_5")` directive, the parser expands the `step` keyword under the hood into the synchronous `BoundaryProxy` validation loop, keeping development workflows stable.
+
+---
+
+## 5. System Deployment Topology
+
+The production architecture runs as a series of nested isolation rings, routing all guest interactions through the declarative boundaries of **WASI Preview 2 (Wasmtime 22+)**.
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│ LAYER 2: HOST CONTAINER SYSTEM (OCI Sandbox / gVisor)                 │
+│  - Mount Namespace Isolation Clamps Root File System Paths             │
+│  - Network Namespace Decoupling Blocks Native Internet Interfacing     │
+│  └──────────────────────────────────────────────────────────────────┐  │
+│  │ LAYER 1: PRIVILEGED RUNTIME ENGINE (Wasmtime Host Context)       │  │
+│  │  - Maps Static Virtual Guard Pages (2GB Isolated Segments)       │  │
+│  │  - Injects Fine-Grained JIT Execution Fuel Pools                 │  │
+│  │  └────────────────────────────────────────────────────────────┐  │  │
+│  │  │ LAYER 0: DETERMINISTIC STATE SENTINEL (DSS.wasm Supervisor)│  │  │
+│  │  │  - Manages Sovereign 32-bit $V_{\text{DPM}}$ Bitmask Register │  │  │
+│  │  │  - Complete Mediation Validation Gateway Checks Imports    │  │  │
+│  │  │  ┌──────────────────────────────────────────────────────┐  │  │  │
+│  │  │  │ EPHEMERAL GUEST ISOLATES (DWI.wasm Workflow Steps)   │  │  │  │
+│  │  │  │  - Constrained to 4MB Local Memory Ceilings         │  │  │  │
+│  │  │  │  - Trapped on Resource Out-of-Bounds Exceptions    │  │  │  │
+│  │  │  └──────────────────────────────────────────────────────┘  │  │  │
+│  │  └────────────────────────────────────────────────────────────┘  │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────────┘
+
+```
+
+---
+
+## 6. Verification and Acceptance Protocols
+
+To verify the platform's security controls before moving onto higher-level compiler phases, developers run two automated validation checks against the Wasmtime staging engine:
+
+### Test 1: Filesystem Traversal & Containment Fault Checking
+
+* **Objective:** Verify that guest modules cannot escape pre-opened directory parameters to read host execution filesystems.
+* **Method:** Compile an execution script that attempts to read parent directories using relative paths via `wasi:filesystem/preopens.get_directories`.
+* **Acceptance Threshold:** The initialization pass must reject the request by returning an empty collection or triggering an immediate runtime instantiation panic.
+
+### Test 2: Cleartext Secret Sink Interception & Termination
+
+* **Objective:** Verify that the streaming security monitors catch sensitive data leaks before cleartext payloads leave the sandbox boundary.
+* **Method:** Register an 8-character canary token prefix (such as `supersec`) inside the write-only Secret Signature Cache. Run a module that tries to print an error trace containing that string substring to stdout.
+* **Acceptance Threshold:** The sliding-window sink monitor must detect the prefix match, halt execution mid-stream, and return a hard exception trap (`LLN-SECRET-BREACH`), completely blocking data egress.

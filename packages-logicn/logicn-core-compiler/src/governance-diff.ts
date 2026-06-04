@@ -24,6 +24,22 @@ export interface FlowGovernanceShape {
   readonly effects: readonly string[];
 }
 
+/**
+ * Change-class classification (task #59 — logicn-governed-design-synthesis.md).
+ *
+ * tightening    — fewer effects, stricter privacy, smaller limits, narrower targets
+ * neutral       — documentation / refactors with no governance delta
+ * expansion     — new effects, new secrets, broader authority, larger budgets
+ * experimental  — policy { emergency {} }, @experimental_profile, native backend changes
+ *
+ * Gate required per class:
+ *   tightening:   1 reviewer + automated checks
+ *   neutral:      1 reviewer
+ *   expansion:    2 reviewers including security/governance owner
+ *   experimental: architecture review + conformance rerun + signed release
+ */
+export type ChangeClass = "tightening" | "neutral" | "expansion" | "experimental";
+
 export interface FlowDelta {
   readonly name: string;
   readonly change: "added" | "removed" | "changed";
@@ -33,6 +49,8 @@ export interface FlowDelta {
   readonly effectsRemoved: readonly string[];
   /** True if the change widens authority (added effects or escalated qualifier). */
   readonly widensAuthority: boolean;
+  /** Change class for this individual flow delta. */
+  readonly changeClass: ChangeClass;
 }
 
 export interface GovernanceDiff {
@@ -42,6 +60,11 @@ export interface GovernanceDiff {
   readonly changed: readonly FlowDelta[];
   /** True if ANY change widens authority — the key signal for PR review. */
   readonly widensAuthority: boolean;
+  /**
+   * The highest change class across all deltas.
+   * CI gate: expansion requires 2 reviewers; experimental requires arch review.
+   */
+  readonly changeClass: ChangeClass;
   readonly summary: string;
 }
 
@@ -87,15 +110,51 @@ export function diffGovernance(
   const removed: FlowDelta[] = [];
   const changed: FlowDelta[] = [];
 
+  // Helper: classify an individual flow delta
+  function classifyDelta(
+    effectsAdded: readonly string[],
+    effectsRemoved: readonly string[],
+    qualifierBefore: string | undefined,
+    qualifierAfter: string | undefined,
+    isAdded: boolean,
+  ): ChangeClass {
+    const qBefore = qualifierBefore ?? "flow";
+    const qAfter  = qualifierAfter  ?? "flow";
+    const escalated = qualifierEscalated(qBefore, qAfter);
+    const degraded  = (QUALIFIER_RANK[qAfter] ?? 0) < (QUALIFIER_RANK[qBefore] ?? 0);
+
+    if (isAdded) {
+      // New flow with effects = expansion; new flow without effects = neutral
+      const rank = QUALIFIER_RANK[qAfter] ?? 0;
+      return (effectsAdded.length > 0 || rank >= (QUALIFIER_RANK.guarded ?? 2))
+        ? "expansion" : "neutral";
+    }
+    if (effectsAdded.length > 0 || escalated)   return "expansion";
+    if (effectsRemoved.length > 0 || degraded)  return "tightening";
+    return "neutral";
+  }
+
+  // Rank change classes for overall determination
+  const CLASS_RANK: Record<ChangeClass, number> = {
+    neutral: 0, tightening: 1, expansion: 2, experimental: 3,
+  };
+
+  function maxClass(a: ChangeClass, b: ChangeClass): ChangeClass {
+    return CLASS_RANK[a] >= CLASS_RANK[b] ? a : b;
+  }
+
   // Added flows (in after, not in before)
   for (const [name, shape] of afterMap) {
     if (!beforeMap.has(name)) {
+      const widens = shape.effects.length > 0 || (QUALIFIER_RANK[shape.qualifier] ?? 0) >= QUALIFIER_RANK.guarded!;
+      const cc = classifyDelta(shape.effects, [], undefined, shape.qualifier, true);
       added.push({
         name, change: "added",
         qualifierAfter: shape.qualifier,
         effectsAdded: shape.effects,
         effectsRemoved: [],
-        widensAuthority: shape.effects.length > 0 || (QUALIFIER_RANK[shape.qualifier] ?? 0) >= QUALIFIER_RANK.guarded!,
+        widensAuthority: widens,
+        changeClass: cc,
       });
     }
   }
@@ -108,7 +167,8 @@ export function diffGovernance(
         qualifierBefore: shape.qualifier,
         effectsAdded: [],
         effectsRemoved: shape.effects,
-        widensAuthority: false,  // removing a flow never widens authority
+        widensAuthority: false,
+        changeClass: "tightening", // removing a flow is always tightening
       });
     }
   }
@@ -129,6 +189,7 @@ export function diffGovernance(
     }
 
     const widens = effectsAdded.length > 0 || qualifierEscalated(beforeShape.qualifier, afterShape.qualifier);
+    const cc = classifyDelta(effectsAdded, effectsRemoved, beforeShape.qualifier, afterShape.qualifier, false);
 
     changed.push({
       name, change: "changed",
@@ -137,11 +198,18 @@ export function diffGovernance(
       effectsAdded,
       effectsRemoved,
       widensAuthority: widens,
+      changeClass: cc,
     });
   }
 
   const widensAuthority =
     added.some(d => d.widensAuthority) || changed.some(d => d.widensAuthority);
+
+  // Determine overall change class (highest individual class)
+  let overallClass: ChangeClass = "neutral";
+  for (const d of [...added, ...removed, ...changed]) {
+    overallClass = maxClass(overallClass, d.changeClass);
+  }
 
   const summary = buildSummary(added, removed, changed, widensAuthority);
 
@@ -149,6 +217,7 @@ export function diffGovernance(
     schemaVersion: "lln.govdiff.v1",
     added, removed, changed,
     widensAuthority,
+    changeClass: overallClass,
     summary,
   };
 }
@@ -168,12 +237,21 @@ function buildSummary(
   return head + flag;
 }
 
+/** Change-class label and required gate. */
+const CHANGE_CLASS_LABEL: Record<ChangeClass, string> = {
+  neutral:      "NEUTRAL      — 1 reviewer",
+  tightening:   "TIGHTENING   — 1 reviewer + automated checks",
+  expansion:    "EXPANSION    — 2 reviewers including security/governance owner",
+  experimental: "EXPERIMENTAL — architecture review + conformance rerun + signed release",
+};
+
 /**
  * Render a governance diff as human-readable text (for CLI output).
  */
 export function renderGovernanceDiff(diff: GovernanceDiff): string {
   const lines: string[] = [];
   lines.push(`Governance Diff (${diff.summary})`);
+  lines.push(`Change class: ${CHANGE_CLASS_LABEL[diff.changeClass]}`);
   lines.push("");
 
   for (const d of diff.added) {

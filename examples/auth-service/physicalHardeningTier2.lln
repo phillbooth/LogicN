@@ -19,6 +19,7 @@ contract {
     strategy transform.crypto_pseudonymize
   }
   audit { level cryptographic_state_hash  target storage.tpm_backed_log }
+  epilogue { generate_proof sha256_seal  on_verification_failure quarantine_payload }
 }
 {
   AuditLog.write("High-value record processed under Tier 2 shielding")

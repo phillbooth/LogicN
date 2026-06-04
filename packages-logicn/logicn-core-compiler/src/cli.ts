@@ -29,13 +29,14 @@ import { checkSourceEscapes } from "./source-escape-checker.js";
 import { verifyGovernance } from "./governance-verifier.js";
 import { checkNamingPolicy } from "./naming-policy-checker.js";
 import { buildAiGraph, emitGIR } from "./gir-emitter.js";
+import { generateManifest, serializeManifest } from "./manifest-generator.js";
 import { buildWATModuleFromGIR, renderWAT } from "./wat-emitter.js";
 import { assembleWAT } from "./wat-assembler.js";
 import { STDLIB_CAPABILITY_MAP } from "./stdlib-registry.js";
 import { EFFECT_REGISTRY } from "./effect-checker.js";
 import { canonicalHash, hashSource, hashGIR } from "./runtime/canonicalHash.js";
 import type { Dirent } from "node:fs";
-import { join } from "node:path";
+import { join, basename } from "node:path";
 
 // =============================================================================
 // logicn.check.json -- project-level configuration for `logicn check`
@@ -302,6 +303,8 @@ interface FileCompileResult {
   readonly file: string;
   readonly diagnostics: CliDiagnostic[];
   readonly aiGraphJson?: string;
+  /** RFC 8785 canonical JSON string for the .lmanifest artifact (task #33) */
+  readonly manifestJson?: string;
 }
 
 function compileFile(
@@ -466,6 +469,19 @@ function compileFile(
     const aiGraph = buildAiGraph(parseResult.ast, parseResult.flows, filePath);
     const aiGraphJson = JSON.stringify(aiGraph, null, 2);
     return { file: filePath, diagnostics, aiGraphJson };
+  }
+
+  // .lmanifest generation (DRCM Phase 1 task #33 — RFC 8785 canonical JSON)
+  // Emitted for build modes when there are no errors.
+  // Contains: source hash, derived constraints, proof obligations, governance signatures.
+  if ((mode === "build" || mode === "build-production" || mode === "build-deterministic") &&
+      !diagnostics.some(d => d.severity === "error")) {
+    const govResultForManifest = verifyGovernance(
+      parseResult.ast, parseResult.flows, effectResults, "dev"
+    );
+    const manifest = generateManifest(source, filePath, parseResult.flows, govResultForManifest);
+    const manifestJson = serializeManifest(manifest);
+    return { file: filePath, diagnostics, manifestJson };
   }
 
   return { file: filePath, diagnostics };
@@ -924,8 +940,14 @@ function runGovernanceDiff(baseRefArg: string): void {
   } else {
     process.stdout.write(renderGovernanceDiff(diff) + "\n");
   }
-  // Exit non-zero if authority was widened -- useful as a CI gate
-  process.exit(diff.widensAuthority ? 2 : 0);
+  // Exit codes:
+  //   0 = neutral or tightening — no human review required beyond normal
+  //   2 = expansion or authority widening — requires 2 reviewers (security/governance owner)
+  //   3 = experimental — requires architecture review + conformance rerun
+  const exitCode = diff.changeClass === "experimental" ? 3
+                 : (diff.widensAuthority || diff.changeClass === "expansion") ? 2
+                 : 0;
+  process.exit(exitCode);
 }
 
 function runCostAnalysis(targetDir: string): void {
@@ -1157,6 +1179,16 @@ function main(): void {
 
     if (result.aiGraphJson !== undefined) {
       allAiGraphParts.push(result.aiGraphJson);
+    }
+
+    // Write .lmanifest alongside build output (task #33 — RFC 8785 canonical JSON)
+    if (result.manifestJson !== undefined) {
+      const outDir = join(targetDir, "build");
+      try { mkdirSync(outDir, { recursive: true }); } catch { /* already exists */ }
+      const baseName = basename(filePath, ".lln");
+      const manifestPath = join(outDir, `${baseName}.lmanifest`);
+      writeFileSync(manifestPath, result.manifestJson, "utf8");
+      process.stdout.write(`[manifest] ${manifestPath}\n`);
     }
   }
 

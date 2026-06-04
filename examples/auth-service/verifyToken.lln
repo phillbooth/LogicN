@@ -2,12 +2,11 @@ type VerifyTokenResult = Result<TokenClaims, TokenError>
 type TokenClaims = record { readonly sub: String readonly exp: Timestamp }
 type TokenError = enum { Expired Invalid Malformed }
 
-pure flow verifyToken(token: String): VerifyTokenResult
+pure flow verifyToken(token: String) -> VerifyTokenResult
+contract {
+  intent { "Verify a JWT token and extract claims without side effects." }
+}
 {
-  contract {
-    intent { "Verify a JWT token and extract claims without side effects." }
-  }
-
   let claims = Jwt.verify(token)?
   return Ok(claims)
 }

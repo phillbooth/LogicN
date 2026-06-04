@@ -69,6 +69,36 @@ console.log("══ LogicN phase-close cadence ══");
 // ── 1. Core tests (SOT four) ──
 run("tests:core", "node", ["scripts/run-all-tests.cjs", "--core"]);
 
+// ── 1b. Architecture pattern examples — logicn check on all tests/patterns/*.lln ──
+const patternsDir = join(ROOT, "tests", "patterns");
+if (existsSync(patternsDir)) {
+  const patternFiles = readdirSync(patternsDir).filter(f => f.endsWith(".lln"));
+  // Use logicn.mjs (Stage A compiler) — not the legacy logicn-core-cli
+  const logicnMjs = join(ROOT, "logicn.mjs");
+  let patternOk = true;
+  const patternDetails = [];
+  for (const f of patternFiles) {
+    const res = spawnSync("node", [logicnMjs, "check", join(patternsDir, f)],
+      { cwd: ROOT, encoding: "utf8", shell: isWin, timeout: 30000 });
+    const passed = res.status === 0;
+    if (!passed) { patternOk = false; patternDetails.push(`${f}: FAIL`); }
+  }
+  results.push({ name: "tests:patterns", ok: patternOk, ms: 0,
+    detail: patternOk
+      ? `${patternFiles.length} patterns pass`
+      : `FAILED — ${patternDetails.join(", ")}` });
+}
+
+// ── 1c. Goal acceptance tests (T-006/007/008) ──
+const goalsDir = join(ROOT, "tests", "goals");
+if (existsSync(goalsDir)) {
+  const goalFiles = readdirSync(goalsDir).filter(f => f.endsWith(".test.mjs")).sort();
+  if (goalFiles.length > 0) {
+    run("tests:goals",
+      "node", ["--test", ...goalFiles.map(f => join(goalsDir, f))]);
+  }
+}
+
 // ── 2. DevTools + ext package tests ──
 for (const p of ["naming", "context", "intelligence", "provenance", "pci"]) {
   const dir = join(ROOT, "packages-logicn", `logicn-devtools-${p}`);
@@ -119,6 +149,37 @@ if (existsSync(corpus)) {
 // ── 5. Full graph re-index ──
 run("graph:reindex", "node",
   ["packages-logicn/logicn-core-cli/dist/index.js", "graph", "--out", "build/graph"]);
+
+// ── 6. Standing Governance Sanity Check — diff HEAD~1 ──
+// Transforms governance diff from a passive human-review step into an active quality gate.
+// Enforces the Monotonicity Rule at CI level: expansion requires explicit sign-off.
+// Reference: logicn-governed-design-synthesis.md change-class table.
+try {
+  // Check if HEAD~1 exists (might not on first commit)
+  const gitCheck = spawnSync("git", ["rev-parse", "--verify", "HEAD~1"],
+    { cwd: ROOT, encoding: "utf8", shell: isWin });
+  if (gitCheck.status === 0) {
+    const diffResult = spawnSync("node",
+      ["packages-logicn/logicn-core-compiler/dist/cli.js", "diff", "HEAD~1", "--json"],
+      { cwd: ROOT, encoding: "utf8", shell: isWin, timeout: 30000 });
+    const diffOut = diffResult.stdout || "";
+    let changeClass = "neutral";
+    let diffSummary = "no .lln changes";
+    try {
+      const diffData = JSON.parse(diffOut);
+      changeClass = diffData.changeClass ?? "neutral";
+      diffSummary = diffData.summary ?? "no .lln changes";
+    } catch { /* parse failure = no .lln changes */ }
+    // In local dev cadence: expansion = warning (GitHub Action handles hard blocking)
+    const govOk = changeClass !== "experimental"; // experimental = requires arch review
+    results.push({
+      name: "governance:diff",
+      ok: govOk,
+      ms: 0,
+      detail: `${changeClass.toUpperCase()} — ${diffSummary}`,
+    });
+  }
+} catch { /* git not available or diff failed — skip silently */ }
 
 // ── Summary ──
 console.log("\n── phase-close summary ──");

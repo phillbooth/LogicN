@@ -5,10 +5,11 @@
 type ProofResult = Result<Response, String>
 
 // Map a qualifier to its proof level
-pure flow qualifierToProofLevel(qualifier: String): Int {
-  contract {
-    intent { "Map a flow qualifier to the minimum proof level required." }
-  }
+pure flow qualifierToProofLevel(qualifier: String) -> Int
+contract {
+  intent { "Map a flow qualifier to the minimum proof level required." }
+}
+{
   match qualifier {
     "pure"    => return 0
     "guarded" => return 1
@@ -18,18 +19,22 @@ pure flow qualifierToProofLevel(qualifier: String): Int {
 }
 
 // Check if proof level meets the policy minimum
-pure flow proofLevelSufficient(actual: Int, required: Int): Bool {
-  contract { intent { "Return true if actual proof level meets or exceeds required." } }
+pure flow proofLevelSufficient(actual: Int, required: Int) -> Bool
+contract {
+  intent { "Return true if actual proof level meets or exceeds required." }
+}
+{
   if actual >= required { return true }
   return false
 }
 
 // HTTP endpoint: generate a proof graph summary
-secure flow generateProofSummary(readonly request: Request): ProofResult {
-  contract {
-    effects { network.inbound audit.write }
-    intent { "Accept a flow metadata request and return a governance proof summary." }
-  }
+secure flow generateProofSummary(readonly request: Request) -> ProofResult
+contract {
+  effects { network.inbound audit.write }
+  intent { "Accept a flow metadata request and return a governance proof summary." }
+}
+{
   unsafe let rawQualifier: String = request.jsonBody.qualifier
   unsafe let rawEffectCount: String = request.jsonBody.effectCount
   let level: Int = qualifierToProofLevel(rawQualifier)

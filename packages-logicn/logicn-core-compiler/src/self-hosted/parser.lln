@@ -76,14 +76,59 @@ record FlowDecl {
   params: Array<FlowParam>
   returnType: String
   effects: Array<String>
+  conformsTo: String        // domain guard policy name from contract [conforms_to: X]; "" if not bound
   body: Array<Stmt>
   returnExpr: ReturnExpr
+}
+
+// A domain guard policy declaration:
+//   policy PolicyName { permitted_effects { effect.name, ... } }
+// Collected from top-level `policy Name { ... }` declarations.
+record PolicyDecl {
+  name: String
+  permittedEffects: Array<String>
+}
+
+// Result of parsing a dot-separated token path (e.g. "database.write").
+record DotPathParse {
+  name: String
+  nextPos: Int
 }
 
 record ParseResult {
   flows: Array<FlowDecl>
   errors: Array<String>
   imports: Array<String>   // module paths from `import ... from "path"` statements
+  policies: Array<PolicyDecl>  // domain guard policies (task #56)
+}
+
+// ── Dot-path helper ──────────────────────────────────────────
+// Parses a dot-separated identifier path from position startPos.
+// Example: at pos pointing to "database", ".", "write" → returns "database.write"
+// Used for effect names in effects {} and permitted_effects {} blocks.
+pure flow parseDotPath(tokens: Array<Token>, startPos: Int) -> DotPathParse
+contract {
+  intent { "Parse a dot-separated token path (e.g. gateway.charge) from startPos." }
+}
+{
+  let total: Int = tokens.count()
+  let firstOpt = tokens.get(startPos)
+  match firstOpt {
+    None => { return { name: "", nextPos: startPos + 1 } }
+    Some(first) => {
+      mut name: String = first.value
+      mut p: Int = startPos + 1
+      while p < total and tokVal(tokens, p) == "." {
+        p = p + 1
+        let sfOpt = tokens.get(p)
+        match sfOpt {
+          Some(sfTok) => { name = name + "." + sfTok.value  p = p + 1 }
+          None => {}
+        }
+      }
+      return { name: name, nextPos: p }
+    }
+  }
 }
 
 // ── Token accessor helpers ───────────────────────────────────
@@ -1256,6 +1301,7 @@ contract {
   mut flows: Array<FlowDecl> = Array.empty()
   mut errs: Array<String> = Array.empty()
   mut importPaths: Array<String> = Array.empty()
+  mut policies: Array<PolicyDecl> = Array.empty()  // domain guard policies (task #56)
   mut pos: Int = 0
   let total: Int = tokens.count()
 
@@ -1288,6 +1334,71 @@ contract {
       pos = ipos
     }
     else {
+
+    // Top-level domain guard policy declaration: policy PolicyName { permitted_effects { ... } }
+    // Collected into the `policies` array; passed to governance-verifier.lln (task #56).
+    if tv == "policy" {
+      mut pp: Int = pos + 1
+      while isNewline(tokens, pp) { pp = pp + 1 }
+      // Read the policy name
+      let polNameOpt = tokens.get(pp)
+      mut polName: String = ""
+      match polNameOpt {
+        Some(polTok) => {
+          if polTok.kind == "Identifier" { polName = polTok.value  pp = pp + 1 }
+        }
+        None => {}
+      }
+      while isNewline(tokens, pp) { pp = pp + 1 }
+      // Parse policy body { ... }
+      mut permEffects: Array<String> = Array.empty()
+      if tokVal(tokens, pp) == "{" {
+        pp = pp + 1
+        mut polDepth: Int = 1
+        while pp < total and polDepth > 0 {
+          let pv: String = tokVal(tokens, pp)
+          if pv == "{" { polDepth = polDepth + 1 }
+          if pv == "}" {
+            polDepth = polDepth - 1
+            if polDepth == 0 { pp = pp + 1 }
+          }
+          // Extract permitted_effects { e1, e2 }
+          if polDepth == 1 and pv == "permitted_effects" {
+            pp = pp + 1
+            while isNewline(tokens, pp) { pp = pp + 1 }
+            if tokVal(tokens, pp) == "{" {
+              pp = pp + 1
+              while pp < total and tokVal(tokens, pp) != "}" {
+                let peOpt = tokens.get(pp)
+                match peOpt {
+                  Some(peTok) => {
+                    match peTok.kind {
+                      Identifier | Keyword => {
+                        let parsed = parseDotPath(tokens, pp)
+                        permEffects = permEffects.append(parsed.name)
+                        pp = parsed.nextPos
+                        while isNewline(tokens, pp) { pp = pp + 1 }
+                        if tokVal(tokens, pp) == "," { pp = pp + 1 }
+                      }
+                      _ => { pp = pp + 1 }
+                    }
+                  }
+                  None => {}
+                }
+                while isNewline(tokens, pp) { pp = pp + 1 }
+              }
+              if tokVal(tokens, pp) == "}" { pp = pp + 1 }
+            }
+          } else {
+            if polDepth > 0 { pp = pp + 1 }
+          }
+        }
+      }
+      if polName != "" {
+        policies = policies.append({ name: polName, permittedEffects: permEffects })
+      }
+      pos = pp
+    }
 
     // Detect qualifier: pure | guarded | secure  (followed by "flow")
     // OR bare "flow" keyword.
@@ -1356,32 +1467,92 @@ contract {
           }
         }
 
-        // Effects: canonical form is contract { effects { ... } }.
-        // "with effects [...]" was removed — Stage B parser does not parse it.
-        // Effects extraction from contract block is a Stage B milestone target.
+        // Effects and domain guard: extract from contract block.
+        // Task #56: also extract [conforms_to: X] attribute and effects { ... }
+        // from inside the contract block rather than just skipping it entirely.
         mut efx: Array<String> = Array.empty()
+        mut ctConformsTo: String = ""
 
-        // Skip newlines between the return type and the contract/body — real
-        // governed flows put `contract` on the next line, e.g.
-        //   pure flow f(...) -> T
-        //   contract { ... }
-        //   { body }
+        // Skip newlines between the return type and the contract/body
         while isNewline(tokens, p) { p = p + 1 }
 
-        // Phase 61: Skip a standalone contract block before the body.
-        // The contract block (with nested types{}/intent{}/effects{} braces) comes
-        // before the opening brace of the body; brace-count to its matching close.
+        // Parse the contract block: contract [conforms_to: X]? { ... }
         if tokVal(tokens, p) == "contract" {
           p = p + 1
           while isNewline(tokens, p) { p = p + 1 }
+
+          // Optional [conforms_to: PolicyName] attribute
+          if tokVal(tokens, p) == "[" {
+            p = p + 1
+            while isNewline(tokens, p) { p = p + 1 }
+            if tokVal(tokens, p) == "conforms_to" {
+              p = p + 1
+              while isNewline(tokens, p) { p = p + 1 }
+              if tokVal(tokens, p) == ":" {
+                p = p + 1
+                while isNewline(tokens, p) { p = p + 1 }
+                let pnOpt = tokens.get(p)
+                match pnOpt {
+                  Some(pnTok) => {
+                    if pnTok.kind == "Identifier" { ctConformsTo = pnTok.value }
+                    p = p + 1
+                  }
+                  None => {}
+                }
+              }
+            }
+            // Consume tokens until ']'
+            while p < total and tokVal(tokens, p) != "]" { p = p + 1 }
+            if tokVal(tokens, p) == "]" { p = p + 1 }
+            while isNewline(tokens, p) { p = p + 1 }
+          }
+
+          // Parse contract body: { ... }
+          // Extract effects { e1, e2 } and skip everything else with brace counting
           if tokVal(tokens, p) == "{" {
             p = p + 1
             mut contractDepth: Int = 1
             while p < total and contractDepth > 0 {
               let cv = tokVal(tokens, p)
               if cv == "{" { contractDepth = contractDepth + 1 }
-              if cv == "}" { contractDepth = contractDepth - 1 }
-              p = p + 1
+              if cv == "}" {
+                contractDepth = contractDepth - 1
+                if contractDepth == 0 {
+                  p = p + 1
+                }
+              }
+              // Extract effects { e1, e2 } at depth 1
+              if contractDepth == 1 and cv == "effects" {
+                p = p + 1
+                while isNewline(tokens, p) { p = p + 1 }
+                if tokVal(tokens, p) == "{" {
+                  p = p + 1
+                  // Collect dot-separated effect names until }
+                  while p < total and tokVal(tokens, p) != "}" {
+                    let etOpt = tokens.get(p)
+                    match etOpt {
+                      Some(etTok) => {
+                        // Multi-variant match arms (task #62) — Identifier | Keyword share body
+                        match etTok.kind {
+                          Identifier | Keyword => {
+                            let parsed = parseDotPath(tokens, p)
+                            efx = efx.append(parsed.name)
+                            p = parsed.nextPos
+                            while isNewline(tokens, p) { p = p + 1 }
+                            if tokVal(tokens, p) == "," { p = p + 1 }
+                          }
+                          _ => { p = p + 1 }
+                        }
+                      }
+                      None => {}
+                    }
+                    while isNewline(tokens, p) { p = p + 1 }
+                  }
+                  if tokVal(tokens, p) == "}" { p = p + 1 }
+                }
+              } else {
+                if contractDepth > 0 { p = p + 1 }
+              }
             }
           }
         }
@@ -1409,6 +1580,7 @@ contract {
           params: params,
           returnType: returnType,
           effects: efx,
+          conformsTo: ctConformsTo,
           body: bodyStmts,
           returnExpr: returnExpr
         })
@@ -1418,5 +1590,5 @@ contract {
     }   // end else (not import)
   }
 
-  return { flows: flows, errors: errs, imports: importPaths }
+  return { flows: flows, errors: errs, imports: importPaths, policies: policies }
 }

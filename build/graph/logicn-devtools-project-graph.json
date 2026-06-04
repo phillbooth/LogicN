@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-06-03T23:32:09.012Z",
+  "generatedAt": "2026-06-04T21:53:20.926Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -3900,6 +3900,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/KNOWLEDGE-BASE-INDEX.md",
+      "kind": "Document",
+      "label": "KNOWLEDGE-BASE-INDEX.md",
+      "sourcePath": "docs/Knowledge-Bases/KNOWLEDGE-BASE-INDEX.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/layered-rate-limits.md",
       "kind": "Document",
       "label": "layered-rate-limits.md",
@@ -4044,6 +4053,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-architecture-patterns.md",
+      "kind": "Document",
+      "label": "logicn-architecture-patterns.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-architecture-patterns.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-asic-cyber-physical.md",
       "kind": "Document",
       "label": "logicn-asic-cyber-physical.md",
@@ -4107,6 +4125,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-build-roadmap.md",
+      "kind": "Document",
+      "label": "logicn-build-roadmap.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-build-roadmap.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-cache-aware-execution.md",
       "kind": "Document",
       "label": "logicn-cache-aware-execution.md",
@@ -4120,6 +4147,15 @@
       "kind": "Document",
       "label": "logicn-calibration-data.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-calibration-data.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-cbor-manifest-spec.md",
+      "kind": "Document",
+      "label": "logicn-cbor-manifest-spec.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-cbor-manifest-spec.md",
       "tags": [
         "document"
       ]
@@ -4291,6 +4327,15 @@
       "kind": "Document",
       "label": "logicn-contract-authoring-guide.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-contract-authoring-guide.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-contract-clause-reference.md",
+      "kind": "Document",
+      "label": "logicn-contract-clause-reference.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-contract-clause-reference.md",
       "tags": [
         "document"
       ]
@@ -4800,6 +4845,24 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-domain-guard-policies.md",
+      "kind": "Document",
+      "label": "logicn-domain-guard-policies.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-domain-guard-policies.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-drcm-phase1-specs.md",
+      "kind": "Document",
+      "label": "logicn-drcm-phase1-specs.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-drcm-phase1-specs.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-effect-checker-architecture.md",
       "kind": "Document",
       "label": "logicn-effect-checker-architecture.md",
@@ -4813,6 +4876,15 @@
       "kind": "Document",
       "label": "logicn-effect-inference-tracking.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-effect-inference-tracking.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-engineering-goals.md",
+      "kind": "Document",
+      "label": "logicn-engineering-goals.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-engineering-goals.md",
       "tags": [
         "document"
       ]
@@ -4917,6 +4989,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-governance-cicd-pipeline.md",
+      "kind": "Document",
+      "label": "logicn-governance-cicd-pipeline.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-governance-cicd-pipeline.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-governance-diff-ci.md",
       "kind": "Document",
       "label": "logicn-governance-diff-ci.md",
@@ -4939,6 +5020,15 @@
       "kind": "Document",
       "label": "logicn-governance-hierarchy.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-governance-hierarchy.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-governance-rules.md",
+      "kind": "Document",
+      "label": "logicn-governance-rules.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-governance-rules.md",
       "tags": [
         "document"
       ]
@@ -4984,6 +5074,15 @@
       "kind": "Document",
       "label": "logicn-governed-apu-memory.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-governed-apu-memory.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-governed-design-synthesis.md",
+      "kind": "Document",
+      "label": "logicn-governed-design-synthesis.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-governed-design-synthesis.md",
       "tags": [
         "document"
       ]
@@ -5610,6 +5709,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-platform-infographic-concept.md",
+      "kind": "Document",
+      "label": "logicn-platform-infographic-concept.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-platform-infographic-concept.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-post-quantum-hardware-security.md",
       "kind": "Document",
       "label": "logicn-post-quantum-hardware-security.md",
@@ -5650,6 +5758,15 @@
       "kind": "Document",
       "label": "logicn-readable-logic-forms.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-readable-logic-forms.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-resilience-observability-design.md",
+      "kind": "Document",
+      "label": "logicn-resilience-observability-design.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-resilience-observability-design.md",
       "tags": [
         "document"
       ]
@@ -10781,6 +10898,16 @@
       ]
     },
     {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/named_named.egraph.json",
+      "kind": "Document",
+      "label": "named_named.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/named_named.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/nameOf_nameOf.egraph.json",
       "kind": "Document",
       "label": "nameOf_nameOf.egraph.json",
@@ -10955,6 +11082,16 @@
       "kind": "Document",
       "label": "parseFlows_parseFlows.egraph.json",
       "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/parseFlows_parseFlows.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/positional_positional.egraph.json",
+      "kind": "Document",
+      "label": "positional_positional.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/positional_positional.egraph.json",
       "tags": [
         "report",
         "logicn-core-compiler"
@@ -12851,6 +12988,16 @@
       ]
     },
     {
+      "id": "type:logicn-core-compiler:ChangeClass",
+      "kind": "Type",
+      "label": "ChangeClass",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-diff.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "type:logicn-core-compiler:FlowDelta",
       "kind": "Type",
       "label": "FlowDelta",
@@ -13084,6 +13231,76 @@
       "id": "type:logicn-core-compiler:LLN_VAL_003",
       "kind": "Type",
       "label": "LLN_VAL_003",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_RES_001",
+      "kind": "Type",
+      "label": "LLN_RES_001",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_OBS_001",
+      "kind": "Type",
+      "label": "LLN_OBS_001",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_EC_001",
+      "kind": "Type",
+      "label": "LLN_EC_001",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_EC_002",
+      "kind": "Type",
+      "label": "LLN_EC_002",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_ID_001",
+      "kind": "Type",
+      "label": "LLN_ID_001",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_AU_001",
+      "kind": "Type",
+      "label": "LLN_AU_001",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LLN_DRCM_UNSUPPORTED",
+      "kind": "Type",
+      "label": "LLN_DRCM_UNSUPPORTED",
       "sourcePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts",
       "tags": [
         "type",
@@ -15011,6 +15228,106 @@
       ]
     },
     {
+      "id": "type:logicn-core-compiler:MANIFEST_SCHEMA_VERSION",
+      "kind": "Type",
+      "label": "MANIFEST_SCHEMA_VERSION",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LManifest",
+      "kind": "Type",
+      "label": "LManifest",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ProofObligation",
+      "kind": "Type",
+      "label": "ProofObligation",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ManifestSignature",
+      "kind": "Type",
+      "label": "ManifestSignature",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:canonicalJson",
+      "kind": "Flow",
+      "label": "canonicalJson",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:sha256Hex",
+      "kind": "Flow",
+      "label": "sha256Hex",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:generateManifest",
+      "kind": "Flow",
+      "label": "generateManifest",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:serializeManifest",
+      "kind": "Flow",
+      "label": "serializeManifest",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:prettyManifest",
+      "kind": "Flow",
+      "label": "prettyManifest",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LOGICN_CBOR_TAGS",
+      "kind": "Type",
+      "label": "LOGICN_CBOR_TAGS",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "type:logicn-core-compiler:MonkeyPatchDiagnostic",
       "kind": "Type",
       "label": "MonkeyPatchDiagnostic",
@@ -15375,6 +15692,86 @@
       "kind": "Flow",
       "label": "isAbsolute",
       "sourcePath": "packages-logicn/logicn-core-compiler/src/node-path-shim.d.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:TraceConfig",
+      "kind": "Type",
+      "label": "TraceConfig",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/observability-inference.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ObservabilityMetric",
+      "kind": "Type",
+      "label": "ObservabilityMetric",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/observability-inference.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:AlertRule",
+      "kind": "Type",
+      "label": "AlertRule",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/observability-inference.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:LogLevel",
+      "kind": "Type",
+      "label": "LogLevel",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/observability-inference.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:InferredObservability",
+      "kind": "Type",
+      "label": "InferredObservability",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/observability-inference.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:inferFlowObservability",
+      "kind": "Flow",
+      "label": "inferFlowObservability",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/observability-inference.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ObservabilityWarning",
+      "kind": "Type",
+      "label": "ObservabilityWarning",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/observability-inference.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:checkObservabilityWarnings",
+      "kind": "Flow",
+      "label": "checkObservabilityWarnings",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/observability-inference.ts",
       "tags": [
         "function",
         "logicn-core-compiler"
@@ -15971,16 +16368,6 @@
       ]
     },
     {
-      "id": "type:logicn-core-compiler:ProofObligation",
-      "kind": "Type",
-      "label": "ProofObligation",
-      "sourcePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts",
-      "tags": [
-        "type",
-        "logicn-core-compiler"
-      ]
-    },
-    {
       "id": "type:logicn-core-compiler:ProofEvidence",
       "kind": "Type",
       "label": "ProofEvidence",
@@ -16295,6 +16682,66 @@
       "kind": "Flow",
       "label": "emitBytecode",
       "sourcePath": "packages-logicn/logicn-core-compiler/src/register-vm.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ResilienceFallback",
+      "kind": "Type",
+      "label": "ResilienceFallback",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/resilience-inference.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:BackoffStrategy",
+      "kind": "Type",
+      "label": "BackoffStrategy",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/resilience-inference.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:InferredResilience",
+      "kind": "Type",
+      "label": "InferredResilience",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/resilience-inference.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:inferFlowResilience",
+      "kind": "Flow",
+      "label": "inferFlowResilience",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/resilience-inference.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ResilienceViolation",
+      "kind": "Type",
+      "label": "ResilienceViolation",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/resilience-inference.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:checkResilienceViolations",
+      "kind": "Flow",
+      "label": "checkResilienceViolations",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/resilience-inference.ts",
       "tags": [
         "function",
         "logicn-core-compiler"
@@ -17057,6 +17504,16 @@
       "sourcePath": "packages-logicn/logicn-core-compiler/src/security-policy.ts",
       "tags": [
         "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:activeSinkMonitor",
+      "kind": "Type",
+      "label": "activeSinkMonitor",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/security-sink-monitor.ts",
+      "tags": [
+        "type",
         "logicn-core-compiler"
       ]
     },
@@ -19365,6 +19822,66 @@
       "kind": "Flow",
       "label": "createSecurityReport",
       "sourcePath": "packages-logicn/logicn-core-security/src/index.ts",
+      "tags": [
+        "function",
+        "logicn-core-security"
+      ]
+    },
+    {
+      "id": "type:logicn-core-security:LLN_SECRET_BREACH",
+      "kind": "Type",
+      "label": "LLN_SECRET_BREACH",
+      "sourcePath": "packages-logicn/logicn-core-security/src/sink-monitor.ts",
+      "tags": [
+        "type",
+        "logicn-core-security"
+      ]
+    },
+    {
+      "id": "type:logicn-core-security:SECRET_BREACH_TRAP_CODE",
+      "kind": "Type",
+      "label": "SECRET_BREACH_TRAP_CODE",
+      "sourcePath": "packages-logicn/logicn-core-security/src/sink-monitor.ts",
+      "tags": [
+        "type",
+        "logicn-core-security"
+      ]
+    },
+    {
+      "id": "type:logicn-core-security:ScanResult",
+      "kind": "Type",
+      "label": "ScanResult",
+      "sourcePath": "packages-logicn/logicn-core-security/src/sink-monitor.ts",
+      "tags": [
+        "type",
+        "logicn-core-security"
+      ]
+    },
+    {
+      "id": "type:logicn-core-security:SecretSinkMonitor",
+      "kind": "Type",
+      "label": "SecretSinkMonitor",
+      "sourcePath": "packages-logicn/logicn-core-security/src/sink-monitor.ts",
+      "tags": [
+        "type",
+        "logicn-core-security"
+      ]
+    },
+    {
+      "id": "type:logicn-core-security:ACTIVE_SINK_MONITOR",
+      "kind": "Type",
+      "label": "ACTIVE_SINK_MONITOR",
+      "sourcePath": "packages-logicn/logicn-core-security/src/sink-monitor.ts",
+      "tags": [
+        "type",
+        "logicn-core-security"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-security:validatePrefixScanApproach",
+      "kind": "Flow",
+      "label": "validatePrefixScanApproach",
+      "sourcePath": "packages-logicn/logicn-core-security/src/sink-monitor.ts",
       "tags": [
         "function",
         "logicn-core-security"
@@ -29356,6 +29873,20 @@
       "evidencePath": "docs/Knowledge-Bases/logicn-calibration-data.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/logicn-cbor-manifest-spec.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-cbor-manifest-spec.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-cbor-manifest-spec.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-cbor-manifest-spec.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/logicn-cli-current.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -30546,6 +31077,34 @@
       "evidencePath": "docs/Knowledge-Bases/logicn-developer-tools.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/logicn-drcm-phase1-specs.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-drcm-phase1-specs.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-drcm-phase1-specs.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-drcm-phase1-specs.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-engineering-goals.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-engineering-goals.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-engineering-goals.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-engineering-goals.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/logicn-execution-graph-kernel-architecture.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -30621,6 +31180,20 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/Knowledge-Bases/logicn-glossary.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-governance-cicd-pipeline.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-governance-cicd-pipeline.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-governance-cicd-pipeline.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-governance-cicd-pipeline.md"
     },
     {
       "from": "doc:docs/Knowledge-Bases/logicn-governance-diff-ci.md",
@@ -38702,6 +39275,13 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/named_named.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/named_named.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/nameOf_nameOf.egraph.json",
       "kind": "owns",
       "confidence": "EXTRACTED",
@@ -38825,6 +39405,13 @@
       "kind": "owns",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/parseFlows_parseFlows.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/positional_positional.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/positional_positional.egraph.json"
     },
     {
       "from": "package:logicn-core-compiler",
@@ -40200,6 +40787,13 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ChangeClass",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-diff.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:FlowDelta",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -40362,6 +40956,55 @@
     {
       "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:LLN_VAL_003",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_RES_001",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_OBS_001",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_EC_001",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_EC_002",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_ID_001",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_AU_001",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LLN_DRCM_UNSUPPORTED",
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/governance-verifier.ts"
@@ -41712,6 +42355,76 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:MANIFEST_SCHEMA_VERSION",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LManifest",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ProofObligation",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ManifestSignature",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:canonicalJson",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:sha256Hex",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:generateManifest",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:serializeManifest",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:prettyManifest",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LOGICN_CBOR_TAGS",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:MonkeyPatchDiagnostic",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -41968,6 +42681,62 @@
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/node-path-shim.d.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:TraceConfig",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/observability-inference.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ObservabilityMetric",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/observability-inference.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:AlertRule",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/observability-inference.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:LogLevel",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/observability-inference.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:InferredObservability",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/observability-inference.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:inferFlowObservability",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/observability-inference.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ObservabilityWarning",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/observability-inference.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:checkObservabilityWarnings",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/observability-inference.ts"
     },
     {
       "from": "package:logicn-core-compiler",
@@ -42384,13 +43153,6 @@
     },
     {
       "from": "package:logicn-core-compiler",
-      "to": "type:logicn-core-compiler:ProofObligation",
-      "kind": "provides",
-      "confidence": "EXTRACTED",
-      "evidencePath": "packages-logicn/logicn-core-compiler/src/proof-graph.ts"
-    },
-    {
-      "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:ProofEvidence",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -42612,6 +43374,48 @@
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/register-vm.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ResilienceFallback",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/resilience-inference.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:BackoffStrategy",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/resilience-inference.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:InferredResilience",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/resilience-inference.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:inferFlowResilience",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/resilience-inference.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ResilienceViolation",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/resilience-inference.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:checkResilienceViolations",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/resilience-inference.ts"
     },
     {
       "from": "package:logicn-core-compiler",
@@ -43144,6 +43948,13 @@
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/security-policy.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:activeSinkMonitor",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/security-sink-monitor.ts"
     },
     {
       "from": "package:logicn-core-compiler",
@@ -44943,6 +45754,48 @@
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-security/src/index.ts"
+    },
+    {
+      "from": "package:logicn-core-security",
+      "to": "type:logicn-core-security:LLN_SECRET_BREACH",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-security/src/sink-monitor.ts"
+    },
+    {
+      "from": "package:logicn-core-security",
+      "to": "type:logicn-core-security:SECRET_BREACH_TRAP_CODE",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-security/src/sink-monitor.ts"
+    },
+    {
+      "from": "package:logicn-core-security",
+      "to": "type:logicn-core-security:ScanResult",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-security/src/sink-monitor.ts"
+    },
+    {
+      "from": "package:logicn-core-security",
+      "to": "type:logicn-core-security:SecretSinkMonitor",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-security/src/sink-monitor.ts"
+    },
+    {
+      "from": "package:logicn-core-security",
+      "to": "type:logicn-core-security:ACTIVE_SINK_MONITOR",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-security/src/sink-monitor.ts"
+    },
+    {
+      "from": "package:logicn-core-security",
+      "to": "flow:logicn-core-security:validatePrefixScanApproach",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-security/src/sink-monitor.ts"
     },
     {
       "from": "package:logicn-core-security",

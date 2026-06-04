@@ -12,6 +12,7 @@ import { type PassiveExecutionPlan, executePlan } from "./runtime/executionPlan.
 import { type RuntimeManifest, EffectCheckerFlags } from "./type-registry.js";
 import { LLN_RUNTIME_006 } from "./security-policy.js";
 import { pureFlowCacheKey, getCachedPureFlow, setCachedPureFlow } from "./pure-flow-cache.js";
+import { activeSinkMonitor } from "./security-sink-monitor.js";
 import { buildExecutionGraph, getOrLoadGraph, storeGraph, executionGraphCacheKey, ExecOp, type ExecutionGraph } from "./execution-graph.js";
 import { compileToBytecode, runBytecode } from "./bytecode-vm.js";
 
@@ -1176,6 +1177,19 @@ class Interpreter {
       }
 
       case "identifier": {
+        // Named argument: `{ kind: "identifier", value: "paramName", children: [valueExpr] }`
+        // These are produced by parseArgList() for `f(name: value)` syntax.
+        // Evaluate the child expression as the argument value rather than looking
+        // up "paramName" as a variable in the current scope.
+        if ((node.children?.length ?? 0) > 0 && node.children?.[0] !== undefined) {
+          const child = node.children[0];
+          // Only treat as named arg if the child is a real expression node
+          // (not the field-name identifier pattern used inside #record constructors,
+          // which is handled separately by the #record callExpr branch).
+          if (child.kind !== "identifier" || (child.children?.length ?? 0) > 0 || child.value !== node.value) {
+            return await this.evalExpr(child);
+          }
+        }
         const name = node.value ?? "";
         if (name === "None") return LLN_NONE;
         if (name === "true") return { __tag: "bool", value: true };
@@ -1395,7 +1409,15 @@ class Interpreter {
       evaluatedArgs,
       this.makeStdlibContext(),
     );
-    if (stdlibResult !== undefined) return stdlibResult;
+    if (stdlibResult !== undefined) {
+      // DRCM Phase 1 (task #31): register any secret values returned by stdlib
+      // with the active sink monitor for cleartext prefix scanning.
+      // Covers: Secrets.get(), env.secret, vault.read, kms.decrypt, etc.
+      if (stdlibResult.__tag === "secure" && stdlibResult.value !== "") {
+        activeSinkMonitor.register(stdlibResult.value);
+      }
+      return stdlibResult;
+    }
 
     if (fullName.startsWith("validate.") || fullName.startsWith("sanitize.") || fullName.startsWith("parse.")) {
       const raw = args[0] !== undefined ? await this.evalExpr(args[0]) : LLN_VOID;
@@ -1491,6 +1513,85 @@ class Interpreter {
       const url = args[0] !== undefined ? await this.evalExpr(args[0]) : LLN_VOID;
       return makeResponseValue(302, url);
     }
+
+    // ── security::interim — BoundaryProxy (task #52) ─────────────────────────
+    // Implements the pre-DRCM cross-boundary validation proxy.
+    // The .lln canonical spec lives in packages-logicn/logicn-core-security/src/interim.lln.
+    // This TypeScript bridge runs it until Stage B fully self-hosts the security module.
+    //
+    // pre_flight_check(caller: String, target: String, payload_size_bytes: Int) -> ValidationReceipt
+    if (fullName === "security.interim.pre_flight_check") {
+      const callerArg  = args[0] !== undefined ? safeDisplay(await this.evalExpr(args[0])) : "";
+      const targetArg  = args[1] !== undefined ? safeDisplay(await this.evalExpr(args[1])) : "";
+      const sizeArg    = args[2] !== undefined ? await this.evalExpr(args[2]) : LLN_VOID;
+      const sizeBytes  = sizeArg.__tag === "int" ? sizeArg.value : 0;
+      const MAX_BYTES  = 4194304; // 4MB DWI ceiling
+
+      // Guard: reject empty caller/target (structural validation)
+      if (callerArg === "" || targetArg === "") {
+        return {
+          __tag: "record",
+          fields: new Map([
+            ["is_approved",  { __tag: "bool",  value: false }],
+            ["tracking_id",  { __tag: "int",   value: 0 }],
+            ["fault_code",   { __tag: "int",   value: 3002 }],
+          ] as [string, LogicNValue][]),
+        };
+      }
+      // Guard: reject payload exceeding 4MB ceiling
+      if (sizeBytes > MAX_BYTES) {
+        return {
+          __tag: "record",
+          fields: new Map([
+            ["is_approved",  { __tag: "bool",  value: false }],
+            ["tracking_id",  { __tag: "int",   value: 0 }],
+            ["fault_code",   { __tag: "int",   value: 3003 }],
+          ] as [string, LogicNValue][]),
+        };
+      }
+      // Approved — assign a monotonically incrementing tracking ID
+      const trackingId = Date.now() % 2147483647;
+      return {
+        __tag: "record",
+        fields: new Map([
+          ["is_approved",  { __tag: "bool",  value: true }],
+          ["tracking_id",  { __tag: "int",   value: trackingId }],
+          ["fault_code",   { __tag: "int",   value: 0 }],
+        ] as [string, LogicNValue][]),
+      };
+    }
+
+    // post_flight_cleanup(receipt: ValidationReceipt) -> Void
+    if (fullName === "security.interim.post_flight_cleanup") {
+      const receiptArg = args[0] !== undefined ? await this.evalExpr(args[0]) : LLN_VOID;
+      if (receiptArg.__tag === "record") {
+        const trackingId = receiptArg.fields.get("tracking_id");
+        const faultCode  = receiptArg.fields.get("fault_code");
+        const entry = {
+          event: "security.interim.boundary.completed",
+          tracking_id: trackingId?.__tag === "int" ? trackingId.value : 0,
+          fault_code:  faultCode?.__tag  === "int" ? faultCode.value  : 0,
+        };
+        this.auditEntries.push(entry as never);
+      }
+      return LLN_VOID;
+    }
+
+    // sink_monitor::scan(payload: String) -> SinkScanResult
+    // DRCM Phase 1 (task #31): real cleartext prefix-token substring scan.
+    // Replaces the broken SHA-256 hash comparison approach.
+    if (fullName === "sink_monitor.scan" || fullName === "security.interim.scan") {
+      const payloadArg = args[0] !== undefined ? safeDisplay(await this.evalExpr(args[0])) : "";
+      const scanResult = activeSinkMonitor.scan(payloadArg);
+      return {
+        __tag: "record",
+        fields: new Map([
+          ["is_clean",       { __tag: "bool",   value: scanResult.isClean }],
+          ["matched_prefix", { __tag: "string", value: scanResult.isClean ? "" : "[REDACTED]" }],
+        ] as [string, LogicNValue][]),
+      };
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     // ApiError helpers
     if (fullName === "ApiError.notFound" || (receiverName === "ApiError" && methodName === "notFound")) {
@@ -1622,7 +1723,19 @@ class Interpreter {
         }
       }
 
-      const match = matchPattern(subjectVal, arm.value ?? "");
+      // Multi-variant arm: `Pattern1 | Pattern2 => body` is stored as "Pattern1|Pattern2".
+      // Try each variant; the first match wins. Not applied to string literals (which
+      // contain quotes and should not be split).
+      const armValue = arm.value ?? "";
+      const isStringPattern = armValue.startsWith("\"");
+      const patterns = (!isStringPattern && armValue.includes("|"))
+        ? armValue.split("|")
+        : [armValue];
+      let match: { matches: boolean; bound?: LogicNValue } = { matches: false };
+      for (const p of patterns) {
+        const m = matchPattern(subjectVal, p.trim());
+        if (m.matches) { match = m; break; }
+      }
       if (!match.matches) continue;
 
       this.pushScope();

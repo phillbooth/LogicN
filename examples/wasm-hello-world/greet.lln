@@ -1,5 +1,9 @@
-pure flow greet(name: String): String
+// Hello World — minimal governed flow compiled to WASM
+// Demonstrates: outside-contract syntax, pure qualifier, zero side effects
+pure flow greetUser(name: String) -> String
+contract {
+  intent { "Return a personalised greeting message for the given user name." }
+}
 {
-  contract { intent { "Return a greeting." } }
   return name
 }

@@ -28,6 +28,11 @@
 //   LLN-GOV-001  INTENT_BEHAVIOR_MISMATCH       (heuristic: read/pure intent + write effects)
 //   LLN-GOV-006  GOVERNANCE_PROOF_REQUIRED_BUT_MISSING (high-risk secure flow, no epilogue)
 //   LLN-TERM-001 TERMINATION_ANNOTATION_MISSING (recursive strict/deterministic flow, no decreases)
+//
+// DRCM Phase 2 — invariant {} block (task #36):
+//   LLN-INV-001  PRE_CONDITION_VIOLATED    ensure expr evaluates false at call site (statically proved)
+//   LLN-INV-002  POST_CONDITION_VIOLATED   ensure expr evaluates false after body (statically proved)
+//   LLN-INV-003  INVARIANT_MISPLACED       invariant {} outside contract {} block
 // =============================================================================
 
 import { type AstNode, type AstNodeKind, type FlowMeta, type SourceLocation } from "./parser.js";
@@ -35,6 +40,8 @@ import { type EffectCheckResult } from "./effect-checker.js";
 import { GovernanceFlags, type GovernanceFlagsMask, type RuntimeManifest } from "./type-registry.js";
 import { buildProofGraphCached, computeExecutionSignature, generateEpilogueReceipt, type EpilogueFailureAction, type EpilogueProofStrategy, type ProofGraph, type ProofObligation, LLN_HW_001, LLN_HW_002, LLN_HW_003 } from "./proof-graph.js";
 import { HARDWARE_TRUST_PROFILES, ProofLevel } from "./type-registry.js";
+import { checkResilienceViolations } from "./resilience-inference.js";
+import { checkObservabilityWarnings } from "./observability-inference.js";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -323,6 +330,67 @@ export const LLN_VAL_003 = {
   message: "Unrecognised classification in contract.value. Use a recognised classification: safety_critical, mission_critical, regulated, financial, medical, government, national_security, confidential, internal, or public.",
   why: "Value classifications drive governance rules, routing decisions, and compliance mapping. Unknown classifications cannot be enforced.",
   suggestedFix: "Replace with a recognised classification.",
+} as const;
+
+// ---------------------------------------------------------------------------
+// New diagnostic codes (task #50) — EC/ID/AU/LC/T/FG categories
+// These are PLANNED (DRCM phases) but exported here for test suites and tooling.
+// ---------------------------------------------------------------------------
+
+/** LLN-RES-001: retry declared on mutation effect without idempotent: true. */
+export const LLN_RES_001 = {
+  code: "LLN-RES-001",
+  name: "RESILIENCE_RETRY_ON_MUTATION",
+  severity: "error" as const,
+  message: "retry declared on a flow with mutation effects (database.write, gateway.charge) without idempotent: true. Retrying mutations risks duplicate writes.",
+} as const;
+
+/** LLN-OBS-001: explicit observability {} on a pure flow (no side effects to observe). */
+export const LLN_OBS_001 = {
+  code: "LLN-OBS-001",
+  name: "OBSERVABILITY_ON_PURE_FLOW",
+  severity: "warning" as const,
+  message: "Explicit observability {} declared on a pure flow. Pure flows have no side effects — telemetry is meaningless here.",
+} as const;
+
+/** LLN-EC-001 (PLANNED Phase 5): static cost overflow — max_aggregate_flow_budget exceeded by estimated loop. */
+export const LLN_EC_001 = {
+  code: "LLN-EC-001",
+  name: "ECONOMICS_COST_OVERFLOW",
+  severity: "error" as const,
+  message: "Static economic analysis: estimated aggregate cost exceeds max_aggregate_flow_budget ceiling.",
+} as const;
+
+/** LLN-EC-002 (PLANNED Phase 5): charge_failure_tolerance_ratio breached — DPM quarantine triggered. */
+export const LLN_EC_002 = {
+  code: "LLN-EC-002",
+  name: "ECONOMICS_FAILURE_TOLERANCE_BREACHED",
+  severity: "error" as const,
+  message: "Charge failure rate exceeded tolerance ratio — DSS DPM quarantine bit set.",
+} as const;
+
+/** LLN-ID-001 (PLANNED Phase 3): manifest missing, tampered, or signature verification failed. */
+export const LLN_ID_001 = {
+  code: "LLN-ID-001",
+  name: "MANIFEST_VERIFICATION_FAILED",
+  severity: "error" as const,
+  message: "Module manifest is missing, has been tampered with, or signature verification failed. Module cannot be instantiated.",
+} as const;
+
+/** LLN-AU-001 (PLANNED Phase 6): epilogue { strategy: none } on high-trust flow. */
+export const LLN_AU_001 = {
+  code: "LLN-AU-001",
+  name: "EPILOGUE_NONE_ON_HIGH_TRUST",
+  severity: "error" as const,
+  message: "epilogue { strategy: none } declared on a high-trust flow (max_risk_liability: high). High-trust flows must produce a verifiable receipt.",
+} as const;
+
+/** LLN-DRCM-UNSUPPORTED: bare step/invariant/emergency syntax used without @experimental_profile wrapper in --release. */
+export const LLN_DRCM_UNSUPPORTED = {
+  code: "LLN-DRCM-UNSUPPORTED",
+  name: "DRCM_FEATURE_NOT_YET_SUPPORTED",
+  severity: "error" as const,
+  message: "DRCM feature used without @experimental_profile wrapper in --release build. Wrap with @experimental_profile(name: \"drcm_core_v1\", status: \"planned_phaseN\") { ... }.",
 } as const;
 
 /** Recognised value classifications from the LogicN governance scope KB. */
@@ -912,6 +980,12 @@ class GovernanceVerifier {
   private readonly intentStatus = new Map<string, "satisfied" | "missing" | "mismatch">();
   private readonly proofObligations: string[] = [];
   private knownContractSets: Map<string, AstNode> = new Map();
+  /**
+   * Domain Guard Policies collected from top-level `policy Name { ... }` declarations.
+   * Key = policy name (e.g. "InvoicingDomainGuard"), value = policyDecl AST node.
+   * Used by the Differential Proof pass for `contract [conforms_to: Name] { }` (task #56).
+   */
+  private knownDomainGuards: Map<string, AstNode> = new Map();
   private readonly governanceFlagsByFlow = new Map<string, GovernanceFlagsMask>();
   private readonly runtimeManifests: RuntimeManifest[] = [];
   private readonly proofGraphsByFlow = new Map<string, ProofGraph>();
@@ -929,6 +1003,16 @@ class GovernanceVerifier {
     for (const child of ast.children ?? []) {
       if (child.kind === "contractSetDecl" && child.value !== undefined) {
         this.knownContractSets.set(child.value, child);
+      }
+    }
+
+    // Collect all top-level policyDecl nodes as Domain Guard policies (task #56).
+    // A domain guard policy has a name (e.g. "InvoicingDomainGuard") and contains
+    // permitted_effects, permitted_capabilities, and/or enforced_limits sub-blocks.
+    this.knownDomainGuards = new Map();
+    for (const child of ast.children ?? []) {
+      if (child.kind === "policyDecl" && child.value !== undefined && child.value !== "policy") {
+        this.knownDomainGuards.set(child.value, child);
       }
     }
 
@@ -1554,6 +1638,293 @@ class GovernanceVerifier {
     if (flowNode !== undefined) {
       this.verifyEpilogueBlock(flowNode, flow.name);
     }
+
+    // ── LLN-GOV-004 / LLN-LIMIT-001: Domain Guard Differential Proof (task #56) ──
+    // If the flow's contract declares [conforms_to: PolicyName], load the external
+    // policy and verify that the contract's declared effects and limits are a strict
+    // SUBSET of the policy's permitted_effects and enforced_limits ceilings.
+    if (flowNode !== undefined) {
+      this.verifyDomainGuardConformance(flow, flowNode);
+    }
+
+    // ── LLN-INV-001/002: invariant {} static evaluation (DRCM Phase 2 — task #36) ──
+    // For each `ensure expr` in the invariant block:
+    //   - Statically provable TRUE  → record as statically_verified in ProofGraph
+    //   - Statically provable FALSE → LLN-INV-001 hard error (dead code: invariant always fails)
+    //   - Unknown at compile time   → record as runtime-precheck (WAT gate to be injected)
+    if (flowNode !== undefined) {
+      this.verifyInvariantBlock(flow, flowNode, loc);
+    }
+
+    // ── LLN-CAP-001: Network wildcard ban (DRCM Phase 1 — task #30) ──────────
+    // Wildcard `*` in network capability declarations introduces parsing vulnerabilities
+    // and ambient authority leaks. Force explicit NetworkTarget variants.
+    if (flowNode !== undefined) {
+      this.verifyNetworkWildcardBan(flow, flowNode, loc);
+    }
+
+    // ── LLN-RES-001: Resilience violation — retry + mutation without idempotent (task #58) ──
+    if (flowNode !== undefined) {
+      const resViolations = checkResilienceViolations(flowNode, flow);
+      for (const v of resViolations) {
+        this.diagnostics.push(makeGovDiag(
+          v.code,
+          "RESILIENCE_RETRY_ON_MUTATION",
+          "error",
+          v.message,
+          loc,
+          `Add 'idempotent: true' to the resilience {} block, or remove the retry declaration.`,
+        ));
+      }
+    }
+
+    // ── LLN-OBS-001: Observability on pure flow warning (task #58) ──
+    if (flowNode !== undefined) {
+      const obsWarnings = checkObservabilityWarnings(flowNode, flow);
+      for (const w of obsWarnings) {
+        this.diagnostics.push(makeGovDiag(
+          w.code,
+          "OBSERVABILITY_ON_PURE_FLOW",
+          "warning",
+          w.message,
+          loc,
+          `Remove the observability {} block from this pure flow.`,
+        ));
+      }
+    }
+  }
+
+  // ── DRCM Phase 2: invariant {} static evaluation ─────────────────────────────
+  // Three outcomes per `ensure` expression:
+  //   1. Statically TRUE  → statically_verified in ProofGraph (Goal A: no runtime overhead)
+  //   2. Statically FALSE → LLN-INV-001 hard error (invariant can never be satisfied)
+  //   3. Unknown          → runtime-precheck in ProofGraph (WAT gate injected — Unit 3, task #36)
+
+  private verifyInvariantBlock(flow: FlowMeta, flowNode: AstNode, loc: SourceLocation | undefined): void {
+    const contractNode = (flowNode.children ?? []).find(c => c.kind === "contractDecl");
+    if (contractNode === undefined) return;
+
+    // Find the invariant:block sub-block (stored as "invariant:block" identifier node)
+    const invariantBlock = (contractNode.children ?? []).find(
+      c => c.kind === "identifier" && c.value === "invariant:block"
+    );
+    if (invariantBlock === undefined) return;
+
+    // Scan children for ensureDecl nodes
+    let invariantCount = 0;
+    for (const child of invariantBlock.children ?? []) {
+      if (child.kind !== "ensureDecl") continue;
+      invariantCount++;
+      const exprNode = child.children?.[0];
+      if (exprNode === undefined) continue;
+
+      // Attempt lightweight static evaluation (constant fold)
+      const staticResult = this.tryStaticEval(exprNode);
+
+      if (staticResult === false) {
+        // LLN-INV-001: statically proved FALSE → invariant can NEVER be satisfied
+        this.diagnostics.push(makeGovDiag(
+          "LLN-INV-001",
+          "PRE_CONDITION_STATICALLY_FALSE",
+          "error",
+          `Flow '${flow.name}': invariant 'ensure ${this.describeExpr(exprNode)}' can never be satisfied ` +
+          `(statically evaluated to false). This flow would always trap at runtime.`,
+          loc,
+          `Fix or remove the 'ensure' expression — it evaluates to false for all inputs.`,
+        ));
+      }
+      // Record in ProofGraph regardless of static result
+      const exprDesc = this.describeExpr(exprNode);
+      if (staticResult === true) {
+        // Statically verified — no WAT gate, no runtime overhead (Goal A)
+        this.proofObligations.push(`invariant_static:${flow.name}:ensure ${exprDesc}:statically_verified`);
+      } else if (staticResult === null) {
+        // Unknown — runtime-precheck (WAT gate will be injected in WAT emitter, Unit 3)
+        this.proofObligations.push(`invariant_runtime:${flow.name}:ensure ${exprDesc}:runtime-precheck`);
+      }
+      // staticResult === false → LLN-INV-001 error already emitted above; not recorded as obligation
+    }
+
+    // If the invariant block exists but is empty, warn
+    if (invariantCount === 0) {
+      this.diagnostics.push(makeGovDiag(
+        "LLN-INV-003",
+        "INVARIANT_BLOCK_EMPTY",
+        "warning",
+        `Flow '${flow.name}' declares an invariant {} block with no 'ensure' statements. ` +
+        `Add at least one 'ensure expr' or remove the block.`,
+        loc,
+        `Add: ensure <condition>; inside the invariant {} block.`,
+      ));
+    }
+  }
+
+  /**
+   * Lightweight constant-fold static evaluator for `ensure` expressions.
+   * Returns: true (proved), false (disproved), null (unknown — needs runtime check)
+   *
+   * Phase 2 scope: only handles literal comparisons and trivially true/false expressions.
+   * Phase 4 (SMT solver) will handle arithmetic equality, state invariants, etc.
+   */
+  private tryStaticEval(expr: AstNode): boolean | null {
+    // Boolean literal: ensure true / ensure false
+    if (expr.kind === "boolLiteral") {
+      return expr.value === "true";
+    }
+
+    // Binary comparison with two number literals: ensure 5 > 0, ensure 0 == 0
+    if (expr.kind === "binaryExpr" && expr.children?.length === 2) {
+      const left  = expr.children[0];
+      const right = expr.children[1];
+      if (left?.kind === "numberLiteral" && right?.kind === "numberLiteral") {
+        const l = parseFloat(left.value ?? "0");
+        const r = parseFloat(right.value ?? "0");
+        const op = expr.value ?? "";
+        switch (op) {
+          case ">":  return l > r;
+          case "<":  return l < r;
+          case ">=": return l >= r;
+          case "<=": return l <= r;
+          case "==": return l === r;
+          case "!=": return l !== r;
+        }
+      }
+    }
+
+    // Logical NOT on a literal: ensure !false
+    if (expr.kind === "unaryExpr" && expr.value === "!" && expr.children?.[0]?.kind === "boolLiteral") {
+      return expr.children[0].value !== "true";
+    }
+
+    // Everything else is unknown → runtime-precheck
+    return null;
+  }
+
+  /** Produce a short human-readable description of an expression for error messages. */
+  private describeExpr(expr: AstNode): string {
+    if (expr.kind === "boolLiteral")   return expr.value ?? "?";
+    if (expr.kind === "numberLiteral") return expr.value ?? "?";
+    if (expr.kind === "identifier")    return expr.value ?? "?";
+    if (expr.kind === "binaryExpr" && expr.children?.length === 2) {
+      return `${this.describeExpr(expr.children[0]!)} ${expr.value ?? "?"} ${this.describeExpr(expr.children[1]!)}`;
+    }
+    if (expr.kind === "memberExpr" && expr.children?.length === 1) {
+      return `${this.describeExpr(expr.children[0]!)}.${expr.value ?? "?"}`;
+    }
+    return "...";
+  }
+
+  // ── LLN-CAP-001: Network wildcard ban (DRCM Phase 1 — task #30) ─────────────
+
+  private verifyNetworkWildcardBan(flow: FlowMeta, flowNode: AstNode, loc: SourceLocation | undefined): void {
+    const contractNode = (flowNode.children ?? []).find(c => c.kind === "contractDecl");
+    if (contractNode === undefined) return;
+
+    // Scan all contract sub-blocks for wildcard `*` in network-related declarations.
+    // Wildcards can appear as:
+    //   effects { network.* }
+    //   authority { requires network.* }
+    //   authority { requires * }  (overly broad — also caught by LLN-GOV-020)
+    for (const child of contractNode.children ?? []) {
+      if (child.kind !== "identifier") continue;
+      const val = child.value ?? "";
+
+      // Check for `*` in network-related effect declarations
+      const isNetworkDecl = val.startsWith("decl:network") || val.includes("network.*") ||
+                            val.startsWith("decl:") && val.includes("*");
+
+      // Check effectRef nodes that contain wildcards
+      const isWildcardRef = child.kind === "identifier" && val.includes("*") &&
+                            (val.includes("network") || val.startsWith("decl:"));
+
+      if (isNetworkDecl || isWildcardRef) {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-CAP-001",
+          "NETWORK_WILDCARD_BANNED",
+          "error",
+          `Flow '${flow.name}' uses a wildcard '*' in a network capability declaration. ` +
+          `Wildcards introduce parsing vulnerabilities and ambient authority leaks. ` +
+          `Use explicit NetworkTarget variants instead: ExplicitHost("fqdn") or UnrestrictedInternet.`,
+          loc,
+          `Replace 'network.*' or 'network: "*"' with an explicit target: effects { network.outbound } ` +
+          `and a typed NetworkTarget in the requires block.`,
+        ));
+      }
+    }
+
+    // Also check flow's declared effects for wildcards (effects are pre-processed)
+    for (const effect of flow.declaredEffects) {
+      if (effect.includes("*")) {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-CAP-001",
+          "NETWORK_WILDCARD_BANNED",
+          "error",
+          `Flow '${flow.name}' declares wildcard effect '${effect}'. ` +
+          `Wildcards are banned — use explicit effect names (e.g. network.outbound, database.read).`,
+          loc,
+          `Replace '${effect}' with the specific effect this flow needs.`,
+        ));
+      }
+    }
+  }
+
+  // ── Domain Guard Differential Proof ──────────────────────────────────────────
+
+  private verifyDomainGuardConformance(flow: FlowMeta, flowNode: AstNode): void {
+    // Find the contractDecl with a conformsTo attribute
+    const contractNode = (flowNode.children ?? []).find((c) => c.kind === "contractDecl" && c.conformsTo !== undefined);
+    if (contractNode === undefined || contractNode.conformsTo === undefined) return;
+
+    const policyName = contractNode.conformsTo;
+    const policyNode = this.knownDomainGuards.get(policyName);
+
+    if (policyNode === undefined) {
+      // Policy referenced but not found — warn, don't error (policy may be in a different file)
+      this.diagnostics.push(makeGovDiag(
+        "LLN-GOV-004",
+        "DOMAIN_GUARD_NOT_FOUND",
+        "warning",
+        `Flow '${flow.name}' declares [conforms_to: ${policyName}] but no policy '${policyName}' was found in this file. ` +
+        `Ensure the policy is declared at the top level of the same file or imported.`,
+        contractNode.location ?? flowNode.location,
+        `Add: policy ${policyName} { permitted_effects { ... } enforced_limits { ... } }`,
+      ));
+      return;
+    }
+
+    // Extract permitted_effects from the policy
+    const permittedEffectsBlock = (policyNode.children ?? []).find(
+      (c) => c.kind === "identifier" && c.value === "permitted_effects"
+    );
+    const permittedEffects = new Set<string>(
+      (permittedEffectsBlock?.children ?? [])
+        .filter((c) => c.kind === "effectRef" && c.value !== undefined)
+        .map((c) => c.value as string)
+    );
+
+    // Check declared effects against permitted_effects
+    if (permittedEffects.size > 0) {
+      for (const declaredEffect of flow.declaredEffects) {
+        if (!permittedEffects.has(declaredEffect)) {
+          this.diagnostics.push(makeGovDiag(
+            "LLN-GOV-004",
+            "DOMAIN_GUARD_POLICY_VIOLATION",
+            "error",
+            `Policy Violation in flow '${flow.name}': the effect '${declaredEffect}' is not in the ` +
+            `permitted_effects of policy '${policyName}'. Permitted: [${[...permittedEffects].join(", ")}].`,
+            contractNode.location ?? flowNode.location,
+            `Remove '${declaredEffect}' from effects, or add it to the '${policyName}' policy's permitted_effects.`,
+          ));
+        }
+      }
+    }
+
+    // ── LLN-LIMIT-001: enforced_limits ceiling check ─────────────────────────
+    // TODO (task #56 Phase 2): Full structured limit comparison.
+    // parseLimitMB() and per-field comparison pending implementation.
+    // When implemented: compare contract limits {} values against policy enforced_limits {}
+    // ceilings and emit LLN-LIMIT-001 on violation.
+    // No diagnostic emitted here until structured parsing is in place.
   }
 
   // ── Phase 2.1 — LLN-GOV-019: limits {} field name validation ─────────────

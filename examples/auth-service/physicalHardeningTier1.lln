@@ -15,6 +15,7 @@ contract {
     on_tamper_signal zeroize
   }
   audit { level cryptographic_state_hash  target storage.tpm_backed_log }
+  epilogue { generate_proof sha256_seal  on_verification_failure halt_pipeline }
 }
 {
   AuditLog.write("Tier 1 settlement initiated")

@@ -1,7 +1,7 @@
 // Phase 49 — Value Classification Service
 // Classifies data values for privacy/risk governance
 
-pure flow classifyValue(typeName: String): Int
+pure flow classifyValue(typeName: String) -> Int
 {
   if typeName.contains("medical") { return 4 }
   if typeName.contains("financial") { return 3 }
@@ -11,20 +11,22 @@ pure flow classifyValue(typeName: String): Int
   return 1
 }
 
-pure flow requiresRedaction(classification: Int): Bool
+pure flow requiresRedaction(classification: Int) -> Bool
 {
   return classification >= 3
 }
 
-pure flow requiresEncryption(classification: Int): Bool
+pure flow requiresEncryption(classification: Int) -> Bool
 {
   return classification >= 2
 }
 
-secure flow classifyData(readonly request: Request): Response
+secure flow classifyData(readonly request: Request) -> Response
+contract {
+  intent { "Classify request data into a governed value-sensitivity class." }
+  effects { network.inbound  audit.write }
+}
 {
-  contract { intent { "Classify request data into a governed value-sensitivity class." } effects { network.inbound  audit.write } }
-
   unsafe let typeName: String = request.jsonBody.typeName
   let classification: Int = classifyValue(typeName)
   let needsRedact: Bool = requiresRedaction(classification)

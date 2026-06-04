@@ -1,0 +1,73 @@
+To ensure long-term architectural stability and satisfy the strict validation laws of the **12-Category Complete Mediation Model**, the `@` prefix must be implemented as a **first-class language-level attribute parsed directly into the Abstract Syntax Tree (AST)**.
+
+Treating it as an opaque preprocessor directive that blindly strips blocks before the main parse creates an un-mediated blind spot, violating core principles of your **Syntax**, **AI Authoring**, and **Governance** pillars.
+
+---
+
+### Why a C-Style Preprocessor Fails the Security Model
+
+If you implement a preprocessor that strips or replaces text segments before the compiler tokenizes the file, you introduce structural hazards:
+
+1. **Opaque Code to AI Generation Models:** Per your **AI Authoring** goals, automated tools and LLMs must treat `limits {}` and `economics {}` blocks as structured metadata schemas rather than freeform text comments. A preprocessor approach allows AI code generators to output malformed blocks that pass early text stripping but break downstream tools.
+2. **Grammar Fragmentation:** Stripping text creates a divergence between what a linter/IDE sees and what the compiler receives. This breaks deterministic syntax analysis and compromises safety properties before compilation even starts.
+3. **Bypassing the Security Audit Trail:** Preprocessors operate outside the scope of formal language checks. An attacker could potentially use line-splicing or text-macro exploits within an unstructured preprocessor pass to mask an undeclared `effects {}` block, bypassing the compiler's *Governance Verifier* entirely.
+
+---
+
+### The First-Class Alternative: AST-Banded Attribute Decoration
+
+By making attributes first-class members of the LogicN grammar, the compiler retains full structural visibility over experimental code while maintaining complete control over code emission.
+
+#### 1. Language Grammar Specification (`EBNF`)
+
+The compiler’s grammar handles attributes by binding them directly to the AST node of the block they decorate:
+
+```ebnf
+Attribute          ::= '@' Identifier '(' AttributeArgList ')'
+AttributeArgList   ::= AttributeArg (',' AttributeArg)*
+AttributeArg       ::= Identifier ':' StringLiteral
+ContractBlock      ::= 'contract' '{' ContractElement* '}'
+ContractElement    ::= Attribute? (LimitsBlock | EconomicsBlock | AuditBlock | AuthorityBlock)
+
+```
+
+#### 2. AST Node Representation
+
+When parsing an experimental block, the parser converts the metadata into a structured sub-tree rather than discarding it:
+
+```
+          ┌────────────────────────────────────────┐
+          │       AST Node: ContractElement        │
+          └───────────────────┬────────────────────┘
+                              │
+         ┌────────────────────┴────────────────────┐
+         ▼                                         ▼
+┌────────────────────────────────┐       ┌────────────────────────────────┐
+│      Metadata: Attribute       │       │    Child Node: EconomicsBlock   │
+│ - Name: "experimental_profile" │       │ - Currency: "USD"              │
+│ - Target: "drcm_core_v1"       │       │ - MaxBilling: 500_00           │
+│ - Status: "planned_phase_5"    │       └────────────────────────────────┘
+└────────────────────────────────┘
+
+```
+
+---
+
+### Enforcement Across Compilation Profiles
+
+Parsing the block as part of the first-class grammar allows the compiler's code-emission engine to conditionally handle the node based on target profile flags:
+
+#### Scenario A: Stable Release Compilation (`--release`)
+
+When compiling for production, the compiler checks the parsed AST. If it encounters a node decorated with `status: "planned_phase_5"`, the **Governance Verifier** checks the block's syntax to ensure it is valid LogicN grammar, but completely omits the corresponding WebAssembly Text (`WAT`) statement generation. This allows the code to compile cleanly today while ensuring no un-sandboxed or unfinished runtime paths reach production.
+
+#### Scenario B: DRCM Development Testing (`--enable-experimental-profile=drcm_core_v1`)
+
+During engine testing or Phase 7 negative test suite execution, passing the explicit target flag tells the compiler to activate the experimental node. The compiler processes the sub-tree, runs static analysis, and injects the corresponding runtime validation gates and assert checks directly into the output binary stream.
+
+---
+
+### Final Blueprint Recommendation
+
+* **Token Isolation:** Reserve the `@` character exclusively as a first-class language token indicating an **Attribute Modifier** for block scopes, signatures, and type structures.
+* **AST Integration:** Store experimental definitions in the official AST. This keeps code examples fully valid for developer tools, IDE syntax highlights, and AI context analysis, while cleanly controlling compilation behavior through structured compiler flags.

@@ -30,13 +30,47 @@ pure flow greet(name: String) -> String {
 
 The `contract {}` block is a **compile-time declaration** — the compiler reads it before any code runs. It belongs between the flow signature and the body `{ }`, not inside the body. Think of it like a Rust `#[attribute]` or Java `@Annotation` — it annotates the function, it is not part of the function body.
 
-**Pattern to remember:**
+**Pattern to remember — three-block structure:**
 ```
 flow-qualifier flow name(params) -> ReturnType   ← signature
 contract { ... }                                  ← compile-time declaration
+policy { ... }                                    ← runtime monotonic overlay (optional, DRCM Phase 4)
 {                                                 ← body opens here
   ...runtime code...
 }
+```
+
+The `policy {}` block is **optional** and **separate from `contract {}`**. It is NOT a sub-block inside `contract {}`. It sits between the contract declaration and the body, and contains runtime monotonic overlay rules (`emergency { on anomaly { deny ... } }`). Most flows will never declare a `policy {}` block — the runtime uses defaults. Only flows that need explicit emergency posture management (financial services, critical infrastructure) declare it explicitly.
+
+```lln
+// ✅ CORRECT — policy {} as its own separate block, between contract and body
+secure flow assessRisk(input: RiskRequest) -> Result<RiskResult, Fault>
+contract {
+  intent { "Assess transaction risk with automatic posture management." }
+  effects { database.read, network.outbound }
+}
+policy {
+  emergency {
+    on system_integrity_anomaly {
+      deny network.outbound
+      require local_only_execution
+    }
+  }
+}
+{
+  // body
+}
+
+// ❌ WRONG — policy {} inside contract {}
+secure flow assessRisk(input: RiskRequest) -> Result<RiskResult, Fault>
+contract {
+  intent { "..." }
+  effects { database.read }
+  policy {               // ← parse error: policy is not a contract sub-block
+    emergency { ... }
+  }
+}
+{ ... }
 ```
 
 ## The single most important rule (AI safety)
@@ -77,6 +111,7 @@ Nothing here is *globally* mandatory. Requirement depends on the **flow kind** a
 | `economics` | **Optional, auto-by-default** | cost/resource budget | auto-inferred from CostGraph/ValueGraph when omitted |
 | `epilogue` | **Optional, auto-by-default** | post-exec proof strategy | auto-tier from value when omitted; declare to pin a strategy |
 | `targets` | Optional | execution preference/fallback | hardware/TEE/WASM isolation hints; never grants authority |
+| `invariant` | **Optional / required for high-trust mutation flows** | pre/post condition assertions | evaluated before AND after the body; violations raise LLN-INV-001 (pre) / LLN-INV-002 (post); uses `ensure` keyword |
 | `cyber_physical_hardening` | **Strongly discouraged unless Tier 1 ASIC** | physical shielding directives | auto-selected by runtime from ValueGraph. Only declare with high `economics.max_risk_liability` AND physical ASIC hardware. LLN-GOV-017 warns if declared without need. |
 | `liability` | **NEVER write manually** | max legal/financial exposure | auto-calculated by governance verifier from breach-risk matrix → stored in ProofGraph. LLN-GOV-018 warns if declared in source. |
 
@@ -187,6 +222,131 @@ contract {
 }
 ```
 
+## ⚠️ Two distinct "policy" concepts — never confuse them
+
+### 1. Domain Guard Policy (external anchor — task #56)
+
+A **Domain Guard Policy** is defined in an **external file** (`governance/policies/`), not in the flow. It sets an immutable ceiling on what any flow's contract is allowed to declare. The contract binds to it via `[conforms_to: PolicyName]` — a decorator on the `contract` block header.
+
+```lln
+;; External file: governance/policies/invoicing_guard.lln
+policy InvoicingDomainGuard {
+  permitted_effects { gateway.charge, audit.write }
+  enforced_limits   { max_memory_ceiling: 4MB }
+}
+
+;; Local flow file — contract [conforms_to: ...] references the external policy
+secure flow processInvoice(merchantId: String) -> Result<Void, Fault>
+contract [conforms_to: InvoicingDomainGuard] {
+  intent   { "Process billing under strict domain lockdowns." }
+  effects  { gateway.charge }   ;; validated against InvoicingDomainGuard ✅
+  limits   { max_memory: 4MB }  ;; validated against InvoicingDomainGuard ✅
+}
+{
+  return Ok(Void)
+}
+```
+
+The `[conforms_to: X]` is a decorator on the contract block header — NOT a sub-block inside `contract {}`, and NOT a separate outer block.
+
+> Full reference: `logicn-domain-guard-policies.md`
+
+---
+
+### 2. Emergency Policy Overlay (inline block between contract and body — DRCM Phase 4)
+
+An **Emergency Policy Overlay** is a per-flow, inline block that sits between `contract {}` and `{ body }`. It declares runtime monotonic security responses to anomalies. Most flows never use this.
+
+```lln
+secure flow assessRisk(input: RiskRequest) -> RiskResult
+contract {
+  intent  { "Assess risk with emergency posture management." }
+  effects { database.read, network.outbound }
+}
+policy {
+  emergency {
+    on system_integrity_anomaly {
+      deny network.outbound
+      require local_only_execution
+    }
+  }
+}
+{
+  // body
+}
+```
+
+This `policy {}` is NOT a contract sub-block. It is NOT a domain guard. It is NOT external. It is an inline runtime overlay block, separate from `contract {}`, defined per-flow.
+
+---
+
+## `invariant {}` — pre/post condition assertions (DRCM Module 2)
+
+`invariant {}` is an **optional sub-block inside `contract {}`** — it sits alongside `intent` and `effects`. It contains one or more `ensure` expressions that are checked **before the body executes** (pre-condition → `LLN-INV-001`) and **after the body returns** (post-condition → `LLN-INV-002`).
+
+```logicn
+// ✅ CORRECT — invariant inside contract block
+secure flow processTransaction(walletId: String, amount: U64) -> Result<Void, Fault>
+contract {
+  intent { "Transfer funds securely while verifying balance constraints." }
+  effects { ledger.mutate }
+  invariant {
+    ensure amount > 0;
+    ensure runtime::getAvailableBalance(walletId) >= amount;
+  }
+}
+{
+  // body executes here — within a DWI isolate under DRCM
+}
+```
+
+**Rules:**
+- `ensure` expressions must be **simple, evaluable expressions** — not theorem prover calls. The runtime evaluates them directly.
+- Complex arithmetic invariants (`ensure ledger.credits == ledger.debits`) will be static (Phase 4 SMT solver). For now, use runtime-evaluable guards.
+- `LLN-INV-001` fires when a pre-condition fails; execution aborts before the body runs.
+- `LLN-INV-002` fires when a post-condition fails; execution aborts before the result is returned.
+- For AI generation: add `invariant {}` to any high-trust mutation flow (payments, medical, government records). Plain internal/pure flows do not need it.
+
+> **Note:** `invariant {}` is a DRCM Phase 2 feature — the parser, governance verifier, and WAT gate injection are scheduled for 2026-07. The clause is documented here now so AI tools and developers write it correctly when the compiler supports it.
+
+---
+
+## `step` keyword — cross-trust-boundary DWI isolate allocation
+
+`step` is used in the **flow body** (not the contract block) to cross a trust boundary. Every `step` call allocates a fresh **DWI (Deterministic Workflow Isolate)** — a shared-nothing WASM linear memory instance with fuel injection and no live pointer transfer.
+
+```logicn
+secure flow processOrder(orderId: String) -> Result<Void, Fault>
+contract {
+  intent { "Process an order and transmit to payment network." }
+  effects { network.outbound, ledger.mutate }
+}
+{
+  // Pure internal logic — no step needed (same isolate)
+  let sanitizedId = internal_utils::clean(orderId);
+
+  // Trust boundary: external network sink — use step
+  let paymentResult = step network_client::transmitOrder(sanitizedId);
+
+  return paymentResult;
+}
+```
+
+**When to use `step`:**
+- Calls to external subsystems (network, databases, third-party APIs)
+- Multi-tenant dependencies
+- Any state-mutating operation that must be isolated from the calling context
+
+**When NOT to use `step`:**
+- Pure internal helpers within the same flow's trust domain
+- Pure math / transform functions
+
+**Cost:** Each `step` allocates a new WASM linear memory segment (max 4MB) and fuel counter. The input is transferred as an immutable serialised snapshot — no live pointers cross the boundary. If fuel is exhausted → `FuelExhaustionFault`. If capability is violated → DSS traps immediately.
+
+> **Note:** `step` is a DRCM Phase 5 feature — parser and ManagedStep AST node are scheduled for 2026-10.
+
+---
+
 ## Quick checklist for AI generation
 
 - [ ] `intent` present (descriptive prose only) for any secure/governed flow.
@@ -195,6 +355,8 @@ contract {
 - [ ] Never widen `authority`/`effects`/`secrets` automatically — emit a `*.logicn.proposal` instead.
 - [ ] `types` only when the flow needs local aliases/records.
 - [ ] High-trust data ⇒ add `privacy` + `audit` (+ `secrets` for credentials).
+- [ ] High-trust **mutation** flows ⇒ add `invariant { ensure ... }` inside `contract {}` for pre/post guards.
+- [ ] Use `step` in the flow body (not the contract) for every cross-trust-boundary call.
 - [ ] Leave `economics`/`secrets`/`epilogue` out unless overriding the auto behavior.
 - [ ] `cyber_physical_hardening {}` — **do NOT write** unless on Tier 1 ASIC hardware with
   a regulatory mandate requiring attestation proof. Runtime auto-selects the tier from

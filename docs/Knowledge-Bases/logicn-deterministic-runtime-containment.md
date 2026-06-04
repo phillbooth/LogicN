@@ -16,7 +16,7 @@ but it still conflates three things that should be kept architecturally distinct
 3. **Emergency policy overlays** — reactive boundary tightening triggered by host-level signals
 
 LogicN already covers category 1 almost completely. Category 2 is the genuinely new piece.
-Category 3 requires a new `policy {}` contract block and a WASI host shim.
+Category 3 requires a new `policy {}` **block** (separate from `contract {}` — sits between the contract declaration and the body, confirmed design) and a WASI host shim.
 
 The most powerful single idea in the document is the **Monotonic Security Rule**:
 *a runtime policy transition can only shrink the execution authority, never expand it.*
@@ -409,3 +409,214 @@ When you combine these layers, the execution pipeline functions as a highly opti
 WASM gives LogicN **near-zero cost memory isolation and lightning-fast instantiation**, while LogicN's DRCM gives WASM **deterministic, compile-verified safety and stateful capability tracking**.
 
 By shifting safety verification from heavy, reactive runtime software checks to **static compile-time proofs and single-cycle bitmask capability gates**, you achieve the holy grail of systems engineering: code that runs at native hardware speeds, remains mathematically secure, and is physically incapable of causing a system-wide crash.
+
+---
+
+## Architecture Design Decisions — Locked (2026-06-04)
+
+The following four questions were formally resolved in notes/13 through notes/16. These are the canonical answers for all future implementation work.
+
+---
+
+### Decision 1: DSS Bootstrap — Wasmtime is the TCB
+
+**Question:** If DSS is compiled to WASM and runs inside Wasmtime, who supervises DSS itself?
+
+**Answer:** There is no paradox. Wasmtime is a **native binary** — it is the Trusted Computing Base (TCB). DSS.wasm is simply the first WASM module that Wasmtime instantiates. Wasmtime boots DSS, not the other way around. DSS then supervises DWI guest isolates as WASM component sub-instances.
+
+```
+Native host OS
+  └─ Wasmtime binary (TCB — native, not WASM)
+       └─ DSS.wasm  (supervisor — LogicN's first module)
+            └─ DWI.wasm × N  (ephemeral guest isolates — one per step)
+```
+
+**Key constraint:** Because the DSS is a WASM module running inside Wasmtime, it cannot make custom host calls, issue raw C-FFI calls, or modify security posture via OS APIs. All capability enforcement maps onto **WASI Preview 2 declarative imports only** (Wasmtime 22+).
+
+**WASI Capability Mapping:**
+
+| LogicN Capability | WASI Interface | Enforcement |
+|---|---|---|
+| `FileSystem(FileSystemConstraint)` | `wasi:filesystem/preopens` | Wasmtime CLI pre-opens specific directories only; relative traversal (`../`) triggers filesystem fault |
+| `Network(NetworkConstraint)` | `wasi:sockets/tcp`, `wasi:http/outgoing-handler` | OCI runtime restricts outbound sockets to declared `NetworkTarget` |
+| `EnvironmentKey(String)` | `wasi:cli/environment` | Environment vars dropped at instantiation unless explicitly mapped |
+| `AuditAppendOnly` | `wasi:cli/stdout` | Streams pipe to write-only host log collector — append-only, un-spoofable |
+
+---
+
+### Decision 2: DPM State Persistence — DSS owns V\_DPM exclusively
+
+**Question:** How does the V_DPM 32-bit register persist across DWI step boundaries? Can guest isolates read or write it?
+
+**Answer:** **Option 1 selected** — DSS owns V_DPM in its own linear memory; guests can only read it through a bound WASI import function. Guests can never address the register directly.
+
+```
+Wasmtime Host Engine Context
+│
+├─ DSS.wasm (supervisor)
+│    ├─ [ V_DPM: 32-bit register ]
+│    │    Bit 0: Network  active/inactive
+│    │    Bit 1: Storage  mounted/unmounted
+│    │    Bit 2: Quarantine engaged
+│    │    (can only shrink — monotonic subtraction engine)
+│    │
+│    └─ provides read-only WASI import to guests
+│
+└─ DWI.wasm (guest isolate)
+     ├─ shared-nothing linear memory (max 4MB)
+     ├─ calls DSS permission broker to check capability before any I/O
+     └─ trapped instantly if capability check fails
+```
+
+**Monotonic subtraction rule:** The DPM can drop capability flags instantly (e.g., flip Bit 0 to revoke network access mid-execution during a fault), but it can **never expand permissions beyond what Wasmtime was launched with**. DPM = monotonic subtraction engine only.
+
+---
+
+### Decision 3: `invariant {}` Syntax — inside `contract {}` block
+
+**Question:** Where does `invariant {}` appear in the source? As a separate top-level block, or inside `contract {}`?
+
+**Answer:** **Inside `contract {}`**, alongside `intent` and `effects`. This keeps all security logic together in a single declarative scope directly attached to the flow signature.
+
+```lln
+;; ✅ CORRECT — invariant inside contract block
+secure flow processTransaction(walletId: String, amount: U64) -> Result<Void, Fault>
+contract {
+  intent { "Transfer funds securely while verifying balance constraints." }
+  effects { ledger.mutate }
+  invariant {
+    ensure amount > 0;
+    ensure runtime::getAvailableBalance(walletId) >= amount;
+  }
+}
+{
+  ;; Implementation body executes within the DWI isolate
+}
+```
+
+**Compiler behaviour:**
+- `ensure` expressions are evaluated as **pre-conditions** before the body executes → `LLN-INV-001` if violated
+- A symmetric post-condition check fires after the body returns → `LLN-INV-002` if the post-state is invalid
+- Static proofs (arithmetic equality, ledger balance) are Phase 4 (SMT solver); runtime pre/post checks are Phase 2
+- Lightweight runtime evaluation of simple expressions is acceptable; do NOT run a theorem prover inline
+
+**Diagnostic codes:**
+- `LLN-INV-001` — pre-condition violated (invariant check failed before body)
+- `LLN-INV-002` — post-condition violated (invariant check failed after body)
+
+---
+
+### Decision 4: `step` Keyword — cross-trust-boundary DWI allocation
+
+**Question:** When should a developer write `step call(...)` vs a plain `call(...)`? What does `step` cost?
+
+**Answer:** Use `step` whenever execution **crosses a trust boundary**:
+- Calls to external subsystems (network sinks, databases, third-party APIs)
+- Multi-tenant dependencies
+- State-mutating operations that must be isolated from the calling context
+
+Plain flow calls are for **pure internal logic** within the same isolate.
+
+```lln
+;; ✅ CORRECT — step for trust-boundary crossing
+secure flow processOrder(orderId: String) -> Result<Void, Fault>
+contract {
+  intent { "Process an order and transmit to payment network." }
+  effects { network.outbound, ledger.mutate }
+}
+{
+  ;; Internal pure logic — same isolate, no step needed
+  let sanitizedId = internal_utils::clean(orderId);
+
+  ;; Crossing a trust boundary — new DWI isolate allocated
+  let paymentResult = step network_client::transmitOrder(sanitizedId);
+
+  return paymentResult;
+}
+```
+
+**`step` mechanics:**
+- A fresh ephemeral DWI isolate is allocated (shared-nothing, max 4MB linear memory)
+- Fuel budget is injected via `wasmtime::Store::add_fuel` (computed from `policy::calculateStepFuelLimit`)
+- Input state is transferred as an **immutable serialised snapshot** — no live pointers cross the boundary
+- If the step exhausts fuel → `FuelExhaustionFault` trap; DSS discards the isolate, rolls back
+- If the step causes a capability violation → DSS traps mid-instruction, V_DPM bits updated
+
+**Cost:** Each `step` allocates a new WASM linear memory segment and fuel counter. Use plain flow calls for internal helpers; reserve `step` for true boundary crossings.
+
+---
+
+## Corrected DRCM Implementation Roadmap (from notes/15, 2026-06-04)
+
+This is the locked 7-phase roadmap. All DRCM implementation is **TODO** — current priority is other runtime work first.
+
+```mermaid
+gantt
+    title LogicN DRCM Implementation Roadmap — Hardened WASI Transition
+    dateFormat YYYY-MM
+    axisFormat %b %Y
+
+    section Phase 1 — Critical Security Fixes (TODO)
+    Fix: canonical manifest RFC 8785 / CBOR         :crit, p1a, 2026-06, 1w
+    Fix: CAS atomic monotonic transition             :crit, p1b, 2026-06, 1w
+    Fix: strip wildcard * from capability checks     :crit, p1c, 2026-06, 3d
+    Fix: length-prefix framing for receipt fragments :crit, p1e, 2026-06, 3d
+    Fix: scanForSecretLiteral cleartext token search :crit, p1f, 2026-07, 1w
+
+    section Phase 2 — invariant block Module 2
+    Parser: invariant inside contract block          :p2a, 2026-07, 1w
+    Governance verifier: static proof pass           :p2b, 2026-07, 2w
+    WAT emitter: dynamic assertion gate injection    :p2c, 2026-07, 2w
+    LLN-INV-001/002 diagnostics                     :p2d, 2026-07, 1w
+    Tests: static bypass and runtime trip            :p2e, 2026-08, 1w
+
+    section Phase 3 — lmanifest Module 1
+    Define canonical manifest schema CBOR/JSON-C    :p3a, 2026-08, 1w
+    Export ProofGraph and T2 taint constraints       :p3b, 2026-08, 2w
+    ML-DSA-65 signing at compile time               :p3c, 2026-08, 1w
+    Admission gate: hash and signature verify        :p3d, 2026-08, 2w
+    Tests: tamper detection and forged sig rejection :p3e, 2026-09, 1w
+
+    section Phase 4 — Structured Capabilities Modules 3 and 4
+    Replace string grants with SystemCapabilityType  :p4a, 2026-09, 2w
+    Path canonicalization pipeline in lln            :p4b, 2026-09, 1w
+    CAS monotonic state transition atomic            :p4c, 2026-09, 1w
+    LLN-MONO-001/002 diagnostics                    :p4d, 2026-09, 1w
+    policy block grammar and monotonicity verifier   :p4e, 2026-09, 2w
+    Tests: path traversal and privilege escalation   :p4f, 2026-10, 1w
+
+    section Phase 5 — DWI and Self-Hosted DSS Modules 5 and 6
+    step keyword parsing and ManagedStep AST node    :p5a, 2026-10, 2w
+    DWI isolate allocation declarative WASI bounds   :p5b, 2026-10, 2w
+    Fuel injection via Wasmtime store engine API     :p5c, 2026-10, 1w
+    Compile self-hosted DSS to Wasmtime entry module :p5d, 2026-10, 2w
+    DSS host import broker DPM bitmask evaluation    :p5e, 2026-11, 2w
+    emergency block parser and signal routing        :p5f, 2026-11, 2w
+    Tests: fuel exhaustion and isolation breach      :p5g, 2026-11, 1w
+
+    section Phase 6 — Epilogue Receipt Module 7
+    Receipt struct and canonical serialisation       :p6a, 2026-12, 1w
+    DSS signing loop ML-DSA-65 post-quantum          :p6b, 2026-12, 1w
+    Admission verification gate                      :p6c, 2026-12, 1w
+    Append-only ledger integration                   :p6d, 2026-12, 1w
+    Tests: tamper and forgery and quarantine flag    :p6e, 2026-12, 1w
+
+    section Phase 7 — Negative Test Suite and Hardening
+    Full negative test suite all OWASP vectors       :p7a, 2027-01, 3w
+    Secret sink monitor real prefix checking         :p7b, 2027-01, 2w
+    Layer 2 OS sandbox config OCI/gVisor wrapper     :p7c, 2027-01, 2w
+    PCI DSS 4.0.1 and SOC 2 evidence validation      :p7d, 2027-02, 2w
+    Linux server deployment verification             :p7e, 2027-02, 2w
+```
+
+---
+
+## Validation Tests — Phase 1 gate (from notes/13)
+
+Before any Phase 2+ compiler work, these two tests must pass against the Wasmtime staging environment:
+
+**Test 1 — WASI Ambient Authority Isolation:**
+Run a compiled `.lln` module that calls `wasi:filesystem/preopens.get_directories` without explicit directory args mapped during engine invocation. The result must be an empty list or an instantiation trap. Proves the guest cannot traverse host filesystems.
+
+**Test 2 — Secret Sink Breach Interception:**
+Register a canary secret (`"supersecuretoken123"`) in the runtime. Execute a script that deliberately formats this credential into an error stack string routed to stdout. The stream must trigger `LLN-SECRET-BREACH` and halt execution before any data exits the sandbox boundary.
