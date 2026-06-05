@@ -1,0 +1,34 @@
+;; Foundation test: static compile-time constants and bitfield registers
+
+static MAX_CONNECTIONS = 100
+static FLOOR_PROOF = 3
+static MAX_BUDGET_MB = 50
+
+bitfield V_DPM_Test {
+  network_outbound: 0
+  storage_write: 1
+  secret_access: 2
+  audit_write: 3
+  database_write: 4
+}
+
+pure flow testStaticAccess() -> Int
+contract {
+  intent "Test static constant access"
+  effects {}
+}
+{
+  ;; MAX_CONNECTIONS should fold to 100 at compile time
+  return MAX_CONNECTIONS
+}
+
+pure flow testBitfieldAccess() -> Int
+contract {
+  intent "Test bitfield bitmask generation"
+  effects {}
+}
+{
+  ;; V_DPM_Test.network_outbound should be 1 (1 << 0)
+  ;; V_DPM_Test.storage_write should be 2 (1 << 1)
+  return V_DPM_Test.network_outbound
+}

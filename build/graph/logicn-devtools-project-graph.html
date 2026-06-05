@@ -7,7 +7,7 @@
 </head>
 <body>
 <h1>LogicN Project Graph</h1>
-<p>2867 nodes, 3603 relationships.</p>
+<p>2893 nodes, 3630 relationships.</p>
 <h2>Nodes</h2>
 <ul><li><strong>logicn-core</strong> <span>Package</span></li>
 <li><strong>logicn-core-compiler</strong> <span>Package</span></li>
@@ -688,6 +688,7 @@
 <li><strong>logicn-tensor-numeric-performance.md</strong> <span>Document</span></li>
 <li><strong>logicn-testing-model.md</strong> <span>Document</span></li>
 <li><strong>logicn-topological-graph-engine.md</strong> <span>Document</span></li>
+<li><strong>logicn-tower-native-syntax.md</strong> <span>Document</span></li>
 <li><strong>logicn-trust-sensitivity-type-rules.md</strong> <span>Document</span></li>
 <li><strong>logicn-type-checker-architecture.md</strong> <span>Document</span></li>
 <li><strong>logicn-type-improvements-phase-8.md</strong> <span>Document</span></li>
@@ -1070,6 +1071,7 @@
 <li><strong>accessLabel_accessLabel.egraph.json</strong> <span>Document</span></li>
 <li><strong>addCacheTest_testhash1.egraph.json</strong> <span>Document</span></li>
 <li><strong>addMoneyExact_addMoneyExact.egraph.json</strong> <span>Document</span></li>
+<li><strong>addOffset_addOffset.egraph.json</strong> <span>Document</span></li>
 <li><strong>add_add.egraph.json</strong> <span>Document</span></li>
 <li><strong>allPass_allPass.egraph.json</strong> <span>Document</span></li>
 <li><strong>answer_answer.egraph.json</strong> <span>Document</span></li>
@@ -1149,7 +1151,11 @@
 <li><strong>freqMapSize_freqMapSize.egraph.json</strong> <span>Document</span></li>
 <li><strong>f_f.egraph.json</strong> <span>Document</span></li>
 <li><strong>getActor_getActor.egraph.json</strong> <span>Document</span></li>
+<li><strong>getAdminMask_getAdminMask.egraph.json</strong> <span>Document</span></li>
 <li><strong>getAmount_getAmount.egraph.json</strong> <span>Document</span></li>
+<li><strong>getLimit_getLimit.egraph.json</strong> <span>Document</span></li>
+<li><strong>getNetworkBit_getNetworkBit.egraph.json</strong> <span>Document</span></li>
+<li><strong>getStorageBit_getStorageBit.egraph.json</strong> <span>Document</span></li>
 <li><strong>getTrace_getTrace.egraph.json</strong> <span>Document</span></li>
 <li><strong>getUser_getUser.egraph.json</strong> <span>Document</span></li>
 <li><strong>Get_User_Get_User.egraph.json</strong> <span>Document</span></li>
@@ -1312,6 +1318,16 @@
 <li><strong>compileToBytecode</strong> <span>Flow</span></li>
 <li><strong>tryRunBytecode</strong> <span>Flow</span></li>
 <li><strong>clearBytecodeCache</strong> <span>Flow</span></li>
+<li><strong>enum</strong> <span>Type</span></li>
+<li><strong>CAPABILITY_BIT_POSITION</strong> <span>Type</span></li>
+<li><strong>capabilityToBitmask</strong> <span>Flow</span></li>
+<li><strong>resolveCompositeBitmask</strong> <span>Flow</span></li>
+<li><strong>KNOWN_CAPABILITIES</strong> <span>Type</span></li>
+<li><strong>KNOWN_SIGNALS</strong> <span>Type</span></li>
+<li><strong>EmergencyTransition</strong> <span>Type</span></li>
+<li><strong>KNOWN_FLOORS</strong> <span>Type</span></li>
+<li><strong>normaliseFloor</strong> <span>Flow</span></li>
+<li><strong>validateTransitionMonotonicity</strong> <span>Flow</span></li>
 <li><strong>CheckConfig</strong> <span>Type</span></li>
 <li><strong>InferredTarget</strong> <span>Type</span></li>
 <li><strong>InferredEconomics</strong> <span>Type</span></li>
@@ -1338,7 +1354,6 @@
 <li><strong>LLN_EVENT_004</strong> <span>Type</span></li>
 <li><strong>LLN_EVENT_005</strong> <span>Type</span></li>
 <li><strong>checkEvents</strong> <span>Flow</span></li>
-<li><strong>enum</strong> <span>Type</span></li>
 <li><strong>ExecNode</strong> <span>Type</span></li>
 <li><strong>ExecutionGraph</strong> <span>Type</span></li>
 <li><strong>getCachedGraph</strong> <span>Flow</span></li>
@@ -1618,6 +1633,8 @@
 <li><strong>buildLazyIteratorChain</strong> <span>Flow</span></li>
 <li><strong>MANIFEST_SCHEMA_VERSION</strong> <span>Type</span></li>
 <li><strong>PolicyResolutionDag</strong> <span>Type</span></li>
+<li><strong>MmcpCapabilityPointerStub</strong> <span>Type</span></li>
+<li><strong>AssimilatedPluginEntry</strong> <span>Type</span></li>
 <li><strong>LManifest</strong> <span>Type</span></li>
 <li><strong>ProofObligation</strong> <span>Type</span></li>
 <li><strong>ManifestSignature</strong> <span>Type</span></li>
@@ -1631,6 +1648,12 @@
 <li><strong>verifyManifestRoundTrip</strong> <span>Flow</span></li>
 <li><strong>prettyManifest</strong> <span>Flow</span></li>
 <li><strong>LOGICN_CBOR_TAGS</strong> <span>Type</span></li>
+<li><strong>FileImportedSymbol</strong> <span>Type</span></li>
+<li><strong>FileModuleDiagnostic</strong> <span>Type</span></li>
+<li><strong>ResolvedFileModule</strong> <span>Type</span></li>
+<li><strong>resolveFileImports</strong> <span>Flow</span></li>
+<li><strong>checkFileSymbolCollisions</strong> <span>Flow</span></li>
+<li><strong>gatherFileImports</strong> <span>Flow</span></li>
 <li><strong>MonkeyPatchDiagnostic</strong> <span>Type</span></li>
 <li><strong>MonkeyPatchCheckResult</strong> <span>Type</span></li>
 <li><strong>checkMonkeyPatching</strong> <span>Flow</span></li>
@@ -1667,6 +1690,7 @@
 <li><strong>basename</strong> <span>Flow</span></li>
 <li><strong>extname</strong> <span>Flow</span></li>
 <li><strong>resolve</strong> <span>Flow</span></li>
+<li><strong>relative</strong> <span>Flow</span></li>
 <li><strong>isAbsolute</strong> <span>Flow</span></li>
 <li><strong>TraceConfig</strong> <span>Type</span></li>
 <li><strong>ObservabilityMetric</strong> <span>Type</span></li>
@@ -1986,6 +2010,8 @@
 <li><strong>getWATImportsForEffects</strong> <span>Flow</span></li>
 <li><strong>buildWATModule</strong> <span>Flow</span></li>
 <li><strong>buildWATModuleFromGIR</strong> <span>Flow</span></li>
+<li><strong>wrapInSingleExit</strong> <span>Flow</span></li>
+<li><strong>extractPostConditionEnsures</strong> <span>Flow</span></li>
 <li><strong>emitWAT</strong> <span>Flow</span></li>
 <li><strong>LEXER_PARITY_STATUS.md</strong> <span>Document</span></li>
 <li><strong>TODO.md</strong> <span>Document</span></li>

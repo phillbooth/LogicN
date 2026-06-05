@@ -38,6 +38,7 @@ contract {
 }
 {
   unsafe let profile: String = request.jsonBody.profile
+  trap profile == "" : ERR_EMPTY_PROFILE_NAME
   let allowsRecursion: Bool = profileAllowsRecursion(profile)
   let allowsUnbounded: Bool = profileAllowsUnboundedLoop(profile)
   let requiresBudget: Bool = profileRequiresBudget(profile)

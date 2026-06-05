@@ -1,6 +1,6 @@
 # LogicN — Governance Rules Registry
 
-**Version:** 1.0 (2026-06-04)  
+**Version:** 1.1 (2026-06-05)  
 **Status:** Living document — rules are added as features land.  
 **Purpose:** Canonical, numbered rule set for the compiler, runtime, governance verifier, AI tools, and human developers.
 
@@ -13,14 +13,16 @@ Rules are organized by category prefix. Each rule carries:
 
 ## ⚠️ Policy Disambiguation
 
-Two distinct "policy" concepts exist in LogicN. These must never be confused:
+Three distinct "policy"-related concepts exist in LogicN. These must never be confused:
 
 | Concept | Syntax | Location | Purpose |
 |---|---|---|---|
 | **Domain Guard Policy** | `policy DomainName { permitted_effects {} enforced_limits {} }` | External file in `governance/policies/` | Immutable ceiling; referenced via `[conforms_to: X]` on `contract {}` block |
-| **Emergency Policy Overlay** | `policy { emergency { on X { deny Y } } }` | Inline block **between** `contract {}` and `{ body }` | Runtime monotonic security overlay per-flow |
+| **`access {}` Capability Negotiation (v2.1)** | `access { purpose "..." allow T to "..." }` | Inline block **between** `contract {}` and `{ body }` | Active negotiation of call-boundary rights; replaces deprecated inline `policy {}` |
+| **Emergency Policy Overlay** | `policy { emergency { on X { deny Y } } }` | Inline block **between** `contract {}` and `{ body }` | Runtime monotonic security overlay per-flow (deprecated inline `policy {}` form) |
 
 Rules governing Domain Guard Policies: K-000, LLN-GOV-004, LLN-LIMIT-001, LLN-GOV-019 — see also `logicn-domain-guard-policies.md`  
+Rules governing `access {}` / legacy inline `policy {}`: S-009, LLN-SYNTAX-LEGACY-003  
 Rules governing Emergency Policy Overlays: S-008, M-001 through M-003, LLN-MONO-001/002/003
 
 ---
@@ -159,6 +161,35 @@ contract {
   effects { database.read }
   policy { emergency { ... } }   // parse error: policy is not a contract sub-block
 }
+{ ... }
+```
+
+---
+
+### S-009 · access {} replaces inline policy {} for capability negotiation (v2.1)
+**Status:** ENFORCED (advisory — Stage A emits LLN-SYNTAX-LEGACY-003)  **Diagnostic:** LLN-SYNTAX-LEGACY-003
+
+In v2.1, the inline block between `contract {}` and `{ body }` that negotiates call-boundary rights is `access {}`. The legacy `policy {}` form is a deprecated alias and emits an advisory diagnostic. The `policy` keyword is **reserved** for State Mutation Governance (a future v2.1 feature).
+
+```lln
+// ✅ CORRECT (v2.1)
+flow processPayment(req: PaymentRequest) -> Result<Receipt, Error>
+contract {
+  intent { "Process a payment." }
+  effects { allow database.write }
+}
+access {
+  purpose "payment-processing"
+  allow PaymentRequest to "process"
+  deny RawCardData
+  require payment.write
+}
+{ ... }
+
+// ⚠️ DEPRECATED (v2.0 form — LLN-SYNTAX-LEGACY-003 advisory)
+flow processPayment(req: PaymentRequest) -> Result<Receipt, Error>
+contract { ... }
+policy { ... }   // use access {} instead
 { ... }
 ```
 
@@ -429,6 +460,10 @@ File system capability paths are canonicalized at compile time. Relative path co
 | Serialize / JSON / audit record | LLN-SECRET-003 | `redact()` |
 
 Any value derived from `secret.get()`, `vault.read()`, `kms.decrypt()`, or `secrets.*` is automatically classified `SecureString`. Concatenation with a plain string produces `TaintedString`, which inherits all sink restrictions.
+
+**Bool-typed variables are exempt from LLN-VALUESTATE-004.** A `Bool` result derived from a secret comparison (e.g., `secret == expected`) has no injection surface — a boolean cannot carry secret content. The value-state checker does not propagate taint through Boolean derivations.
+
+**`trap` statements clear the taint chain in the value-state checker.** A `trap COND : ERR` that fires before a tainted value reaches a sink acts as a hard abort — the checker treats the taint path as terminated at the trap point.
 
 ---
 
@@ -926,18 +961,254 @@ Under `@experimental_profile(drcm_core_v1)`, the compiler:
 | LLN-ASSUME-002 | Proof-Tracing | Referenced manifest signature invalid or expired | PLANNED (task #74) |
 | LLN-ASSUME-003 | Proof-Tracing | Manifest sourceHash mismatch — referenced flow has changed since manifest was signed | PLANNED (task #74) |
 | LLN-ASSUME-004 | Proof-Tracing | Condition found as `runtime-precheck` only (partial proof — WAT gate still needed) | PLANNED (task #74) |
+| LLN-SYNTAX-LEGACY-003 | Syntax | Inline `policy {}` block between contract and body. Use `access {}` instead. `policy` keyword reserved for State Mutation Governance. | ADVISORY (v2.1) |
+| LLN-STATIC-001 | Static | `static` declaration value is not a compile-time constant (contains runtime expressions) | PLANNED (v2.1) |
+| LLN-STATIC-002 | Static | `static` name declared more than once in the same scope | PLANNED (v2.1) |
+| LLN-BF-001 | Bitfield | Two fields in the same `bitfield` declaration use the same bit position | PLANNED (v2.1) |
+| LLN-BF-002 | Bitfield | Bit position exceeds 31 (V_DPM is a 32-bit register) | PLANNED (v2.1) |
+| LLN-GATE-001 | Gate | `gate(condition)` references a condition not found in knownDomainGuards. Full enforcement in Phase 5. | PLANNED (v2.1) |
+| LLN-GATE-002 | Gate | `gate {}` wrapping a `pure flow` — pure flows have no side effects; gate is redundant | PLANNED (v2.1) |
+| LLN-IMPORT-001 | Import | `import "./path.lln"` target file not found at resolved path | PLANNED (v2.1) |
+| LLN-IMPORT-002 | Import | Imported file has parse errors — cannot merge DAG | PLANNED (v2.1) |
+| LLN-IMPORT-003 | Import | Circular import detected in import chain | PLANNED (v2.1) |
+| LLN-IMPORT-004 | Import | Imported symbol name conflicts with local definition | PLANNED (v2.1) |
+| LLN-ACCESS-001 | Access | `access {}` grant references unknown capability name | PLANNED (v2.1) |
+| LLN-ACCESS-002 | Access | `grant` capability not declared in flow's `effects {}` | PLANNED (v2.1) |
+| LLN-ASSIMILATE-001 | Assimilate | `assimilate` plugin declared outside `boot.lln` | PLANNED (v2.1) |
+| LLN-ASSIMILATE-002 | Assimilate | `assimilation_memory_budget` not declared in `governance {}` | PLANNED (v2.1) |
+| LLN-ASSIMILATE-003 | Assimilate | Assimilated plugin has no `access { grant }` block | PLANNED (v2.1) |
 
 ---
 
-## Cross-References
+## ST — Static Declaration Rules (new in v2.1)
 
-| Topic | Document |
-|---|---|
-| Canonical contract authoring guide | `logicn-contract-authoring-guide.md` |
-| DRCM 7-module architecture | `logicn-deterministic-runtime-containment.md` |
-| Architecture principles | `architecture-charter.md` |
-| Secure syntax principles | `secure-by-default-syntax-principles.md` |
-| Capability model | `capabilities.md` |
-| Architecture patterns | `logicn-architecture-patterns.md` |
-| Secrets + epilogue design | `logicn-design-secrets-epilogue-blocks.md` |
-| Contract economics | `logicn-contract-economics.md` |
+### ST-001 · static value must be a compile-time constant
+**Status:** PLANNED (v2.1 compiler)  **Diagnostic:** LLN-STATIC-001
+
+A `static` declaration value must be resolvable at compile time. Runtime expressions (function calls, parameter references, conditionals) are not permitted.
+
+```lln
+// ✅ CORRECT
+static MAX_RETRY = 3
+static FLOOR_PROOF = 3
+
+// ❌ WRONG — LLN-STATIC-001
+static MAX_RETRY = getConfig("retry")   // runtime call — not a compile-time constant
+```
+
+---
+
+### ST-002 · static names must be unique in scope
+**Status:** PLANNED (v2.1 compiler)  **Diagnostic:** LLN-STATIC-002
+
+A `static` name may not be declared more than once in the same scope. Redeclaration is a compile error.
+
+---
+
+## BF — Bitfield Rules (new in v2.1)
+
+### BF-001 · bitfield bit positions must not overlap
+**Status:** PLANNED (v2.1 compiler)  **Diagnostic:** LLN-BF-001
+
+Two fields in the same `bitfield` declaration must not use the same bit position. Overlap is a compile error — it would produce ambiguous bitmask values.
+
+```lln
+// ❌ WRONG — LLN-BF-001
+bitfield V_DPM {
+  network_outbound: 0
+  storage_write: 0   // duplicate bit position — error
+}
+```
+
+---
+
+### BF-002 · bitfield bit positions must not exceed 31
+**Status:** PLANNED (v2.1 compiler)  **Diagnostic:** LLN-BF-002
+
+V_DPM is a 32-bit register. Bit positions are 0–31. Any `bitfield` declaration using a position ≥ 32 is a compile error.
+
+```lln
+// ❌ WRONG — LLN-BF-002
+bitfield V_DPM {
+  overflow_bit: 32   // bit position out of range — V_DPM is 32-bit
+}
+```
+
+---
+
+## PT — Proof-Tracing Rules (new in v2.1)
+
+### PT-001 · assuming() is a proof-tracing block — not a runtime conditional
+**Status:** PLANNED (tasks #73/#74)  **Diagnostics:** LLN-ASSUME-001 through LLN-ASSUME-004
+
+Syntax:
+```lln
+assuming(flowRef, "claim") {
+  // code that may only execute if "claim" is proved in flowRef's manifest
+}
+```
+
+`assuming(flowRef, "claim")` traces a proof obligation from another flow's `.lmanifest`. The `claim` string must appear in the referenced flow's `ProofObligations`. If the claim cannot be verified (missing, invalid signature, or source hash mismatch), the containing code block is rejected.
+
+This is not a runtime `if`-statement — it is a **compile-time proof assertion**. The block is emitted only if the claim is verifiable at compile time.
+
+---
+
+## GT — Gate Rules (new in v2.1)
+
+### GT-001 · gate condition must reference a known Domain Guard Policy
+**Status:** PLANNED (v2.1 governance verifier; full enforcement Phase 5)  **Diagnostic:** LLN-GATE-001
+
+A `gate(condition)` block's condition must name a Domain Guard Policy found in `knownDomainGuards`. At Phase 5, unresolvable gate conditions are a hard error. Currently emits a warning.
+
+```lln
+// ⚠️ LLN-GATE-001 — 'unknown_policy' not in knownDomainGuards
+gate(unknown_policy) {
+  flow sensitiveOp() -> Result<Void, Fault>
+  contract { ... }
+  { ... }
+}
+```
+
+---
+
+### GT-002 · gate {} wrapping a pure flow is redundant
+**Status:** PLANNED (v2.1 governance verifier)  **Diagnostic:** LLN-GATE-002
+
+`gate {}` blocks add an admission guard check (V_DPM bit 8). `pure` flows have no side effects by definition; the gate check is redundant and signals a likely authoring error.
+
+```lln
+// ⚠️ LLN-GATE-002 — gate wraps a pure flow
+gate(admin_only) {
+  pure flow helper(x: Int) -> Int   // pure: no effects, gate is redundant
+  contract { ... }
+  { return x + 1 }
+}
+```
+
+---
+
+## Comment Syntax
+
+LogicN supports three comment forms. All are equally valid; `//` is canonical in generated code.
+
+| Syntax | Token | Purpose |
+|---|---|---|
+| `// text` | `comment` | Code documentation — discarded after parse |
+| `/// text` | `docComment` | API documentation — extracted by doc tooling |
+| `;; text` | `govComment` | Governance annotation — scanned by verifier, stored in .lmanifest |
+| `/* text */` | `comment` | Block code comment — discarded after parse |
+| `;` (trailing) | `newline` | Optional statement separator — silently collapsed |
+
+The `;;` governance annotation is a first-class token. Its text is collected into
+`governanceAnnotations[]` in the .lmanifest narrative, alongside ProofObligations.
+
+---
+
+## IM — Import Rules (new in v2.1)
+
+### IM-001 · import file must exist at the resolved path
+**Status:** PLANNED (v2.1 compiler)  **Diagnostic:** LLN-IMPORT-001
+
+`import "./path.lln"` resolves relative to the importing file's directory. A missing file is always a hard error — the DAG merge cannot proceed.
+
+```lln
+// ❌ WRONG — LLN-IMPORT-001
+import "./nonexistent.lln"
+```
+
+---
+
+### IM-002 · imported file must be error-free before merge
+**Status:** PLANNED (v2.1 compiler)  **Diagnostic:** LLN-IMPORT-002
+
+An imported `.lln` file with parse errors cannot contribute symbols to the DAG. The importer fails with the nested error list. Fix the imported file first.
+
+---
+
+### IM-003 · circular imports are rejected
+**Status:** PLANNED (v2.1 compiler)  **Diagnostic:** LLN-IMPORT-003
+
+If file A imports file B and file B imports file A (directly or transitively), the import chain is circular. The compiler detects the cycle and emits `LLN-IMPORT-003` on the second edge that closes the cycle.
+
+---
+
+### IM-004 · imported symbol collisions are a warning
+**Status:** PLANNED (v2.1 compiler)  **Diagnostic:** LLN-IMPORT-004 (warning)
+
+If an imported symbol name conflicts with a locally-defined name, the local definition wins and `LLN-IMPORT-004` is emitted as a warning. Use explicit aliases (`import "./path.lln" as X`) to avoid collisions.
+
+---
+
+## AC — Access Block Rules (new in v2.1)
+
+### AC-001 · access {} grant must reference a known capability name
+**Status:** PLANNED (v2.1 governance verifier)  **Diagnostic:** LLN-ACCESS-001 (warning)
+
+A `grant X` line in an `access {}` block must name a capability found in the capability registry. Typos and invented capability names produce a warning; full enforcement at Phase 5.
+
+```lln
+// ⚠️ LLN-ACCESS-001 — 'network.telepathy' not in capability registry
+access {
+  grant network.telepathy
+}
+```
+
+---
+
+### AC-002 · access {} grant capability must be declared in effects {}
+**Status:** PLANNED (v2.1 governance verifier)  **Diagnostic:** LLN-ACCESS-002 (warning)
+
+`access { grant X }` is a boundary declaration. Granting a capability that is not listed in the flow's `effects {}` is likely an authoring error — the capability cannot be exercised if the effect is not declared. Emits a warning.
+
+```lln
+// ⚠️ LLN-ACCESS-002 — grant references network.outbound but effects {} doesn't declare it
+flow example() -> Void
+contract {
+  intent { "Example flow." }
+  effects { audit.write }
+}
+access {
+  grant network.outbound   // LLN-ACCESS-002: not in effects {}
+}
+{ ... }
+```
+
+---
+
+## AS — Assimilation Rules (new in v2.1)
+
+### AS-001 · assimilate plugins must be declared in boot.lln
+**Status:** PLANNED (v2.1 compiler)  **Diagnostic:** LLN-ASSIMILATE-001 (warning)
+
+Hot-Code Residency plugins (`import plugin assimilate`) are boot-time only. Declaring them outside `boot.lln` is a governance violation — assimilation cannot be triggered at runtime after the DSS bootstrap completes.
+
+---
+
+### AS-002 · assimilation_memory_budget must be declared
+**Status:** PLANNED (v2.1 compiler)  **Diagnostic:** LLN-ASSIMILATE-002 (warning)
+
+Any file that assimilates a plugin must declare `assimilation_memory_budget` in its `governance {}` block. Without a budget cap, the DSS cannot enforce memory isolation for the hot-code resident.
+
+---
+
+### AS-003 · assimilated plugin must have an access { grant } block
+**Status:** PLANNED (v2.1 compiler)  **Diagnostic:** LLN-ASSIMILATE-003 (error)
+
+An assimilated plugin with no `access { grant }` block inherits no capabilities — it cannot perform any governed operation. This is almost always an authoring error. `LLN-ASSIMILATE-003` is a hard error: the assimilation is rejected until an explicit `access {}` block is added.
+
+```lln
+// ❌ WRONG — LLN-ASSIMILATE-003
+import plugin assimilate "./crypto.lln" as crypto {
+  contract { intent { "Fast crypto routines." } }
+  // no access {} block — error
+}
+
+// ✅ CORRECT
+import plugin assimilate "./crypto.lln" as crypto {
+  contract { intent { "Fast crypto routines." } }
+  access { grant secret.access }
+}
+```
+
+---

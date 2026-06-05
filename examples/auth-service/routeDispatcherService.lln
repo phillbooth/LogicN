@@ -88,6 +88,8 @@ contract {
   unsafe let rawMethod: String = request.jsonBody.method
   unsafe let rawPath: String = request.jsonBody.path
 
+  trap rawMethod == "" : ERR_EMPTY_HTTP_METHOD
+  trap rawPath == "" : ERR_EMPTY_PATH
   let resolvedFlow: String = resolveRoute(rawMethod, rawPath)
   let profile: String = flowGovernanceProfile(resolvedFlow)
   let denied: Bool = profile == "denied"

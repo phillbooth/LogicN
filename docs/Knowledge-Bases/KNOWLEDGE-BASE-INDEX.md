@@ -1,6 +1,6 @@
 # LogicN Core Knowledge Base — Master Navigation Guide & TCB Map
 
-**Version:** 1.0 (2026-06-04)  
+**Version:** 1.1 (2026-06-05)  
 **Purpose:** Official index, validation hierarchy, and cross-reference schema for the LogicN language, compiler pipelines, and governed runtime containment model. All implementation work must conform to the specifications mapped here.
 
 ---
@@ -48,10 +48,11 @@
 | Document | Tier | Responsibility | Key Concepts |
 |---|---|---|---|
 | `architecture-charter.md` | Layer 0: Principles | Absolute invariant axioms. No Rust host deps, pure declarative WASI TCB, security-first. | 12-Category Complete Mediation Model, foundational philosophy |
-| `logicn-governance-rules.md` | Layer 1: Hard Rules | 14-category rule registry, 37+ LLN codes with enforce status. LLN-CAP-001, LLN-RES-001, LLN-OBS-001 enforced. | S/C/E/K/I/M/A/P/EC/ID/AU/LC/T/FG categories; :: separator, policy disambiguation |
+| `logicn-governance-rules.md` | Layer 1: Hard Rules | 18-category rule registry, 50+ LLN codes with enforce status. LLN-CAP-001, LLN-RES-001, LLN-OBS-001, LLN-IMPORT-001-004, LLN-ACCESS-001-002, LLN-ASSIMILATE-001-003 enforced/planned. Comment syntax. | S/C/E/K/I/M/A/P/EC/ID/AU/LC/T/FG/ST/BF/GT/IM/AC/AS categories |
 | `logicn-architecture-patterns.md` | Layer 2A: Layout Patterns | 9 concrete execution topologies, feature profiles, @experimental_profile directive. | drcm_stable_v0 / drcm_core_v1 profiles; patterns 1–9 |
 | `logicn-contract-authoring-guide.md` | Layer 2B: Syntax Reference | Official grammar blueprint — contract syntax, policy {} vs domain guard disambiguation. | Three-block structure: contract → policy → body |
-| `logicn-contract-clause-reference.md` | Layer 2B: Syntax Reference | Per-clause reference for all 17 contract sub-blocks including resilience/observability/invariant. | Status, syntax, auto-defaults, LLN codes, minimal examples |
+| `logicn-contract-clause-reference.md` | Layer 2B: Syntax Reference | Per-clause reference for all contract sub-blocks including resilience/observability/invariant, plus `access {}` Default Deny, `guard {}`, `gate {}`, `import`, `static`, `bitfield`. | Status, syntax, auto-defaults, LLN codes, minimal examples |
+| `logicn-tower-native-syntax.md` | Layer 2B: Syntax Reference | Tower-native security primitives §1–§10: `trap`, `governed`, `view()`, `match`, `static`, `bitfield`, `gate`, `access`, `import`, `import plugin`. | WAT output, V_DPM bitmask, Default Deny, assimilation, govComment manifest |
 | `logicn-deterministic-runtime-containment.md` | Layer 3: Physical Runtime | DRCM 7-module architecture, 4 locked decisions (DSS/DWI/V_DPM/step). | DSS.wasm, V_DPM 32-bit register, DWI 4MB isolates, fuel injection |
 
 ### Security, Governance & Policies
@@ -77,7 +78,7 @@
 
 | Document | Purpose |
 |---|---|
-| `logicn-build-roadmap.md` | **Authoritative build roadmap** — Phases 1–3 ✅, DRCM Phase 1 ✅, DRCM Phase 2 open |
+| `logicn-build-roadmap.md` | **Authoritative build roadmap** — v6.0: Phases 1–3 ✅, DRCM Phases 1–4 ✅, Tower-native v2.1 foundations (tasks #86–#94) ✅, Phase 5 open; 2888 nodes / 3625 edges |
 | `logicn-engineering-goals.md` | Three architectural goals with acceptance tests |
 | `logicn-wasmtime-baseline.md` | Benchmark baseline: governance-cost 3.2K/s → 1.88M/s after WASM |
 

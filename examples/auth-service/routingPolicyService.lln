@@ -30,7 +30,9 @@ contract {
   unsafe let effectCount: Int = request.jsonBody.effectCount
   unsafe let hasAI: Bool = request.jsonBody.hasAI
   unsafe let isCritical: Bool = request.jsonBody.isSafetyCritical
+  trap effectCount < 0 : ERR_NEGATIVE_EFFECT_COUNT
   let tier: String = preferredTier(effectCount, hasAI, isCritical)
+  trap tier == "" : ERR_INVALID_TIER
   let govClass: Int = tierGovernanceClass(tier)
   let retTier: String = tier
   safe mut tier = redact(tier)

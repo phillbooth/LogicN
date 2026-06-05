@@ -20,7 +20,7 @@
  * This WASM path:                                  ~1,880,000 ops/sec  (588×)
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
 import { join, basename, dirname } from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
@@ -39,6 +39,8 @@ Commands:
   logicn build <file.lln>                             compile → build/<name>.wasm + .wat + .lmanifest
   logicn check <file.lln>                             type-check + governance verify
   logicn check <file.lln> --diff                      show change class vs HEAD~1 before pushing
+  logicn check --what-if <policy.lln>                 shadow policy analysis (dry run)
+  logicn check --what-if <policy.lln> <file.lln>      what-if against single file
   logicn verify <file.lln>                            DRCM Phase 3 admission gate — verify manifest
   logicn manifest-to-dot <file.lln>                   export manifest as Graphviz DOT for DAG audit
   logicn init-env                                      validate capabilities against root policy
@@ -95,6 +97,121 @@ Baseline comparison (governance-cost):
       process.exit(2);
     }
     return;
+  }
+
+  // ── logicn check --what-if <policyFile> [targetFile]: Shadow Policy Analysis (#71) ─
+  // Runs governance verification against a proposed policy WITHOUT applying it.
+  // Shows which flows would fail, which effects would be denied, and change class.
+  // Exit 0 = policy compatible, Exit 2 = expansion violations
+  if (command === "check" && rest[0] === "--what-if" && rest[1]) {
+    const policyFile = rest[1];
+    const targetFile = rest[2]; // optional: target specific .lln file
+
+    if (!existsSync(policyFile)) {
+      console.error(`❌ Policy file not found: ${policyFile}`);
+      process.exit(1);
+    }
+
+    console.log(`\n🔍 Shadow Policy Analysis — What-If Mode`);
+    console.log(`   Policy:  ${policyFile}`);
+    console.log(`   Target:  ${targetFile ?? "all .lln files in build/"}`);
+    console.log(`   Status:  DRY RUN — no changes applied\n`);
+
+    // Read the shadow policy file
+    const shadowPolicyContent = readFileSync(policyFile, "utf-8");
+
+    // Parse to extract policy name and permitted_effects
+    const policyNameMatch = shadowPolicyContent.match(/policy\s+(\w+)\s*\{/);
+    const policyName = policyNameMatch?.[1] ?? "ShadowPolicy";
+
+    // Extract permitted_effects from shadow policy
+    const permittedEffectsMatch = shadowPolicyContent.match(/permitted_effects\s*\{([^}]*)\}/s);
+    const permittedEffects = permittedEffectsMatch?.[1]
+      ?.split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 0 && !l.startsWith('//') && !l.startsWith(';'))
+      ?? [];
+
+    // Extract enforced_limits from shadow policy
+    const enforcedLimitsMatch = shadowPolicyContent.match(/enforced_limits\s*\{([^}]*)\}/s);
+    const enforcedLimits = enforcedLimitsMatch?.[1]
+      ?.split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 0 && !l.startsWith('//') && !l.startsWith(';'))
+      ?? [];
+
+    // Find all .lln files to check
+    const llnFiles = targetFile
+      ? [targetFile]
+      : readdirSync(".", { recursive: true })
+          .filter(f => String(f).endsWith(".lln") && !String(f).includes("node_modules"))
+          .map(f => String(f))
+          .slice(0, 20); // cap at 20
+
+    // Analyse each file against the shadow policy
+    let violations = 0;
+    let warnings = 0;
+    let compatible = 0;
+    const report = [];
+
+    for (const llnFile of llnFiles) {
+      if (!existsSync(llnFile)) continue;
+      const src = readFileSync(llnFile, "utf-8");
+
+      // Extract declared effects from the file
+      const effectsMatches = [...src.matchAll(/effects\s*\{([^}]*)\}/sg)];
+      const declaredEffects = effectsMatches.flatMap(m =>
+        (m[1] ?? "").split('\n')
+          .map(l => l.trim())
+          .filter(l => l.length > 0 && !l.startsWith('//') && !l.startsWith(';'))
+      );
+
+      // Check which effects would be blocked by the shadow policy
+      const blockedEffects = declaredEffects.filter(eff => {
+        const effName = eff.replace(/^allow\s+/, "").trim();
+        // If permitted_effects is empty, all are allowed (no restriction)
+        if (permittedEffects.length === 0) return false;
+        // Check if the effect is covered by the policy's permitted list
+        return !permittedEffects.some(pe => {
+          const peName = pe.replace(/^allow\s+/, "").trim();
+          return peName === effName || peName === effName.split('.')[0] + '.*';
+        });
+      });
+
+      if (blockedEffects.length > 0) {
+        violations++;
+        report.push({
+          file: llnFile,
+          status: "❌ VIOLATION",
+          blocked: blockedEffects,
+          allowed: declaredEffects.filter(e => !blockedEffects.includes(e)),
+        });
+      } else if (declaredEffects.length > 0) {
+        compatible++;
+        report.push({ file: llnFile, status: "✅ compatible", blocked: [], allowed: declaredEffects });
+      }
+    }
+
+    // Print report
+    for (const entry of report) {
+      console.log(`  ${entry.status}  ${entry.file}`);
+      if (entry.blocked.length > 0) {
+        console.log(`    Would block: ${entry.blocked.join(', ')}`);
+      }
+    }
+
+    // Summary
+    const changeClass = violations > 0 ? "TIGHTENING" : "NEUTRAL";
+    console.log(`\n─────────────────────────────────────────────────`);
+    console.log(`  Shadow Policy: ${policyName}`);
+    console.log(`  Change Class:  ${changeClass}`);
+    console.log(`  Compatible:    ${compatible} file(s)`);
+    console.log(`  Violations:    ${violations} file(s) — would fail under this policy`);
+    console.log(`  Warnings:      ${warnings}`);
+    console.log(`\n  📋 This is a DRY RUN — policy '${policyName}' has NOT been applied.`);
+    console.log(`     To apply: cp ${policyFile} governance/${policyName}.lln && logicn init-env\n`);
+
+    process.exit(violations > 0 ? 2 : 0);
   }
 
   const m = await import(compilerPath);

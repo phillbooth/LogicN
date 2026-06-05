@@ -1,6 +1,6 @@
 # LogicN — Topological Graph Engine
 
-**Version:** 1.0 (2026-06-04)  
+**Version:** 1.1 (2026-06-05)  
 **Purpose:** Integrates the Governed Tower with topology-aware execution enforcement.
 Evolves LogicN from a deterministic sandbox into a **Topology-Aware Governance Platform**.
 
@@ -174,6 +174,35 @@ a probabilistic vector model, but with zero false-positive rate.
 
 When Bit 8 (`dag_edge_valid`) is 0, the capability check O(1) AND operation always returns 0
 regardless of other bits — **topology check runs BEFORE capability check**.
+
+---
+
+### `gate {}` — Admission Guard Integration
+
+The `gate(condition)` syntax maps directly to V_DPM bit 8 (`dag_edge_valid`) in the topology layer.
+
+At the architectural level:
+1. Compiler records `gate(condition)` → `dag_check_required: true` in flow manifest
+2. DSS.wasm checks bit 8 before dispatching to any flow inside a gate block
+3. If bit 8 is 0 (DAG transition not authorized) → `unreachable` trap → LLN-INV-000 AuditEvent
+
+The `condition` in `gate(condition)` maps to a Domain Guard Policy name. At Phase 5, the
+pre-compiled decision tree from the PolicyResolutionDAG (CBOR Tag 416) is used for the O(1) lookup:
+
+```
+gate(admin_only)
+    ↓
+Compiler looks up 'admin_only' in knownDomainGuards
+    ↓
+Records { gateCondition: "admin_only", bit: 8 } in .lmanifest ProofObligation (Tag 403)
+    ↓
+DSS.wasm: before dispatch → V_DPM & 0x100 (bit 8) → if 0 → unreachable
+```
+
+**Stage A (now):** gate condition recorded in manifest; bit 8 check deferred to Phase 5.  
+**Phase 5 (DSS.wasm):** real `(if (i32.eqz (i32.and (global.get $vdpm) (i32.const 256))) (then unreachable))` emitted.
+
+**Governance rules:** `LLN-GATE-001` (unknown condition), `LLN-GATE-002` (gate on pure flow)
 
 ---
 

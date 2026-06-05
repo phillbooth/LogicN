@@ -1,0 +1,36 @@
+// v2.1 syntax test: access {}, static, bitfield, gate
+
+static FLOOR_PROOF = 3
+static MAX_RETRY = 3
+
+bitfield V_DPM_Test {
+  network_outbound: 0
+  storage_write: 1
+  secret_access: 2
+}
+
+gate(admin_only) {
+  flow adminAction(userId: String) -> Bool
+  contract {
+    intent "Admin-only action gated by admission guard"
+    effects { audit.write }
+  }
+  {
+    trap userId == "" : ERR_EMPTY_USER
+    return true
+  }
+}
+
+flow dataProcess(payload: String) -> Result<Bool, Error>
+contract {
+  intent "Process data with explicit access negotiation"
+  effects { database.write }
+}
+access {
+  purpose "data-processing"
+  allow String to "process"
+  deny RawInput
+}
+{
+  return Ok(true)
+}

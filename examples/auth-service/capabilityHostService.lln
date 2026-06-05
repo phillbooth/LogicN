@@ -1,15 +1,14 @@
 // Phase 42 — Capability Host in LogicN
 //
 // This declares the capability routing contract in LogicN source.
-// The capability host is what makes the runtime governance-first:
-// every side-effectful call routes through this governed layer before execution.
-//
-// This is the runtime-in-LogicN foundation for Phase 42-44 (75% milestone).
+// HTTP POST /capability/check  →  governance  →  capability policy check  →  response
 //
 // The TypeScript CapabilityHost handles execution; this .lln file declares
 // the GOVERNANCE CONTRACT that the host must satisfy.
-//
-//   HTTP POST /capability/check  →  governance  →  capability policy check  →  response
+
+;; The capability host is what makes the runtime governance-first:
+;; every side-effectful call routes through this governed layer before execution.
+;; This is the runtime-in-LogicN foundation for Phase 42-44 (75% milestone).
 
 // Capability policy: which effects are allowed in which contexts
 pure flow isEffectAllowedInContext(effect: String, context: String) -> Bool
@@ -17,33 +16,35 @@ contract {
   intent { "Check if an effect is allowed in the given execution context." }
 }
 {
-  // Network effects require explicit context
   if effect.contains("network") {
+    ;; network effects are denied in production and deterministic contexts
+    ;; — outbound calls bypass the governed DAG and create untracked side effects
     if context.contains("production") { return false }
     if context.contains("deterministic") { return false }
     return true
   }
 
-  // Database effects require governed context
   if effect.contains("database") {
+    ;; database mutations are denied in deterministic contexts
+    ;; — non-deterministic state changes invalidate proof reproducibility
     if context.contains("deterministic") { return false }
     return true
   }
 
-  // Audit writes are always allowed (governance requirement)
+  ;; audit writes are always permitted — governance requirement, cannot be denied
   if effect.contains("audit") { return true }
 
-  // Crypto effects are always allowed
+  ;; crypto effects are always permitted — used for governed proof verification
   if effect.contains("crypto") { return true }
 
-  // Secret reads require non-deterministic context
   if effect.contains("secret") {
+    ;; secret reads denied in deterministic contexts — vault I/O is non-deterministic
     if context.contains("deterministic") { return false }
     return true
   }
 
-  // File system reads/writes allowed in non-deterministic context
   if effect.contains("filesystem") {
+    ;; filesystem writes denied in deterministic contexts — same proof-reproducibility reason
     if context.contains("deterministic") { return false }
     return true
   }
@@ -67,7 +68,7 @@ contract {
   return 0
 }
 
-// The governed capability check endpoint
+// HTTP endpoint: check whether an effect is allowed in the caller's context
 secure flow checkCapability(readonly request: Request) -> Response
 contract {
   intent { "Resolve whether a requested effect is permitted in the caller's capability context." }
@@ -80,6 +81,8 @@ contract {
   unsafe let effect: String = request.jsonBody.effect
   unsafe let context: String = request.jsonBody.context
 
+  trap effect == "" : ERR_EMPTY_EFFECT
+  trap context == "" : ERR_EMPTY_CONTEXT
   let allowed: Bool = isEffectAllowedInContext(effect, context)
   let govClass: Int = effectGovernanceClass(effect)
 

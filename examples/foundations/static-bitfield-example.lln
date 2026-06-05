@@ -1,0 +1,45 @@
+/*
+ * Example: Static constants and bitfield registers
+ * Demonstrates compile-time constant folding and V_DPM bit definitions.
+ */
+
+;; Compile-time constants — zero memory overhead, folded at WAT emission
+static MAX_RETRIES = 3
+static MAX_PAYLOAD_SIZE_KB = 512
+static AUDIT_REQUIRED_THRESHOLD = 1000
+
+;; V_DPM capability register — the type-safe alternative to magic numbers
+bitfield ServiceCapabilities {
+  network_outbound:  0
+  secret_access:     2
+  audit_write:       3
+  database_write:    4
+}
+
+pure flow validatePayloadSize(sizeKb: Int) -> Bool
+contract {
+  intent "Validate payload is within configured limits"
+  effects {}
+  invariant {
+    ensure sizeKb > 0
+  }
+}
+{
+  ;; Bring the static constant into local scope before the trap condition.
+  ;; MAX_PAYLOAD_SIZE_KB folds to 512 at compile time — no runtime lookup.
+  let limit: Int = MAX_PAYLOAD_SIZE_KB
+  trap sizeKb > limit : ERR_PAYLOAD_TOO_LARGE
+  return true
+}
+
+pure flow getCapabilityMask() -> Int
+contract {
+  intent "Return the pre-computed bitmask for this service"
+  effects {}
+}
+{
+  ;; ServiceCapabilities.network_outbound = 1 (bit 0)
+  ;; ServiceCapabilities.database_write = 16 (bit 4)
+  ;; Combined mask is computed at compile time — zero runtime arithmetic
+  return ServiceCapabilities.network_outbound
+}

@@ -1,0 +1,23 @@
+governed floor_3 flow validateAmount(amount: Int, maxLimit: Int) -> Bool
+contract {
+  intent "Validate amount is within governance limits"
+  effects {}
+  invariant {
+    ensure amount >= 0
+    ensure maxLimit > 0
+  }
+}
+{
+  trap amount > maxLimit : ERR_AMOUNT_EXCEEDS_LIMIT
+  trap amount < 0 : ERR_NEGATIVE_AMOUNT
+  return true
+}
+
+pure flow readSensitiveData(ptr: view(read | secret)) -> String
+contract {
+  intent "Read secret data via MMCP capability-masked pointer"
+  effects { allow secret.access }
+}
+{
+  return "data"
+}

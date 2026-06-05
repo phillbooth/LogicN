@@ -694,6 +694,8 @@ class Interpreter {
   private readonly diagnostics: Array<{ code: string; message: string }> = [];
   private readonly flowIndex: ReadonlyMap<string, AstNode>;
   private readonly fnIndex = new Map<string, AstNode>();
+  /** Compile-time constants from `static NAME = EXPR` declarations. Checked before scope lookup. */
+  private readonly staticConstants: Map<string, LogicNValue> = new Map();
   capabilityHost: CapabilityHost | undefined;
   private readonly enforcer: ContractEnforcer | undefined;
   private readonly runtimeOptions: InterpreterRuntimeOptions;
@@ -723,6 +725,81 @@ class Interpreter {
     this.runtimeOptions = runtimeOptions ?? {};
     this.executionPlans = executionPlans ?? new Map();
     this.manifest = manifest;
+    // Pre-process top-level staticDecl and bitfieldDecl nodes synchronously.
+    // Static constants are folded at construction time (compile-time simulation).
+    this.processTopLevelStatics(ast.children ?? []);
+  }
+
+  /**
+   * Pre-process top-level `static NAME = EXPR` and `bitfield NAME { ... }` declarations.
+   * Populates staticConstants map so that identifier lookups during flow execution
+   * resolve constants first — simulating compile-time constant folding.
+   */
+  private processTopLevelStatics(nodes: readonly AstNode[]): void {
+    const tempScope = new Map<string, BindingEntry>();
+    this.scopes.push(tempScope);
+    try {
+      for (const node of nodes) {
+        if (node.kind === "staticDecl") {
+          const name = node.value ?? "";
+          const valueExpr = node.children?.[0];
+          if (name !== "" && valueExpr !== undefined) {
+            const value = this.evalExprSync(valueExpr);
+            this.staticConstants.set(name, value);
+          }
+        } else if (node.kind === "bitfieldDecl") {
+          const registerName = node.value ?? "";
+          if (registerName === "") continue;
+          for (const child of node.children ?? []) {
+            const parts = (child.value ?? "").split(":");
+            if (parts.length !== 2) continue;
+            const fieldName = (parts[0] ?? "").trim();
+            const bitPos = parseInt((parts[1] ?? "").trim(), 10);
+            if (isNaN(bitPos)) continue;
+            const bitmask = 1 << bitPos;
+            // V_DPM.network_outbound = bitmask (e.g. 1 for bit 0)
+            this.staticConstants.set(`${registerName}.${fieldName}`, intVal(bitmask));
+            // V_DPM.BIT_network_outbound = raw bit position (e.g. 0)
+            this.staticConstants.set(`${registerName}.BIT_${fieldName}`, intVal(bitPos));
+          }
+        }
+      }
+    } finally {
+      this.scopes.pop();
+    }
+  }
+
+  /**
+   * Synchronous expression evaluator used only during static constant pre-processing.
+   * Handles the subset of expressions valid in static initializers: literals and identifiers
+   * that refer to previously-declared static constants.
+   */
+  private evalExprSync(node: AstNode): LogicNValue {
+    switch (node.kind) {
+      case "numberLiteral": {
+        const raw = (node.value ?? "0").replace(/_/g, "");
+        if (raw.startsWith("0x") || raw.startsWith("0X")) return { __tag: "int", value: parseInt(raw, 16) };
+        if (raw.startsWith("0b") || raw.startsWith("0B")) return { __tag: "int", value: parseInt(raw.slice(2), 2) };
+        if (raw.startsWith("0o") || raw.startsWith("0O")) return { __tag: "int", value: parseInt(raw.slice(2), 8) };
+        return raw.includes(".")
+          ? { __tag: "float", value: parseFloat(raw) }
+          : { __tag: "int", value: parseInt(raw, 10) };
+      }
+      case "stringLiteral":
+        return { __tag: "string", value: stripStringQuotes(node.value ?? "") };
+      case "boolLiteral":
+        return { __tag: "bool", value: node.value === "true" };
+      case "identifier": {
+        const name = node.value ?? "";
+        const constVal = this.staticConstants.get(name);
+        if (constVal !== undefined) return constVal;
+        if (name === "true")  return { __tag: "bool", value: true };
+        if (name === "false") return { __tag: "bool", value: false };
+        return { __tag: "int", value: 0 }; // unresolved in static context
+      }
+      default:
+        return { __tag: "int", value: 0 };
+    }
   }
 
   private getContext(flowName?: string): RuntimeContext {
@@ -1195,6 +1272,10 @@ class Interpreter {
         if (name === "true") return { __tag: "bool", value: true };
         if (name === "false") return { __tag: "bool", value: false };
         if (name === "Ok" || name === "Err" || name === "Some") return { __tag: "unresolved", name };
+        // Check compile-time constants first (static NAME = EXPR and bitfield fields)
+        if (this.staticConstants.has(name)) {
+          return this.staticConstants.get(name)!;
+        }
         const entry = this.lookup(name);
         if (entry !== undefined) {
           // R4C: LLN-RUNTIME-005 — check governed value cross-flow access
@@ -1760,6 +1841,15 @@ class Interpreter {
     const receiver = node.children?.[0];
     const memberName = node.value ?? "";
     if (receiver === undefined) return LLN_VOID;
+    // Check if this is a bitfield dotted access: REGISTER.field
+    // e.g. V_DPM.network_outbound → look up "V_DPM.network_outbound" in staticConstants
+    if (receiver.kind === "identifier") {
+      const receiverName = receiver.value ?? "";
+      const dottedKey = `${receiverName}.${memberName}`;
+      if (this.staticConstants.has(dottedKey)) {
+        return this.staticConstants.get(dottedKey)!;
+      }
+    }
     return this.evalMethodCall(await this.evalExpr(receiver), memberName, []);
   }
 

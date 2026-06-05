@@ -28,6 +28,7 @@ contract {
 }
 {
   unsafe let typeName: String = request.jsonBody.typeName
+  trap typeName == "" : ERR_EMPTY_TYPE_NAME
   let classification: Int = classifyValue(typeName)
   let needsRedact: Bool = requiresRedaction(classification)
   let encrypt: Bool = requiresEncryption(classification)

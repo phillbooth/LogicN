@@ -29,9 +29,12 @@ contract {
   unsafe let verified: Bool = request.jsonBody.verified
   unsafe let hasSignature: Bool = request.jsonBody.hasSignature
   unsafe let governanceFlagsMask: Int = request.jsonBody.governanceFlagsMask
+  trap schemaVersion == "" : ERR_EMPTY_SCHEMA_VERSION
+  trap governanceFlagsMask < 0 : ERR_INVALID_FLAGS
+  let isVerified: Bool = verified == true
   let versionValid: Bool = isValidManifestVersion(schemaVersion)
   let flagsValid: Bool = isValidGovernanceFlags(governanceFlagsMask)
-  let trustLevel: Int = manifestTrustLevel(verified, hasSignature, flagsValid)
+  let trustLevel: Int = manifestTrustLevel(isVerified, hasSignature, flagsValid)
   let accepted: Bool = trustLevel >= 3
   let retTrustLevel: Int = trustLevel
   let retAccepted: Bool = accepted

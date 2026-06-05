@@ -1,0 +1,53 @@
+/*
+ * Example: Guard domain ceilings and Differential Proof
+ * Shows how guard {} defines a permission ceiling that contracts must satisfy.
+ */
+
+;; Project-level domain ceiling — defines the maximum permissions for this service
+guard PaymentServiceGuard {
+  permitted_effects {
+    database.write
+    database.read
+    audit.write
+    network.outbound
+  }
+  enforced_limits {
+    max_memory_ceiling: 16MB
+    max_compute_budget: 1000
+  }
+}
+
+;; Narrower child guard — only a subset of the parent's effects
+guard InvoiceReadGuard {
+  parent_policy: PaymentServiceGuard
+  permitted_effects {
+    database.read
+  }
+}
+
+;; Flow that conforms to the ceiling — compiler validates effects ⊆ guard
+secure flow processPayment(amount: Int) -> Result<Bool, Error>
+contract [conforms_to: PaymentServiceGuard] {
+  intent "Process a payment within the payment service ceiling"
+  effects { database.write, audit.write }
+  invariant {
+    ensure amount > 0
+    ensure amount <= 1000000
+  }
+}
+{
+  trap amount <= 0 : ERR_ZERO_AMOUNT
+  trap amount > 1000000 : ERR_AMOUNT_TOO_LARGE
+  return Ok(true)
+}
+
+;; Flow that conforms to narrower child guard
+secure flow getInvoiceTotal(invoiceId: String) -> Int
+contract [conforms_to: InvoiceReadGuard] {
+  intent "Read invoice total — read-only, no mutations"
+  effects { database.read }
+}
+{
+  trap invoiceId == "" : ERR_EMPTY_INVOICE_ID
+  return 0
+}

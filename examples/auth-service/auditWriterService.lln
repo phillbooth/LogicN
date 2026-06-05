@@ -15,18 +15,23 @@ contract {
     "CapabilityResolved"   => return "medium"
     "HealthCheck"          => return "low"
     "RateStatusCheck"      => return "low"
+    ;; GovernanceDenial is always critical — a denied governance check must be
+    ;; surfaced immediately; it indicates a capability escalation attempt
     "GovernanceDenial"     => return "critical"
+    ;; PatientAccess carries PII — mandatory high severity for HIPAA compliance
     "PatientAccess"        => return "high"
     _                      => return "medium"
   }
 }
 
-// Validate that an audit event has required fields
+// Validate that an audit event has required fields before writing to the log
 pure flow validateAuditEvent(eventName: String, level: String) -> Bool
 contract {
   intent { "Ensure required fields are present before writing to the audit log." }
 }
 {
+  ;; both fields required — audit entries without eventName or level cannot be
+  ;; properly routed, retained, or included in the tamper-evident chain
   if eventName == "" {
     return false
   }
@@ -48,6 +53,9 @@ contract {
 {
   unsafe let rawEvent: String = request.jsonBody.event
   unsafe let rawLevel: String = request.jsonBody.level
+
+  trap rawEvent == "" : ERR_EMPTY_AUDIT_EVENT
+  trap rawLevel == "" : ERR_EMPTY_AUDIT_LEVEL
 
   let isValid: Bool = validateAuditEvent(rawEvent, rawLevel)
 

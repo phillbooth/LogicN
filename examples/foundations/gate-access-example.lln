@@ -1,0 +1,46 @@
+/*
+ * Example: gate {} admission guards and access {} Default Deny
+ * Demonstrates flow-level access control and capability negotiation.
+ */
+
+;; Domain ceiling for administrative operations
+guard AdminOperationsGuard {
+  permitted_effects {
+    database.write
+    audit.write
+    secret.access
+  }
+}
+
+;; gate {} — only flows inside are reachable from authorized callers
+;; The condition references a declared guard — compiler validates at Stage B
+gate(AdminOperationsGuard) {
+  secure flow deleteRecord(recordId: String) -> Result<Bool, Error>
+  contract {
+    intent "Delete a record — admin-only, audit-required"
+    effects { database.write, audit.write }
+    invariant {
+      ensure recordId != ""
+    }
+  }
+  {
+    ;; Only reachable if caller holds AdminOperationsGuard capability
+    trap recordId == "" : ERR_EMPTY_RECORD_ID
+    return Ok(true)
+  }
+}
+
+;; access {} with Default Deny — callers must have listed capabilities
+secure flow processRequest(payload: String) -> Result<Bool, Error>
+contract {
+  intent "Process an incoming request"
+  effects { allow database.write, allow audit.write }
+}
+access {
+  grant database.write
+  grant audit.write
+}
+{
+  trap payload == "" : ERR_EMPTY_PAYLOAD
+  return Ok(true)
+}

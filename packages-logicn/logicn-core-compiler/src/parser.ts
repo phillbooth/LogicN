@@ -73,6 +73,8 @@ export type AstNodeKind =
   // Governance blocks
   | "authorityDecl"
   | "policyDecl"
+  // v2.2 canonical domain ceiling declaration (replaces top-level named `policy Name {}`)
+  | "guardDecl"
   // Resource declarations (Phase 17)
   | "resourceDecl"
   // Literal expression nodes
@@ -84,7 +86,44 @@ export type AstNodeKind =
   // Grammar: @Identifier(key: "val", ...) { ... }
   // In --release: parsed + grammar-checked; verification/emission skipped
   // In --enable-experimental-profile=X: full pipeline applies to inner block
-  | "attributeDecl";
+  | "attributeDecl"
+  // Proof-tracing block (task #73) — assuming(flowRef, "claim") { ... }
+  // Declares that a proof established in a parent/sibling flow is being borrowed.
+  // The governance verifier (task #74) looks up the referenced flow's .lmanifest,
+  // checks the proof obligation exists + is signed, then elides the WAT gate.
+  | "assumingDecl"
+  // DRCM Phase 4 (task #39) — emergency transition declaration inside emergency {} block.
+  // Produced by parseEmergencyBlock(); validated by LLN-MONO-001/002.
+  // { kind: "emergencyTransitionDecl", value: signalName, children: [deny/action nodes] }
+  | "emergencyTransitionDecl"
+  // Tower-native syntax primitives
+  // trapDecl — hardware trap if condition is TRUE (inverted ensure). task #76 foundation.
+  // { kind: "trapDecl", value: errorCode, children: [conditionExpr] }
+  | "trapDecl"
+  // governedFlowDecl — flow qualified with a Tower floor constraint. DAG_CHECK (bit 8).
+  // { kind: "governedFlowDecl", value: "governed:<floor>:<flowName>", children: [...] }
+  | "governedFlowDecl"
+  // v2.1 Tower-native syntax (#86)
+  // accessDecl — inline capability negotiation block at the flow boundary (v2.1 replacement for inline policy {})
+  // { kind: "accessDecl", value: "access", children: [purpose/allow/deny/require nodes] }
+  | "accessDecl"
+  // staticDecl — compile-time constant declaration: static NAME = EXPR
+  // { kind: "staticDecl", value: "NAME", children: [valueExpr] }
+  | "staticDecl"
+  // bitfieldDecl — type-safe V_DPM capability register: bitfield NAME { field: BIT_POSITION }
+  // { kind: "bitfieldDecl", value: "NAME", children: [identifier nodes "field:bitpos"] }
+  | "bitfieldDecl"
+  // gateDecl — flow admission guard: gate(condition) { flow ... }
+  // { kind: "gateDecl", value: "conditionName", children: [flowDecl nodes] }
+  | "gateDecl"
+  // importPluginDecl — Standard bridged plugin (isolated, demand-loaded, transient)
+  // { kind: "importPluginDecl", value: "Alias", children: [path identifier, contractDecl?] }
+  | "importPluginDecl"
+  // assimilatedPluginDecl — Hot-Code Residency (pre-compiled, always-hot, stateless data)
+  // { kind: "assimilatedPluginDecl", value: "Alias", children: [path identifier, contractDecl?] }
+  // assimilate implies safe — deep DAG audit performed automatically
+  // governed by boot.lln assimilation_memory_budget
+  | "assimilatedPluginDecl";
 
 export interface SourceLocation {
   readonly file: string;
@@ -134,6 +173,17 @@ export interface AstNode {
    * Used by the governance verifier to perform the Differential Proof pass (#56).
    */
   readonly conformsTo?: string;
+  /**
+   * Proof-tracing block (task #73): the name of the flow whose .lmanifest is borrowed.
+   * Set on `assumingDecl` nodes — corresponds to the first argument of assuming(flowRef, "claim").
+   */
+  readonly flowRef?: string;
+  /**
+   * Proof-tracing block (task #73): the proof obligation claim string.
+   * Set on `assumingDecl` nodes — corresponds to the second argument of assuming(flowRef, "claim").
+   * Must match a ProofObligation entry in the referenced flow's .lmanifest.
+   */
+  readonly claim?: string;
   /**
    * Structural bitmask set by the parser on flow/fn declaration nodes.
    * Encodes: HasContract, HasEffects, HasCompute, TensorCandidate, ReadonlyInputs.
@@ -321,7 +371,7 @@ class Parser {
 
     if (tok.kind === "keyword") {
       switch (tok.value) {
-        case "import":   return this.parseImportDecl();
+        case "import":   return this.parseImportStatement();
         case "type":     return this.parseTypeDecl();
         case "record":   return this.parseRecordDecl();
         case "enum":     return this.parseEnumDecl();
@@ -329,11 +379,16 @@ class Parser {
         case "secure":   return this.parseSecureOrPureFlow();
         case "pure":     return this.parsePureFlow();
         case "guarded":  return this.parseGuardedFlow();
+        case "governed": return this.parseGovernedFlow();
         case "intent":   return this.parseIntentDecl();
         case "governance": return this.parseGenericBlock("governanceDecl");
         case "api":      return this.parseGenericBlock("apiDecl");
         case "authority": return this.parseAuthorityBlock();
+        case "access":   return this.parseAccessBlock();
         case "policy":   return this.parsePolicyBlock();
+        case "static":   return this.parseStaticDecl();
+        case "bitfield": return this.parseBitfieldDecl();
+        case "gate":     return this.parseGateBlock();
         case "compute":  return this.parseComputeTarget();
         case "prefer":   return this.parsePreferHint();
         case "route":    return this.parseRouteDecl();
@@ -384,12 +439,11 @@ class Parser {
           return undefined;
         }
         // LLN-SYNTAX-LEGACY-002: deprecated flow qualifiers — emit advisory, fall through to flow parse
-        case "safe":
-        case "guard": {
+        case "safe": {
           const legacyQual = tok.value;
           const nextPeek = this.peek(1);
           if (nextPeek.kind === "keyword" && nextPeek.value === "flow") {
-            // `safe flow` / `guard flow` — emit advisory and parse as `flow`
+            // `safe flow` — emit advisory and parse as `flow`
             this.emitWarning(
               "LLN-SYNTAX-LEGACY-002",
               "LegacyFlowQualifier",
@@ -404,6 +458,25 @@ class Parser {
           this.emitUnexpected(`Unexpected '${legacyQual}' at top level.`);
           this.skipTopLevelStatement();
           return undefined;
+        }
+        // `guard Name { ... }` — v2.2 canonical domain ceiling declaration
+        // `guard flow ...`     — legacy flow qualifier (emit advisory, fall through)
+        case "guard": {
+          const nextPeek = this.peek(1);
+          if (nextPeek.kind === "keyword" && nextPeek.value === "flow") {
+            // `guard flow` — legacy qualifier; emit advisory and parse as `flow`
+            this.emitWarning(
+              "LLN-SYNTAX-LEGACY-002",
+              "LegacyFlowQualifier",
+              `'guard flow' is a legacy qualifier. Use 'guarded flow'. This will become an error in a future version.`,
+              this.loc(),
+              `Replace 'guard flow' with 'guarded flow'.`,
+            );
+            this.advance(); // consume "guard", leave "flow" for parseFlowDecl
+            return this.parseFlowDecl("flow");
+          }
+          // Otherwise: `guard Name { ... }` — domain ceiling declaration
+          return this.parseGuardDecl();
         }
         case "unsafe": {
           // LLN-SYNTAX-008: unsafe let at top level — boundary data must be flow-owned
@@ -646,9 +719,20 @@ class Parser {
         flowClauses.push(this.parseAuthorityBlock());
         continue;
       }
-      // `policy { ... }` — data-sharing policy block (post-v1); parse structurally
+      // `access { ... }` — capability negotiation block at the flow boundary (v2.1 spec)
+      // Declares: purpose, allow X to "action", deny Y, require effect.name
+      // Replaces the deprecated inline `policy {}` block between contract and body.
+      // Represents the ACTIVE NEGOTIATION of rights at the call boundary —
+      // distinct from `contract {}` (static governance declarations).
+      if (this.currentIs("keyword", "access") || this.currentIs("identifier", "access")) {
+        flowClauses.push(this.parseAccessBlock());
+        continue;
+      }
+      // `policy { ... }` — DEPRECATED alias for `access {}` (v2.1: policy keyword reserved)
+      // Will emit LLN-SYNTAX-LEGACY-003 advisory in a future version.
+      // For now: silently accept and delegate to parsePolicyBlock().
       if (this.currentIs("keyword", "policy")) {
-        flowClauses.push(this.parsePolicyBlock());
+        flowClauses.push(this.parsePolicyBlock()); // existing handler, kept for compat
         continue;
       }
       // Bare `effects [...]` after contract block
@@ -810,6 +894,61 @@ class Parser {
     return this.parseFlowDecl("guarded");
   }
 
+  /**
+   * Parse: governed <floor_name> flow <name>(...) -> T contract { ... } { body }
+   *
+   * `governed` is a flow qualifier that declares which Tower floor this flow
+   * is authorized to execute in. The compiler:
+   *   1. Records the floor constraint in the manifest
+   *   2. Emits a DAG_CHECK (bit 8 = dag_edge_valid) as a WAT comment placeholder
+   *      (real enforcement is DRCM Phase 5 — DSS.wasm checks bit 8 at runtime)
+   *
+   * Valid floor names: floor_1, floor_2, floor_3, floor_4
+   * Also accepts short names: execution, containment, proof, attestation
+   *
+   * Example:
+   *   governed floor_3 flow verifyTransaction(tx: Transaction) -> Hash
+   *   contract { intent "Verify tx in the Proof Zone" }
+   *   { return tx.hash() }
+   */
+  private parseGovernedFlow(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "governed"
+    this.skipNewlines();
+
+    // Parse floor name (optional — defaults to "floor_3" if omitted and "flow" follows)
+    let floorName = "floor_3";
+    if ((this.current().kind === "identifier" || this.current().kind === "keyword")
+        && this.current().value !== "flow") {
+      floorName = this.current().value;
+      this.advance();
+      this.skipNewlines();
+    }
+
+    // Expect "flow" keyword
+    if (!this.currentIs("keyword", "flow") && !this.currentIs("identifier", "flow")) {
+      this.emit(
+        "LLN-PARSE-002",
+        "EXPECTED_FLOW_KEYWORD",
+        `Expected "flow" after "governed ${floorName}".`,
+        loc,
+        `Write: governed floor_3 flow name(params) -> ReturnType { ... }`,
+      );
+      return { kind: "identifier", value: "governed:error", location: loc };
+    }
+
+    // Parse the actual flow as a guarded flow, then attach floor metadata
+    const flowNode = this.parseFlowDecl("guarded");
+
+    // Re-tag as governedFlowDecl and encode floor in value:
+    // value = "governed:<floorName>:<originalFlowName>"
+    return {
+      ...flowNode,
+      kind: "governedFlowDecl" as AstNodeKind,
+      value: `governed:${floorName}:${flowNode.value ?? ""}`,
+    };
+  }
+
   // ── Parameters ────────────────────────────────────────────────────────────
 
   private parseParamList(): AstNode[] {
@@ -893,8 +1032,39 @@ class Parser {
     const loc = this.loc();
     let value = "";
 
-    // Base type name
+    // view(cap1 | cap2) — MMCP capability-masked pointer type (task #78 foundation)
+    // Parses: view(read | secret) → typeRef with value "view:read|secret"
+    // The pipe | separates capability names inside view().
     const base = this.current();
+    if ((base.kind === "identifier" || base.kind === "keyword") && base.value === "view") {
+      this.advance(); // consume "view"
+      let capMask = "read";  // default: read-only
+      if (this.currentIs("symbol", "(")) {
+        this.advance(); // consume (
+        this.skipNewlines();
+        const caps: string[] = [];
+        while (!this.currentIs("symbol", ")") && !this.isEof()) {
+          const capTok = this.current();
+          if (capTok.kind === "identifier" || capTok.kind === "keyword") {
+            caps.push(capTok.value);
+            this.advance();
+          }
+          this.skipNewlines();
+          // consume | separator (may be operator or symbol depending on lexer)
+          if (this.currentIs("operator", "|") || this.currentIs("symbol", "|")) {
+            this.advance();
+            this.skipNewlines();
+          } else {
+            break; // no more caps
+          }
+        }
+        if (this.currentIs("symbol", ")")) this.advance(); // consume )
+        if (caps.length > 0) capMask = caps.join("|");
+      }
+      return { kind: "typeRef", value: `view:${capMask}`, location: loc };
+    }
+
+    // Base type name
     if (base.kind === "identifier" || base.kind === "keyword") {
       value += base.value;
       this.advance();
@@ -1087,6 +1257,10 @@ class Parser {
           this.emitUnexpected(`Expected 'let' or 'mut' after '${safetyPrefix}'.`);
           return undefined;
         }
+        // `trap CONDITION : ERROR_CODE` — hardware trap if condition is TRUE (task #76 foundation)
+        case "trap": return this.parseTrapStmt();
+        // `static NAME = EXPR` — compile-time constant (also valid inside flow bodies)
+        case "static": return this.parseStaticDecl();
         // `fallback <target>` inside compute blocks — consume silently as a hint node.
         case "fallback": {
           this.advance(); // consume "fallback"
@@ -1355,6 +1529,58 @@ class Parser {
     }
 
     return { kind: "ifStmt", location: loc, children };
+  }
+
+  /**
+   * Parse: trap CONDITION : ERROR_CODE
+   *
+   * Syntax: trap <condition_expr> : <ErrorIdentifier>
+   *
+   * Semantics: "If CONDITION is TRUE, fire a hardware trap immediately."
+   * This is the INVERSE of `ensure` — trap fires when the condition holds (failure case).
+   *
+   * Differences from `ensure`:
+   *  - `ensure X > 0`         → trap if X <= 0 (test the positive; fires on negative)
+   *  - `trap X <= 0 : ERR_X`  → trap if X <= 0 (test the negative; fires on positive)
+   * Both produce identical WAT, but `trap` carries a named error code for AuditEvent emission.
+   *
+   * The error code is stored in the trapDecl node and flows into:
+   *  - ProofObligation record (CBOR Tag 403) as trapKind
+   *  - AuditEvent (CBOR Tag 410) trapKind field when the trap fires at runtime
+   *
+   * Example:
+   *   trap amount > balance : ERR_INSUFFICIENT_FUNDS
+   *   trap userId == "" : ERR_EMPTY_USER_ID
+   *   trap !isValid : ERR_VALIDATION_FAILURE
+   */
+  private parseTrapStmt(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "trap"
+    this.skipNewlines();
+
+    // Parse the failure condition expression (same as any expression)
+    const condition = this.parseExpression();
+    this.skipNewlines();
+
+    // Parse optional ": ERROR_CODE" suffix
+    let errorCode = "ERR_TRAP";
+    if (this.currentIs("symbol", ":")) {
+      this.advance(); // consume ":"
+      this.skipNewlines();
+      const errTok = this.current();
+      if (errTok.kind === "identifier" || errTok.kind === "keyword") {
+        errorCode = errTok.value;
+        this.advance();
+        // Allow compound error codes: ERR_INSUFFICIENT_FUNDS (single identifier for now)
+      }
+    }
+
+    return {
+      kind: "trapDecl",
+      value: errorCode,
+      location: loc,
+      children: [condition],
+    };
   }
 
   private parseUnlessStmt(): AstNode {
@@ -2354,6 +2580,15 @@ class Parser {
   /**
    * Parses a `policy { purpose "tag" allow TypeRef to "action" deny TypeRef require effectName }` block.
    *
+   * @deprecated Use `access {}` for inline capability negotiation blocks.
+   *
+   * NOTE: The `policy` keyword is RESERVED for future State Mutation Governance
+   * (permitted transitions on `mut` variables — how state is allowed to change over time).
+   * See: logicn-build-roadmap.md — Tower-Native Syntax v2.1 spec.
+   *
+   * For now: accepted silently as an alias for `access {}`. Will become LLN-SYNTAX-LEGACY-003
+   * in a future version.
+   *
    * Syntax:
    *   policy {
    *     purpose "data-processing"
@@ -2461,6 +2696,29 @@ class Parser {
         continue;
       }
 
+      // Hierarchical Policy Inheritance: parent_policy: ParentPolicyName (task #72)
+      // Declares that this policy INHERITS from a parent policy ceiling.
+      // The governance verifier enforces: child permitted_effects ⊆ parent permitted_effects.
+      // This prevents privilege escalation through policy derivation.
+      // Syntax: parent_policy: FinanceDomainGuard
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "parent_policy") {
+        this.advance(); // consume "parent_policy"
+        this.skipNewlines();
+        // consume optional colon
+        if (this.currentIs("symbol", ":")) {
+          this.advance();
+          this.skipNewlines();
+        }
+        let parentName = "";
+        if (this.current().kind === "identifier") {
+          parentName = this.current().value;
+          this.advance();
+        }
+        children.push({ kind: "identifier", value: `parent_policy:${parentName}`, location: clauseLoc });
+        this.skipNewlines();
+        continue;
+      }
+
       // Domain Guard Policy: permitted_effects { effect.name, ... }
       // Stores each effect name as an effectRef child of a "permitted_effects" sub-block.
       if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "permitted_effects") {
@@ -2486,8 +2744,9 @@ class Parser {
       }
 
       // Emergency overlay: emergency { on X { deny Y } }
+      // DRCM Phase 4 (task #39): delegate to parseEmergencyBlock() for structured AST.
       if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "emergency") {
-        children.push(this.parseContractSubBlock("emergency"));
+        children.push(this.parseEmergencyBlock());
         this.skipNewlines();
         continue;
       }
@@ -2503,6 +2762,566 @@ class Parser {
 
     this.expect("symbol", "}");
     return { kind: "policyDecl", value: policyName, location: loc, children };
+  }
+
+  /**
+   * Parse: guard Name { permitted_effects {} enforced_limits {} parent_policy: X emergency {} }
+   *
+   * `guard` is the v2.2 canonical name for top-level domain ceiling declarations.
+   * Replaces the `policy Name {}` form. The governance verifier performs the
+   * Differential Proof: contract [conforms_to: Name] effects ⊆ guard.permitted_effects.
+   *
+   * Accepts all the same sub-blocks as parsePolicyBlock() for named policies.
+   * Stored as: { kind: "guardDecl", value: guardName, children: [...clauses] }
+   */
+  private parseGuardDecl(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "guard"
+    this.skipNewlines();
+
+    let guardName = "guard";
+    if (this.current().kind === "identifier") {
+      guardName = this.current().value;
+      this.advance();
+      this.skipNewlines();
+    }
+
+    // Delegate to the same sub-block parsing as parsePolicyBlock but produce guardDecl
+    const children: AstNode[] = [];
+
+    if (!this.currentIs("symbol", "{")) {
+      return { kind: "guardDecl", value: guardName, location: loc, children };
+    }
+
+    this.advance(); // consume {
+    this.skipNewlines();
+
+    while (!this.currentIs("symbol", "}") && !this.isEof()) {
+      const tok = this.current();
+      const clauseLoc = this.loc();
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "parent_policy") {
+        this.advance();
+        this.skipNewlines();
+        if (this.currentIs("symbol", ":")) { this.advance(); this.skipNewlines(); }
+        let parentName = "";
+        if (this.current().kind === "identifier") { parentName = this.current().value; this.advance(); }
+        children.push({ kind: "identifier", value: `parent_policy:${parentName}`, location: clauseLoc });
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "permitted_effects") {
+        children.push(this.parseDomainGuardList("permitted_effects"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "permitted_capabilities") {
+        children.push(this.parseContractSubBlock("permitted_capabilities"));
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "enforced_limits") {
+        children.push(this.parseDomainGuardLimits());
+        this.skipNewlines();
+        continue;
+      }
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "emergency") {
+        children.push(this.parseEmergencyBlock());
+        this.skipNewlines();
+        continue;
+      }
+
+      if (this.currentIs("symbol", "{")) this.skipBalancedBraces();
+      else this.advance();
+      this.skipNewlines();
+    }
+
+    this.expect("symbol", "}");
+    return { kind: "guardDecl", value: guardName, location: loc, children };
+  }
+
+  /**
+   * Parse `access { purpose allow deny require }` — capability negotiation at the flow boundary.
+   *
+   * This is the v2.1 replacement for inline `policy {}`. Position: between `contract {}` and `{ body }`.
+   *
+   * Syntax:
+   *   access {
+   *     purpose "data-processing"
+   *     allow String to "process"
+   *     deny RawInput
+   *     require effect.name
+   *   }
+   *
+   * Stored as: { kind: "accessDecl", value: "access", children: [...clauses] }
+   *
+   * Distinct from top-level named Domain Guard policies:
+   *   - No `parent_policy:` clause (that's for named policies only)
+   *   - No `emergency {}` sub-block (that's for named policies only)
+   *   - Just: purpose, allow X to "action", deny Y, require effect.name
+   */
+  private parseAccessBlock(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "access"
+    this.skipNewlines();
+
+    const children: AstNode[] = [];
+
+    if (!this.currentIs("symbol", "{")) {
+      return { kind: "accessDecl", value: "access", location: loc, children };
+    }
+
+    this.advance(); // consume {
+    this.skipNewlines();
+
+    while (!this.currentIs("symbol", "}") && !this.isEof()) {
+      const tok = this.current();
+      const clauseLoc = this.loc();
+
+      // purpose "machine-readable-tag"
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "purpose") {
+        this.advance();
+        this.skipNewlines();
+        let purposeText = "";
+        if (this.current().kind === "string") {
+          const raw = this.current().value;
+          purposeText = raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw;
+          this.advance();
+        } else if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+          purposeText = this.current().value;
+          this.advance();
+        }
+        children.push({ kind: "identifier", value: `purpose:${purposeText}`, location: clauseLoc });
+        this.skipNewlines();
+        continue;
+      }
+
+      // allow TypeRef [to "action"]
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "allow") {
+        this.advance();
+        this.skipNewlines();
+        const typeRef = this.parseTypeRef();
+        let action = "";
+        this.skipNewlines();
+        if ((this.current().kind === "keyword" || this.current().kind === "identifier") && this.current().value === "to") {
+          this.advance();
+          this.skipNewlines();
+          if (this.current().kind === "string") {
+            const raw = this.current().value;
+            action = raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw;
+            this.advance();
+          }
+        }
+        children.push({ kind: "typeRef", value: `allow:${typeRef.value ?? ""}${action !== "" ? ` to ${action}` : ""}`, location: clauseLoc });
+        this.skipNewlines();
+        continue;
+      }
+
+      // deny TypeRef
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "deny") {
+        this.advance();
+        this.skipNewlines();
+        const typeRef = this.parseTypeRef();
+        children.push({ kind: "typeRef", value: `deny:${typeRef.value ?? ""}`, location: clauseLoc });
+        this.skipNewlines();
+        continue;
+      }
+
+      // require effectName (dot-path)
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "require") {
+        this.advance();
+        this.skipNewlines();
+        let req = "";
+        if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+          req = this.current().value;
+          this.advance();
+          while (this.currentIs("symbol", ".")) {
+            this.advance();
+            if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+              req += "." + this.current().value;
+              this.advance();
+            } else break;
+          }
+        }
+        children.push({ kind: "effectRef", value: req.trim(), location: clauseLoc });
+        this.skipNewlines();
+        continue;
+      }
+
+      // grant capability.name — Hot-Code Residency / assimilate plugin capability grant.
+      // Declares a V_DPM bit to pre-warm at boot. Stored as identifier with "grant:" prefix.
+      // Syntax: grant network.outbound  → identifier { value: "grant:network.outbound" }
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "grant") {
+        this.advance(); // consume "grant"
+        this.skipNewlines();
+        let cap = "";
+        if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+          cap = this.current().value;
+          this.advance();
+          while (this.currentIs("symbol", ".")) {
+            this.advance();
+            if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+              cap += "." + this.current().value;
+              this.advance();
+            } else break;
+          }
+        }
+        children.push({ kind: "identifier", value: `grant:${cap}`, location: clauseLoc });
+        this.skipNewlines();
+        continue;
+      }
+
+      // Skip unrecognised content
+      if (this.currentIs("symbol", "{")) {
+        this.skipBalancedBraces();
+      } else {
+        this.advance();
+      }
+      this.skipNewlines();
+    }
+
+    this.expect("symbol", "}");
+    return { kind: "accessDecl", value: "access", location: loc, children };
+  }
+
+  /**
+   * Parse: static NAME = EXPR
+   *
+   * Defines a compile-time constant. The compiler substitutes the value everywhere
+   * NAME appears — zero memory overhead, O(1) lookup.
+   *
+   * Used for: topology constants (MAX_NODES, FLOOR_PROOF), bitmask values (V_DPM bit positions).
+   *
+   * Syntax:
+   *   static MAX_NODES = 2867
+   *   static FLOOR_PROOF = 3
+   */
+  private parseStaticDecl(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "static"
+    this.skipNewlines();
+
+    let name = "";
+    if (this.current().kind === "identifier") {
+      name = this.current().value;
+      this.advance();
+    }
+    this.skipNewlines();
+
+    // consume "="
+    if (this.currentIs("operator", "=") || this.currentIs("symbol", "=")) {
+      this.advance();
+      this.skipNewlines();
+    }
+
+    const valueExpr = this.parseExpression();
+
+    return {
+      kind: "staticDecl",
+      value: name,
+      location: loc,
+      children: [valueExpr],
+    };
+  }
+
+  /**
+   * Parse: bitfield NAME { field: BIT_POSITION, ... }
+   *
+   * Defines a type-safe V_DPM capability register. The compiler generates:
+   *   NAME.field_name = (1 << BIT_POSITION)   for bitmask values
+   *   NAME.BIT_field_name = BIT_POSITION        for bit positions
+   *
+   * Example:
+   *   bitfield V_DPM {
+   *     network_outbound: 0
+   *     storage_write: 1
+   *     secret_access: 2
+   *   }
+   *   // Usage: V_DPM.network_outbound = 1, V_DPM.storage_write = 2
+   *
+   * Used for: V_DPM governance registers, MMCP capability masks.
+   * Replaces the verbose `pure flow VDPM_BIT_*() -> Int { return N }` pattern.
+   */
+  private parseBitfieldDecl(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "bitfield"
+    this.skipNewlines();
+
+    let name = "";
+    if (this.current().kind === "identifier") {
+      name = this.current().value;
+      this.advance();
+      this.skipNewlines();
+    }
+
+    const fields: AstNode[] = [];
+
+    if (!this.currentIs("symbol", "{")) {
+      return { kind: "bitfieldDecl", value: name, location: loc, children: fields };
+    }
+
+    this.advance(); // consume {
+    this.skipNewlines();
+
+    while (!this.currentIs("symbol", "}") && !this.isEof()) {
+      const fieldLoc = this.loc();
+      const tok = this.current();
+
+      if (tok.kind === "identifier" || tok.kind === "keyword") {
+        const fieldName = tok.value;
+        this.advance();
+        this.skipNewlines();
+
+        // consume optional ":"
+        if (this.currentIs("symbol", ":")) {
+          this.advance();
+          this.skipNewlines();
+        }
+
+        // bit position (integer literal)
+        let bitPos = 0;
+        if (this.current().kind === "number") {
+          bitPos = parseInt(this.current().value, 10);
+          this.advance();
+        }
+
+        fields.push({
+          kind: "identifier",
+          value: `${fieldName}:${bitPos}`,
+          location: fieldLoc,
+        });
+      } else {
+        this.advance(); // skip unknown
+      }
+
+      // optional comma
+      if (this.currentIs("symbol", ",")) this.advance();
+      this.skipNewlines();
+    }
+
+    if (this.currentIs("symbol", "}")) this.advance();
+
+    return { kind: "bitfieldDecl", value: name, location: loc, children: fields };
+  }
+
+  /**
+   * Parse: gate(condition) { flow ... }
+   *
+   * Wraps a flow with an admission guard. The compiler inserts a V_DPM capability
+   * check (bit 8 = dag_edge_valid) at flow dispatch time. Only flows inside a gate
+   * block are reachable from specific caller contexts.
+   *
+   * Syntax:
+   *   gate(admin_only) {
+   *     flow withdraw(amount: Int) -> Result
+   *     contract { ... }
+   *     { body }
+   *   }
+   *
+   * The condition (e.g. admin_only) maps to a Domain Guard Policy name or a
+   * V_DPM capability bit. Verified at compile time via the knownDomainGuards registry.
+   *
+   * Multiple flows may be wrapped in a single gate block.
+   */
+  private parseGateBlock(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "gate"
+    this.skipNewlines();
+
+    // Optional (condition) — gate predicate / Domain Guard name
+    let condition = "";
+    if (this.currentIs("symbol", "(")) {
+      this.advance(); // consume (
+      this.skipNewlines();
+      while (!this.currentIs("symbol", ")") && !this.isEof()) {
+        if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+          condition += this.current().value;
+          this.advance();
+        } else {
+          this.advance();
+        }
+        this.skipNewlines();
+      }
+      if (this.currentIs("symbol", ")")) this.advance(); // consume )
+      this.skipNewlines();
+    }
+
+    const children: AstNode[] = [];
+
+    if (!this.currentIs("symbol", "{")) {
+      return { kind: "gateDecl", value: condition, location: loc, children };
+    }
+
+    this.advance(); // consume {
+    this.skipNewlines();
+
+    // Parse flows inside the gate block
+    while (!this.currentIs("symbol", "}") && !this.isEof()) {
+      this.skipNewlines();
+      const tok = this.current();
+
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "flow") {
+        // parseFlowDecl() expects to consume "flow" itself via this.expect("keyword", "flow")
+        children.push(this.parseFlowDecl("flow"));
+        this.skipNewlines();
+        continue;
+      }
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "secure") {
+        children.push(this.parseSecureOrPureFlow());
+        this.skipNewlines();
+        continue;
+      }
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "guarded") {
+        children.push(this.parseGuardedFlow());
+        this.skipNewlines();
+        continue;
+      }
+      // Unknown — skip
+      if (this.currentIs("symbol", "{")) this.skipBalancedBraces();
+      else this.advance();
+      this.skipNewlines();
+    }
+
+    if (this.currentIs("symbol", "}")) this.advance(); // consume }
+
+    return { kind: "gateDecl", value: condition, location: loc, children };
+  }
+
+  /**
+   * Parse: emergency { on signalName { deny cap, quarantine, emergency } ... }
+   *
+   * Produces: { kind: "identifier", value: "emergency:block", children: [
+   *   { kind: "emergencyTransitionDecl", value: "invariant_failure", children: [
+   *     { kind: "identifier", value: "deny:network.outbound" },
+   *     { kind: "identifier", value: "action:quarantine" },
+   *   ] },
+   *   ...
+   * ]}
+   *
+   * Called from parsePolicyBlock() for the `emergency { }` sub-block.
+   * The governance verifier (LLN-MONO-001/002) validates the transitions.
+   *
+   * DRCM Phase 4 (task #39).
+   */
+  private parseEmergencyBlock(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "emergency"
+    this.skipNewlines();
+
+    const transitions: AstNode[] = [];
+
+    if (!this.currentIs("symbol", "{")) {
+      return { kind: "identifier", value: "emergency:block", location: loc, children: transitions };
+    }
+
+    this.advance(); // consume {
+    this.skipNewlines();
+
+    while (!this.currentIs("symbol", "}") && !this.isEof()) {
+      const tok = this.current();
+
+      // on signalName { deny X, quarantine, emergency }
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "on") {
+        const transLoc = this.loc();
+        this.advance(); // consume "on"
+        this.skipNewlines();
+
+        // signal name
+        let signal = "any_failure";
+        if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+          signal = this.current().value;
+          this.advance();
+          // Handle compound signals like "invariant_failure" (already single identifier)
+        }
+        this.skipNewlines();
+
+        const actions: AstNode[] = [];
+
+        if (this.currentIs("symbol", "{")) {
+          this.advance(); // consume {
+          this.skipNewlines();
+
+          while (!this.currentIs("symbol", "}") && !this.isEof()) {
+            const actionTok = this.current();
+            const actionLoc = this.loc();
+
+            // deny effectName
+            if ((actionTok.kind === "keyword" || actionTok.kind === "identifier") && actionTok.value === "deny") {
+              this.advance(); // consume "deny"
+              this.skipNewlines();
+              let effName = "";
+              // dot-path effect name
+              if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+                effName = this.current().value;
+                this.advance();
+                while (this.currentIs("symbol", ".")) {
+                  this.advance();
+                  if (this.current().kind === "identifier" || this.current().kind === "keyword") {
+                    effName += "." + this.current().value;
+                    this.advance();
+                  } else break;
+                }
+              }
+              actions.push({ kind: "identifier", value: `deny:${effName}`, location: actionLoc });
+              this.skipNewlines();
+              continue;
+            }
+
+            // quarantine — set quarantine_engaged flag
+            if ((actionTok.kind === "keyword" || actionTok.kind === "identifier") && actionTok.value === "quarantine") {
+              this.advance();
+              actions.push({ kind: "identifier", value: "action:quarantine", location: actionLoc });
+              this.skipNewlines();
+              continue;
+            }
+
+            // emergency — set emergency_mode flag
+            if ((actionTok.kind === "keyword" || actionTok.kind === "identifier") && actionTok.value === "emergency") {
+              this.advance();
+              actions.push({ kind: "identifier", value: "action:emergency_mode", location: actionLoc });
+              this.skipNewlines();
+              continue;
+            }
+
+            // halt — block all further execution
+            if ((actionTok.kind === "keyword" || actionTok.kind === "identifier") && actionTok.value === "halt") {
+              this.advance();
+              actions.push({ kind: "identifier", value: "action:halt", location: actionLoc });
+              this.skipNewlines();
+              continue;
+            }
+
+            // Unknown action — consume and skip
+            this.advance();
+            this.skipNewlines();
+          }
+
+          if (this.currentIs("symbol", "}")) this.advance(); // consume }
+        }
+
+        transitions.push({
+          kind: "emergencyTransitionDecl",
+          value: signal,
+          location: transLoc,
+          children: actions,
+        });
+        this.skipNewlines();
+        continue;
+      }
+
+      // Unknown content — skip
+      if (this.currentIs("symbol", "{")) this.skipBalancedBraces();
+      else this.advance();
+      this.skipNewlines();
+    }
+
+    if (this.currentIs("symbol", "}")) this.advance(); // consume outer }
+
+    return { kind: "identifier", value: "emergency:block", location: loc, children: transitions };
   }
 
   /**
@@ -3244,6 +4063,26 @@ class Parser {
         continue;
       }
 
+      // `assuming(flowRef, "claim") { ... }` — explicit proof-tracing assertion (#73).
+      // Declares that a proof established in a parent/sibling flow is being borrowed.
+      // The governance verifier (task #74) looks up the referenced flow's .lmanifest,
+      // checks the proof obligation exists + is signed, then elides the WAT gate.
+      // Syntax: assuming(flowName, "ensure condition") { optional_notes }
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "assuming") {
+        children.push(this.parseAssumingDecl());
+        this.skipNewlines();
+        continue;
+      }
+
+      // `access { grant X grant Y ... }` — capability negotiation block inside contract.
+      // Used by import plugin assimilate contracts to declare pre-warmed V_DPM bits.
+      // Parsed as an accessDecl child so verifiers can locate grant declarations.
+      if ((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "access") {
+        children.push(this.parseAccessBlock());
+        this.skipNewlines();
+        continue;
+      }
+
       // Skip unrecognised content gracefully
       if (this.currentIs("symbol", "{")) {
         this.skipBalancedBraces();
@@ -3255,6 +4094,81 @@ class Parser {
 
     this.expect("symbol", "}");
     return { kind: "contractDecl", location: loc, children, ...(conformsTo !== undefined && { conformsTo }) };
+  }
+
+  /**
+   * Parse: assuming(flowRef, "claim") { optional body }
+   *
+   * Produces: { kind: "assumingDecl", flowRef: string, claim: string, children: [] }
+   *
+   * flowRef  — the name of the flow whose .lmanifest we look up
+   * claim    — the proof obligation claim string (must match ProofObligation in manifest)
+   *
+   * Used by governance verifier (task #74) to perform manifest-lookup proof verification.
+   * On success: WAT gate is elided (zero overhead). On failure: LLN-ASSUME-001.
+   */
+  private parseAssumingDecl(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "assuming"
+    this.skipNewlines();
+
+    let flowRef = "";
+    let claim = "";
+
+    // Parse (flowRef, "claim") argument list
+    if (this.currentIs("symbol", "(")) {
+      this.advance(); // consume (
+      this.skipNewlines();
+
+      // flowRef — identifier
+      if (this.current().kind === "identifier") {
+        flowRef = this.current().value;
+        this.advance();
+      }
+      this.skipNewlines();
+
+      // comma separator
+      if (this.currentIs("symbol", ",")) {
+        this.advance();
+        this.skipNewlines();
+      }
+
+      // claim — string literal
+      if (this.current().kind === "string") {
+        claim = this.current().value;
+        this.advance();
+      }
+      this.skipNewlines();
+
+      if (this.currentIs("symbol", ")")) {
+        this.advance(); // consume )
+        this.skipNewlines();
+      }
+    }
+
+    // Optional body block { notes or sub-expressions }
+    const children: AstNode[] = [];
+    if (this.currentIs("symbol", "{")) {
+      this.advance(); // consume {
+      this.skipNewlines();
+      while (!this.currentIs("symbol", "}") && !this.isEof()) {
+        // Consume any content inside the body as plain identifiers/strings
+        children.push({ kind: "identifier", value: this.current().value ?? "", location: this.loc() });
+        this.advance();
+        this.skipNewlines();
+      }
+      if (this.currentIs("symbol", "}")) {
+        this.advance(); // consume }
+      }
+    }
+
+    return {
+      kind: "assumingDecl",
+      flowRef,
+      claim,
+      location: loc,
+      children,
+    };
   }
 
   /**
@@ -3935,6 +4849,106 @@ class Parser {
 
   // ── Import / type / enum stubs ────────────────────────────────────────────
 
+  /**
+   * Parse all import forms:
+   *
+   *   import "./path.lln"
+   *     → DAG merge (app file, same security context as boot.lln)
+   *     → importDecl node (existing)
+   *
+   *   import plugin safe "./path.lln" as Alias { contract { access { grant X } } }
+   *     → Standard bridged plugin (isolated, demand-loaded, transient)
+   *     → importPluginDecl node
+   *
+   *   import plugin assimilate "./path.lln" as Alias { contract { ... } }
+   *     → Hot-Code Residency (pre-compiled, always-hot, stateless data)
+   *     → assimilatedPluginDecl node
+   *     → assimilate implies safe — deep DAG audit performed automatically
+   *     → governed by boot.lln assimilation_memory_budget
+   *
+   * The `as Alias` name is stored in node.value.
+   * The plugin path is stored as the first child (identifier node).
+   * The contract block is parsed as a contractDecl child.
+   */
+  private parseImportStatement(): AstNode {
+    const loc = this.loc();
+    this.advance(); // consume "import"
+    this.skipNewlines();
+
+    // Check for "plugin" modifier
+    const tok = this.current();
+    if (!((tok.kind === "keyword" || tok.kind === "identifier") && tok.value === "plugin")) {
+      // Plain import "./path" — existing DAG merge form
+      let value = "";
+      while (!this.isEof() && this.current().kind !== "newline") {
+        value += this.current().value + " ";
+        this.advance();
+      }
+      return { kind: "importDecl", value: value.trim(), location: loc };
+    }
+
+    this.advance(); // consume "plugin"
+    this.skipNewlines();
+
+    // Determine plugin kind: safe | assimilate
+    let pluginKind: "importPluginDecl" | "assimilatedPluginDecl" = "importPluginDecl";
+    const modTok = this.current();
+    if ((modTok.kind === "keyword" || modTok.kind === "identifier") && modTok.value === "assimilate") {
+      pluginKind = "assimilatedPluginDecl";
+      this.advance(); // consume "assimilate"
+      this.skipNewlines();
+    } else if ((modTok.kind === "keyword" || modTok.kind === "identifier") && modTok.value === "safe") {
+      pluginKind = "importPluginDecl";
+      this.advance(); // consume "safe"
+      this.skipNewlines();
+    }
+
+    // Plugin file path (string literal)
+    let pluginPath = "";
+    if (this.current().kind === "string") {
+      const raw = this.current().value;
+      pluginPath = raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw;
+      this.advance();
+      this.skipNewlines();
+    }
+
+    // `as Alias` name
+    let alias = "";
+    if ((this.current().kind === "keyword" || this.current().kind === "identifier") && this.current().value === "as") {
+      this.advance(); // consume "as"
+      this.skipNewlines();
+      if (this.current().kind === "identifier") {
+        alias = this.current().value;
+        this.advance();
+        this.skipNewlines();
+      }
+    }
+
+    const children: AstNode[] = [];
+    // Store path as first child
+    children.push({ kind: "identifier", value: `path:${pluginPath}`, location: loc });
+
+    // Parse optional contract block { contract { ... } }
+    if (this.currentIs("symbol", "{")) {
+      this.advance(); // consume {
+      this.skipNewlines();
+      while (!this.currentIs("symbol", "}") && !this.isEof()) {
+        if ((this.current().kind === "keyword" || this.current().kind === "identifier") && this.current().value === "contract") {
+          children.push(this.parseContractDecl());
+          this.skipNewlines();
+          continue;
+        }
+        // Skip unknown content
+        if (this.currentIs("symbol", "{")) this.skipBalancedBraces();
+        else this.advance();
+        this.skipNewlines();
+      }
+      if (this.currentIs("symbol", "}")) this.advance();
+    }
+
+    return { kind: pluginKind, value: alias, location: loc, children };
+  }
+
   private parseImportDecl(): AstNode {
     const loc = this.loc();
     this.advance(); // consume "import"
@@ -4131,7 +5145,12 @@ class Parser {
   }
 
   private skipNewlines(): void {
-    while (this.current().kind === "newline" || this.current().kind === "comment" || this.current().kind === "docComment") {
+    while (
+      this.current().kind === "newline" ||
+      this.current().kind === "comment" ||
+      this.current().kind === "docComment" ||
+      this.current().kind === "govComment"   // ;; governance annotations — skip during parse, preserved in token stream for manifest
+    ) {
       this.pos++;
     }
   }

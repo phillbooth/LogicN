@@ -1,8 +1,8 @@
 # LogicN — Contract Clause Reference Card
 
-**Version:** 1.0 (2026-06-04)  
+**Version:** 1.1 (2026-06-05)  
 **Status:** Living document — updated as DRCM phases ship.  
-**Scope:** Per-clause reference for every `contract {}` sub-block, the `[conforms_to]` decorator, and the separate `policy {}` block.  
+**Scope:** Per-clause reference for every `contract {}` sub-block, the `[conforms_to]` decorator, the separate `access {}` / `policy {}` block, and declaration keywords `static` / `bitfield`.  
 **Authoritative sources:** `logicn-contract-authoring-guide.md` (syntax) · `logicn-governance-rules.md` (diagnostic codes)
 
 ---
@@ -28,7 +28,12 @@
 | `observability {}` | ENFORCED (auto-by-default) | **Yes** | Omit unless overriding trace/metrics/alerts; do NOT use on `pure` flows |
 | `invariant {}` | PLANNED (DRCM Phase 2, 2026-07) | No | Strongly recommended for high-trust mutation flows (payments, medical, gov records) |
 | `[conforms_to: X]` | ENFORCED (partial — effects check) | No | Required when domain guard policy ceiling must be compile-time enforced |
-| `policy {}` *(separate block)* | PLANNED (DRCM Phase 4) | No | Only for flows that need explicit emergency posture management |
+| `access {}` *(separate block)* | v2.1 primary syntax | No | Declares who may call this flow and what data types cross the boundary; **Default Deny** — only listed `grant` lines are permitted |
+| `policy {}` *(separate block, deprecated alias)* | PLANNED (DRCM Phase 4) | No | Deprecated inline form — use `access {}` instead; `policy` reserved for State Mutation Governance |
+| `guard Name {}` *(top-level, external)* | v2.1 primary syntax | No | Domain ceiling declaration — replaces `policy Name {}`; referenced via `[conforms_to:]` |
+| `gate(condition) {}` *(top-level wrapper)* | PLANNED (v2.1 / Phase 5 WAT) | No | Admission guard wrapping flows; maps to V_DPM bit 8 (`dag_edge_valid`) |
+| `import "./path"` *(top-level)* | PLANNED (v2.1 compiler) | No | DAG merge file import; symbols enter scope immediately |
+| `import plugin safe/assimilate` *(top-level)* | PLANNED (v2.1 compiler) | No | Bridged plugin (`safe` = sandboxed; `assimilate` = Hot-Code Residency) |
 
 **Status key:** ENFORCED = compiler rejects violations today · PLANNED Phase N = scheduled for that DRCM phase · AUTO-by-default = runtime handles it when omitted.
 
@@ -41,13 +46,15 @@ Before reading any clause, internalize the canonical layout:
 ```logicn
 flow-qualifier flow name(params) -> ReturnType   // 1. signature
 contract { ... }                                  // 2. compile-time governance declaration
-policy { ... }                                    // 3. runtime overlay (optional, Phase 4)
+access { ... }                                    // 3. capability negotiation (optional, v2.1)
 {                                                 // 4. body
   ...
 }
 ```
 
-`contract {}` is **never inside the body**. `policy {}` is **never inside `contract {}`**. Both are standalone blocks at the same structural level, between the signature and the body.
+`contract {}` is **never inside the body**. `access {}` is **never inside `contract {}`**. Both are standalone blocks at the same structural level, between the signature and the body.
+
+> **v2.1 rename:** The block between `contract {}` and `{ body }` is now called `access {}`. The old inline `policy {}` form is a deprecated alias — it still compiles but emits `LLN-SYNTAX-LEGACY-003`. The `policy` keyword is **reserved** for the future State Mutation Governance feature (see §`access {}` below).
 
 ---
 
@@ -950,7 +957,8 @@ The binding is a **decorator on the `contract` block header** — not a sub-bloc
 
 ```logicn
 // External file: governance/policies/invoicing_guard.lln
-policy InvoicingDomainGuard {
+// Use `guard Name {}` for top-level domain ceilings (v2.1 — replaces `policy Name {}`)
+guard InvoicingDomainGuard {
   permitted_effects { gateway.charge, audit.write }
   enforced_limits   { max_memory_ceiling: 4MB }
 }
@@ -967,17 +975,115 @@ contract [conforms_to: InvoicingDomainGuard] {
 }
 ```
 
+> **v2.1 rename:** Top-level domain ceiling declarations use `guard Name {}` instead of `policy Name {}`. The `policy` keyword is reserved for State Mutation Governance (see below). Existing `policy Name {}` files emit `LLN-SYNTAX-LEGACY-003` advisory.
+
 #### Common mistakes
 
 - Placing `conforms_to` as a sub-block inside `contract {}` — it is a decorator on the header, not a clause.
 - Referencing a guard policy that does not exist in `governance/policies/` — compile error at the guard-resolution step.
 - Declaring effects in the contract that exceed the guard's `permitted_effects {}` ceiling — the Differential Proof will reject.
+- Using `policy Name {}` for domain ceilings instead of `guard Name {}` in new code — `LLN-SYNTAX-LEGACY-003`.
 
 > Full reference: `logicn-domain-guard-policies.md`
 
 ---
 
-## Separate Block: `policy {}`
+## Separate Block: `access {}` — Capability Negotiation Block
+
+**Status:** v2.1 primary syntax — replaces deprecated inline `policy {}`  
+**Auto?** No — most flows omit this block  
+**LLN diagnostics:**
+- `LLN-SYNTAX-LEGACY-003` — inline `policy {}` used instead of `access {}` (advisory)
+
+### `access {}` — Capability Negotiation Block
+
+**Position:** Between `contract {}` and `{ body }`  
+**Purpose:** Declares who may call this flow and what data types cross the boundary.  
+**Status:** v2.1 primary syntax — replaces deprecated inline `policy {}`.
+
+Represents the *active negotiation of rights* at the call boundary, distinct from `contract {}`
+which declares static governance properties.
+
+**Clauses:**
+- `purpose "tag"` — machine-readable purpose string
+- `allow TypeName to "action"` — permit a type to cross the boundary for a specific action
+- `deny TypeName` — explicitly block a type from crossing
+- `require effect.name` — declare a required capability for callers
+- `grant capability.name` — permit a named capability (Default Deny form — see below)
+
+#### Default Deny
+
+`access {}` operates under **Default Deny**: if a capability is not listed with `grant`,
+it is automatically denied. You never need to list what is denied.
+
+```lln
+// Old syntax (explicit allow + deny):
+policy {
+  allow Payment to "process"
+  deny RawCard
+}
+
+// New syntax (default deny — only list what IS permitted):
+access {
+  grant network.outbound    // everything else is automatically denied
+  grant audit.write
+}
+```
+
+**Example:**
+```lln
+flow processPayment(req: PaymentRequest) -> Result<Receipt, Error>
+contract {
+  intent { "Process a payment with full audit trail." }
+  effects { database.write, audit.write }
+}
+access {
+  purpose "payment-processing"
+  grant database.write
+  grant audit.write
+  // network.outbound automatically denied — not listed
+}
+{
+  // body
+}
+```
+
+**Deprecated alias:** `policy {}` (inline form only — NOT the named top-level Domain Guard form)
+
+### Three-block structure (v2.1)
+
+```logicn
+secure flow assessRisk(input: RiskRequest) -> Result<RiskResult, Fault>
+contract {                              // 1. compile-time governance
+  intent  { "Assess risk with full capability negotiation." }
+  effects { db.read, network.outbound }
+}
+access {                               // 2. capability negotiation (v2.1 — SEPARATE block)
+  purpose "risk-assessment"
+  allow RiskRequest to "read"
+  require db.read
+}
+{                                      // 3. body
+  return Ok(RiskResult { level: 0 })
+}
+```
+
+### Required vs optional
+
+**Almost always omit.** Declare only when:
+- A flow needs to explicitly restrict which data types may cross its call boundary
+- A machine-readable purpose tag is required for policy audit traces
+- Callers must satisfy a declared capability before dispatch is permitted
+
+### Common mistakes
+
+- Using the deprecated `policy {}` form instead of `access {}` → `LLN-SYNTAX-LEGACY-003`
+- Placing `access {}` inside `contract {}` — it is a separate block at the same structural level
+- Confusing `access {}` (per-flow capability negotiation) with `policy DomainName {}` (external domain guard in `governance/policies/`)
+
+---
+
+## Separate Block: `policy {}` *(Deprecated Inline Alias)*
 
 **Status:** PLANNED (DRCM Phase 4)  
 **Auto?** No — most flows never declare this  
@@ -985,16 +1091,19 @@ contract [conforms_to: InvoicingDomainGuard] {
 - `LLN-GOV-020` — `policy {}` placed inside `contract {}` (parse error)
 - `LLN-MONO-001` — capability expansion attempted through overlay (monotonic violation)
 - `LLN-MONO-003` — emergency overlay attempted de-escalation (monotonic violation)
+- `LLN-SYNTAX-LEGACY-003` — inline `policy {}` used as capability negotiation block; use `access {}` instead (advisory)
+
+> **v2.1 note:** In v2.1, the inline `policy {}` block (for capability negotiation) is renamed to `access {}`. The `policy` keyword is **reserved** for the future State Mutation Governance feature (see below). The emergency overlay form (`policy { emergency {} }`) remains valid syntax but is also subject to rename in a future version.
 
 ### What it is
 
-The `policy {}` block is a **per-flow, inline runtime monotonic overlay** — a block that declares how the flow's runtime capability posture should respond to software anomalies. It is:
+The inline `policy {}` block (emergency form) is a **per-flow, runtime monotonic overlay** — a block that declares how the flow's runtime capability posture should respond to software anomalies. It is:
 
 - **Separate from `contract {}`** — it sits between `contract {}` and the body `{ }`
 - **Not a domain guard** — it is local, per-flow, and not stored in `governance/policies/`
 - **Not a contract sub-block** — placing it inside `contract {}` is `LLN-GOV-020`
 
-### Three-block structure reminder
+### Three-block structure reminder (v2.0 form — use `access {}` in v2.1)
 
 ```logicn
 secure flow assessRisk(input: RiskRequest) -> Result<RiskResult, Fault>
@@ -1002,7 +1111,7 @@ contract {                              // 1. compile-time governance
   intent  { "Assess risk with emergency posture management." }
   effects { db.read, network.outbound }
 }
-policy {                               // 2. runtime monotonic overlay (SEPARATE block)
+policy {                               // 2. runtime monotonic overlay (SEPARATE block — deprecated inline form)
   emergency {
     on system_integrity_anomaly {
       deny network.outbound
@@ -1048,15 +1157,176 @@ contract {
 
 ---
 
-## Two Policy Concepts — Never Confuse Them
+## Three `policy`-Related Concepts — Never Confuse Them
 
-| | Domain Guard Policy | Emergency Policy Overlay |
+| | Domain Guard Policy | `access {}` Capability Negotiation (v2.1) | Emergency Policy Overlay (deprecated inline `policy {}`) |
+|---|---|---|---|
+| **Syntax** | `policy DomainName { permitted_effects {} enforced_limits {} }` | `access { purpose "..." allow T to "..." }` | `policy { emergency { on X { deny Y } } }` |
+| **Location** | External file in `governance/policies/` | Inline block between `contract {}` and `{ body }` | Inline block between `contract {}` and `{ body }` |
+| **Referenced via** | `contract [conforms_to: PolicyName]` header decorator | Declared directly as a standalone block | Declared directly as a standalone block |
+| **Purpose** | Immutable compile-time ceiling on contract clauses | Active negotiation of call-boundary rights (v2.1) | Runtime monotonic capability de-escalation on anomaly |
+| **Most flows** | Reference when domain requires it | Omit unless boundary type control needed | Never declare |
+| **v2.1 status** | Unchanged | **Primary syntax** — replaces inline `policy {}` | Deprecated alias; `policy` keyword reserved for State Mutation Governance |
+
+---
+
+## Declaration Keywords: `static` and `bitfield`
+
+These are **top-level declaration keywords** (not contract sub-blocks). They appear at module scope and produce compile-time constants used in contracts and flow bodies.
+
+### `static` — Compile-Time Constant
+
+```lln
+static NAME = VALUE
+```
+
+Defines a compile-time constant. The compiler substitutes VALUE everywhere NAME appears — zero memory overhead, O(1) lookup. Type-safe equivalent of C `#define`.
+
+**Compile-time folding:** The WAT emitter replaces every reference to a `static` constant with an inline literal. For example, `static FLOOR_PROOF = 3` causes every use of `FLOOR_PROOF` in WAT output to emit `(i32.const 3)` — no memory load, no indirection.
+
+**Governance rules:**
+- `LLN-STATIC-001` — value is not a compile-time constant (contains runtime expressions)
+- `LLN-STATIC-002` — name declared more than once in the same scope
+
+**Example:**
+```lln
+static FLOOR_PROOF = 3
+static MAX_RETRY = 3
+
+// WAT output for a reference to FLOOR_PROOF:
+// (i32.const 3)  ← no memory load; zero overhead
+```
+
+---
+
+### `bitfield` — Type-Safe Governance Register
+
+```lln
+bitfield NAME {
+  field_name: BIT_POSITION
+  ...
+}
+```
+
+Defines a structured governance register. Replaces the verbose `pure flow VDPM_BIT_*() -> Int` pattern.
+
+The compiler generates two accessors for each declared field:
+- `NAME.field_name` → `(1 << BIT_POSITION)` — the **bitmask value** (use for AND/OR operations)
+- `NAME.BIT_field_name` → `BIT_POSITION` — the **raw bit position** (use for shift operations)
+
+So for `bitfield V_DPM { network_outbound: 0 }`:
+- `V_DPM.network_outbound` evaluates to `1` (i.e. `1 << 0`)
+- `V_DPM.BIT_network_outbound` evaluates to `0`
+
+**Governance rules:**
+- `LLN-BF-001` — duplicate bit positions in the same `bitfield`
+- `LLN-BF-002` — bit position > 31 (V_DPM is a 32-bit register)
+
+**Example:**
+```lln
+bitfield V_DPM {
+  network_outbound: 0
+  storage_write: 1
+  secret_access: 2
+  audit_write: 3
+  database_write: 4
+  ai_inference: 5
+  shell_execute: 6
+  native_call: 7
+  dag_edge_valid: 8
+}
+// V_DPM.network_outbound = 1  (bitmask: 1 << 0)
+// V_DPM.BIT_network_outbound = 0  (raw bit position)
+// V_DPM.dag_edge_valid = 256  (bitmask: 1 << 8)
+// V_DPM.BIT_dag_edge_valid = 8  (raw bit position)
+```
+
+---
+
+## Top-Level Declaration: `guard Name {}` — Domain Ceiling
+
+**Status:** v2.1 primary syntax — replaces `policy Name {}` for domain ceilings  
+**Location:** External file in `governance/policies/` (never inline in a flow file)
+
+`guard Name {}` defines an immutable compile-time ceiling on what any `contract [conforms_to: Name]` flow may declare. It is verified via Differential Proof at compile time.
+
+```lln
+// governance/policies/payment_guard.lln
+guard PaymentDomainGuard {
+  permitted_effects { gateway.charge, audit.write, db.read }
+  enforced_limits   { max_memory_ceiling: 8MB }
+}
+```
+
+> **v2.1 rename:** `policy Name {}` for domain ceilings is deprecated. Use `guard Name {}` in all new code. Existing `policy Name {}` files continue to compile but emit `LLN-SYNTAX-LEGACY-003`.
+
+---
+
+## Top-Level Declaration: `gate(condition) {}` — Flow Admission Guard
+
+**Status:** PLANNED (v2.1 governance verifier; Phase 5 WAT enforcement)  
+**Location:** Top-level block wrapping one or more flow declarations
+
+`gate(condition) {}` wraps one or more flows with an admission guard. The `condition` names a Domain Guard Policy. Only callers satisfying the policy ceiling can dispatch flows inside the gate block.
+
+Maps to V_DPM bit 8 (`dag_edge_valid`) — the topology check fires before capability checks.
+
+```lln
+gate(admin_only) {
+  secure flow deleteRecord(id: String) -> Result<Void, Fault>
+  contract {
+    intent { "Delete a record — admin only." }
+    effects { db.write }
+  }
+  {
+    return Ok(Void)
+  }
+}
+```
+
+**Governance rules:** `LLN-GATE-001` (unknown condition), `LLN-GATE-002` (wraps pure flow — redundant).  
+`gateConstraints[]` in the `.lmanifest` tracks all `gate {}` admission guards.
+
+---
+
+## Top-Level Declaration: `import` — DAG Merge
+
+**Status:** PLANNED (v2.1 compiler)  
+**Diagnostics:** LLN-IMPORT-001 through LLN-IMPORT-004
+
+Two forms:
+
+```lln
+// Form 1 — plain file import (DAG merge)
+import "./path.lln"
+
+// Form 2 — bridged plugin (safe: sandboxed; assimilate: Hot-Code Residency)
+import plugin safe "./path" as X {
+  contract { access { grant capability.name } }
+}
+
+import plugin assimilate "./path" as X {
+  contract { access { grant capability.name } }
+}
+```
+
+- **Plain import:** Merges the target file's symbols into the current DAG scope. Symbols are live — the file is compiled as part of the same DAG.
+- **`plugin safe`:** Sandboxed bridge. The plugin runs in an isolated module; calls are mediated by the `access {}` boundary.
+- **`plugin assimilate`:** Hot-Code Residency. The plugin is loaded into the DSS bootstrap memory at startup. Must be declared in `boot.lln`. Requires `assimilation_memory_budget` in `governance {}`. The `.lmanifest` tracks assimilated plugins in `assimilatedPlugins[]`.
+
+---
+
+## Comment Syntax
+
+| Syntax | Token | Purpose |
 |---|---|---|
-| **Syntax** | `policy DomainName { permitted_effects {} enforced_limits {} }` | `policy { emergency { on X { deny Y } } }` |
-| **Location** | External file in `governance/policies/` | Inline block between `contract {}` and `{ body }` |
-| **Referenced via** | `contract [conforms_to: PolicyName]` header decorator | Declared directly as a standalone block |
-| **Purpose** | Immutable compile-time ceiling on contract clauses | Runtime monotonic capability de-escalation on anomaly |
-| **Most flows** | Reference when domain requires it | Never declare |
+| `// text` | `comment` | Code documentation — discarded after parse |
+| `/// text` | `docComment` | API documentation — extracted by doc tooling |
+| `;; text` | `govComment` | Governance annotation — scanned by verifier, stored in .lmanifest |
+| `/* text */` | `comment` | Block code comment — discarded after parse |
+| `;` (trailing) | `newline` | Optional statement separator — silently collapsed |
+
+`;;` governance annotations are first-class tokens. The verifier collects them into `governanceAnnotations[]` in the `.lmanifest` narrative alongside `ProofObligations`.
 
 ---
 

@@ -1,0 +1,45 @@
+// Policy hierarchy test — task #72
+
+guard FinanceDomainGuard {
+  permitted_effects {
+    database.write
+    database.read
+    audit.write
+  }
+  enforced_limits {
+    max_memory_ceiling: 8MB
+  }
+}
+
+// Valid child: only uses subset of parent effects
+guard InvoiceReadPolicy {
+  parent_policy: FinanceDomainGuard
+  permitted_effects {
+    database.read
+  }
+  enforced_limits {
+    max_memory_ceiling: 4MB
+  }
+}
+
+// governed floor test alongside policy hierarchy
+governed floor_3 flow verifyInvoice(invoiceId: String) -> Bool
+contract {
+  intent "Verify invoice exists — read-only, Proof Zone only"
+  effects { database.read }
+}
+{
+  trap invoiceId == "" : ERR_EMPTY_INVOICE_ID
+  return true
+}
+
+// pure flow using trap keyword
+pure flow validatePositive(n: Int) -> Bool
+contract {
+  intent "Validate a positive integer"
+  effects {}
+}
+{
+  trap n <= 0 : ERR_NON_POSITIVE
+  return true
+}

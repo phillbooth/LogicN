@@ -952,6 +952,19 @@ function numericStatic(receiver: string, method: string, args: readonly LogicNVa
       const n = parseInt(strVal(args[0] ?? LLN_VOID), 10);
       return Number.isNaN(n) ? err("ParseError: not a valid integer") : ok({ __tag: "int", value: n });
     }
+    case "Int.bitAnd": {
+      // Bitwise AND for bitmask operations (e.g. V_DPM capability checks).
+      // Uses BigInt to avoid sign-extension on bit 31 for 32-bit unsigned masks.
+      const a = BigInt(Math.trunc(numVal(args[0] ?? LLN_VOID)));
+      const b = BigInt(Math.trunc(numVal(args[1] ?? LLN_VOID)));
+      return { __tag: "int", value: Number(a & b) };
+    }
+    case "Int.bitOr": {
+      // Bitwise OR for bitmask operations (e.g. V_DPM quarantine/emergency set).
+      const a = BigInt(Math.trunc(numVal(args[0] ?? LLN_VOID)));
+      const b = BigInt(Math.trunc(numVal(args[1] ?? LLN_VOID)));
+      return { __tag: "int", value: Number(a | b) };
+    }
     case "Float.parse": {
       const n = parseFloat(strVal(args[0] ?? LLN_VOID));
       return Number.isNaN(n) ? err("ParseError: not a valid float") : ok({ __tag: "float", value: n });

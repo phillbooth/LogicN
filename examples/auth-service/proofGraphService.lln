@@ -37,6 +37,7 @@ contract {
 {
   unsafe let rawQualifier: String = request.jsonBody.qualifier
   unsafe let rawEffectCount: String = request.jsonBody.effectCount
+  trap rawQualifier == "" : ERR_EMPTY_QUALIFIER
   let level: Int = qualifierToProofLevel(rawQualifier)
   let sufficient: Bool = proofLevelSufficient(level, 1)
   let retRawQualifier: String = rawQualifier

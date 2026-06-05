@@ -39,10 +39,12 @@ contract {
   unsafe let rawHasAI: String = request.jsonBody.hasAI
   unsafe let rawIsCritical: String = request.jsonBody.isSafetyCritical
   unsafe let rawHasDB: String = request.jsonBody.hasDBWrite
+  // rawHasAI/rawIsCritical/rawHasDB are Bool, type-safe, no empty-string risk
   let hasAI: Bool = rawHasAI == "true"
   let isCritical: Bool = rawIsCritical == "true"
   let hasDB: Bool = rawHasDB == "true"
   let target: String = inferTarget(hasAI, isCritical, hasDB)
+  trap target == "" : ERR_INVALID_TARGET
   let riskTier: String = inferRiskTier(target)
   let retTarget: String = target
   safe mut target = redact(target)

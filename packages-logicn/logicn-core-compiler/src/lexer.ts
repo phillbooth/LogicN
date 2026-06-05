@@ -30,6 +30,7 @@ export type TokenKind =
   | "symbol"
   | "comment"
   | "docComment"
+  | "govComment"   // ;; governance/system annotation — scanned by verifier + included in manifest
   | "newline"
   | "eof";
 
@@ -55,8 +56,9 @@ export const TokenKindId = {
   Symbol:     7,
   Comment:    8,
   DocComment: 9,
-  Newline:    10,
-  Eof:        11,
+  GovComment: 10,  // ;; system/governance annotation
+  Newline:    11,
+  Eof:        12,
 } as const;
 export type TokenKindIdValue = typeof TokenKindId[keyof typeof TokenKindId];
 
@@ -71,6 +73,7 @@ const TOKEN_KIND_ID_MAP: Readonly<Record<TokenKind, TokenKindIdValue>> = {
   symbol:     TokenKindId.Symbol,
   comment:    TokenKindId.Comment,
   docComment: TokenKindId.DocComment,
+  govComment: TokenKindId.GovComment,
   newline:    TokenKindId.Newline,
   eof:        TokenKindId.Eof,
 };
@@ -130,7 +133,13 @@ export const V1_ACTIVE_KEYWORDS: ReadonlySet<string> = new Set([
   // Flow sub-declarations
   "effects", "with", "intent", "governance", "api", "package",
   // Governance declarations
-  "authority", "policy",
+  "authority", "policy", "guard",
+  // v2.1 Tower-native declarations (#86)
+  // `access {}` — inline capability negotiation block at the flow boundary (replaces inline `policy {}`)
+  // `gate(cond) {}` — flow admission guard (V_DPM bit 8 = dag_edge_valid)
+  // `static NAME = EXPR` — compile-time constant (zero memory overhead)
+  // `bitfield NAME { field: BIT }` — type-safe V_DPM capability register
+  "access", "gate", "static", "bitfield",
   // Binding
   "let", "mut", "readonly",
   // Control flow
@@ -163,8 +172,15 @@ export const V1_ACTIVE_KEYWORDS: ReadonlySet<string> = new Set([
   "and", "or", "unless", "is",
   // Guard match arms (Phase 41 syntax) — `when condition => body`
   "when",
+  // Tower-native syntax primitives (task #76/#77 foundation)
+  // `trap COND : ERR_CODE` — hardware trap if condition is TRUE
+  "trap",
+  // `governed <floor> flow ...` — Tower floor qualifier for DAG_CHECK (bit 8)
+  "governed",
   // Note: "rules", "audit", "set" are intentionally NOT keywords — they are too
   // common as identifier names and are handled contextually in the contract parser.
+  // import plugin assimilate — Hot-Code Residency directive
+  "assimilate",
 ]);
 
 /** Words reserved for post-v1 grammar — produce LLN-SYNTAX-003 if used as identifiers. */
@@ -366,6 +382,34 @@ export function lex(source: string, file: string): LexResult {
         });
         break;
       }
+      continue;
+    }
+
+    // ── Block comment /* ... */ ────────────────────────────────────────────
+    // Multi-line. Tracks newlines inside so line/col counts stay accurate.
+    // Not nested: the first */ closes the comment regardless of inner /**.
+    // LLN comment style 3 of 3 — all three are accepted, // is canonical.
+    if (ch === "/" && peek(1) === "*") {
+      const scanStart = pos;
+      advance(); // consume /
+      advance(); // consume *
+      while (pos < source.length) {
+        if (peek() === "*" && peek(1) === "/") {
+          advance(); // consume *
+          advance(); // consume /
+          break;
+        }
+        if (peek() === "\n") {
+          // Keep line/col tracking accurate inside block comments
+          advance();
+          tokens.push(tok("newline", "\n", pos - 1, line - 1, 0));
+          lineStartPos = pos;
+        } else {
+          advance();
+        }
+      }
+      // Emit a single comment token for the whole block (value is the raw text)
+      tokens.push(tok("comment", source.slice(scanStart, pos), startPos, startLine, startCol));
       continue;
     }
 
@@ -634,6 +678,29 @@ export function lex(source: string, file: string): LexResult {
       continue;
     }
 
+    // ── Governance/system annotation ;; ───────────────────────────────────
+    // ;; is a FIRST-CLASS governance annotation, not just an alternate comment.
+    // It produces a "govComment" token (distinct from "comment") so that:
+    //   - The governance verifier can scan ;; text for proof hints and intent
+    //   - The manifest generator can include ;; annotations in the .lmanifest
+    //     narrative context (ProofObligation human-readable rationale)
+    //   - Future tooling can distinguish "why it's secure" from "what it does"
+    //
+    // Semantic intent:
+    //   ;; amount is validated — safe to proceed    ← govComment: security reasoning
+    //   // process the payment                      ← comment: code reasoning
+    //
+    // Must be checked BEFORE the general symbol handler so ;; is never split
+    // into two separate ";" symbol tokens.
+    if (ch === ";" && peek(1) === ";") {
+      const scanStart = pos;
+      while (pos < source.length && peek() !== "\n") {
+        advance();
+      }
+      tokens.push(tok("govComment", source.slice(scanStart, pos), startPos, startLine, startCol));
+      continue;
+    }
+
     // ── Punctuation / symbols ──────────────────────────────────────────────
     if (SYMBOLS.has(ch)) {
       advance();
@@ -645,6 +712,16 @@ export function lex(source: string, file: string): LexResult {
       // still catching a genuinely deep single-line generic.
       if (ch === "{" || ch === "}" || ch === ";") {
         genericDepth = 0;
+      }
+      // ── Optional statement separator ; ──────────────────────────────────
+      // A lone `;` is treated as a newline — it acts as an optional statement
+      // terminator for developers coming from TypeScript/C/Java backgrounds.
+      // `;;` is handled above as a comment, so this only fires for single `;`.
+      // Emitting "newline" (not "symbol") means the parser never sees it as
+      // a syntax element — it just ends the current statement cleanly.
+      if (ch === ";") {
+        tokens.push(tok("newline", ";", startPos, startLine, startCol));
+        continue;
       }
       tokens.push(tok("symbol", ch, startPos, startLine, startCol));
       continue;

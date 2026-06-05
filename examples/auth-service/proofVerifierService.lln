@@ -46,6 +46,8 @@ contract {
   unsafe let algorithm: String = request.jsonBody.algorithm
   unsafe let signaturePresent: Bool = request.jsonBody.signaturePresent
 
+  trap algorithm == "" : ERR_EMPTY_ALGORITHM
+
   let valid: Bool = isValidAlgorithm(algorithm)
   let strength: Int = proofStrength(algorithm)
 

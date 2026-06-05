@@ -11,10 +11,13 @@ contract {
 }
 {
   if profile == "deterministic" {
+    ;; network.outbound, filesystem.write, process.spawn are denied in deterministic profile
+    ;; — these effects break proof reproducibility and must be excluded from the DAG
     if effectName == "network.outbound" { return false }
     if effectName == "filesystem.write" { return false }
     if effectName == "process.spawn" { return false }
   }
+  ;; eval.execute is unconditionally denied — arbitrary code execution bypasses the governance layer
   if effectName == "eval.execute" { return false }
   return true
 }
@@ -25,6 +28,8 @@ contract {
   intent { "Return true if a flow with this qualifier satisfies the governance invariants." }
 }
 {
+  ;; secure and guarded qualifiers both require audit.write — LLN-GOV-010 enforcement
+  ;; a secure flow without audit.write is a governance violation and must be denied
   if qualifier == "secure" {
     if hasAudit == false { return false }
   }
@@ -59,6 +64,11 @@ contract {
   unsafe let rawEffect: String = request.jsonBody.effect
   unsafe let rawProfile: String = request.jsonBody.profile
   unsafe let rawHasAudit: String = request.jsonBody.hasAudit
+
+  trap rawEffect == "" : ERR_EMPTY_EFFECT_NAME
+  trap rawQualifier == "" : ERR_EMPTY_QUALIFIER
+  trap rawProfile == "" : ERR_EMPTY_PROFILE
+  trap rawHasAudit == "" : ERR_EMPTY_HAS_AUDIT
 
   let hasAudit: Bool = rawHasAudit == "true"
   let permitted: Bool = isEffectPermittedInProfile(rawEffect, rawProfile)

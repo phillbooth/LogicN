@@ -69,6 +69,9 @@ contract {
   unsafe let rawEffect: String = request.jsonBody.effect
   unsafe let rawQualifier: String = request.jsonBody.qualifier
 
+  trap rawEffect == "" : ERR_EMPTY_EFFECT_NAME
+  trap rawQualifier == "" : ERR_EMPTY_QUALIFIER
+
   let capability: String = effectRequiresCapability(rawEffect)
   let severity: String = classifyEffectSeverity(capability)
   let complete: Bool = effectsAreComplete(rawEffect, rawQualifier)

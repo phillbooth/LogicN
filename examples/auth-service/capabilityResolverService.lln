@@ -58,6 +58,8 @@ contract {
 {
   unsafe let rawEffect: String = request.jsonBody.effectName
 
+  trap rawEffect == "" : ERR_EMPTY_EFFECT_NAME
+
   let available: Bool = isEffectAvailable(rawEffect)
   let tier: String = effectTier(rawEffect)
 

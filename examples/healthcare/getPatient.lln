@@ -12,6 +12,7 @@ contract {
   effects { database.read phi.read audit.write }
   privacy {
     phi name dob
+    phi patientId masked_in_audit
     deny protected PatientId to response.body
     require redaction before audit.write
   }
@@ -20,9 +21,10 @@ contract {
 {
   let patientId: protected PatientId = validate.patientId(request.params.id)?
   let patient = PatientsDB.find(patientId)?
+  let redactedPatientId: redacted String = redact(patientId)
   AuditLog.write({
     event: "PatientAccessed",
-    patientId: redact(patientId),
+    patient_ref: redactedPatientId,
     actor: request.context.actor
   })
   return Ok({

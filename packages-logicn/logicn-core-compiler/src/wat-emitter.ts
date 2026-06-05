@@ -1,6 +1,10 @@
 // =============================================================================
 // LogicN Phase 19 / Phase 22 — WAT Emitter (WebAssembly Text Format)
 //
+// #70 WAT single-exit transformation: foundational wrapper added.
+// Current behavior: no-op (post-conditions deferred to Phase 4).
+// When Phase 4 activates: wrapInSingleExit() injects post-condition gates.
+//
 // Emits WebAssembly Text Format (.wat) from GIR + PassiveExecutionPlan.
 // The .wat file is then compiled to binary .wasm via wat2wasm in CI.
 //
@@ -325,17 +329,41 @@ const BINARY_OP_TO_WAT: ReadonlyMap<string, string> = new Map([
 /**
  * Emits a single WAT s-expression for an AST expression node.
  *
- * @param node - The AST expression node.
- * @param vars - Map from LogicN variable/param name → WAT local name ($p0, $x, etc.)
+ * @param node         - The AST expression node.
+ * @param vars         - Map from LogicN variable/param name → WAT local name ($p0, $x, etc.)
+ * @param staticConsts - Optional map of compile-time constant name → integer value.
+ *                       Populated from `static NAME = EXPR` and `bitfield` declarations.
+ *                       Used to fold constant references to `(i32.const N)` at compile time.
  */
-export function emitWATExpr(node: AstNode, vars: ReadonlyMap<string, string>): string {
+export function emitWATExpr(
+  node: AstNode,
+  vars: ReadonlyMap<string, string>,
+  staticConsts: ReadonlyMap<string, number> = new Map(),
+): string {
   switch (node.kind) {
     case "identifier": {
       const name = node.value ?? "";
       const watName = vars.get(name);
       if (watName !== undefined) return `(local.get ${watName})`;
+      // Check compile-time constants (static NAME = EXPR)
+      const constVal = staticConsts.get(name);
+      if (constVal !== undefined) return `(i32.const ${constVal}) ;; static ${name}`;
       // Unknown identifier — emit with comment for diagnostics.
       return `(i32.const 0) ;; unresolved: ${name}`;
+    }
+
+    case "memberExpr": {
+      // Dotted access: REGISTER.field — check bitfield constants first
+      // e.g. V_DPM.network_outbound → staticConsts.get("V_DPM.network_outbound")
+      const memberName = node.value ?? "";
+      const receiverNode = node.children?.[0];
+      if (receiverNode?.kind === "identifier") {
+        const receiverName = receiverNode.value ?? "";
+        const dottedKey = `${receiverName}.${memberName}`;
+        const constVal = staticConsts.get(dottedKey);
+        if (constVal !== undefined) return `(i32.const ${constVal}) ;; bitfield ${dottedKey}`;
+      }
+      return `(i32.const 0) ;; unresolved member: ${memberName}`;
     }
 
     case "numberLiteral": {
@@ -351,8 +379,8 @@ export function emitWATExpr(node: AstNode, vars: ReadonlyMap<string, string>): s
       const op = node.value ?? "";
       const watOp = BINARY_OP_TO_WAT.get(op);
       const children = node.children ?? [];
-      const left  = children[0] ? emitWATExpr(children[0], vars) : "(i32.const 0)";
-      const right = children[1] ? emitWATExpr(children[1], vars) : "(i32.const 0)";
+      const left  = children[0] ? emitWATExpr(children[0], vars, staticConsts) : "(i32.const 0)";
+      const right = children[1] ? emitWATExpr(children[1], vars, staticConsts) : "(i32.const 0)";
       if (watOp !== undefined) {
         return `(${watOp} ${left} ${right})`;
       }
@@ -361,7 +389,7 @@ export function emitWATExpr(node: AstNode, vars: ReadonlyMap<string, string>): s
 
     case "unaryExpr": {
       const op = node.value ?? "";
-      const operand = node.children?.[0] ? emitWATExpr(node.children[0], vars) : "(i32.const 0)";
+      const operand = node.children?.[0] ? emitWATExpr(node.children[0], vars, staticConsts) : "(i32.const 0)";
       if (op === "-") return `(i32.sub (i32.const 0) ${operand})`;
       if (op === "!")  return `(i32.eqz ${operand})`;
       return `(i32.const 0) ;; unknown unary: ${op}`;
@@ -370,7 +398,7 @@ export function emitWATExpr(node: AstNode, vars: ReadonlyMap<string, string>): s
     case "callExpr": {
       // Flow-to-flow calls within pure flows.
       const name = node.value ?? "";
-      const args = (node.children ?? []).map((c) => emitWATExpr(c, vars));
+      const args = (node.children ?? []).map((c) => emitWATExpr(c, vars, staticConsts));
       return `(call $${name} ${args.join(" ")})`.trimEnd();
     }
 
@@ -409,16 +437,17 @@ function negateBinaryOp(op: string): string | null {
 function emitBlockLastExpr(
   blockNode: AstNode,
   vars: ReadonlyMap<string, string>,
+  staticConsts: ReadonlyMap<string, number> = new Map(),
 ): string {
   const stmts = blockNode.children ?? [];
   const last = stmts[stmts.length - 1];
   if (last === undefined) return "(i32.const 0)";
   if (last.kind === "returnStmt") {
-    return last.children?.[0] ? emitWATExpr(last.children[0], vars) : "(i32.const 0)";
+    return last.children?.[0] ? emitWATExpr(last.children[0], vars, staticConsts) : "(i32.const 0)";
   }
   if (last.kind === "binaryExpr" || last.kind === "callExpr" ||
       last.kind === "identifier"  || last.kind === "numberLiteral") {
-    return emitWATExpr(last, vars);
+    return emitWATExpr(last, vars, staticConsts);
   }
   return "(i32.const 0) ;; unresolved block expr";
 }
@@ -443,6 +472,8 @@ function emitBlockStatements(
   /** Phase 27B: when true, emit (return <expr>) for returnStmt instead of bare expr.
    *  Used inside nested blocks (if/while bodies) where implicit stack return is invalid. */
   nested = false,
+  /** Compile-time constants from `static` and `bitfield` declarations. */
+  staticConsts: ReadonlyMap<string, number> = new Map(),
 ): void {
   const stmts: readonly AstNode[] = blockNode.children ?? [];
 
@@ -458,7 +489,7 @@ function emitBlockStatements(
         const varName  = rawName.split(":")[0]?.trim() ?? rawName;
         const watLocal = `$${varName}`;
         const initNode = stmt.children?.[0];
-        const initExpr = initNode ? emitWATExpr(initNode, vars) : "(i32.const 0)";
+        const initExpr = initNode ? emitWATExpr(initNode, vars, staticConsts) : "(i32.const 0)";
 
         if (vars.has(varName)) {
           // Variable already declared — this is a mutation (e.g. let x = x + 1 inside a loop).
@@ -479,7 +510,7 @@ function emitBlockStatements(
         const varName  = (stmt.value ?? "").trim();
         const watLocal = vars.get(varName) ?? `$${varName}`;
         const exprNode = stmt.children?.[0];
-        const exprStr  = exprNode ? emitWATExpr(exprNode, vars) : "(i32.const 0)";
+        const exprStr  = exprNode ? emitWATExpr(exprNode, vars, staticConsts) : "(i32.const 0)";
         if (!vars.has(varName)) {
           // Declare it now if somehow not in scope (defensive)
           vars.set(varName, watLocal);
@@ -492,7 +523,7 @@ function emitBlockStatements(
       case "returnStmt": {
         const exprNode = stmt.children?.[0];
         const exprStr  = exprNode !== undefined
-          ? emitWATExpr(exprNode, vars)
+          ? emitWATExpr(exprNode, vars, staticConsts)
           : "(i32.const 0) ;; return void";
         // Inside nested blocks (if/while body), use explicit (return <expr>)
         // so the value is returned from the FUNCTION, not just pushed to the block stack.
@@ -508,7 +539,7 @@ function emitBlockStatements(
       case "ifStmt": {
         // ifStmt children: [condition, thenBlock, elseBlock?]
         const [condNode, thenBlock, elseBlock] = stmt.children ?? [];
-        const condExpr = condNode ? emitWATExpr(condNode, vars) : "(i32.const 1)";
+        const condExpr = condNode ? emitWATExpr(condNode, vars, staticConsts) : "(i32.const 1)";
 
         // Value-producing if/else: ONLY when isLast AND both branches end with returnStmt.
         // An if block whose branches contain assignStmt is NOT value-producing.
@@ -522,8 +553,8 @@ function emitBlockStatements(
         if (isValueProducing) {
           // Value-producing if/else (last stmt → the if provides the function's return value).
           // Emit: (if (result i32) COND (then THEN_EXPR) (else ELSE_EXPR))
-          const thenExpr = emitBlockLastExpr(thenBlock!, vars);
-          const elseExpr = emitBlockLastExpr(elseBlock!, vars);
+          const thenExpr = emitBlockLastExpr(thenBlock!, vars, staticConsts);
+          const elseExpr = emitBlockLastExpr(elseBlock!, vars, staticConsts);
           bodyLines.push(`(if (result i32) ${condExpr}`);
           bodyLines.push(`  (then ${thenExpr})`);
           bodyLines.push(`  (else ${elseExpr})`);
@@ -538,7 +569,7 @@ function emitBlockStatements(
             bodyLines.push(`(if ${condExpr}`);
             bodyLines.push(`  (then`);
             const thenLines: string[] = [];
-            emitBlockStatements(thenBlock, vars, localDecls, thenLines, labelCounter, true);
+            emitBlockStatements(thenBlock, vars, localDecls, thenLines, labelCounter, true, staticConsts);
             for (const line of thenLines) bodyLines.push(`    ${line}`);
             bodyLines.push(`  )`);
             if (elseBlock !== undefined) {
@@ -551,9 +582,9 @@ function emitBlockStatements(
                 children: [elseBlock],
                 ...(elseBlock.location !== undefined ? { location: elseBlock.location } : {}),
               };
-                emitBlockStatements(synthBlock, vars, localDecls, elseLines, labelCounter, true);
+                emitBlockStatements(synthBlock, vars, localDecls, elseLines, labelCounter, true, staticConsts);
               } else {
-                emitBlockStatements(elseBlock, vars, localDecls, elseLines, labelCounter, true);
+                emitBlockStatements(elseBlock, vars, localDecls, elseLines, labelCounter, true, staticConsts);
               }
               for (const line of elseLines) bodyLines.push(`    ${line}`);
               bodyLines.push(`  )`);
@@ -578,14 +609,14 @@ function emitBlockStatements(
         if (condNode?.kind === "binaryExpr") {
           const negOp = negateBinaryOp(condNode.value ?? "");
           if (negOp !== null) {
-            const left  = condNode.children?.[0] ? emitWATExpr(condNode.children[0], vars) : "(i32.const 0)";
-            const right = condNode.children?.[1] ? emitWATExpr(condNode.children[1], vars) : "(i32.const 0)";
+            const left  = condNode.children?.[0] ? emitWATExpr(condNode.children[0], vars, staticConsts) : "(i32.const 0)";
+            const right = condNode.children?.[1] ? emitWATExpr(condNode.children[1], vars, staticConsts) : "(i32.const 0)";
             exitCondExpr = `(${negOp} ${left} ${right})`;
           } else {
-            exitCondExpr = `(i32.eqz ${condNode ? emitWATExpr(condNode, vars) : "(i32.const 1)"})`;
+            exitCondExpr = `(i32.eqz ${condNode ? emitWATExpr(condNode, vars, staticConsts) : "(i32.const 1)"})`;
           }
         } else {
-          exitCondExpr = `(i32.eqz ${condNode ? emitWATExpr(condNode, vars) : "(i32.const 1)"})`;
+          exitCondExpr = `(i32.eqz ${condNode ? emitWATExpr(condNode, vars, staticConsts) : "(i32.const 1)"})`;
         }
 
         bodyLines.push(`(block ${exitLabel}`);
@@ -594,7 +625,7 @@ function emitBlockStatements(
 
         if (bodyBlock !== undefined) {
           const loopLines: string[] = [];
-          emitBlockStatements(bodyBlock, vars, localDecls, loopLines, labelCounter, true);
+          emitBlockStatements(bodyBlock, vars, localDecls, loopLines, labelCounter, true, staticConsts);
           for (const line of loopLines) bodyLines.push(`    ${line}`);
         }
 
@@ -605,8 +636,27 @@ function emitBlockStatements(
       }
 
       case "callExpr": {
-        const callExpr = emitWATExpr(stmt, vars);
+        const callExpr = emitWATExpr(stmt, vars, staticConsts);
         bodyLines.push(`(drop ${callExpr})`);
+        break;
+      }
+
+      // trapDecl — hardware trap if condition is TRUE (opposite polarity from ensureDecl)
+      // `trap COND : ERROR_CODE` emits: if COND then unreachable
+      // Compared to ensureDecl: `ensure COND` emits: if NOT COND then unreachable
+      // Both produce atomic hardware traps; trapDecl carries a named error code.
+      case "trapDecl": {
+        const condNode = stmt.children?.[0];
+        const errorCode = stmt.value ?? "ERR_TRAP";
+        if (condNode !== undefined) {
+          const condWat = emitWATExpr(condNode, vars, staticConsts);
+          // condWat evaluates to 1 (true) when the trap SHOULD fire → emit directly
+          // Unlike ensureDecl which uses (i32.eqz cond), trapDecl fires when cond is true
+          bodyLines.push(`    ;; trap: ${errorCode} — fires if condition is TRUE`);
+          bodyLines.push(`    (if ${condWat}`);
+          bodyLines.push(`      (then unreachable) ;; LLN-INV-000 trapKind=${errorCode}`);
+          bodyLines.push(`    )`);
+        }
         break;
       }
 
@@ -641,6 +691,7 @@ function emitBlockStatements(
 export function emitWATFromFlowAST(
   flowNode: AstNode,
   paramNames: readonly string[],
+  staticConsts: ReadonlyMap<string, number> = new Map(),
 ): string | null {
   // Build variable map: LogicN name → WAT local name.
   // Params are $p0, $p1, … — immutable (parameters are passed by value in WAT).
@@ -681,7 +732,7 @@ export function emitWATFromFlowAST(
   const preGates:  string[] = [];
   const postGates: string[] = [];
   for (const ensureExpr of ensureNodes) {
-    const condWAT = emitWATExpr(ensureExpr, vars);
+    const condWAT = emitWATExpr(ensureExpr, vars, staticConsts);
     // Assertion pattern: evaluate condition, negate (eqz), trap if false
     // Stack is neutral: condition consumed by if, unreachable terminates branch
     const gate = `  (if (i32.eqz ${condWAT}) (then unreachable)) ;; ensure ${describeASTExpr(ensureExpr)}`;
@@ -693,7 +744,7 @@ export function emitWATFromFlowAST(
     bodyLines.push(`  ;; --- invariant pre-conditions (LLN-INV-001 gate) ---`);
     bodyLines.push(...preGates);
   }
-  emitBlockStatements(blockNode, vars, localDecls, bodyLines, labelCounter);
+  emitBlockStatements(blockNode, vars, localDecls, bodyLines, labelCounter, false, staticConsts);
   if (postGates.length > 0) {
     bodyLines.push(`  ;; --- invariant post-conditions (LLN-INV-002 gate) ---`);
     bodyLines.push(...postGates);
@@ -780,10 +831,16 @@ export function extractFlowParamNames(flowNode: AstNode): string[] {
  */
 export function findFlowNodeInAST(ast: AstNode, flowName: string): AstNode | undefined {
   const FLOW_KINDS = new Set([
-    "pureFlowDecl", "flowDecl", "secureFlowDecl", "guardedFlowDecl",
+    "pureFlowDecl", "flowDecl", "secureFlowDecl", "guardedFlowDecl", "governedFlowDecl",
   ]);
   for (const child of ast.children ?? []) {
-    if (FLOW_KINDS.has(child.kind) && child.value === flowName) {
+    if (!FLOW_KINDS.has(child.kind)) continue;
+    // governedFlowDecl stores value as "governed:<floor>:<name>" — extract the real name
+    if (child.kind === "governedFlowDecl") {
+      const parts = (child.value ?? "").split(":");
+      const realName = parts.slice(2).join(":"); // everything after "governed:<floor>:"
+      if (realName === flowName) return child;
+    } else if (child.value === flowName) {
       return child;
     }
   }
@@ -990,11 +1047,80 @@ export function getWATImportsForEffects(effects: readonly string[]): WATImport[]
  *
  * Phase 19: all function bodies are stubs. Full lowering in Phase 22.
  */
+
+/**
+ * Collects compile-time integer constants from top-level `static` and `bitfield`
+ * declarations in the program AST.
+ *
+ * `static NAME = N` → staticConsts.set("NAME", N)
+ * `bitfield REG { field: bitPos }` → staticConsts.set("REG.field", 1 << bitPos)
+ *                                    staticConsts.set("REG.BIT_field", bitPos)
+ *
+ * Only integer literals are folded here (the WAT emitter only supports i32).
+ * Non-integer static values are ignored (they will emit (i32.const 0) at use site).
+ */
+function collectStaticConsts(ast: AstNode | undefined): ReadonlyMap<string, number> {
+  const consts = new Map<string, number>();
+  if (ast === undefined) return consts;
+
+  for (const node of ast.children ?? []) {
+    if (node.kind === "staticDecl") {
+      const name = node.value ?? "";
+      const valueExpr = node.children?.[0];
+      if (name !== "" && valueExpr !== undefined) {
+        const n = foldToInt(valueExpr, consts);
+        if (n !== null) consts.set(name, n);
+      }
+    } else if (node.kind === "bitfieldDecl") {
+      const registerName = node.value ?? "";
+      if (registerName === "") continue;
+      for (const child of node.children ?? []) {
+        const parts = (child.value ?? "").split(":");
+        if (parts.length !== 2) continue;
+        const fieldName = (parts[0] ?? "").trim();
+        const bitPos = parseInt((parts[1] ?? "").trim(), 10);
+        if (isNaN(bitPos) || bitPos < 0 || bitPos > 31) continue;
+        const bitmask = 1 << bitPos;
+        consts.set(`${registerName}.${fieldName}`, bitmask);
+        consts.set(`${registerName}.BIT_${fieldName}`, bitPos);
+      }
+    }
+  }
+  return consts;
+}
+
+/**
+ * Attempts to fold an AST expression to a plain JavaScript integer.
+ * Used by collectStaticConsts to resolve static initializers.
+ * Returns null for non-constant or non-integer expressions.
+ */
+function foldToInt(
+  expr: AstNode,
+  consts: ReadonlyMap<string, number>,
+): number | null {
+  if (expr.kind === "numberLiteral") {
+    const raw = (expr.value ?? "0").replace(/_/g, "");
+    if (raw.includes(".")) return null; // float — not an integer
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) ? n : null;
+  }
+  if (expr.kind === "identifier") {
+    const name = expr.value ?? "";
+    const v = consts.get(name);
+    return v !== undefined ? v : null;
+  }
+  return null;
+}
+
 export function buildWATModule(
   gir: WATGIRInput,
   _capabilityMap: ReadonlyMap<string, { readonly wasmImport?: string; readonly requiredEffects: readonly string[] }>,
   target: "wasm-standalone" | "wasm-hybrid" = "wasm-standalone",
 ): WATModule {
+  // Collect compile-time constants from `static NAME = EXPR` and `bitfield NAME { ... }`
+  // top-level declarations in the AST. These are folded to (i32.const N) at every use site.
+  const staticConsts = collectStaticConsts(gir.ast);
+
   // Build deduped import list from effectful flows using getWATImportsForEffects.
   // Collect all declared effects across non-pure flows, then resolve via STDLIB_CAPABILITY_MAP.
   const allEffects: string[] = [];
@@ -1050,7 +1176,7 @@ export function buildWATModule(
       const flowAstNode = findFlowNodeInAST(gir.ast, flow.name);
       if (flowAstNode !== undefined) {
         const paramNames = extractFlowParamNames(flowAstNode);
-        const phase25Body = emitWATFromFlowAST(flowAstNode, paramNames);
+        const phase25Body = emitWATFromFlowAST(flowAstNode, paramNames, staticConsts);
         if (phase25Body !== null) {
           body = phase25Body;
         } else if (flow.executionPlan !== undefined) {
@@ -1211,6 +1337,63 @@ export function buildWATModuleFromGIR(
 // ---------------------------------------------------------------------------
 // Stub emitter entry point
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// #70 WAT single-exit body transformation (Phase 4 prerequisite)
+// ---------------------------------------------------------------------------
+
+/**
+ * Single-exit body transformation — Phase 4 prerequisite (task #70).
+ *
+ * Wraps a WAT function body so that ALL return paths converge through
+ * a single exit point, where post-condition invariant gates can fire.
+ *
+ * Pattern:
+ *   (block $logicn_exit
+ *     ... body with br $logicn_exit replacing return ...
+ *   )
+ *   ;; post-condition gates fire here (after $exit)
+ *   local.get $logicn_result
+ *
+ * Stage A (now): only emits the wrapper structure — no active post-conditions yet.
+ *   The wrapper is a no-op transformation that preserves identical behavior.
+ *   Post-condition gates will be injected here in Phase 4 when #70 is fully active.
+ *
+ * Stage B (Phase 4): `ensure returnValue > 0` expressions in invariant {} will
+ *   generate post-condition gates that are injected after $logicn_exit.
+ */
+export function wrapInSingleExit(
+  bodyLines: string[],
+  postConditionLines: string[],
+  _resultType: string,
+): string[] {
+  if (postConditionLines.length === 0) {
+    // No post-conditions active yet — return body unchanged (Stage A no-op)
+    return bodyLines;
+  }
+
+  // Future: wrap body in (block $logicn_exit), inject post-condition gates after
+  // For now Stage A: no post-conditions, return unchanged
+  return bodyLines;
+}
+
+/**
+ * Classify ensures in an invariant {} block:
+ *   - Pre-conditions: reference only flow parameters → already handled (WAT gate at entry)
+ *   - Post-conditions: reference 'result' or non-parameter identifiers → need single-exit
+ *
+ * Stage A: returns empty array (no post-conditions wired yet).
+ * Phase 4: will classify by comparing ensure symbols against param names.
+ */
+export function extractPostConditionEnsures(
+  invariantNode: AstNode | undefined,
+  _paramNames: Set<string>,
+): AstNode[] {
+  if (invariantNode === undefined) return [];
+  // Stage A stub: all ensures are pre-conditions on parameters
+  // Post-condition detection (symbols NOT in paramNames) added in Phase 4
+  return [];
+}
 
 /**
  * Phase 19 stub: validates GIR structure and produces a skeleton WATModule.

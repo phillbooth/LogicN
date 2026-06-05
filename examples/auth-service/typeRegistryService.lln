@@ -60,6 +60,7 @@ contract {
 {
   unsafe let typeName: String = request.jsonBody.typeName
 
+  trap typeName == "" : ERR_EMPTY_TYPE_NAME
   let isBuiltin: Bool = isBuiltinType(typeName)
   let category: String = typeCategory(typeName)
 

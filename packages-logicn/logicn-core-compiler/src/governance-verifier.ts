@@ -37,6 +37,7 @@
 // =============================================================================
 
 import { type AstNode, type AstNodeKind, type FlowMeta, type SourceLocation } from "./parser.js";
+import { KNOWN_SIGNALS, KNOWN_FLOORS, normaliseFloor, KNOWN_CAPABILITIES } from "./capability-types.js";
 import { type EffectCheckResult } from "./effect-checker.js";
 import { GovernanceFlags, type GovernanceFlagsMask, type RuntimeManifest } from "./type-registry.js";
 import { buildProofGraphCached, computeExecutionSignature, generateEpilogueReceipt, type EpilogueFailureAction, type EpilogueProofStrategy, type ProofGraph, type ProofObligation, LLN_HW_001, LLN_HW_002, LLN_HW_003 } from "./proof-graph.js";
@@ -88,12 +89,21 @@ export type DeploymentProfile = "dev" | "production" | "deterministic" | "check-
 // ---------------------------------------------------------------------------
 
 const FLOW_KINDS = new Set<AstNodeKind>([
-  "flowDecl", "secureFlowDecl", "pureFlowDecl", "guardedFlowDecl",
+  "flowDecl", "secureFlowDecl", "pureFlowDecl", "guardedFlowDecl", "governedFlowDecl",
 ]);
 
 function findFlowNode(ast: AstNode, name: string): AstNode | undefined {
   function walk(node: AstNode): AstNode | undefined {
-    if (FLOW_KINDS.has(node.kind) && node.value === name) return node;
+    if (FLOW_KINDS.has(node.kind)) {
+      // governedFlowDecl stores value as "governed:<floor>:<name>" — extract the real name
+      if (node.kind === "governedFlowDecl") {
+        const parts = (node.value ?? "").split(":");
+        const realName = parts.slice(2).join(":");
+        if (realName === name) return node;
+      } else if (node.value === name) {
+        return node;
+      }
+    }
     for (const child of node.children ?? []) {
       const found = walk(child);
       if (found !== undefined) return found;
@@ -206,6 +216,32 @@ export const LLN_GOV_012 = {
   severity: "warning" as const,
   message: "Contract set requires audit.write but the flow does not declare it.",
 } as const;
+
+// ── LLN-ASSIMILATE codes ──────────────────────────────────────────────────────────
+//
+// LLN-ASSIMILATE-001  assimilated plugin declared outside boot.lln project manifest.
+//                     Only boot.lln may grant assimilation authority. Individual flow
+//                     files cannot promote plugins to Hot-Code Residency.
+// LLN-ASSIMILATE-002  assimilation_memory_budget not declared in boot.lln governance {}
+//                     block but an assimilated plugin exists in the project.
+//                     Add: governance { assimilation_memory_budget: 50MB } to boot.lln.
+// LLN-ASSIMILATE-003  assimilated plugin contract {} has no access { grant } block.
+//                     All assimilated plugins must declare explicit capability grants —
+//                     they are pre-warmed at boot so V_DPM bits must be known ahead of time.
+
+// ── LLN-GATE codes ────────────────────────────────────────────────────────────────
+//
+// LLN-GATE-001  gate(condition) references a condition not in knownDomainGuards.
+//               Stage A: warning (guard may be in another file).
+//               Stage B: error (full project context available).
+// LLN-GATE-002  gate {} wraps a pure flow — redundant.
+//               Pure flows have no side effects, so a gate is meaningless.
+
+// ── LLN-ACCESS codes ──────────────────────────────────────────────────────────────
+//
+// LLN-ACCESS-001  access {} grant references unknown capability name.
+// LLN-ACCESS-002  access {} grants capability not declared in flow's effects {}.
+//                 Default Deny means grants must be consistent with the flow's own effects.
 
 /** LLN-GOV-019: A `limits {}` block contains an unrecognised field name (likely a typo). */
 export const LLN_GOV_019 = {
@@ -353,6 +389,48 @@ export const LLN_OBS_001 = {
   severity: "warning" as const,
   message: "Explicit observability {} declared on a pure flow. Pure flows have no side effects — telemetry is meaningless here.",
 } as const;
+
+// ── LLN-ASSUME codes ────────────────────────────────────────────────────────────────
+//
+// LLN-ASSUME-001  Flow referenced in assuming() does not exist in the known flow registry.
+// LLN-ASSUME-002  Claim in assuming() does not match any ProofObligation in the flow's manifest.
+// LLN-ASSUME-003  Referenced manifest is not present or sourceHash has changed (tampered/stale).
+// LLN-ASSUME-004  assuming() references a flow from a different trust domain (cross-module).
+//                 Only permitted when that flow's manifest carries a valid GovernanceSignature.
+//
+// These codes enforce the Proof-Tracing safety property:
+//   "A developer cannot bypass a proof — they can only reference a proof that exists."
+
+// ── LLN-MONO codes ────────────────────────────────────────────────────────────────────
+//
+// LLN-MONO-001  Emergency transition attempts to ADD a capability (expand permissions).
+//               Only DENY/CLEAR operations are permitted in emergency {} blocks.
+//               Monotonicity rule: V_DPM bits can only be cleared, never set.
+// LLN-MONO-002  Emergency transition references an unknown signal type.
+//               Valid signals: invariant_failure, capability_denied, fuel_exhausted,
+//               manifest_tampered, quarantine_request, any_failure.
+
+// ── LLN-TRAP codes ────────────────────────────────────────────────────────────────────
+//
+// LLN-TRAP-001  trap error code is not a valid identifier (empty or contains spaces).
+//               Error codes must be SCREAMING_SNAKE_CASE identifiers.
+// LLN-TRAP-002  trap condition references symbols not in the flow's parameter scope.
+//               Same as LLN-INV-004 but for trapDecl nodes.
+
+// ── LLN-DAG codes ─────────────────────────────────────────────────────────────────────
+//
+// LLN-DAG-001  governed flow declares an unknown Tower floor.
+//              Valid floors: floor_1..4 / execution / containment / proof / attestation.
+// LLN-DAG-002  governed flow floor is inconsistent with the flow's effects profile.
+//              A floor_1 (Execution) flow cannot declare secret.access effects —
+//              secret access is a Floor 3+ capability.
+
+// ── LLN-MATCH codes ───────────────────────────────────────────────────────────────────
+//
+// LLN-MATCH-001  match expression on a known enum type has no wildcard (_) arm
+//                and does not cover all known variants. Missing arms create "governance holes"
+//                where a V_DPM signal or capability could pass unchecked.
+//                Only fires when the match target type is known to the compiler.
 
 /** LLN-EC-001 (PLANNED Phase 5): static cost overflow — max_aggregate_flow_budget exceeded by estimated loop. */
 export const LLN_EC_001 = {
@@ -1020,6 +1098,12 @@ class GovernanceVerifier {
    * Used by the Differential Proof pass for `contract [conforms_to: Name] { }` (task #56).
    */
   private knownDomainGuards: Map<string, AstNode> = new Map();
+  /**
+   * All flows in the current compilation unit, keyed by flow name.
+   * Value holds the AST node for the flow declaration.
+   * Built in verify() and consumed by verifyAssumingBlocks() (task #74).
+   */
+  private knownFlows: Map<string, { node?: AstNode }> = new Map();
   private readonly governanceFlagsByFlow = new Map<string, GovernanceFlagsMask>();
   private readonly runtimeManifests: RuntimeManifest[] = [];
   private readonly proofGraphsByFlow = new Map<string, ProofGraph>();
@@ -1030,6 +1114,7 @@ class GovernanceVerifier {
     flows: readonly FlowMeta[],
     effectResults: readonly EffectCheckResult[],
     profile: DeploymentProfile,
+    sourceFile?: string,
   ): void {
     this.currentProfile = profile;
     // Collect all contractSetDecl nodes from top-level program children
@@ -1040,12 +1125,16 @@ class GovernanceVerifier {
       }
     }
 
-    // Collect all top-level policyDecl nodes as Domain Guard policies (task #56).
+    // Collect all top-level policyDecl / guardDecl nodes as Domain Guard policies (task #56).
     // A domain guard policy has a name (e.g. "InvoicingDomainGuard") and contains
     // permitted_effects, permitted_capabilities, and/or enforced_limits sub-blocks.
+    // `guardDecl` is the v2.2 canonical form; `policyDecl` is the legacy alias kept for compat.
     this.knownDomainGuards = new Map();
     for (const child of ast.children ?? []) {
       if (child.kind === "policyDecl" && child.value !== undefined && child.value !== "policy") {
+        this.knownDomainGuards.set(child.value, child);
+      }
+      if (child.kind === "guardDecl" && child.value !== undefined && child.value !== "guard") {
         this.knownDomainGuards.set(child.value, child);
       }
     }
@@ -1065,11 +1154,42 @@ class GovernanceVerifier {
       }
     }
 
+    // Build knownFlows map for assuming {} proof-tracing (task #74)
+    this.knownFlows = new Map();
+    for (const flow of flows) {
+      const flowNode = findFlowNode(ast, flow.name);
+      this.knownFlows.set(flow.name, flowNode !== undefined ? { node: flowNode } : {});
+    }
+
     for (const flow of flows) {
       const flowNode = findFlowNode(ast, flow.name);
       const effectResult = effectResults.find((r) => r.flowName === flow.name);
       this.verifyFlow(flow, flowNode, effectResult, profile, flows, effectResults);
     }
+
+    // ── LLN-MONO-001/002: Policy monotonicity verification (DRCM Phase 4, task #39) ──
+    // Scan all AST nodes for policyDecl blocks and verify emergency {} transitions.
+    const allNodes = ast.children ?? [];
+    this.verifyPolicyMonotonicity(allNodes);
+
+    // ── LLN-INHERIT-001/002: Policy hierarchy subset verification (task #72) ──
+    // Verifies parent_policy: annotations — child permitted_effects ⊆ parent.
+    this.verifyPolicyHierarchy(allNodes);
+
+    // ── LLN-DAG-001/002: governed flow floor validation ───────────────────────────
+    this.verifyGovernedFlows(allNodes);
+
+    // ── LLN-GATE-001/002: gate {} admission guard block validation ────────────────
+    this.verifyGateBlocks(allNodes);
+
+    // ── LLN-STATIC-001/002: static compile-time constant validation ──────────────
+    this.verifyStaticDecls(allNodes);
+
+    // ── LLN-BF-001/002: bitfield register bitmask validation ─────────────────────
+    this.verifyBitfieldDecls(allNodes);
+
+    // ── LLN-ASSIMILATE-001/003: assimilated plugin validation ─────────────────────
+    this.verifyAssimilatedPlugins(allNodes, sourceFile ?? "");
   }
 
   getResult(): GovernanceVerifyResult {
@@ -1690,6 +1810,16 @@ class GovernanceVerifier {
       this.verifyInvariantBlock(flow, flowNode, loc);
     }
 
+    // ── LLN-TRAP-001/002: trap {} declarations in flow body ───────────────────
+    if (flowNode !== undefined) {
+      this.verifyTrapDecls(flow, flowNode, loc);
+    }
+
+    // ── LLN-MATCH-001: match exhaustiveness check ─────────────────────────────
+    if (flowNode !== undefined) {
+      this.checkMatchExhaustiveness(flow, flowNode, loc);
+    }
+
     // ── LLN-CAP-001: Network wildcard ban (DRCM Phase 1 — task #30) ──────────
     // Wildcard `*` in network capability declarations introduces parsing vulnerabilities
     // and ambient authority leaks. Force explicit NetworkTarget variants.
@@ -1725,6 +1855,188 @@ class GovernanceVerifier {
           `Remove the observability {} block from this pure flow.`,
         ));
       }
+    }
+
+    // ── LLN-OBS-002: observability {} must not access privacy {} scope (task #66) ──
+    // The observability block emits telemetry (best-effort, lossy, non-authoritative).
+    // Telemetry must NEVER contain PII, PHI, or secrets declared in privacy {}.
+    // Privacy-scoped variables (masked fields) must not appear in observability metrics.
+    //
+    // Rule: if a flow declares both privacy {} AND observability {}, the compiler
+    // must ensure no privacy-scoped field names appear in observability metric names.
+    if (flowNode !== undefined) {
+      const contractNode = (flowNode.children ?? []).find(c => c.kind === "contractDecl");
+      if (contractNode !== undefined) {
+        const hasObservability = (contractNode.children ?? []).some(
+          c => c.kind === "identifier" && c.value === "observability:block"
+        );
+        const privacyBlock = (contractNode.children ?? []).find(
+          c => c.kind === "identifier" && c.value === "privacy:block"
+        );
+        if (hasObservability && privacyBlock !== undefined) {
+          // Extract privacy-scoped field names from privacy:block declarations
+          const privacyFields = new Set<string>(
+            (privacyBlock.children ?? [])
+              .filter(c => (c.value ?? "").startsWith("pii:") || (c.value ?? "").startsWith("phi:"))
+              .map(c => (c.value ?? "").replace(/^(pii|phi):/, "").trim())
+              .filter(Boolean)
+          );
+          // Check observability block for any metric names matching privacy fields
+          const observabilityBlock = (contractNode.children ?? []).find(
+            c => c.kind === "identifier" && c.value === "observability:block"
+          );
+          for (const child of observabilityBlock?.children ?? []) {
+            const decl = child.value ?? "";
+            for (const privField of privacyFields) {
+              if (decl.includes(privField)) {
+                this.diagnostics.push(makeGovDiag(
+                  "LLN-OBS-002",
+                  "OBSERVABILITY_ACCESSES_PRIVACY_SCOPE",
+                  "error",
+                  `Flow '${flow.name}': observability {} references '${privField}' which is declared in privacy {}. ` +
+                  `Telemetry must never expose PII/PHI fields. Use aggregate metrics (latency, error_rate) instead.`,
+                  loc,
+                  `Remove '${privField}' from observability metrics, or use redact(${privField}) in a separate audit {} block.`,
+                ));
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // ── LLN-ASSUME-001..004: assuming {} proof-tracing verification (task #74) ──
+    if (flowNode !== undefined) {
+      this.verifyAssumingBlocks(flowNode, flow, loc);
+    }
+
+    // ── LLN-ACCESS-001/002: access {} capability grant enforcement (task #89) ──
+    if (flowNode !== undefined) {
+      this.verifyAccessBlocks(flowNode, flow, loc);
+    }
+  }
+
+  /**
+   * LLN-ASSUME-001..004: Verify all `assuming {}` blocks in a contract.
+   *
+   * For each assumingDecl:
+   *   1. Check flowRef names a known flow in this compilation unit (LLN-ASSUME-001)
+   *   2. Check the claim string appears as a ProofObligation in the known flow (LLN-ASSUME-002)
+   *   3. If the flow is external, require that it was compiled with a valid GovernanceSignature (LLN-ASSUME-004)
+   *   Note: LLN-ASSUME-003 (manifest file freshness) is a Phase 5 check — requires disk I/O at admission gate.
+   *         In Stage A we emit a warning-only placeholder for cross-module assuming().
+   */
+  private verifyAssumingBlocks(
+    flowNode: AstNode,
+    flow: FlowMeta,
+    loc: SourceLocation | undefined,
+  ): void {
+    const contractNode = (flowNode.children ?? []).find(c => c.kind === "contractDecl");
+    if (contractNode === undefined) return;
+
+    const assumingBlocks = (contractNode.children ?? []).filter(c => c.kind === "assumingDecl");
+    if (assumingBlocks.length === 0) return;
+
+    for (const block of assumingBlocks) {
+      const refFlowName = block.flowRef ?? "";
+      const claim = block.claim ?? "";
+
+      if (refFlowName === "") {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-ASSUME-001",
+          "ASSUMING_MISSING_FLOW_REF",
+          "error",
+          `Flow '${flow.name}': assuming() requires a flow reference as first argument. ` +
+          `Syntax: assuming(flowName, "ensure condition") { }`,
+          loc,
+          `Provide the name of the flow whose proof you are borrowing.`,
+        ));
+        continue;
+      }
+
+      if (claim === "") {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-ASSUME-001",
+          "ASSUMING_MISSING_CLAIM",
+          "error",
+          `Flow '${flow.name}': assuming() requires a claim string as second argument. ` +
+          `Syntax: assuming(flowName, "ensure condition") { }`,
+          loc,
+          `Provide the proof obligation claim, e.g. "ensure amount > 0".`,
+        ));
+        continue;
+      }
+
+      // Check: does refFlowName exist in the current compilation unit?
+      const refFlow = this.knownFlows.get(refFlowName);
+      if (refFlow === undefined) {
+        // The flow is either external or doesn't exist.
+        // External flows require GovernanceSignature — emit LLN-ASSUME-004 warning.
+        // Full manifest-file lookup (LLN-ASSUME-003) is deferred to Phase 5 admission gate.
+        this.diagnostics.push(makeGovDiag(
+          "LLN-ASSUME-004",
+          "ASSUMING_EXTERNAL_FLOW",
+          "warning",
+          `Flow '${flow.name}': assuming() references '${refFlowName}' which is not in this ` +
+          `compilation unit. External proof borrowing requires a GovernanceSignature on ` +
+          `'${refFlowName}'.lmanifest. The admission gate (logicn verify) will check this at runtime.`,
+          loc,
+          `Ensure '${refFlowName}' is compiled separately and its .lmanifest is available at ` +
+          `deployment time. Run: logicn verify --assuming ${refFlowName}`,
+        ));
+        continue;
+      }
+
+      // The flow exists in this compilation unit — check if it has the claimed proof obligation.
+      // We check the flow's contract invariant {} blocks for a matching ensure expression.
+      const refFlowContract = (refFlow.node?.children ?? []).find(c => c.kind === "contractDecl");
+      if (refFlowContract === undefined) {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-ASSUME-002",
+          "ASSUMING_NO_CONTRACT",
+          "error",
+          `Flow '${flow.name}': assuming() references '${refFlowName}' but that flow has ` +
+          `no contract {} block. Cannot borrow a proof that was never declared.`,
+          loc,
+          `Add an invariant {} block to '${refFlowName}' declaring the claimed ensure condition.`,
+        ));
+        continue;
+      }
+
+      // Check ensure expressions — normalise whitespace for comparison
+      const normalise = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
+      const normClaim = normalise(claim);
+
+      let claimFound = false;
+      for (const invBlock of (refFlowContract.children ?? [])) {
+        for (const child of (invBlock.children ?? [])) {
+          if (child.kind === "ensureDecl" || (child.kind === "identifier" && normalise(child.value ?? "").includes("ensure"))) {
+            // Reconstruct the ensure text from AST for comparison
+            const ensureText = normalise(`ensure ${child.value ?? ""}`);
+            if (ensureText.includes(normClaim) || normClaim.includes(ensureText)) {
+              claimFound = true;
+              break;
+            }
+          }
+        }
+        if (claimFound) break;
+      }
+
+      if (!claimFound) {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-ASSUME-002",
+          "ASSUMING_CLAIM_NOT_FOUND",
+          "warning",
+          `Flow '${flow.name}': assuming() claims '${claim}' is proved in '${refFlowName}', ` +
+          `but no matching ensure expression was found in that flow's invariant {} block. ` +
+          `The WAT gate will NOT be elided — this proof will be treated as unverified.`,
+          loc,
+          `Verify the claim string matches exactly an ensure expression in '${refFlowName}' invariant {}. ` +
+          `Or add: ensure ${claim.replace(/^ensure\s+/, "")} to '${refFlowName}' invariant {}.`,
+        ));
+      }
+      // If claimFound: proof borrowed successfully — no WAT gate emitted for this claim.
+      // This is recorded in the ProofGraph as "borrowed:refFlowName" for the manifest.
     }
   }
 
@@ -1948,7 +2260,7 @@ class GovernanceVerifier {
         `Flow '${flow.name}' declares [conforms_to: ${policyName}] but no policy '${policyName}' was found in this file. ` +
         `Ensure the policy is declared at the top level of the same file or imported.`,
         contractNode.location ?? flowNode.location,
-        `Add: policy ${policyName} { permitted_effects { ... } enforced_limits { ... } }`,
+        `Add: guard ${policyName} { permitted_effects { ... } enforced_limits { ... } }`,
       ));
       return;
     }
@@ -2151,6 +2463,179 @@ class GovernanceVerifier {
     ));
   }
 
+  /**
+   * LLN-INHERIT-001/002: Hierarchical policy inheritance subset verification (task #72).
+   *
+   * When a policy declares `parent_policy: ParentName`, this verifier checks:
+   *   LLN-INHERIT-001: parent policy name is not found in knownDomainGuards
+   *   LLN-INHERIT-002: child policy's permitted_effects ⊄ parent's permitted_effects
+   *                    (child attempts to use effects the parent doesn't allow)
+   *
+   * Monotonicity of inheritance: a child policy can ONLY be more restrictive than its parent.
+   * It cannot declare effects the parent doesn't permit — that would be privilege escalation.
+   *
+   * Example (valid):
+   *   policy FinanceFullAccess { permitted_effects { database.write, audit.write } }
+   *   policy InvoiceRead { parent_policy: FinanceFullAccess; permitted_effects { database.read } }
+   *   → database.read has no bit → always permitted (it's a no-op, read-only) ✓
+   *
+   * Example (invalid — LLN-INHERIT-002):
+   *   policy InvoiceRead { parent_policy: FinanceFullAccess; permitted_effects { network.outbound } }
+   *   → network.outbound not in FinanceFullAccess.permitted_effects → LLN-INHERIT-002 ✗
+   */
+  private verifyPolicyHierarchy(nodes: readonly AstNode[]): void {
+    // Helper: extract permitted_effects from a policyDecl node
+    const extractPermittedEffects = (policyNode: AstNode): Set<string> => {
+      const effects = new Set<string>();
+      for (const child of policyNode.children ?? []) {
+        // The permitted_effects block is stored as an AstNode with effectRef children
+        if (child.kind === "identifier" && (child.value ?? "").startsWith("permitted_effects")) {
+          // Effects stored as effectRef children
+          for (const eff of child.children ?? []) {
+            if (eff.kind === "effectRef" && eff.value) effects.add(eff.value);
+          }
+        }
+        // Direct effectRef children (alternative storage form from parseDomainGuardList)
+        if (child.kind === "effectRef" && child.value) effects.add(child.value);
+      }
+      return effects;
+    };
+
+    for (const node of nodes) {
+      if (node.kind !== "policyDecl" && node.kind !== "guardDecl") continue;
+      const policyName = node.value ?? "anonymous-policy";
+      const loc = node.location ?? { file: "", line: 0, column: 0 };
+
+      // Look for parent_policy: annotation
+      const parentClause = (node.children ?? []).find(
+        c => c.kind === "identifier" && (c.value ?? "").startsWith("parent_policy:"),
+      );
+      if (parentClause === undefined) continue;
+
+      const parentName = (parentClause.value ?? "").replace(/^parent_policy:/, "").trim();
+      if (parentName === "") continue;
+
+      // LLN-INHERIT-001: Parent policy not found
+      const parentNode = this.knownDomainGuards.get(parentName);
+      if (parentNode === undefined) {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-INHERIT-001",
+          "PARENT_POLICY_NOT_FOUND",
+          "error",
+          `Policy '${policyName}': parent_policy '${parentName}' is not defined in this ` +
+          `compilation unit. Parent policies must be declared before child policies, ` +
+          `or in the same governance/ directory.`,
+          loc,
+          `Declare 'guard ${parentName} { ... }' before this guard, or remove parent_policy:`,
+        ));
+        continue;
+      }
+
+      // LLN-INHERIT-002: Child declares effects not in parent's permitted set
+      const parentEffects = extractPermittedEffects(parentNode);
+      const childEffects  = extractPermittedEffects(node);
+
+      // If parent has no permitted_effects block, all effects are implicitly allowed
+      if (parentEffects.size === 0) continue;
+
+      for (const childEff of childEffects) {
+        // Check if childEff is covered by parent (exact match or parent allows the root family)
+        const rootFamily = childEff.split(".")[0] + ".*";
+        const covered = parentEffects.has(childEff) || parentEffects.has(rootFamily);
+        if (!covered) {
+          this.diagnostics.push(makeGovDiag(
+            "LLN-INHERIT-002",
+            "CHILD_POLICY_EXCEEDS_PARENT",
+            "error",
+            `Policy '${policyName}': permitted_effects includes '${childEff}' but parent ` +
+            `policy '${parentName}' does not permit this effect. Child policies can ONLY ` +
+            `be more restrictive — this is a privilege escalation attempt.`,
+            loc,
+            `Remove '${childEff}' from '${policyName}' permitted_effects, or add it to ` +
+            `'${parentName}' permitted_effects if this expansion is intentional.`,
+          ));
+        }
+      }
+    }
+  }
+
+  /**
+   * LLN-MONO-001/002: Verify emergency {} transitions in all top-level policy {} blocks.
+   *
+   * Scans the AST for policyDecl nodes, extracts emergencyTransitionDecl children,
+   * and validates monotonicity of each transition.
+   *
+   * DRCM Phase 4 (task #39).
+   */
+  private verifyPolicyMonotonicity(nodes: readonly AstNode[]): void {
+    for (const node of nodes) {
+      if (node.kind !== "policyDecl" && node.kind !== "guardDecl") continue;
+      const policyName = node.value ?? "anonymous-policy";
+      const loc = node.location ?? { file: "", line: 0, column: 0 };
+
+      // Find the emergency:block child (if any)
+      const emergencyBlock = (node.children ?? []).find(
+        c => c.kind === "identifier" && c.value === "emergency:block"
+      );
+      if (emergencyBlock === undefined) continue;
+
+      for (const transition of (emergencyBlock.children ?? [])) {
+        if (transition.kind !== "emergencyTransitionDecl") continue;
+
+        const signal = transition.value ?? "";
+        const transLoc = transition.location ?? loc;
+
+        // LLN-MONO-002: Unknown signal type
+        if (!KNOWN_SIGNALS.has(signal)) {
+          this.diagnostics.push(makeGovDiag(
+            "LLN-MONO-002",
+            "UNKNOWN_EMERGENCY_SIGNAL",
+            "error",
+            `Policy '${policyName}': emergency {} transition uses unknown signal '${signal}'. ` +
+            `Valid signals: ${[...KNOWN_SIGNALS].join(", ")}.`,
+            transLoc,
+            `Replace '${signal}' with a valid signal type.`,
+          ));
+        }
+
+        // LLN-MONO-001: Check actions for permission expansion
+        for (const action of (transition.children ?? [])) {
+          const val = action.value ?? "";
+          // deny:X and action:X are always valid (clearing bits or setting mode flags)
+          if (val.startsWith("deny:") || val.startsWith("action:")) continue;
+          // allow:X would be a monotonicity violation
+          if (val.startsWith("allow:")) {
+            const capName = val.replace(/^allow:/, "");
+            this.diagnostics.push(makeGovDiag(
+              "LLN-MONO-001",
+              "EMERGENCY_EXPANDS_CAPABILITY",
+              "error",
+              `Policy '${policyName}': emergency {} transition on '${signal}' attempts to ` +
+              `ADD capability '${capName}'. Emergency transitions can ONLY clear (deny) ` +
+              `capabilities — V_DPM is monotonically decreasing. This is a critical ` +
+              `security violation: an emergency handler cannot grant itself new powers.`,
+              transLoc,
+              `Remove 'allow ${capName}' from the emergency {} transition. ` +
+              `Emergency handlers may only deny capabilities, quarantine, or halt.`,
+            ));
+          } else if (!val.startsWith("deny:") && !val.startsWith("action:") && val !== "") {
+            // Unknown action type
+            this.diagnostics.push(makeGovDiag(
+              "LLN-MONO-001",
+              "EMERGENCY_UNKNOWN_ACTION",
+              "warning",
+              `Policy '${policyName}': emergency {} transition on '${signal}' contains ` +
+              `unknown action '${val}'. Only 'deny', 'quarantine', 'emergency', and 'halt' ` +
+              `are valid emergency transition actions.`,
+              transLoc,
+              `Replace '${val}' with a valid action.`,
+            ));
+          }
+        }
+      }
+    }
+  }
+
   private verifyEpilogueBlock(flowNode: AstNode, flowName: string): void {
     const contractNode = (flowNode.children ?? []).find((c) => c.kind === "contractDecl");
     if (contractNode === undefined) return;
@@ -2243,6 +2728,493 @@ class GovernanceVerifier {
       this.proofGraphsByFlow.set(flowName, { ...existingPg, epilogueReceipt: receipt });
     }
   }
+
+  // ── LLN-TRAP-001/002: trap declarations in flow body ────────────────────────
+
+  /**
+   * Scan the flow body for trapDecl nodes and verify:
+   *  - LLN-TRAP-001: error code is a valid identifier (not empty, no spaces)
+   *  - LLN-TRAP-002: condition references only symbols in parameter scope
+   *
+   * Also records trap obligations in the ProofGraph (CBOR Tag 403, trapKind field).
+   */
+  private verifyTrapDecls(flow: FlowMeta, flowNode: AstNode, loc: SourceLocation): void {
+    const blockNode = (flowNode.children ?? []).find(c => c.kind === "block");
+    if (blockNode === undefined) return;
+
+    // Build parameter scope (same as verifyInvariantBlock)
+    const paramNames = new Set<string>(
+      (flowNode.children ?? [])
+        .filter(c => c.kind === "paramDecl")
+        .map(c => ((c.value ?? "").split(":")[0] ?? "").trim())
+        .filter(n => n.length > 0)
+    );
+
+    // Sequential pass: accumulate let/mut binding names into scope as we go,
+    // so that trap conditions can reference variables declared before the trap.
+    // This matches the semantic intent: trap validates a value already in scope.
+    const localScope = new Set<string>(paramNames);
+
+    /**
+     * Extract the variable name from a letDecl/mutDecl value string.
+     * Format is: [prefix] name[: type]
+     * e.g. "unsafe rawFoo: String" → "rawFoo"
+     *      "foo: String"           → "foo"
+     *      "foo"                   → "foo"
+     */
+    function extractBindingName(value: string): string {
+      // Strip optional "unsafe " / "safe " prefix
+      const withoutPrefix = value.replace(/^(unsafe|safe)\s+/, "");
+      // Take the name part before ":"
+      return (withoutPrefix.split(":")[0] ?? "").trim();
+    }
+
+    for (const stmt of blockNode.children ?? []) {
+      // Accumulate local binding names into scope before processing the next trap
+      if (stmt.kind === "letDecl" || stmt.kind === "mutDecl") {
+        const name = extractBindingName(stmt.value ?? "");
+        if (name.length > 0) localScope.add(name);
+        continue;
+      }
+
+      if (stmt.kind !== "trapDecl") continue;
+
+      const errorCode = stmt.value ?? "ERR_TRAP";
+      const condExpr = stmt.children?.[0];
+
+      // LLN-TRAP-001: error code must be a valid identifier (non-empty, no spaces)
+      if (!errorCode || errorCode.trim() === "" || /\s/.test(errorCode)) {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-TRAP-001",
+          "TRAP_INVALID_ERROR_CODE",
+          "error",
+          `Flow '${flow.name}': trap has invalid error code '${errorCode}'. ` +
+          `Error codes must be non-empty identifiers (SCREAMING_SNAKE_CASE recommended).`,
+          stmt.location ?? loc,
+          `Use a valid identifier: trap <cond> : ERR_SOME_CODE`,
+        ));
+      }
+
+      // LLN-TRAP-002: condition must only reference symbols in parameter or local scope
+      if (condExpr !== undefined) {
+        const unresolvedNames = collectUnresolvedIdentifiers(condExpr, localScope);
+        for (const name of unresolvedNames) {
+          this.diagnostics.push(makeGovDiag(
+            "LLN-TRAP-002",
+            "TRAP_SYMBOL_UNRESOLVED",
+            "error",
+            `Flow '${flow.name}': trap condition references '${name}' which is not a parameter. ` +
+            `Available parameters: [${[...paramNames].join(", ") || "none"}].`,
+            stmt.location ?? loc,
+            `Check the spelling of '${name}' or use a flow parameter name instead.`,
+          ));
+        }
+      }
+
+      // Record as runtime-trap proof obligation (CBOR Tag 403 trapKind field)
+      this.proofObligations.push(`runtime-trap:${flow.name}:${errorCode}`);
+    }
+  }
+
+  // ── LLN-DAG-001/002: governed flow floor validation ─────────────────────────
+
+  /**
+  /**
+   * LLN-STATIC-001/002: Verify top-level `static NAME = EXPR` declarations.
+   *
+   * LLN-STATIC-002: Redeclaration — the same name declared more than once.
+   * LLN-STATIC-001: Non-constant initializer — static uses a callExpr (runtime value).
+   *
+   * Static constants must have unique names and must be initialized with compile-time
+   * literals (number, string, bool, or a previously-declared static identifier).
+   */
+  private verifyStaticDecls(nodes: readonly AstNode[]): void {
+    const seen = new Set<string>();
+    for (const node of nodes) {
+      if (node.kind !== "staticDecl") continue;
+      const name = node.value ?? "";
+      // LLN-STATIC-002: redeclaration
+      if (seen.has(name)) {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-STATIC-002",
+          "STATIC_REDECLARATION",
+          "error",
+          `Static constant '${name}' is declared more than once. Static constants must be unique.`,
+          node.location,
+          `Remove the duplicate static declaration of '${name}'.`,
+        ));
+      }
+      seen.add(name);
+      // LLN-STATIC-001: value must be a compile-time constant (not a function call)
+      const valueExpr = node.children?.[0];
+      if (valueExpr !== undefined && valueExpr.kind === "callExpr") {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-STATIC-001",
+          "STATIC_NOT_CONSTANT",
+          "warning",
+          `Static constant '${name}' uses a function call as its value. Static constants should be ` +
+          `compile-time literals (number, string, bool). Function calls are evaluated at runtime.`,
+          node.location,
+          `Replace the function call with a literal value.`,
+        ));
+      }
+    }
+  }
+
+  /**
+   * LLN-BF-001/002: Verify top-level `bitfield NAME { field: bitPos }` declarations.
+   *
+   * LLN-BF-002: Bit position out of range — V_DPM is a 32-bit register (positions 0-31).
+   * LLN-BF-001: Duplicate bit position — two fields map to the same bit.
+   *
+   * Each field in a bitfield must have a unique bit position within [0, 31].
+   */
+  private verifyBitfieldDecls(nodes: readonly AstNode[]): void {
+    for (const node of nodes) {
+      if (node.kind !== "bitfieldDecl") continue;
+      const name = node.value ?? "";
+      const seenBits = new Map<number, string>(); // bit position → field name
+
+      for (const child of node.children ?? []) {
+        const parts = (child.value ?? "").split(":");
+        if (parts.length !== 2) continue;
+        const fieldName = (parts[0] ?? "").trim();
+        const bitPos = parseInt((parts[1] ?? "").trim(), 10);
+
+        // LLN-BF-002: bit position out of range (0-31 for 32-bit register)
+        if (isNaN(bitPos) || bitPos < 0 || bitPos > 31) {
+          this.diagnostics.push(makeGovDiag(
+            "LLN-BF-002",
+            "BITFIELD_BIT_OUT_OF_RANGE",
+            "error",
+            `Bitfield '${name}': field '${fieldName}' uses bit position ${isNaN(bitPos) ? "NaN" : bitPos}. ` +
+            `V_DPM is a 32-bit register — valid positions are 0-31.`,
+            child.location,
+            `Change bit position to a value between 0 and 31.`,
+          ));
+          continue;
+        }
+
+        // LLN-BF-001: duplicate bit position within the same bitfield
+        if (seenBits.has(bitPos)) {
+          const existing = seenBits.get(bitPos)!;
+          this.diagnostics.push(makeGovDiag(
+            "LLN-BF-001",
+            "BITFIELD_BIT_OVERLAP",
+            "error",
+            `Bitfield '${name}': fields '${existing}' and '${fieldName}' both use bit position ${bitPos}. ` +
+            `Each bit position must be unique within a bitfield.`,
+            child.location,
+            `Change one of the fields to use a different bit position.`,
+          ));
+        } else {
+          seenBits.set(bitPos, fieldName);
+        }
+      }
+    }
+  }
+
+  /**
+   * Scan all top-level AST nodes for governedFlowDecl and verify the floor name.
+   *  - LLN-DAG-001: floor name must be in KNOWN_FLOORS
+   *  - No other checks in Stage A (full DAG validation is Phase 5)
+   */
+  private verifyGovernedFlows(nodes: readonly AstNode[]): void {
+    for (const node of nodes) {
+      if (node.kind !== "governedFlowDecl") continue;
+
+      // value = "governed:<floorName>:<flowName>"
+      const parts = (node.value ?? "").split(":");
+      const floorName = parts[1] ?? "";
+      const flowName = parts.slice(2).join(":");
+
+      // LLN-DAG-001: unknown floor name
+      if (!KNOWN_FLOORS.has(floorName)) {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-DAG-001",
+          "GOVERNED_FLOW_UNKNOWN_FLOOR",
+          "error",
+          `governed flow '${flowName}' declares unknown Tower floor '${floorName}'. ` +
+          `Valid floors: floor_1, floor_2, floor_3, floor_4 (or short names: execution, containment, proof, attestation).`,
+          node.location,
+          `Replace '${floorName}' with a valid floor name, e.g. 'governed floor_3 flow ...'`,
+        ));
+      } else {
+        // Record DAG_CHECK obligation for the flow
+        const canonicalFloor = normaliseFloor(floorName);
+        this.proofObligations.push(`dag_check:${flowName}:${canonicalFloor}:bit8`);
+      }
+    }
+  }
+
+  // ── LLN-ASSIMILATE: assimilated plugin verification ──────────────────────────
+
+  /**
+   * Verify all assimilatedPluginDecl nodes in the top-level AST children.
+   *
+   * LLN-ASSIMILATE-001: assimilated plugin declared outside boot.lln.
+   *   In Stage A single-file compilation we don't have full project context,
+   *   so this is a WARNING with note "full enforcement in Stage B".
+   *
+   * LLN-ASSIMILATE-003: assimilated plugin has no contract {} with access { grant } block.
+   *   V_DPM bits must be pre-warmed at boot, so capability grants are mandatory.
+   */
+  private verifyAssimilatedPlugins(nodes: readonly AstNode[], sourceFile: string): void {
+    for (const node of nodes) {
+      if (node.kind !== "assimilatedPluginDecl") continue;
+
+      const alias = node.value ?? "<unknown>";
+
+      // LLN-ASSIMILATE-001: warn if not in boot.lln (Stage A warning; Stage B will be error)
+      if (!sourceFile.endsWith("boot.lln")) {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-ASSIMILATE-001",
+          "ASSIMILATE_OUTSIDE_BOOT",
+          "warning",
+          `Assimilated plugin '${alias}' is declared outside boot.lln. ` +
+          `Only boot.lln may grant Hot-Code Residency. ` +
+          `Move this declaration to boot.lln. (Full enforcement in Stage B multi-file compilation.)`,
+          node.location,
+          `Move 'import plugin assimilate ...' to boot.lln and add governance { assimilation_memory_budget: 50MB }.`,
+        ));
+      }
+
+      // LLN-ASSIMILATE-003: require contract {} with at least one grant
+      const contractNode = (node.children ?? []).find(c => c.kind === "contractDecl");
+      let hasGrant = false;
+      if (contractNode !== undefined) {
+        // Walk all children of the contract looking for accessDecl or identifier nodes
+        // that carry grant: prefixed values (as parsed by parseContractDecl/parseAccessBlock).
+        function walkForGrant(n: AstNode): boolean {
+          if (n.kind === "accessDecl") return true;
+          if (n.kind === "identifier" && (n.value ?? "").startsWith("grant:")) return true;
+          // Also check for access block stored as a sub-identifier "access:block"
+          if (n.kind === "identifier" && (n.value ?? "").startsWith("access:")) return true;
+          return (n.children ?? []).some(walkForGrant);
+        }
+        hasGrant = walkForGrant(contractNode);
+        // Also accept: contract has child nodes at all (grant lines from the access block)
+        // The contract parser stores access { grant X } sub-blocks as children of contractDecl.
+        if (!hasGrant) {
+          // Broader check: any child with "grant" in its value
+          function walkForGrantBroad(n: AstNode): boolean {
+            if (typeof n.value === "string" && n.value.includes("grant")) return true;
+            return (n.children ?? []).some(walkForGrantBroad);
+          }
+          hasGrant = walkForGrantBroad(contractNode);
+        }
+      }
+
+      if (!hasGrant) {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-ASSIMILATE-003",
+          "ASSIMILATE_MISSING_CAPABILITY_GRANTS",
+          "error",
+          `Assimilated plugin '${alias}' has no access { grant } block in its contract. ` +
+          `V_DPM bits are pre-warmed at boot — explicit capability grants are mandatory.`,
+          node.location,
+          `Add inside the plugin contract: access { grant network.outbound }`,
+        ));
+      }
+    }
+  }
+
+  // ── LLN-GATE-001/002: gate {} admission guard verification ──────────────────────
+
+  /**
+   * LLN-GATE-001/002: Verify gate {} admission guard blocks.
+   *
+   * LLN-GATE-001: gate(condition) references a condition not in knownDomainGuards.
+   *               Stage A: warning (guard may be in another file).
+   *               Stage B: error (full project context available).
+   *
+   * LLN-GATE-002: gate {} wraps a pure flow — redundant.
+   *               Pure flows have no side effects, so a gate is meaningless.
+   */
+  private verifyGateBlocks(nodes: readonly AstNode[]): void {
+    for (const node of nodes) {
+      if (node.kind !== "gateDecl") continue;
+      const condition = node.value ?? "";
+      const loc = node.location ?? { file: "", line: 0, column: 0 };
+
+      // LLN-GATE-001: Unknown condition name
+      if (condition !== "" && !this.knownDomainGuards.has(condition)) {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-GATE-001",
+          "GATE_UNKNOWN_CONDITION",
+          "warning",
+          `gate(${condition}): condition '${condition}' is not defined as a guard {} in this ` +
+          `compilation unit. In Stage A single-file compilation, the guard may be in boot.lln. ` +
+          `Full enforcement in Stage B multi-file compilation.`,
+          loc,
+          `Declare 'guard ${condition} { permitted_effects { ... } }' in boot.lln, ` +
+          `or check the condition name spelling.`,
+        ));
+      }
+
+      // LLN-GATE-002: gate wrapping pure flows is redundant
+      for (const child of node.children ?? []) {
+        if (child.kind === "pureFlowDecl") {
+          const flowName = child.value ?? "unknown";
+          this.diagnostics.push(makeGovDiag(
+            "LLN-GATE-002",
+            "GATE_WRAPS_PURE_FLOW",
+            "warning",
+            `gate(${condition}): wraps pure flow '${flowName}'. Pure flows have no side effects ` +
+            `and no capability requirements — the admission gate is redundant here.`,
+            child.location ?? loc,
+            `Remove the gate {} wrapper from '${flowName}', or change it to a non-pure flow ` +
+            `if it has side effects.`,
+          ));
+        }
+      }
+    }
+  }
+
+  // ── LLN-ACCESS-001/002: access {} capability grant verification ──────────────────
+
+  /**
+   * LLN-ACCESS-001/002: Verify access {} capability negotiation blocks.
+   *
+   * LLN-ACCESS-001: access {} grant references an unknown capability name.
+   *                 Valid capability names are in KNOWN_CAPABILITIES.
+   *
+   * LLN-ACCESS-002: access {} grant capability is not declared in flow's effects {}.
+   *                 A flow granting network.outbound to callers must itself declare
+   *                 allow network.outbound in its effects {}.
+   *
+   * Note: access {} operates under Default Deny — only listed grants are permitted.
+   * We check that grants are real capabilities (001) and consistent with effects (002).
+   */
+  private verifyAccessBlocks(
+    flowNode: AstNode,
+    flow: FlowMeta,
+    loc: SourceLocation | undefined,
+  ): void {
+    const contractNode = (flowNode.children ?? []).find(c => c.kind === "contractDecl");
+    if (contractNode === undefined) return;
+
+    // Find accessDecl — the v2.2 access {} block
+    const accessBlock = (contractNode.children ?? []).find(c => c.kind === "accessDecl");
+    if (accessBlock === undefined) return;
+
+    // Collect all grant:X children
+    const grants = (accessBlock.children ?? []).filter(c => (c.value ?? "").startsWith("grant:"));
+
+    for (const grant of grants) {
+      const capName = (grant.value ?? "").replace("grant:", "").trim();
+      if (capName === "") continue;
+
+      // LLN-ACCESS-001: unknown capability name
+      if (!KNOWN_CAPABILITIES.has(capName) && !capName.includes(".")) {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-ACCESS-001",
+          "ACCESS_UNKNOWN_CAPABILITY",
+          "warning",
+          `Flow '${flow.name}': access {} grants unknown capability '${capName}'. ` +
+          `Known capabilities: ${[...KNOWN_CAPABILITIES].filter(c => !c.includes("*")).join(", ")}.`,
+          grant.location ?? loc,
+          `Check the capability name spelling. Valid capabilities match V_DPM bit positions.`,
+        ));
+      }
+
+      // LLN-ACCESS-002: granted capability not in flow's declared effects
+      // access { grant X } means "callers need X to use this flow"
+      // The flow itself must have declared X if X has a V_DPM bit
+      const effectEquivalent = capName; // e.g. "network.outbound"
+      const flowHasEffect = flow.declaredEffects.includes(effectEquivalent) ||
+                            flow.declaredEffects.includes(`effect:${effectEquivalent}`);
+      const capHasBit = KNOWN_CAPABILITIES.has(capName) && capName !== "database.read";
+
+      if (capHasBit && !flowHasEffect) {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-ACCESS-002",
+          "ACCESS_GRANT_WITHOUT_EFFECT",
+          "warning",
+          `Flow '${flow.name}': access {} grants '${capName}' to callers but the flow ` +
+          `does not declare 'allow ${capName}' in its effects {}. ` +
+          `If callers need this capability, the flow should declare it in effects {}.`,
+          grant.location ?? loc,
+          `Add 'allow ${capName}' to the flow's contract effects {}, or remove the grant.`,
+        ));
+      }
+    }
+  }
+
+  // ── LLN-MATCH-001: match exhaustiveness checking ─────────────────────────────
+
+  /**
+   * Scan the flow body for matchExpr nodes that:
+   *  - Have no wildcard (_) arm
+   *  - Target a known enum-like type (SystemCapabilityType or EmergencySignalType)
+   *    identified by: <6 arms AND subject is a field access or local var on a known type
+   *  - Emits LLN-MATCH-001 WARNING (not error) — conservative approach
+   */
+  private checkMatchExhaustiveness(flow: FlowMeta, flowNode: AstNode, loc: SourceLocation): void {
+    const blockNode = (flowNode.children ?? []).find(c => c.kind === "block");
+    if (blockNode === undefined) return;
+
+    this.walkForMatchExpr(blockNode, flow, loc);
+  }
+
+  private walkForMatchExpr(node: AstNode, flow: FlowMeta, loc: SourceLocation): void {
+    for (const child of node.children ?? []) {
+      if (child.kind === "matchExpr") {
+        this.verifyMatchExhaustiveness(child, flow, loc);
+      }
+      // Recurse into nested blocks (if, while, etc.)
+      this.walkForMatchExpr(child, flow, loc);
+    }
+  }
+
+  private verifyMatchExhaustiveness(matchNode: AstNode, flow: FlowMeta, loc: SourceLocation): void {
+    const children = matchNode.children ?? [];
+    if (children.length === 0) return;
+
+    // children[0] = subject, rest = matchArm nodes
+    const arms = children.slice(1).filter(c => c.kind === "matchArm");
+
+    // Check if there is a wildcard arm
+    const hasWildcard = arms.some(arm => arm.value === "_");
+    if (hasWildcard) return; // wildcard covers all cases — no LLN-MATCH-001
+
+    // Check if there is a guard arm (when condition => body) — not an enum match
+    const hasGuardArm = arms.some(arm => arm.value === "__guard__");
+    if (hasGuardArm) return; // guard arms are boolean, not enum-exhaustive
+
+    // Only fire when arm count < 6 (conservative: likely incomplete enum coverage)
+    if (arms.length >= 6) return;
+
+    // Check if the subject looks like a known enum type (field access, or known signal/capability)
+    const subject = children[0];
+    if (subject === undefined) return;
+    const subjectDesc = this.describeExpr(subject);
+    const looksLikeKnownEnum =
+      subjectDesc.includes("signal") ||
+      subjectDesc.includes("capability") ||
+      subjectDesc.includes("Signal") ||
+      subjectDesc.includes("Capability") ||
+      (subject.kind === "memberExpr") ||
+      (subject.kind === "identifier" && (
+        (subject.value ?? "").toLowerCase().includes("signal") ||
+        (subject.value ?? "").toLowerCase().includes("cap") ||
+        (subject.value ?? "").toLowerCase().includes("mode")
+      ));
+
+    if (!looksLikeKnownEnum) return;
+
+    this.diagnostics.push(makeGovDiag(
+      "LLN-MATCH-001",
+      "MATCH_NON_EXHAUSTIVE",
+      "warning",
+      `Flow '${flow.name}': match expression on '${subjectDesc}' has no wildcard (_) arm ` +
+      `and only ${arms.length} arm(s). Missing arms create governance holes where a ` +
+      `V_DPM signal or capability could pass unchecked. ` +
+      `Add a wildcard arm: _ => { /* handle unexpected */ }`,
+      matchNode.location ?? loc,
+      `Add a wildcard arm: _ => { /* govern unexpected variants */ }`,
+    ));
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -2266,8 +3238,9 @@ export function verifyGovernance(
   flows: readonly FlowMeta[],
   effectResults: readonly EffectCheckResult[],
   profile: DeploymentProfile = "dev",
+  sourceFile?: string,
 ): GovernanceVerifyResult {
   const verifier = new GovernanceVerifier();
-  verifier.verify(ast, flows, effectResults, profile);
+  verifier.verify(ast, flows, effectResults, profile, sourceFile);
   return verifier.getResult();
 }

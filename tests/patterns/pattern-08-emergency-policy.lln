@@ -1,10 +1,10 @@
 // EXPECT: ACCEPT
-// Pattern 8 — Emergency Policy Overlay (drcm_core_v1 — future)
+// Pattern 8 — Emergency Policy Overlay (DRCM Phase 4 — task #39)
 // Reference: docs/Knowledge-Bases/logicn-architecture-patterns.md
 //
-// policy { emergency { ... } } is DRCM Phase 4 — not yet in Stage A.
-// This file shows the stable shell (accepted today) with the emergency block
-// in comments. When Phase 4 ships, unwrap the @experimental_profile block.
+// policy { emergency { ... } } is DRCM Phase 4 — now live in Stage A.
+// Demonstrates the structured emergency {} state machine parser (parseEmergencyBlock).
+// LLN-MONO-001/002 verifier validates monotonicity of all transitions at compile time.
 //
 // The Monotonic Rule (M-003): emergency overlays are ONE-WAY.
 // Once deny network.outbound fires — it cannot be reversed in this session.
@@ -24,30 +24,24 @@ contract {
   audit   { require cryptographic_state_hash }
   limits  { memory 64mb request_time 10s }
 }
-// DRCM Phase 4 — policy {} is a SEPARATE block between contract and body (not inside contract {}).
-// Confirmed design: signature → contract {} → policy {} → { body }
-// policy {} contains runtime monotonic overlay rules. Not a contract sub-block.
-// When @experimental_profile ships (task #51), unwrap this:
-//
-// policy {
-//   emergency {
-//     on invariant_failure {
-//       deny network.outbound
-//       require local_only_execution
-//       audit { level cryptographic_state_hash }
-//     }
-//     on memory_pressure_high {
-//       deny network.outbound
-//       deny database.write
-//       flush ephemeral_scratchpad
-//     }
-//     on secret_breach_detected {
-//       zeroize all_key_material
-//       terminate execution
-//       emit audit_final_entry
-//     }
-//   }
-// }
+policy {
+  emergency {
+    on invariant_failure {
+      deny network.outbound
+      deny ai.inference
+      quarantine
+    }
+    on capability_denied {
+      deny network.outbound
+      deny database.write
+      quarantine
+    }
+    on any_failure {
+      deny network.outbound
+      emergency
+    }
+  }
+}
 {
   if payload.amount <= 0 {
     return Err(ProcessingError.InvariantFailure)

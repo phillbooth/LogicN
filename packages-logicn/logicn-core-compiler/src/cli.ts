@@ -35,8 +35,9 @@ import { assembleWAT } from "./wat-assembler.js";
 import { STDLIB_CAPABILITY_MAP } from "./stdlib-registry.js";
 import { EFFECT_REGISTRY } from "./effect-checker.js";
 import { canonicalHash, hashSource, hashGIR } from "./runtime/canonicalHash.js";
+import { gatherFileImports } from "./module-registry.js";
 import type { Dirent } from "node:fs";
-import { join, basename } from "node:path";
+import { join, basename, resolve as resolvePath } from "node:path";
 
 // =============================================================================
 // logicn.check.json -- project-level configuration for `logicn check`
@@ -342,6 +343,37 @@ function compileFile(
     );
   }
 
+  // ── Import resolution — DAG merge ────────────────────────────────────────
+  // Resolve `import "./path.lln"` declarations and surface any diagnostics.
+  // Imported symbols are available for use in this file's flows.
+  // This is additive — no existing behaviour is changed.
+  const absoluteFilePath = resolvePath(filePath);
+  const importResult = gatherFileImports(parseResult.ast, absoluteFilePath);
+  for (const diag of importResult.diagnostics) {
+    pushDiag(
+      diagnostics,
+      diag.code,
+      diag.severity,
+      diag.message,
+      filePath,
+      undefined,
+      undefined,
+    );
+  }
+  if (importResult.resolvedPaths.length > 0) {
+    const count = importResult.resolvedPaths.length;
+    const symCount = importResult.symbols.length;
+    pushDiag(
+      diagnostics,
+      "LLN-IMPORT-000",
+      "info",
+      `Resolved ${count} imported file(s), ${symCount} symbol(s) merged into scope.`,
+      filePath,
+      undefined,
+      undefined,
+    );
+  }
+
   const symbolResult = resolveSymbols(parseResult.ast);
   for (const d of symbolResult.diagnostics) {
     pushDiag(
@@ -450,6 +482,7 @@ function compileFile(
       parseResult.flows,
       effectResults,
       "production",
+      filePath,
     );
     for (const d of govResult.diagnostics) {
       pushDiag(
@@ -477,9 +510,9 @@ function compileFile(
   if ((mode === "build" || mode === "build-production" || mode === "build-deterministic") &&
       !diagnostics.some(d => d.severity === "error")) {
     const govResultForManifest = verifyGovernance(
-      parseResult.ast, parseResult.flows, effectResults, "dev"
+      parseResult.ast, parseResult.flows, effectResults, "dev", filePath
     );
-    const manifest = generateManifest(source, filePath, parseResult.flows, govResultForManifest);
+    const manifest = generateManifest(source, filePath, parseResult.flows, govResultForManifest, undefined, parseResult.ast, source);
     const manifestJson = serializeManifest(manifest);
     return { file: filePath, diagnostics, manifestJson };
   }

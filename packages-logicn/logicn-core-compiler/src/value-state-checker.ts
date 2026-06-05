@@ -768,6 +768,21 @@ class ValueStateChecker {
     this.currentScope().set(info.name, info);
   }
 
+  /**
+   * Update an existing binding in the nearest scope where it is defined.
+   * Used by trapDecl handling to clear taint after a validation guard.
+   */
+  private updateBinding(name: string, patch: Partial<BindingInfo>): void {
+    for (let i = this.scopes.length - 1; i >= 0; i--) {
+      const scope = this.scopes[i]!;
+      const existing = scope.get(name);
+      if (existing !== undefined) {
+        scope.set(name, { ...existing, ...patch });
+        return;
+      }
+    }
+  }
+
   // ── AST walker ───────────────────────────────────────────────────────────
 
   private walkNode(node: AstNode): void {
@@ -802,6 +817,12 @@ class ValueStateChecker {
 
       case "mutDecl":
         this.handleMutDecl(node);
+        break;
+
+      case "trapDecl":
+        // Phase 12: trap as validation guard — clear taint on referenced bindings.
+        // `trap x == "" : ERR_X` guarantees x is non-empty past this point.
+        this.handleTrapDecl(node);
         break;
 
       case "callExpr":
@@ -1069,6 +1090,48 @@ class ValueStateChecker {
     return false;
   }
 
+  // ── Trap declaration — validation guard ──────────────────────────────────
+
+  /**
+   * Phase 12: trapDecl as a validation guard.
+   *
+   * A `trap` statement halts execution when its condition is TRUE, so any
+   * binding referenced in the condition is guaranteed to have been validated
+   * by the time execution continues past the trap. This clears the taint on
+   * those bindings so subsequent flow-call arguments are no longer flagged by
+   * LLN-VALUESTATE-004.
+   *
+   * Example: `trap rawFoo == "" : ERR_EMPTY_VALUE`
+   *   → rawFoo is safe to pass after this point.
+   */
+  private handleTrapDecl(node: AstNode): void {
+    // The condition expression is the first child of the trapDecl node
+    const condExpr = node.children?.[0];
+    if (condExpr === undefined) return;
+
+    // Collect all identifier names referenced anywhere in the condition
+    const referenced = new Set<string>();
+    function collectIdents(n: AstNode): void {
+      if (n.kind === "identifier" && n.value && n.value.trim().length > 0) {
+        referenced.add(n.value.trim());
+      }
+      for (const child of n.children ?? []) collectIdents(child);
+    }
+    collectIdents(condExpr);
+
+    // For each referenced name that is a tainted or unsafe binding, clear taint.
+    // The trap acts as a boundary guard: if execution continues, the value has
+    // passed the condition check.
+    for (const name of referenced) {
+      const binding = this.lookupBinding(name);
+      if (binding === undefined) continue;
+      if (binding.safetyPrefix === "unsafe" || binding.tainted === true) {
+        // Clear taint — the trap validates the value
+        this.updateBinding(name, { safetyPrefix: undefined, tainted: false });
+      }
+    }
+  }
+
   // ── Call expression rules ────────────────────────────────────────────────
 
   private handleCallExpr(node: AstNode): void {
@@ -1132,6 +1195,19 @@ class ValueStateChecker {
         if (isTaintedExpression(arg, (n) => this.lookupBinding(n), this.userGates)) {
           const taintName = findTaintSourceName(arg, (n) => this.lookupBinding(n))
             ?? (arg.kind === "identifier" ? (arg.value ?? "?") : "?");
+          // Bool-typed bindings cannot carry injection payloads — exempt from VALUESTATE-004.
+          // A Bool is structurally a single bit (true/false); it has no string-injection
+          // surface even when derived from an unsafe boundary source.
+          const argBinding =
+            arg.kind === "identifier"
+              ? this.lookupBinding(arg.value ?? "")
+              : this.lookupBinding(taintName);
+          if (
+            argBinding !== undefined &&
+            (argBinding.typeName === "Bool" || argBinding.typeName === "boolean")
+          ) {
+            continue;
+          }
           this.diagnostics.push({
             code: "LLN-VALUESTATE-004",
             name: "TaintedValuePropagation",

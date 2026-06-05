@@ -66,8 +66,10 @@ logicn check --what-if "economics.max_billing_quota_per_call = 5_000_000" flows/
 **What it provides:** A mathematical "sandbox" that tells you exactly how much agility you can
 safely afford before you ever modify a production file.
 
-**Status:** `logicn check` exists (Floor 3). `--what-if` flag is a new feature.  
-**Pending:** Task #71 (`logicn check --what-if` shadow policy analysis)
+**Status:** `logicn check --what-if` is live as of Task #71. Parses `policy {}` files,
+extracts `permitted_effects {}` and `enforced_limits {}`, scans `.lln` files for blocked
+effects, reports change class (TIGHTENING / NEUTRAL), and exits 2 on violations.
+DRY RUN — the policy is never applied. To apply: `cp <policy.lln> governance/ && logicn init-env`.
 
 ---
 
@@ -177,7 +179,7 @@ When speed is needed:
 | Pattern | Current status | Remaining task |
 |---|---|---|
 | Policy-as-Versioned-Proof | ✅ Binary CBOR `.lmanifest` live (#67) | Real ML-DSA-65 signing (Phase 5) |
-| Shadow Policies | ⬜ `logicn check --what-if` not yet built | Task #71 |
+| Shadow Policies | ✅ `logicn check --what-if` live (#71) | — |
 | Hierarchical Delegation | ⬜ `parent_policy:` not yet built | Task #72 |
 | Emergency overlay (runtime agility) | ⬜ `policy { emergency {} }` parsed, not enforced | DRCM Phase 4 (#39) |
 

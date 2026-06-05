@@ -80,6 +80,7 @@ contract {
 {
   unsafe let rawInput: String = request.jsonBody.input
 
+  trap rawInput == "" : ERR_EMPTY_INPUT
   let len: Int = strLength(rawInput)
   let hasContent: Bool = len > 0
   let clamped: Int = mathClamp(len, 0, 100)

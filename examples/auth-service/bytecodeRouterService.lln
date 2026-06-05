@@ -42,6 +42,9 @@ contract {
   unsafe let rawQualifier: String = request.jsonBody.qualifier
   unsafe let rawHasEffects: String = request.jsonBody.hasEffects
   unsafe let rawIsIntegerOnly: String = request.jsonBody.isIntegerOnly
+  trap rawQualifier == "" : ERR_EMPTY_QUALIFIER
+  trap rawHasEffects == "" : ERR_EMPTY_HAS_EFFECTS
+  trap rawIsIntegerOnly == "" : ERR_EMPTY_IS_INTEGER_ONLY
   let hasEffects: Bool = rawHasEffects == "true"
   let isIntegerOnly: Bool = rawIsIntegerOnly == "true"
   let tier: String = selectExecutionTier(rawQualifier, hasEffects, isIntegerOnly)

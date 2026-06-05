@@ -32,6 +32,10 @@ contract {
   unsafe let targetClass: Int = request.jsonBody.targetClass
   unsafe let recordCount: Int = request.jsonBody.recordCount
   unsafe let classificationLevel: Int = request.jsonBody.classificationLevel
+  trap opCount < 0 : ERR_NEGATIVE_OP_COUNT
+  trap recordCount < 0 : ERR_NEGATIVE_RECORD_COUNT
+  trap targetClass < 0 : ERR_INVALID_TARGET_CLASS
+  trap classificationLevel < 0 : ERR_INVALID_CLASSIFICATION
   let compute: Int = estimateComputeCost(opCount, targetClass)
   let risk: Int = estimateRiskCost(recordCount, classificationLevel)
   let audit: Int = 5

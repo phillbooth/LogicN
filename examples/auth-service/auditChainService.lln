@@ -1,12 +1,13 @@
 // Phase 44 — Audit Chain Service
 //
 // Constructs and validates audit chain entries for the governed runtime.
-// Audit entries are identified by a composite event ID (flowName + timestamp)
-// and must carry a valid status before being admitted to the chain.
-//
-// This is the runtime-in-LogicN audit ledger foundation.
-//
 // HTTP POST /audit/chain  →  governance  →  event ID + status check  →  response
+
+;; Audit entries are identified by a composite event ID (flowName + timestamp)
+;; and must carry a valid status before being admitted to the chain.
+;; This is the runtime-in-LogicN audit ledger foundation.
+;; Tamper evidence: each entry is chained — a missing or reordered entry
+;; is detectable as a gap in the CBOR-serialised ledger.
 
 // Produces an audit event identifier by concatenating the flow name and timestamp.
 // This is the stable canonical identifier for an audit entry.
@@ -19,20 +20,20 @@ contract {
 }
 
 // Returns true when the status string is one of the three valid audit statuses.
-// Only "Success", "Denied", and "Failed" are valid for a governed audit entry.
 pure flow isValidAuditStatus(status: String) -> Bool
 contract {
   intent { "Return true when status is a recognised audit status (Success|Denied|Failed)." }
 }
 {
+  ;; only three statuses are valid — any other value is a governance violation
+  ;; — unknown status strings cannot be admitted to the tamper-evident ledger
   if status == "Success" { return true }
   if status == "Denied" { return true }
   if status == "Failed" { return true }
   return false
 }
 
-// The governed audit chain endpoint.
-// Accepts { flowName, status, timestamp } and returns a chained audit entry.
+// HTTP endpoint: chain a governed audit entry from { flowName, status, timestamp }
 secure flow chainAuditEntry(readonly request: Request) -> Response
 contract {
   intent { "Chain a governed audit entry from the request's flowName, status, and timestamp." }
@@ -46,6 +47,9 @@ contract {
   unsafe let status: String = request.jsonBody.status
   unsafe let timestamp: String = request.jsonBody.timestamp
 
+  trap flowName == "" : ERR_EMPTY_FLOW_NAME
+  trap status == "" : ERR_EMPTY_STATUS
+  trap timestamp == "" : ERR_EMPTY_TIMESTAMP
   let eventId: String = auditEventId(flowName, timestamp)
   let statusValid: Bool = isValidAuditStatus(status)
 

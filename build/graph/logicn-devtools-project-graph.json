@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-06-05T07:04:08.361Z",
+  "generatedAt": "2026-06-05T11:40:50.436Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -6168,6 +6168,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-tower-native-syntax.md",
+      "kind": "Document",
+      "label": "logicn-tower-native-syntax.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-tower-native-syntax.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-trust-sensitivity-type-rules.md",
       "kind": "Document",
       "label": "logicn-trust-sensitivity-type-rules.md",
@@ -9813,6 +9822,16 @@
       ]
     },
     {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/addOffset_addOffset.egraph.json",
+      "kind": "Document",
+      "label": "addOffset_addOffset.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/addOffset_addOffset.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/add_add.egraph.json",
       "kind": "Document",
       "label": "add_add.egraph.json",
@@ -10603,10 +10622,50 @@
       ]
     },
     {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/getAdminMask_getAdminMask.egraph.json",
+      "kind": "Document",
+      "label": "getAdminMask_getAdminMask.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/getAdminMask_getAdminMask.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/getAmount_getAmount.egraph.json",
       "kind": "Document",
       "label": "getAmount_getAmount.egraph.json",
       "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/getAmount_getAmount.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/getLimit_getLimit.egraph.json",
+      "kind": "Document",
+      "label": "getLimit_getLimit.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/getLimit_getLimit.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/getNetworkBit_getNetworkBit.egraph.json",
+      "kind": "Document",
+      "label": "getNetworkBit_getNetworkBit.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/getNetworkBit_getNetworkBit.egraph.json",
+      "tags": [
+        "report",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/getStorageBit_getStorageBit.egraph.json",
+      "kind": "Document",
+      "label": "getStorageBit_getStorageBit.egraph.json",
+      "sourcePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/getStorageBit_getStorageBit.egraph.json",
       "tags": [
         "report",
         "logicn-core-compiler"
@@ -12233,6 +12292,106 @@
       ]
     },
     {
+      "id": "type:logicn-core-compiler:enum",
+      "kind": "Type",
+      "label": "enum",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:CAPABILITY_BIT_POSITION",
+      "kind": "Type",
+      "label": "CAPABILITY_BIT_POSITION",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:capabilityToBitmask",
+      "kind": "Flow",
+      "label": "capabilityToBitmask",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:resolveCompositeBitmask",
+      "kind": "Flow",
+      "label": "resolveCompositeBitmask",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:KNOWN_CAPABILITIES",
+      "kind": "Type",
+      "label": "KNOWN_CAPABILITIES",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:KNOWN_SIGNALS",
+      "kind": "Type",
+      "label": "KNOWN_SIGNALS",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:EmergencyTransition",
+      "kind": "Type",
+      "label": "EmergencyTransition",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:KNOWN_FLOORS",
+      "kind": "Type",
+      "label": "KNOWN_FLOORS",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:normaliseFloor",
+      "kind": "Flow",
+      "label": "normaliseFloor",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:validateTransitionMonotonicity",
+      "kind": "Flow",
+      "label": "validateTransitionMonotonicity",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "type:logicn-core-compiler:CheckConfig",
       "kind": "Type",
       "label": "CheckConfig",
@@ -12489,16 +12648,6 @@
       "sourcePath": "packages-logicn/logicn-core-compiler/src/event-checker.ts",
       "tags": [
         "function",
-        "logicn-core-compiler"
-      ]
-    },
-    {
-      "id": "type:logicn-core-compiler:enum",
-      "kind": "Type",
-      "label": "enum",
-      "sourcePath": "packages-logicn/logicn-core-compiler/src/execution-graph.ts",
-      "tags": [
-        "type",
         "logicn-core-compiler"
       ]
     },
@@ -15293,6 +15442,26 @@
       ]
     },
     {
+      "id": "type:logicn-core-compiler:MmcpCapabilityPointerStub",
+      "kind": "Type",
+      "label": "MmcpCapabilityPointerStub",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:AssimilatedPluginEntry",
+      "kind": "Type",
+      "label": "AssimilatedPluginEntry",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "type:logicn-core-compiler:LManifest",
       "kind": "Type",
       "label": "LManifest",
@@ -15419,6 +15588,66 @@
       "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
       "tags": [
         "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:FileImportedSymbol",
+      "kind": "Type",
+      "label": "FileImportedSymbol",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/module-registry.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:FileModuleDiagnostic",
+      "kind": "Type",
+      "label": "FileModuleDiagnostic",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/module-registry.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ResolvedFileModule",
+      "kind": "Type",
+      "label": "ResolvedFileModule",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/module-registry.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:resolveFileImports",
+      "kind": "Flow",
+      "label": "resolveFileImports",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/module-registry.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:checkFileSymbolCollisions",
+      "kind": "Flow",
+      "label": "checkFileSymbolCollisions",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/module-registry.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:gatherFileImports",
+      "kind": "Flow",
+      "label": "gatherFileImports",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/module-registry.ts",
+      "tags": [
+        "function",
         "logicn-core-compiler"
       ]
     },
@@ -15776,6 +16005,16 @@
       "id": "flow:logicn-core-compiler:resolve",
       "kind": "Flow",
       "label": "resolve",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/node-path-shim.d.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:relative",
+      "kind": "Flow",
+      "label": "relative",
       "sourcePath": "packages-logicn/logicn-core-compiler/src/node-path-shim.d.ts",
       "tags": [
         "function",
@@ -18966,6 +19205,26 @@
       "id": "flow:logicn-core-compiler:buildWATModuleFromGIR",
       "kind": "Flow",
       "label": "buildWATModuleFromGIR",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:wrapInSingleExit",
+      "kind": "Flow",
+      "label": "wrapInSingleExit",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:extractPostConditionEnsures",
+      "kind": "Flow",
+      "label": "extractPostConditionEnsures",
       "sourcePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts",
       "tags": [
         "function",
@@ -32852,6 +33111,20 @@
       "evidencePath": "docs/Knowledge-Bases/logicn-tensor-numeric-performance.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/logicn-tower-native-syntax.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-tower-native-syntax.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-tower-native-syntax.md",
+      "to": "package:logicn-core-security",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-tower-native-syntax.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/logicn-type-system-compute-extensions.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -38593,6 +38866,13 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/addOffset_addOffset.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/addOffset_addOffset.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/add_add.egraph.json",
       "kind": "owns",
       "confidence": "EXTRACTED",
@@ -39146,10 +39426,38 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/getAdminMask_getAdminMask.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/getAdminMask_getAdminMask.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/getAmount_getAmount.egraph.json",
       "kind": "owns",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/getAmount_getAmount.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/getLimit_getLimit.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/getLimit_getLimit.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/getNetworkBit_getNetworkBit.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/getNetworkBit_getNetworkBit.egraph.json"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "doc:packages-logicn/logicn-core-compiler/build/.lln-cache/getStorageBit_getStorageBit.egraph.json",
+      "kind": "owns",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/build/.lln-cache/getStorageBit_getStorageBit.egraph.json"
     },
     {
       "from": "package:logicn-core-compiler",
@@ -40336,6 +40644,76 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:enum",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/execution-graph.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:CAPABILITY_BIT_POSITION",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:capabilityToBitmask",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:resolveCompositeBitmask",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:KNOWN_CAPABILITIES",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:KNOWN_SIGNALS",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:EmergencyTransition",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:KNOWN_FLOORS",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:normaliseFloor",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:validateTransitionMonotonicity",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/capability-types.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:CheckConfig",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -40515,13 +40893,6 @@
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/event-checker.ts"
-    },
-    {
-      "from": "package:logicn-core-compiler",
-      "to": "type:logicn-core-compiler:enum",
-      "kind": "provides",
-      "confidence": "EXTRACTED",
-      "evidencePath": "packages-logicn/logicn-core-compiler/src/execution-graph.ts"
     },
     {
       "from": "package:logicn-core-compiler",
@@ -42478,6 +42849,20 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:MmcpCapabilityPointerStub",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:AssimilatedPluginEntry",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:LManifest",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -42566,6 +42951,48 @@
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:FileImportedSymbol",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/module-registry.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:FileModuleDiagnostic",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/module-registry.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ResolvedFileModule",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/module-registry.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:resolveFileImports",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/module-registry.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:checkFileSymbolCollisions",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/module-registry.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:gatherFileImports",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/module-registry.ts"
     },
     {
       "from": "package:logicn-core-compiler",
@@ -42815,6 +43242,13 @@
     {
       "from": "package:logicn-core-compiler",
       "to": "flow:logicn-core-compiler:resolve",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/node-path-shim.d.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:relative",
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/node-path-shim.d.ts"
@@ -45048,6 +45482,20 @@
     {
       "from": "package:logicn-core-compiler",
       "to": "flow:logicn-core-compiler:buildWATModuleFromGIR",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:wrapInSingleExit",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:extractPostConditionEnsures",
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts"
