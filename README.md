@@ -1,14 +1,33 @@
 ﻿# LogicN
 
-LogicN aims to be the language of choice for software that handles money, personal information, healthcare data, and public services.
+**A governance-first programming language and runtime for high-assurance software.**
 
-Built for financial, medical, government, and enterprise platforms, LogicN introduces governance, privacy, authority, and auditability directly into the architecture of an application, helping organisations reduce risk while building secure and transparent systems.
+LogicN is built for organisations where software failure is not acceptable — financial platforms, healthcare systems, government services, and regulated enterprise. Every execution is **declared, verified, and audited** by design, not by convention.
 
 ---
 
-The language is designed from the ground up so that execution intent, capability boundaries, memory ownership, and effects are **declared in source and enforced by tooling** — not inferred, guessed, or left to convention. It targets CPUs, GPUs, NPUs, APUs, WASM and future heterogeneous hardware.
+## What LogicN does
 
-> **New here?** → [**SETUP.md**](SETUP.md) — install on Windows, Linux, or macOS · run your first benchmark · explore the examples · Hello World with full comments
+**Declares governance in source code.** Every flow declares its intent, effects, capability boundaries, and invariants in a `contract {}` block. The compiler verifies these at build time. There is no runtime surprise.
+
+**Enforces at runtime via the Governed Tower.** The DSS.wasm supervisor runs alongside every execution, tracking the V_DPM (Virtual Dynamic Posture Matrix) register. Every capability use is a bitmask check. Every trap produces a structured AuditEvent. Rollback is always clean — `unreachable` fires before the next CPU instruction.
+
+**Produces a cryptographic audit trail.** Every governed execution generates an Epilogue Receipt (sha256_seal or zk_snark). Every security trap appends to an append-only audit log (CBOR Tag 410 AuditEvent). The manifest carrying the governance contract is signed with ML-DSA-65 (NIST FIPS 204).
+
+**Compiles to WebAssembly.** The output is a WASM binary verified by the compiler's governance pipeline before it runs. The binary is governed — effects, invariants, and capability constraints are enforced, not assumed.
+
+---
+
+## Who it is for
+
+| Sector | Why LogicN |
+|---|---|
+| **Financial platforms** | Every payment flow declares and enforces its effects. Audit trail by default. PCI DSS governance built in. |
+| **Healthcare systems** | PII/PHI is typed and tracked. Redaction is enforced at the type level before data reaches any audit sink. |
+| **Government / defence** | Air-gapped deployment. No cloud dependency. BitNet CPU inference for governed AI in regulated environments. |
+| **Enterprise regulated** | OWASP attack vectors blocked at the compiler. Supply chain provenance via ML-DSA-65 signed manifests. |
+
+> **New here?** → [**SETUP.md**](SETUP.md) — install · run your first benchmark · Hello World with full governance comments
 
 ---
 
