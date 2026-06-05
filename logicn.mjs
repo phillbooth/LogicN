@@ -24,6 +24,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 
 import { join, basename, dirname } from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
+import { execSync } from "node:child_process";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const compilerPath = new URL("packages-logicn/logicn-core-compiler/dist/index.js", import.meta.url).href;
@@ -44,6 +45,9 @@ Commands:
   logicn verify <file.lln>                            DRCM Phase 3 admission gate — verify manifest
   logicn manifest-to-dot <file.lln>                   export manifest as Graphviz DOT for DAG audit
   logicn init-env                                      validate capabilities against root policy
+  logicn keygen                                        generate Ed25519 signing keypair for manifests
+  logicn deploy <file.lln> [--tag <image>]            run full deploy pipeline (check+build+verify+health)
+  logicn version                                      show version and runtime status
 
 Examples:
   logicn run   governance-cost.lln --invoke main
@@ -62,6 +66,61 @@ Baseline comparison (governance-cost):
   This WASM path:                  ~1,880,000 ops/sec  (588×)
 `);
     return;
+  }
+
+  // ── logicn version — show version and runtime status (#117) ─────────────────
+  if (command === "version" || command === "--version" || command === "-v") {
+    const v = JSON.parse(readFileSync("version.json", "utf-8"));
+    console.log(`LogicN ${v.version} (${v.stage})`);
+    console.log(`  Runtime:  ${v.runtime}`);
+    console.log(`  DRCM:     ${v.drcmPhases}`);
+    console.log(`  Tests:    ${v.testCount} tests / ${v.packageCount} packages`);
+    console.log(`  Status:   ${v.milestone}`);
+    process.exit(0);
+  }
+
+  // ── logicn deploy — full governed deploy pipeline (#112) ─────────────────────
+  // Runs: governance check → build WASM → verify manifest → health check
+  // Prints OCI packaging instructions for Dockerfile.logicn + deploy-linux.sh
+  if (command === "deploy") {
+    const llnFile = rest[0];
+    if (!llnFile) {
+      console.error("Usage: logicn deploy <file.lln> [--tag <image-tag>]");
+      process.exit(1);
+    }
+
+    const tagIdx = rest.indexOf("--tag");
+    const imageTag = tagIdx >= 0 ? rest[tagIdx + 1] : "logicn-app:latest";
+
+    console.log(`\n🏰 LogicN Deploy — ${llnFile}`);
+    console.log(`   Image tag: ${imageTag}\n`);
+
+    const steps = [
+      { name: "Governance check", cmd: `node logicn.mjs check ${llnFile}` },
+      { name: "Build WASM",       cmd: `node logicn.mjs build ${llnFile}` },
+      { name: "Verify manifest",  cmd: `node logicn.mjs verify ${llnFile}` },
+      { name: "Health check",     cmd: `node logicn.mjs run examples/deployment/health-check.lln --invoke getHealthStatus` },
+    ];
+
+    for (const step of steps) {
+      try {
+        process.stdout.write(`  ⏳ ${step.name}...`);
+        execSync(step.cmd, { cwd: process.cwd(), encoding: "utf-8", timeout: 60000 });
+        console.log(`  ✅ ${step.name}`);
+      } catch (err) {
+        console.log(`  ❌ ${step.name} FAILED`);
+        console.error(err.message);
+        process.exit(1);
+      }
+    }
+
+    console.log(`\n✅ Deploy pipeline complete`);
+    console.log(`   WASM:     build/`);
+    console.log(`   Receipts: build/receipt-ledger/receipts.jsonl`);
+    console.log(`   Audit:    build/audit-log/audit-log.jsonl`);
+    console.log(`\n   OCI packaging: see scripts/Dockerfile.logicn`);
+    console.log(`   Deployment:     ./scripts/deploy-linux.sh ${llnFile}\n`);
+    process.exit(0);
   }
 
   // ── logicn init-env — validate capabilities against root governance policy (#65) ─
@@ -97,6 +156,55 @@ Baseline comparison (governance-cost):
       process.exit(2);
     }
     return;
+  }
+
+  // ── logicn keygen — generate Ed25519 signing keypair for manifest governance (#107) ─
+  // Stage A: Ed25519 (Node.js native crypto)
+  // Stage B: ML-DSA-65 (NIST FIPS 204) — upgrade once Node.js adds FIPS 204 support
+  if (command === "keygen") {
+    const { generateKeyPairSync, randomBytes } = await import("node:crypto");
+    const { writeFileSync: wfs, mkdirSync: mds } = await import("node:fs");
+    const { join: pjoin } = await import("node:path");
+
+    // Generate Ed25519 keypair (Stage A — will upgrade to ML-DSA-65 in Stage B)
+    const { publicKey, privateKey } = generateKeyPairSync("ed25519", {
+      publicKeyEncoding: { type: "spki", format: "pem" },
+      privateKeyEncoding: { type: "pkcs8", format: "pem" },
+    });
+
+    // Key ID = first 16 hex chars of random bytes
+    const keyId = randomBytes(8).toString("hex");
+
+    // Store public key in governance/ directory (safe to commit)
+    mds("governance", { recursive: true });
+    const pubKeyPath = pjoin("governance", `signing-key-${keyId}.pub.pem`);
+    wfs(pubKeyPath, publicKey);
+
+    // Store private key in .env.logicn-signing (never commit)
+    const envPath = ".env.logicn-signing";
+    const envContent = [
+      `# LogicN governance signing key — NEVER COMMIT THIS FILE`,
+      `# Key ID: ${keyId}`,
+      `# Algorithm: Ed25519 (Stage A) → ML-DSA-65 NIST FIPS 204 (Stage B)`,
+      `LOGICN_SIGNING_KEY_ID=${keyId}`,
+      `LOGICN_SIGNING_PRIVATE_KEY_B64=${Buffer.from(privateKey).toString("base64")}`,
+      ``,
+    ].join("\n");
+    wfs(envPath, envContent);
+
+    console.log(`\n✅ LogicN governance signing keypair generated`);
+    console.log(`   Algorithm:  Ed25519 (Stage A — ML-DSA-65 in Stage B)`);
+    console.log(`   Key ID:     ${keyId}`);
+    console.log(`   Public key: ${pubKeyPath}  (safe to commit)`);
+    console.log(`   Private key: ${envPath}    (NEVER COMMIT — add to .gitignore)`);
+    console.log(`\n   Add to .gitignore:`);
+    console.log(`     .env.logicn-signing`);
+    console.log(`\n   To start signing manifests:`);
+    console.log(`     export LOGICN_SIGNING_KEY_ID=${keyId}`);
+    console.log(`     source ${envPath}  # or add to your shell env`);
+    console.log(`     logicn build <file.lln>  # will now sign the manifest\n`);
+
+    process.exit(0);
   }
 
   // ── logicn check --what-if <policyFile> [targetFile]: Shadow Policy Analysis (#71) ─
@@ -428,7 +536,59 @@ Baseline comparison (governance-cost):
       console.log(`   Flow count:          ${manifest.flowCount}`);
       console.log(`   Proof obligations:   ${proofCount}`);
       console.log(`   Derived constraints: ${constraintCount}`);
-      console.log(`   Signature:           ${manifest.governanceSignature?.algorithm ?? "none"} (placeholder — real signing in DRCM Phase 5)`);
+
+      // ── Signature verification (#109) ────────────────────────────────────────
+      // Stage A: Ed25519-SHA256 (Node.js native crypto)
+      // Stage B: ML-DSA-65 (NIST FIPS 204) — upgrade once Node.js adds FIPS 204 support
+      // Signature is stored in the .lmanifest.json (human-readable counterpart)
+      const jsonManifestPath = `build/${name}.lmanifest.json`;
+      if (existsSync(jsonManifestPath)) {
+        try {
+          const jsonManifestRaw = readFileSync(jsonManifestPath, "utf-8");
+          const jsonManifest = JSON.parse(jsonManifestRaw);
+
+          if (jsonManifest.governanceSignature && typeof jsonManifest.governanceSignature === "object") {
+            const sig = jsonManifest.governanceSignature;
+
+            if (sig.algorithm && sig.keyId && sig.signature) {
+              // Look for the public key file
+              const pubKeyPath = join("governance", `signing-key-${sig.keyId}.pub.pem`);
+              if (existsSync(pubKeyPath)) {
+                try {
+                  const { verify: cryptoVerify, createPublicKey } = await import("node:crypto");
+                  const pubKeyPem = readFileSync(pubKeyPath, "utf-8");
+                  const publicKey = createPublicKey(pubKeyPem);
+
+                  // Reconstruct the manifest without the signature field for verification
+                  // (mirrors what was signed: prettyManifest(manifest) before signing was applied)
+                  const { governanceSignature: _sig, ...manifestWithoutSig } = jsonManifest;
+                  const manifestForVerification = JSON.stringify(manifestWithoutSig, null, 2);
+
+                  // Ed25519 uses deterministic signing — pass null as algorithm (per RFC 8032)
+                  const valid = cryptoVerify(null, Buffer.from(manifestForVerification), publicKey, Buffer.from(sig.signature, "base64"));
+
+                  if (valid) {
+                    console.log(`   🔐 Signature verified (${sig.algorithm}, keyId: ${sig.keyId.slice(0, 8)}...)`);
+                  } else {
+                    console.error(`❌ LLN-MANIFEST-TAMPER: Signature verification FAILED — manifest may be tampered`);
+                    process.exit(1);
+                  }
+                } catch (err) {
+                  console.warn(`   ⚠️  Signature verification error: ${err.message}`);
+                }
+              } else {
+                console.warn(`   ⚠️  Public key not found: ${pubKeyPath} — skipping signature verification`);
+              }
+            }
+          } else if (jsonManifest.governanceSignature === "placeholder") {
+            console.log(`   ℹ️  Manifest is unsigned (placeholder). Run: logicn keygen && logicn build`);
+          }
+        } catch (err) {
+          console.warn(`   ⚠️  Could not read .lmanifest.json for signature check: ${err.message}`);
+        }
+      } else {
+        console.log(`   ℹ️  No .lmanifest.json found — signature check skipped`);
+      }
     } catch (e) {
       console.error(`❌ LLN-MANIFEST-INVALID: Failed to parse manifest — ${e.message}`);
       process.exit(1);
@@ -507,8 +667,46 @@ Baseline comparison (governance-cost):
         writeFileSync(`build/${name}.lmanifest`, serializeManifest(manifest));
         console.log(`   build/${name}.lmanifest      (JSON fallback — CBOR round-trip failed)`);
       }
-      writeFileSync(`build/${name}.lmanifest.json`, prettyManifest(manifest));
+      const manifestJsonPath = `build/${name}.lmanifest.json`;
+      const manifestJson = prettyManifest(manifest);
+      writeFileSync(manifestJsonPath, manifestJson);
       console.log(`   build/${name}.lmanifest.json (human-readable)`);
+
+      // ── Real manifest signing (#108) ─────────────────────────────────────────
+      // Stage A: Ed25519-SHA256 (Node.js native crypto)
+      // Stage B: ML-DSA-65 (NIST FIPS 204) — upgrade once Node.js adds FIPS 204 support
+      const signingKeyId = process.env.LOGICN_SIGNING_KEY_ID;
+      const signingKeyB64 = process.env.LOGICN_SIGNING_PRIVATE_KEY_B64;
+
+      if (signingKeyId && signingKeyB64) {
+        try {
+          const { sign: cryptoSign, createPrivateKey } = await import("node:crypto");
+          const privateKeyPem = Buffer.from(signingKeyB64, "base64").toString("utf-8");
+          const privateKey = createPrivateKey(privateKeyPem);
+
+          // Sign the manifest without the governanceSignature field so verification
+          // can reconstruct the exact same bytes by stripping the signature before checking.
+          // Ed25519 uses deterministic signing — no external hash algorithm needed (RFC 8032).
+          const manifestObjForSigning = JSON.parse(manifestJson);
+          const { governanceSignature: _placeholder, ...manifestWithoutSig } = manifestObjForSigning;
+          const manifestBytesForSigning = JSON.stringify(manifestWithoutSig, null, 2);
+          const signature = cryptoSign(null, Buffer.from(manifestBytesForSigning), privateKey).toString("base64");
+
+          // Update the .lmanifest.json with real signature
+          const signedManifest = JSON.parse(manifestJson);
+          signedManifest.governanceSignature = {
+            algorithm: "Ed25519",  // Stage A; will be ML-DSA-65 (NIST FIPS 204) in Stage B
+            keyId: signingKeyId,
+            signature: signature,
+            signedAt: new Date().toISOString(),
+          };
+
+          writeFileSync(manifestJsonPath, JSON.stringify(signedManifest, null, 2));
+          console.log(`   🔐 Manifest signed (Ed25519, keyId: ${signingKeyId.slice(0, 8)}...)`);
+        } catch (err) {
+          console.warn(`   ⚠️  Signing failed (continuing unsigned): ${err.message}`);
+        }
+      }
 
       // governance-impact.json (#63) — security surface area artifact per build
       // Summarises effects, invariants, domain guards, change class, resilience

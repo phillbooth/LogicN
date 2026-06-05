@@ -1,11 +1,11 @@
 /// @file: parser.lln
-/// @purpose: LogicN parser — Milestone 2: flow declaration headers + body stmts
-/// @status: Stage B milestone — parses pure/guarded/secure/flow declarations + body stmts
+/// @purpose: LogicN parser â€” Milestone 2: flow declaration headers + body stmts
+/// @status: Stage B milestone â€” parses pure/guarded/secure/flow declarations + body stmts
 /// @phase: 46
 /// test_status: milestone
 
 // ============================================================
-// LogicN Self-Hosted Parser — Milestone 1
+// LogicN Self-Hosted Parser â€” Milestone 1
 //
 // Parses flow declaration headers from a token stream produced
 // by lexer.lln. Emits FlowDecl records for each flow found.
@@ -21,7 +21,7 @@
 //               list.get(pos), cross-flow calls.
 // ============================================================
 
-// ── AST node types ──────────────────────────────────────────
+// â”€â”€ AST node types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 record FlowParam {
   name: String
@@ -29,7 +29,7 @@ record FlowParam {
   isReadonly: Bool
 }
 
-// ── Expression AST (folded from body-parser.lln, Milestone M-A) ──
+// â”€â”€ Expression AST (folded from body-parser.lln, Milestone M-A) â”€â”€
 // Self-referential children via Array<Self>; supported by the runtime.
 record Expr {
   kind: String          // "lit" | "name" | "binary" | "unary" | "call"
@@ -56,7 +56,7 @@ record Stmt {
 record StmtParse { stmt: Stmt, nextPos: Int }
 record BlockParse { stmts: Array<Stmt>, nextPos: Int }
 
-// A decomposed return expression — Phase S6 bridge to the self-hosted
+// A decomposed return expression â€” Phase S6 bridge to the self-hosted
 // type-checker.lln and gir-emitter.lln, which both consume exactly this shape.
 //   kind     : "literal" | "param" | "arith" | "compare"
 //   litType  : for literal/param, the static type ("Int"/"String"/"Bool"/"Unknown")
@@ -89,6 +89,82 @@ record PolicyDecl {
   permittedEffects: Array<String>
 }
 
+// ── v2.2 AST node declarations ───────────────────────────────
+// These records capture the new syntax constructs introduced in v2.2.
+// They are emitted by the Stage B parser and consumed by the v2.2 checkers.
+
+// GuardDecl — top-level domain ceiling: guard GuardName { permitted_effects {} enforced_limits {} }
+// Replaces PolicyDecl for named guards; PolicyDecl retained for back-compat.
+record GuardDecl {
+  name: String
+  permittedEffects: Array<String>
+  enforcedLimits: Array<String>   // enforced_limits entries (key=value pairs encoded as "key=value" strings)
+}
+
+// AccessDecl — inline access {} block with grant clauses inside a contract.
+record AccessDecl {
+  flowName: String
+  grantedTypes: Array<String>
+}
+
+// GateDecl — gate(condition) {} admission guard at flow entry.
+record GateDecl {
+  flowName: String
+  condition: String
+  policyRef: String
+}
+
+// StaticDecl — static NAME = EXPR compile-time constant.
+record StaticDecl {
+  name: String
+  valueExpr: String
+  inferredType: String
+}
+
+// BitfieldDecl — bitfield NAME { field: bit } governance register.
+record BitfieldDecl {
+  name: String
+  fields: Array<String>
+}
+
+// TrapDecl — trap CONDITION : ERR_CODE (inverted ensure; fires when condition is false).
+record TrapDecl {
+  condition: String
+  errorCode: String
+  flowName: String
+}
+
+// StepExpr — step EXPR cross-boundary DWI call.
+record StepExpr {
+  targetExpr: String
+  flowName: String
+}
+
+// EvictExpr — evict ALIAS removes a loaded plugin from the DWI isolate.
+record EvictExpr {
+  alias: String
+  flowName: String
+}
+
+// AssimilatedPluginDecl — import plugin assimilate declaration for Hot-Code Residency.
+record AssimilatedPluginDecl {
+  pluginPath: String
+  alias: String
+}
+
+// GovernedFlowDecl — governed flow qualifier (DAG-edge validation).
+record GovernedFlowDecl {
+  floorName: String
+  flowName: String
+  dagEdges: Array<String>
+}
+
+// PolicyMutationDecl — policy {} inside contract for permitted state transitions.
+record PolicyMutationDecl {
+  flowName: String
+  transitions: Array<String>
+}
+
 // Result of parsing a dot-separated token path (e.g. "database.write").
 record DotPathParse {
   name: String
@@ -98,13 +174,14 @@ record DotPathParse {
 record ParseResult {
   flows: Array<FlowDecl>
   errors: Array<String>
-  imports: Array<String>   // module paths from `import ... from "path"` statements
-  policies: Array<PolicyDecl>  // domain guard policies (task #56)
+  imports: Array<String>        // module paths from `import ... from "path"` statements
+  policies: Array<PolicyDecl>   // domain guard policies (task #56)
+  guardDecls: Array<GuardDecl>  // v2.2 named guard ceiling declarations (task #97/#98)
 }
 
-// ── Dot-path helper ──────────────────────────────────────────
+// â”€â”€ Dot-path helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Parses a dot-separated identifier path from position startPos.
-// Example: at pos pointing to "database", ".", "write" → returns "database.write"
+// Example: at pos pointing to "database", ".", "write" â†’ returns "database.write"
 // Used for effect names in effects {} and permitted_effects {} blocks.
 pure flow parseDotPath(tokens: Array<Token>, startPos: Int) -> DotPathParse
 contract {
@@ -131,7 +208,7 @@ contract {
   }
 }
 
-// ── Token accessor helpers ───────────────────────────────────
+// â”€â”€ Token accessor helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 pure flow tokVal(tokens: Array<Token>, pos: Int) -> String
 contract { intent { "Safely read token value at pos; empty string when out of bounds." } }
@@ -209,13 +286,13 @@ contract { intent { "True when the token at pos is a Newline token." } }
   }
 }
 
-// ── Return-expression decomposition (Phase S6) ───────────────
+// â”€â”€ Return-expression decomposition (Phase S6) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // Classify a single operand token at `pos` into a static type name.
-//   NumberLiteral → "Int"
-//   StringLiteral → "String"
-//   true/false    → "Bool"  (Keyword tokens whose value is the literal)
-//   anything else → "Unknown"  (identifier / param reference)
+//   NumberLiteral â†’ "Int"
+//   StringLiteral â†’ "String"
+//   true/false    â†’ "Bool"  (Keyword tokens whose value is the literal)
+//   anything else â†’ "Unknown"  (identifier / param reference)
 // Reads the token's TokenKind enum (match), mirroring isKw's pattern.
 pure flow classifyOperandType(tokens: Array<Token>, pos: Int) -> String
 contract { intent { "Map a return-operand token to its static type for arith/compare decomposition." } }
@@ -266,10 +343,10 @@ contract { intent { "True when op is one of + - * / (arithmetic)." } }
 // Decompose the return expression beginning at `startPos` (the first token
 // AFTER the `return` keyword) into a ReturnExpr record. Reads at most three
 // tokens: operand, optional operator, optional right operand.
-//   single literal       → { kind: "literal", litType: <type>, "", "" }
-//   single identifier    → { kind: "param",   litType: "Unknown", "", "" }
-//   X (+ - * /) Y        → { kind: "arith",   litType: "", leftType, rightType }
-//   X (== != < > <= >=) Y→ { kind: "compare", litType: "", leftType, rightType }
+//   single literal       â†’ { kind: "literal", litType: <type>, "", "" }
+//   single identifier    â†’ { kind: "param",   litType: "Unknown", "", "" }
+//   X (+ - * /) Y        â†’ { kind: "arith",   litType: "", leftType, rightType }
+//   X (== != < > <= >=) Yâ†’ { kind: "compare", litType: "", leftType, rightType }
 pure flow decomposeReturn(tokens: Array<Token>, startPos: Int) -> ReturnExpr
 contract { intent { "Decompose a flow's return-expression tokens into the checker/emitter ReturnExpr shape." } }
 {
@@ -305,7 +382,7 @@ contract { intent { "Decompose a flow's return-expression tokens into the checke
   }
 }
 
-// ── Sub-parsers (called by parseFlows) ──────────────────────
+// â”€â”€ Sub-parsers (called by parseFlows) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // Parse "(" paramName: TypeName, ... ")" starting at pos.
 // Returns [params, newPos] encoded as a record { params, pos }.
@@ -345,14 +422,14 @@ contract { intent { "Parse a parenthesised parameter list. Caller must advance p
   return params
 }
 
-// ════════════════════════════════════════════════════════════
-// BODY PARSER — full statement + expression AST (Milestone M-A)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// BODY PARSER â€” full statement + expression AST (Milestone M-A)
 // Folded from body-parser.lln. parseBlock yields a nested Stmt/Expr AST.
 //
 // Expression cascade (LOW -> HIGH, each left-associative):
 //   parseExpr -> parseComparison (== != < > <= >=) -> parseAdditive (+ -)
 //             -> parseMultiplicative (* /) -> parsePrimary (lit/name/call/group)
-// ════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // Token value at pos; "" when out of bounds.
 pure flow eTokVal(tokens: Array<Token>, pos: Int) -> String
@@ -450,7 +527,7 @@ contract { intent { "Parse a primary expression: literal, name, call, or ( group
             return parseArrayLiteral(tokens, p + 1)
           }
           // Record literal: { field: expr, field: expr, ... }
-          // Detected by peeking ahead: { <ident> ":" ... } — two-token lookahead.
+          // Detected by peeking ahead: { <ident> ":" ... } â€” two-token lookahead.
           if tok.value == "{" {
             let peek1: String = eTokVal(tokens, p + 1)
             let peek2: String = eTokVal(tokens, p + 2)
@@ -460,7 +537,7 @@ contract { intent { "Parse a primary expression: literal, name, call, or ( group
               return parseRecordLiteral(tokens, p + 1)
             }
           }
-          // Terminator tokens are NOT primaries — a dangling operator (`return a +`)
+          // Terminator tokens are NOT primaries â€” a dangling operator (`return a +`)
           // must NOT consume the closing "}"/")"/"," (doing so swallowed a following
           // flow). Return an empty node WITHOUT advancing so the caller stops here.
           if tok.value == "}" or tok.value == ")" or tok.value == "," or tok.value == "]" {
@@ -551,7 +628,7 @@ contract { intent { "Parse { key: expr, ... } record literal from the first fiel
 // Wrap parsePrimary with member-access chaining: `p.x` / `p.x.y` / `xs.count()`.
 // After each primary, if the very next (non-newline) token is "." followed by an
 // identifier, fold it into a `member` Expr{ kind:"member", value:<field>, children:[receiver] }.
-// If that identifier is immediately followed by "(" it is a method call — build a
+// If that identifier is immediately followed by "(" it is a method call â€” build a
 // `call` Expr using the receiver+field as qualified callee.
 pure flow parsePrimaryWithMember(tokens: Array<Token>, pos: Int) -> ExprParse
 contract { intent { "Parse a primary then chain any .field / .method() accesses." } }
@@ -601,7 +678,7 @@ contract { intent { "Parse a primary then chain any .field / .method() accesses.
             p = ap
           }
           else {
-            // Field access: receiver.field → kind:"member"
+            // Field access: receiver.field â†’ kind:"member"
             mut kids: Array<Expr> = Array.empty()
             kids = kids.append(cur)
             cur = { kind: "member", value: fname, litType: "", children: kids }
@@ -756,7 +833,7 @@ contract { intent { "Left-associative comparison operators over parseAdditive." 
   return { expr: left, nextPos: p }
 }
 
-// Logical and/or — the lowest-precedence level, below comparison. `and`/`or` are
+// Logical and/or â€” the lowest-precedence level, below comparison. `and`/`or` are
 // Keyword tokens. They share ONE left-associative level (no precedence between them),
 // so `a or b and c` parses as `(a or b) and c` (left-fold), matching the Stage-A
 // parser's treatment of and/or at a single level.
@@ -804,8 +881,8 @@ contract { intent { "Build the [left, right] children array for a binary node." 
 record ForLoopResult { stmt: Stmt  nextPos: Int }
 // Parse a for loop. `startPos` is just past the `for` keyword.
 // Handles:
-//   for item in collection { body }  → while loop with index counter + .get()
-//   for i in lo..hi { body }         → while loop with range
+//   for item in collection { body }  â†’ while loop with index counter + .get()
+//   for i in lo..hi { body }         â†’ while loop with range
 // Returns a synthetic "while" Stmt so the GIR + runtime need no new construct.
 pure flow parseForLoop(tokens: Array<Token>, startPos: Int) -> ForLoopResult
 contract { intent { "Parse for loop (iterator or range) and lower to a while Stmt." } }
@@ -817,7 +894,7 @@ contract { intent { "Parse for loop (iterator or range) and lower to a while Stm
   if eTokVal(tokens, p) == "in" { p = p + 1 }
   p = skipNewlines(tokens, p)
 
-  // Detect range form: lo..hi — the current token is a number/name, then ".."
+  // Detect range form: lo..hi â€” the current token is a number/name, then ".."
   let isRange: Bool = eTokVal(tokens, p + 1) == ".."
   mut whileStmt: Stmt = { kind: "exprStmt", name: "", typeName: "", expr: Array.empty(), body: Array.empty(), elseBody: Array.empty() }
   mut endPos: Int = p
@@ -846,7 +923,7 @@ contract { intent { "Parse for loop (iterator or range) and lower to a while Stm
       condKids = condKids.append({ kind: "name", value: varName, litType: "", children: Array.empty() })
       condKids = condKids.append(hiExpr.expr)
       let condExpr2: Expr = { kind: "binary", value: "<", litType: "", children: condKids }
-      // Init: mut i: Int = lo (returned as a separate let stmt — we use assign instead)
+      // Init: mut i: Int = lo (returned as a separate let stmt â€” we use assign instead)
       // The caller receives just the while stmt; the init `mut i = lo` precedes it.
       // We pack both into a synthetic "block" using the while's body field for the init
       // and elseBody for the actual while stmt. The runtime handles this via the "forblock" op.
@@ -872,12 +949,12 @@ contract { intent { "Parse for loop (iterator or range) and lower to a while Stm
       let idxName: String = "__fori_" + varName
       // Build body: let item = collection.get(__fori).unwrapOr(default_sentinel); ..body..; __fori = __fori + 1
       // Use a match Some(x)/None pattern via the existing match infrastructure
-      // Build: collection.get(idxName) → call "get" with kids=[collExpr, idxExpr]
+      // Build: collection.get(idxName) â†’ call "get" with kids=[collExpr, idxExpr]
       mut getKids: Array<Expr> = Array.empty()
       getKids = getKids.append(collExpr.expr)
       getKids = getKids.append({ kind: "name", value: idxName, litType: "", children: Array.empty() })
       let getCallExpr: Expr = { kind: "call", value: "get", litType: "", children: getKids }
-      // unwrapOr(getResult, default) — kids=[getCallExpr, defaultExpr]
+      // unwrapOr(getResult, default) â€” kids=[getCallExpr, defaultExpr]
       mut unwrapKids: Array<Expr> = Array.empty()
       unwrapKids = unwrapKids.append(getCallExpr)
       unwrapKids = unwrapKids.append({ kind: "lit", value: "0", litType: "Int", children: Array.empty() })
@@ -900,7 +977,7 @@ contract { intent { "Parse for loop (iterator or range) and lower to a while Stm
         bi2 = bi2 + 1
       }
       loopBody2 = loopBody2.append(incStmt2)
-      // Condition: idxName < collection.count() → call "count" with kids=[collExpr]
+      // Condition: idxName < collection.count() â†’ call "count" with kids=[collExpr]
       mut cntKids: Array<Expr> = Array.empty()
       cntKids = cntKids.append(collExpr.expr)
       let cntCall: Expr = { kind: "call", value: "count", litType: "", children: cntKids }
@@ -950,7 +1027,7 @@ contract { intent { "Parse match arms { pat => { body } ... } from the opening b
           let mpat: String = eTokVal(tokens, p)
           p = p + 1
           p = skipNewlines(tokens, p)
-          // Constructor pattern: Some(x), Ok(v), Err(e) — read optional binding name
+          // Constructor pattern: Some(x), Ok(v), Err(e) â€” read optional binding name
           // stored in typeName so the matche runtime handler can bind it in the arm env.
           mut bindingName: String = ""
           if eTokVal(tokens, p) == "(" {
@@ -1026,14 +1103,14 @@ contract { intent { "Parse one statement; dispatch on the leading token kind/val
           if tokenValue == ">=" {
             // The lexer fuses `>` + `=` into a single `>=` token when a generic type
             // is immediately followed by `=`, e.g. `Array<Int>=value`.
-            // Treat as closing `>` — back up after the loop so the `=` is re-read.
+            // Treat as closing `>` â€” back up after the loop so the `=` is re-read.
             genericDepth = genericDepth - 1
           }
 
           p = p + 1
         }
 
-        // genericDepth > 0 means an unclosed generic — source is malformed.
+        // genericDepth > 0 means an unclosed generic â€” source is malformed.
         // Continue silently; downstream parseExpr will surface the error.
 
         // Restore position if the closing token was `>=` (fused `> =`) so the
@@ -1085,7 +1162,7 @@ contract { intent { "Parse one statement; dispatch on the leading token kind/val
     if isOpSym(tokens, p, "{") {
       blk = parseBlock(tokens, p + 1)
     }
-    // Optional `else { ... }` — skip newlines, then look for the `else` keyword
+    // Optional `else { ... }` â€” skip newlines, then look for the `else` keyword
     // followed by `{`. LogicN bans chained `else if`, so only `else { ... }` here.
     mut elseStmts: Array<Stmt> = Array.empty()
     mut endPos: Int = blk.nextPos
@@ -1136,10 +1213,10 @@ contract { intent { "Parse one statement; dispatch on the leading token kind/val
     return { stmt: stmt, nextPos: blk.nextPos }
   }
 
-  // ── for ──
+  // â”€â”€ for â”€â”€
   // Two forms:
-  //   for item in collection { body }  → iterator-style over Array/list
-  //   for i in 0..n { body }           → range-style (integer range)
+  //   for item in collection { body }  â†’ iterator-style over Array/list
+  //   for i in 0..n { body }           â†’ range-style (integer range)
   // Both are lowered at parse time to `while` stmts so the GIR + runtime need no
   // new construct.
   //
@@ -1160,7 +1237,7 @@ contract { intent { "Parse one statement; dispatch on the leading token kind/val
     return { stmt: forResult.stmt, nextPos: forResult.nextPos }
   }
 
-  // ── match ──
+  // â”€â”€ match â”€â”€
   // match <subjectExpr> { <pat> => { <body> } ... _ => { <body> } }
   // Stage B parser approach: store each arm as an individual if-stmt in the
   // Stmt.body array of a "match" kind stmt. The Stmt holds:
@@ -1291,7 +1368,7 @@ contract {
   return result
 }
 
-// ── Main parser flow ─────────────────────────────────────────
+// â”€â”€ Main parser flow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 pure flow parseFlows(tokens: Array<Token>) -> ParseResult
 contract {
@@ -1301,7 +1378,8 @@ contract {
   mut flows: Array<FlowDecl> = Array.empty()
   mut errs: Array<String> = Array.empty()
   mut importPaths: Array<String> = Array.empty()
-  mut policies: Array<PolicyDecl> = Array.empty()  // domain guard policies (task #56)
+  mut policies: Array<PolicyDecl> = Array.empty()   // domain guard policies (task #56)
+  mut guardDecls: Array<GuardDecl> = Array.empty()  // v2.2 named guard ceiling declarations
   mut pos: Int = 0
   let total: Int = tokens.count()
 
@@ -1400,12 +1478,110 @@ contract {
       pos = pp
     }
 
+
+    // Top-level guard declaration: guard GuardName { permitted_effects {} enforced_limits {} }
+    // v2.2 — named domain ceiling; distinct from the `guarded` flow qualifier.
+    if tv == "guard" {
+      mut gp: Int = pos + 1
+      while isNewline(tokens, gp) { gp = gp + 1 }
+      let guardNameOpt = tokens.get(gp)
+      mut guardName: String = ""
+      match guardNameOpt {
+        Some(gnTok) => {
+          if gnTok.kind == "Identifier" { guardName = gnTok.value  gp = gp + 1 }
+        }
+        None => {}
+      }
+      while isNewline(tokens, gp) { gp = gp + 1 }
+      mut guardPermEffects: Array<String> = Array.empty()
+      mut guardLimits: Array<String> = Array.empty()
+      if tokVal(tokens, gp) == "{" {
+        gp = gp + 1
+        mut gDepth: Int = 1
+        while gp < total and gDepth > 0 {
+          let gv: String = tokVal(tokens, gp)
+          if gv == "{" { gDepth = gDepth + 1 }
+          if gv == "}" {
+            gDepth = gDepth - 1
+            if gDepth == 0 { gp = gp + 1 }
+          }
+          if gDepth == 1 and gv == "permitted_effects" {
+            gp = gp + 1
+            while isNewline(tokens, gp) { gp = gp + 1 }
+            if tokVal(tokens, gp) == "{" {
+              gp = gp + 1
+              while gp < total and tokVal(tokens, gp) != "}" {
+                let geOpt = tokens.get(gp)
+                match geOpt {
+                  Some(geTok) => {
+                    match geTok.kind {
+                      Identifier | Keyword => {
+                        let geParsed = parseDotPath(tokens, gp)
+                        guardPermEffects = guardPermEffects.append(geParsed.name)
+                        gp = geParsed.nextPos
+                        while isNewline(tokens, gp) { gp = gp + 1 }
+                        if tokVal(tokens, gp) == "," { gp = gp + 1 }
+                      }
+                      _ => { gp = gp + 1 }
+                    }
+                  }
+                  None => {}
+                }
+                while isNewline(tokens, gp) { gp = gp + 1 }
+              }
+              if tokVal(tokens, gp) == "}" { gp = gp + 1 }
+            }
+          } else {
+            if gDepth == 1 and gv == "enforced_limits" {
+              gp = gp + 1
+              while isNewline(tokens, gp) { gp = gp + 1 }
+              if tokVal(tokens, gp) == "{" {
+                gp = gp + 1
+                while gp < total and tokVal(tokens, gp) != "}" {
+                  let glOpt = tokens.get(gp)
+                  match glOpt {
+                    Some(glTok) => {
+                      match glTok.kind {
+                        Identifier | Keyword => {
+                          let glKey: String = glTok.value
+                          gp = gp + 1
+                          mut glVal: String = ""
+                          if tokVal(tokens, gp) == ":" or tokVal(tokens, gp) == "=" {
+                            gp = gp + 1
+                            glVal = tokVal(tokens, gp)
+                            gp = gp + 1
+                          }
+                          guardLimits = guardLimits.append(glKey + "=" + glVal)
+                          while isNewline(tokens, gp) { gp = gp + 1 }
+                          if tokVal(tokens, gp) == "," { gp = gp + 1 }
+                        }
+                        _ => { gp = gp + 1 }
+                      }
+                    }
+                    None => {}
+                  }
+                  while isNewline(tokens, gp) { gp = gp + 1 }
+                }
+                if tokVal(tokens, gp) == "}" { gp = gp + 1 }
+              }
+            } else {
+              if gDepth > 0 { gp = gp + 1 }
+            }
+          }
+        }
+      }
+      if guardName != "" {
+        guardDecls = guardDecls.append({ name: guardName, permittedEffects: guardPermEffects, enforcedLimits: guardLimits })
+      }
+      pos = gp
+    }
+
     // Detect qualifier: pure | guarded | secure  (followed by "flow")
     // OR bare "flow" keyword.
     mut qualifier: String = ""
     mut namePos: Int = 0
 
-    // Detect qualifier — no else-if; use sequential if blocks (LogicN: match on strings not yet supported for runtime values)
+    // Detect qualifier â€” no else-if; use sequential if blocks (LogicN: match on strings not yet supported for runtime values)
     if tv == "pure" or tv == "guarded" or tv == "secure" {
       if tokVal(tokens, pos + 1) == "flow" {
         qualifier = tv
@@ -1447,7 +1623,7 @@ contract {
 
         // Return type: lexer emits "->" as a single Operator token.
         // Generic parameters like `Result<Int, String>` or `Option<String>` are
-        // read as a single base name then a `< ... >` run — skip the generic run
+        // read as a single base name then a `< ... >` run â€” skip the generic run
         // so the cursor lands on `contract` / `{` correctly.
         mut returnType: String = ""
         if tokVal(tokens, p) == "->" {
@@ -1532,7 +1708,7 @@ contract {
                     let etOpt = tokens.get(p)
                     match etOpt {
                       Some(etTok) => {
-                        // Multi-variant match arms (task #62) — Identifier | Keyword share body
+                        // Multi-variant match arms (task #62) â€” Identifier | Keyword share body
                         match etTok.kind {
                           Identifier | Keyword => {
                             let parsed = parseDotPath(tokens, p)
@@ -1560,7 +1736,7 @@ contract {
         // Skip newlines between the contract block and the body's opening brace.
         while isNewline(tokens, p) { p = p + 1 }
 
-        // Parse body block — Milestone M-A: build the full structured Stmt/Expr
+        // Parse body block â€” Milestone M-A: build the full structured Stmt/Expr
         // AST via parseBlock (folded from body-parser.lln). parseBlock returns the
         // statement list AND the cursor position just past the closing "}".
         // Phase S6: also decompose the first top-level return into a ReturnExpr
@@ -1590,5 +1766,5 @@ contract {
     }   // end else (not import)
   }
 
-  return { flows: flows, errors: errs, imports: importPaths, policies: policies }
+  return { flows: flows, errors: errs, imports: importPaths, policies: policies, guardDecls: guardDecls }
 }

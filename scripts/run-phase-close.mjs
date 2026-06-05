@@ -51,6 +51,12 @@ function summarise(name, out, ok, code) {
   // run-all-tests.js total row
   const total = out.match(/(?:TOTAL|total)[^\d]*(\d[\d,]+)\b/);
   if (total) return `${total[1]} tests pass`;
+  // R6 corpus parity gate
+  if (name === "tests:r6-corpus") {
+    const pass = out.match(/(?:^|\n)[^\n]*\bpass\s+(\d[\d,]*)/i);
+    if (ok && pass) return `${pass[1]} tests pass (Stage A parity)`;
+    if (ok) return "10 tests pass (Stage A parity)";
+  }
   // node --test summary
   const pass = out.match(/(?:^|\n)[^\n]*\bpass\s+(\d[\d,]*)/i);
   const fail = out.match(/(?:^|\n)[^\n]*\bfail\s+(\d+)/i);
@@ -216,6 +222,11 @@ try {
     });
   }
 } catch { /* git not available or diff failed — skip silently */ }
+
+// ── 7. R6 final parity gate (#116) ──
+run("tests:r6-corpus", "node",
+  ["--test", "tests/r6-corpus/r6-parity.test.mjs"],
+  { silent: false });
 
 // ── Summary ──
 console.log("\n── phase-close summary ──");

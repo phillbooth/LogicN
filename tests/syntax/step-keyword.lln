@@ -1,0 +1,23 @@
+;; P5.3 test: step keyword for cross-boundary DWI calls
+
+pure flow innerComputation(x: Int) -> Int
+contract {
+  intent "Inner computation to be called via step"
+  effects {}
+}
+{
+  trap x < 0 : ERR_NEGATIVE
+  return x * 2
+}
+
+secure flow stepCaller(n: Int) -> Int
+contract {
+  intent "Call inner computation via step DWI boundary"
+  effects { allow audit.write }
+}
+{
+  ;; step creates a DWI isolate — AuditEvent emitted on entry
+  let result = step innerComputation(n)
+  ;; DWI completes normally — result propagated
+  return result
+}

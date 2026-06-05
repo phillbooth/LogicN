@@ -1,0 +1,15 @@
+// EXPECT: ACCEPT
+// R6 corpus 02 — governed flow with database.read effect
+// Exercises: secure qualifier, effects { database.read }, Result return
+
+secure flow fetchRecord(id: Int) -> Result<String, String>
+contract {
+  intent { "Fetch a record from the database by id. Returns Err on invalid id." }
+  effects { database.read }
+}
+{
+  if id <= 0 {
+    return Err("invalid id")
+  }
+  return Ok("record:" + id.toStr())
+}

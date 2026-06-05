@@ -1,0 +1,30 @@
+;; ExecutionDAG test — CBOR Tag 414
+
+pure flow helperA(x: Int) -> Int
+contract {
+  intent "Helper flow A — called by orchestrator"
+  effects {}
+}
+{
+  return x + 1
+}
+
+pure flow helperB(x: Int) -> Int
+contract {
+  intent "Helper flow B — called by orchestrator via step DWI"
+  effects {}
+}
+{
+  return x * 2
+}
+
+secure flow orchestrator(n: Int) -> Int
+contract {
+  intent "Orchestrator — calls helperA directly and helperB via step DWI"
+  effects { allow audit.write }
+}
+{
+  let a = helperA(n)
+  let b = step helperB(n)
+  return a
+}

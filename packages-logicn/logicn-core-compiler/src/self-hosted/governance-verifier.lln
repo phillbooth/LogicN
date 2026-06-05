@@ -1,7 +1,8 @@
 /// @file: governance-verifier.lln
 /// @purpose: Stage B governance verifier — real subset, executing
 /// @phase: 67
-/// @status: functional subset — validates governance contracts for flows
+/// @version: 2.2
+/// @status: functional subset — validates governance contracts for flows; v2.2 adds guard/hierarchy/emergency/trap/step/mutation
 ///
 /// Expected flow-record shape (from the Stage B ParseResult):
 ///   { name: String, kind: String, effects: Array<String>,
@@ -366,6 +367,351 @@ contract {
             }
             j = j + 1
           }
+        }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return { diagnostics: allDiags, passed: passed, failed: failed }
+}
+
+// ── v2.2 Governance Additions ─────────────────────────────────
+//
+// 1. verifyGuardDecl          — guard {} domain ceiling (permitted_effects subset)
+// 2. verifyPolicyHierarchy    — LLN-INHERIT-001/002: parent_policy resolution + subset
+// 3. verifyEmergencyTransitions — LLN-MONO-001/002: emergency {} only DENY
+// 4. verifyTrapDecl           — LLN-TRAP-001/002: error code format + scope
+// 5. verifyStepExpr           — LLN-STEP-001: step in pure flow warning
+// 6. verifyMutationPolicy     — LLN-MUTATION-001/002: only_decrease + max_change
+
+// Known capability names recognised by the governance verifier.
+pure flow isKnownCapability(cap: String) -> Bool
+contract {
+  intent { "Return true when cap is a recognised system capability token." }
+}
+{
+  if cap == "audit.write"           { return true }
+  if cap == "memory.read"           { return true }
+  if cap == "memory.write"          { return true }
+  if cap == "network.send"          { return true }
+  if cap == "network.receive"       { return true }
+  if cap == "fs.read"               { return true }
+  if cap == "fs.write"              { return true }
+  if cap == "crypto.sign"           { return true }
+  if cap == "crypto.verify"         { return true }
+  if cap == "deterministic_execution" { return true }
+  if cap == "state.read"            { return true }
+  if cap == "state.write"           { return true }
+  if cap == "timer.read"            { return true }
+  if cap == "log.write"             { return true }
+  return false
+}
+
+// ── 1. Guard Domain Ceiling ───────────────────────────────────
+
+// Verify a single guard {} declaration.
+// guardDecls shape: Array<{ name: String, permittedEffects: Array<String> }>
+// LLN-GOV-005: every permitted_effect must be a known capability token.
+pure flow verifyGuardDecl(guardDecls: Array) -> GovResult
+contract {
+  intent { "LLN-GOV-005: guard permitted_effects must all be known capability tokens." }
+}
+{
+  mut allDiags: Array = Array.empty()
+  mut passed: Int = 0
+  mut failed: Int = 0
+  mut i: Int = 0
+  while i < guardDecls.count() {
+    let gOpt = guardDecls.get(i)
+    match gOpt {
+      Some(g) => {
+        mut guardDiags: Array = Array.empty()
+        mut j: Int = 0
+        while j < g.permittedEffects.count() {
+          let eOpt = g.permittedEffects.get(j)
+          match eOpt {
+            Some(e) => {
+              if isKnownCapability(e) == false {
+                let msg: String = "guard '" + g.name + "' permitted_effects contains unknown capability '" + e + "' (LLN-GOV-005)"
+                guardDiags = guardDiags.append({ code: "LLN-GOV-005", message: msg, flowName: g.name })
+              }
+            }
+            None => {}
+          }
+          j = j + 1
+        }
+        if guardDiags.count() == 0 { passed = passed + 1 }
+        if guardDiags.count() > 0 {
+          failed = failed + 1
+          allDiags = appendAll(allDiags, guardDiags)
+        }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return { diagnostics: allDiags, passed: passed, failed: failed }
+}
+
+// ── 2. Policy Hierarchy (LLN-INHERIT-001/002) ─────────────────
+
+// Verify parent_policy references resolve and child effects ⊆ parent effects.
+// Each element in guards: { name: String, parentPolicy: String, permittedEffects: Array }
+// LLN-INHERIT-001: parentPolicy must resolve to an existing guard name.
+// LLN-INHERIT-002: child permittedEffects must be a subset of parent permittedEffects.
+pure flow verifyPolicyHierarchy(guards: Array) -> GovResult
+contract {
+  intent { "LLN-INHERIT-001/002: parent_policy references resolve; child effects ⊆ parent effects." }
+}
+{
+  mut allDiags: Array = Array.empty()
+  mut passed: Int = 0
+  mut failed: Int = 0
+  mut i: Int = 0
+  while i < guards.count() {
+    let gOpt = guards.get(i)
+    match gOpt {
+      Some(g) => {
+        let parent: String = g.parentPolicy
+        if parent != "" {
+          // LLN-INHERIT-001: parent guard must exist.
+          let parentExists: Bool = findPolicyExists(guards, parent)
+          if parentExists == false {
+            let msg: String = "guard '" + g.name + "' declares parent_policy: '" + parent + "' which does not resolve (LLN-INHERIT-001)"
+            allDiags = allDiags.append({ code: "LLN-INHERIT-001", message: msg, flowName: g.name })
+            failed = failed + 1
+          } else {
+            // LLN-INHERIT-002: every child effect must appear in parent's permittedEffects.
+            mut hierDiags: Array = Array.empty()
+            mut j: Int = 0
+            while j < g.permittedEffects.count() {
+              let ceOpt = g.permittedEffects.get(j)
+              match ceOpt {
+                Some(ce) => {
+                  let inParent: Bool = effectIsPermitted(guards, parent, ce)
+                  if inParent == false {
+                    let msg: String = "guard '" + g.name + "' child effect '" + ce + "' is not in parent '" + parent + "' permitted_effects (LLN-INHERIT-002)"
+                    hierDiags = hierDiags.append({ code: "LLN-INHERIT-002", message: msg, flowName: g.name })
+                  }
+                }
+                None => {}
+              }
+              j = j + 1
+            }
+            if hierDiags.count() == 0 { passed = passed + 1 }
+            if hierDiags.count() > 0 {
+              failed = failed + 1
+              allDiags = appendAll(allDiags, hierDiags)
+            }
+          }
+        } else {
+          passed = passed + 1
+        }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return { diagnostics: allDiags, passed: passed, failed: failed }
+}
+
+// ── 3. Emergency Transitions (LLN-MONO-001/002) ───────────────
+
+// Verify that emergency {} transitions only DENY, never grant capabilities.
+// guardDecl: Array<{ name: String, emergencyTransitions: Array<{ action: String, capability: String }> }>
+// LLN-MONO-001: emergency transition action must be "DENY".
+// LLN-MONO-002: no emergency transition may use action "GRANT".
+pure flow verifyEmergencyTransitions(guardDecl: Array) -> GovResult
+contract {
+  intent { "LLN-MONO-001/002: emergency transitions must only DENY capabilities, never grant them." }
+}
+{
+  mut allDiags: Array = Array.empty()
+  mut passed: Int = 0
+  mut failed: Int = 0
+  mut i: Int = 0
+  while i < guardDecl.count() {
+    let gOpt = guardDecl.get(i)
+    match gOpt {
+      Some(g) => {
+        mut emDiags: Array = Array.empty()
+        mut j: Int = 0
+        while j < g.emergencyTransitions.count() {
+          let tOpt = g.emergencyTransitions.get(j)
+          match tOpt {
+            Some(t) => {
+              if t.action != "DENY" {
+                let msg1: String = "emergency transition in guard '" + g.name + "' uses action '" + t.action + "' — only DENY is permitted (LLN-MONO-001)"
+                emDiags = emDiags.append({ code: "LLN-MONO-001", message: msg1, flowName: g.name })
+              }
+              if t.action == "GRANT" {
+                let msg2: String = "emergency transition in guard '" + g.name + "' must not grant capability '" + t.capability + "' (LLN-MONO-002)"
+                emDiags = emDiags.append({ code: "LLN-MONO-002", message: msg2, flowName: g.name })
+              }
+            }
+            None => {}
+          }
+          j = j + 1
+        }
+        if emDiags.count() == 0 { passed = passed + 1 }
+        if emDiags.count() > 0 {
+          failed = failed + 1
+          allDiags = appendAll(allDiags, emDiags)
+        }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return { diagnostics: allDiags, passed: passed, failed: failed }
+}
+
+// ── 4. Trap Declaration Validation (LLN-TRAP-001/002) ─────────
+
+// Verify error code format and scope for trap {} statements.
+// trapDecl: Array<{ kind: "trap", errorCode: String, scopeName: String }>
+// flowParams: Array<{ name: String }> — visible parameter names in the enclosing flow.
+// LLN-TRAP-001: errorCode must be non-empty (non-blank identifier).
+// LLN-TRAP-002: errorCode must not shadow a flow parameter name.
+pure flow verifyTrapDecl(trapDecl: Array, flowParams: Array) -> GovResult
+contract {
+  intent { "LLN-TRAP-001/002: trap error code must be a non-blank identifier and must not shadow a flow parameter." }
+}
+{
+  mut allDiags: Array = Array.empty()
+  mut passed: Int = 0
+  mut failed: Int = 0
+  mut i: Int = 0
+  while i < trapDecl.count() {
+    let tOpt = trapDecl.get(i)
+    match tOpt {
+      Some(t) => {
+        if t.kind == "trap" {
+          mut trapDiags: Array = Array.empty()
+          // LLN-TRAP-001: error code must be non-empty.
+          if t.errorCode == "" {
+            let msg1: String = "trap statement has no error code identifier (LLN-TRAP-001)"
+            trapDiags = trapDiags.append({ code: "LLN-TRAP-001", message: msg1, flowName: t.scopeName })
+          }
+          // LLN-TRAP-002: error code must not shadow a parameter name.
+          mut j: Int = 0
+          while j < flowParams.count() {
+            let pOpt = flowParams.get(j)
+            match pOpt {
+              Some(p) => {
+                if t.errorCode == p.name {
+                  let msg2: String = "trap error code '" + t.errorCode + "' shadows flow parameter '" + p.name + "' (LLN-TRAP-002)"
+                  trapDiags = trapDiags.append({ code: "LLN-TRAP-002", message: msg2, flowName: t.scopeName })
+                }
+              }
+              None => {}
+            }
+            j = j + 1
+          }
+          if trapDiags.count() == 0 { passed = passed + 1 }
+          if trapDiags.count() > 0 {
+            failed = failed + 1
+            allDiags = appendAll(allDiags, trapDiags)
+          }
+        }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return { diagnostics: allDiags, passed: passed, failed: failed }
+}
+
+// ── 5. Step Expression Qualifier Check (LLN-STEP-001) ─────────
+
+// Warn when a step expression appears inside a pure flow.
+// stepExpr: Array<{ kind: String, target: { kind: String, value: String } }>
+// flowQualifier: "pure" | "governed" | "secure" | "flow"
+// LLN-STEP-001: step in a pure flow is not permitted.
+pure flow verifyStepExpr(stepExpr: Array, flowQualifier: String) -> GovResult
+contract {
+  intent { "LLN-STEP-001: warn when a step expression is used inside a pure flow." }
+}
+{
+  mut allDiags: Array = Array.empty()
+  mut passed: Int = 0
+  mut failed: Int = 0
+  mut i: Int = 0
+  while i < stepExpr.count() {
+    let eOpt = stepExpr.get(i)
+    match eOpt {
+      Some(e) => {
+        if e.kind == "step" {
+          if flowQualifier == "pure" {
+            let msg: String = "step expression in pure flow '" + e.target.value + "' is not permitted — pure flows cannot spawn DWI isolates (LLN-STEP-001)"
+            allDiags = allDiags.append({ code: "LLN-STEP-001", message: msg, flowName: e.target.value })
+            failed = failed + 1
+          } else {
+            passed = passed + 1
+          }
+        }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return { diagnostics: allDiags, passed: passed, failed: failed }
+}
+
+// ── 6. Mutation Policy Constraints (LLN-MUTATION-001/002) ─────
+
+// Verify only_decrease and max_change constraints in policy {} blocks.
+// policyBlock: Array<{ name: String, onlyDecrease: Bool, maxChange: Int }>
+// flowBody: Array of assignment statements with { kind: "assign", varName: String, delta: Int }
+// LLN-MUTATION-001: when onlyDecrease is true, no assignment may increase the variable.
+// LLN-MUTATION-002: when maxChange > 0, no single assignment delta may exceed maxChange.
+pure flow verifyMutationPolicy(policyBlock: Array, flowBody: Array) -> GovResult
+contract {
+  intent { "LLN-MUTATION-001/002: enforce only_decrease and max_change mutation constraints from policy blocks." }
+}
+{
+  mut allDiags: Array = Array.empty()
+  mut passed: Int = 0
+  mut failed: Int = 0
+  mut i: Int = 0
+  while i < policyBlock.count() {
+    let pOpt = policyBlock.get(i)
+    match pOpt {
+      Some(pol) => {
+        mut polDiags: Array = Array.empty()
+        mut j: Int = 0
+        while j < flowBody.count() {
+          let sOpt = flowBody.get(j)
+          match sOpt {
+            Some(s) => {
+              if s.kind == "assign" {
+                if s.varName == pol.name {
+                  // LLN-MUTATION-001: only_decrease — delta must be <= 0.
+                  if pol.onlyDecrease {
+                    if s.delta > 0 {
+                      let msg1: String = "mutation policy '" + pol.name + "' only_decrease violated: assignment increases variable by " + s.delta + " (LLN-MUTATION-001)"
+                      polDiags = polDiags.append({ code: "LLN-MUTATION-001", message: msg1, flowName: pol.name })
+                    }
+                  }
+                  // LLN-MUTATION-002: max_change — delta must not exceed maxChange.
+                  if pol.maxChange > 0 {
+                    if s.delta > pol.maxChange {
+                      let msg2: String = "mutation policy '" + pol.name + "' max_change=" + pol.maxChange + " violated: assignment delta " + s.delta + " exceeds limit (LLN-MUTATION-002)"
+                      polDiags = polDiags.append({ code: "LLN-MUTATION-002", message: msg2, flowName: pol.name })
+                    }
+                  }
+                }
+              }
+            }
+            None => {}
+          }
+          j = j + 1
+        }
+        if polDiags.count() == 0 { passed = passed + 1 }
+        if polDiags.count() > 0 {
+          failed = failed + 1
+          allDiags = appendAll(allDiags, polDiags)
         }
       }
       None => {}

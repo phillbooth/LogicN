@@ -1,12 +1,12 @@
 /**
- * Phase 40 — Stage B Self-Hosting Bootstrap
+ * Phase 40 â€” Stage B Self-Hosting Bootstrap
  *
  * Proves that the Stage B .lln files are not just parse-clean but actually
  * EXECUTABLE through the governed interpreter. This is the foundation for
- * Phase 41 (Stage B compiles Stage A → Runtime 50%).
+ * Phase 41 (Stage B compiles Stage A â†’ Runtime 50%).
  *
  * Executing Stage B code through the LogicN runtime IS the runtime being
- * partly written in LogicN — these are the first self-governing compiler flows.
+ * partly written in LogicN â€” these are the first self-governing compiler flows.
  */
 
 import { describe, it } from "node:test";
@@ -24,7 +24,7 @@ function loadSrc(filename) {
   return readFileSync(join(SELF_HOSTED, filename), "utf8");
 }
 
-// ── compiler.capabilities.lln ─────────────────────────────────────────────────
+// â”€â”€ compiler.capabilities.lln â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("Phase 40: compiler.capabilities.lln executes", () => {
   const prog = parseProgram(loadSrc("compiler.capabilities.lln"), "compiler.capabilities.lln");
@@ -44,12 +44,12 @@ describe("Phase 40: compiler.capabilities.lln executes", () => {
     assert.deepEqual(r.value, { __tag: "int", value: 7 });
   });
 
-  it("isCapabilityAllowed(network.read) → false", async () => {
+  it("isCapabilityAllowed(network.read) â†’ false", async () => {
     const r = await executeFlow("isCapabilityAllowed", new Map([["name",{__tag:"string",value:"network.read"}]]), prog.ast, prog.flows);
     assert.deepEqual(r.value, { __tag: "bool", value: false });
   });
 
-  it("isCapabilityAllowed(filesystem.read) → true", async () => {
+  it("isCapabilityAllowed(filesystem.read) â†’ true", async () => {
     const r = await executeFlow("isCapabilityAllowed", new Map([["name",{__tag:"string",value:"filesystem.read"}]]), prog.ast, prog.flows);
     assert.deepEqual(r.value, { __tag: "bool", value: true });
   });
@@ -82,7 +82,7 @@ describe("Phase 40: compiler.capabilities.lln executes", () => {
   });
 });
 
-// ── lexer.lln ─────────────────────────────────────────────────────────────────
+// â”€â”€ lexer.lln â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("Phase 40: lexer.lln executes (Stage B tokenizer)", () => {
   const prog = parseProgram(loadSrc("lexer.lln"), "lexer.lln");
@@ -92,10 +92,10 @@ describe("Phase 40: lexer.lln executes (Stage B tokenizer)", () => {
     assert.equal(errs.length, 0, errs.map(e => e.message).join(", "));
   });
 
-  it("makeKeywordTable() returns 40 keywords", async () => {
+  it("makeKeywordTable() returns 52 keywords (v2.2)", async () => {
     const r = await executeFlow("makeKeywordTable", new Map(), prog.ast, prog.flows);
     assert.equal(r.value.__tag, "list");
-    assert.equal(r.value.items?.length, 40, `expected 40 keywords, got ${r.value.items?.length}`);
+    assert.equal(r.value.items?.length, 52, `expected 52 keywords (v2.2), got ${r.value.items?.length}`);
   });
 
   it("makeKeywordTable() includes 'flow'", async () => {
@@ -140,11 +140,11 @@ describe("Phase 40: lexer.lln executes (Stage B tokenizer)", () => {
   });
 });
 
-// ── All 4 Stage B files parse cleanly ────────────────────────────────────────
+// â”€â”€ All 4 Stage B files parse cleanly â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("Phase 40: all Stage B files parse with zero errors", () => {
   for (const filename of ["compiler.capabilities.lln", "lexer.lln", "parser.lln", "type-checker.lln"]) {
-    it(`${filename} — zero parse errors`, () => {
+    it(`${filename} â€” zero parse errors`, () => {
       const p = parseProgram(loadSrc(filename), filename);
       const errs = (p.diagnostics ?? []).filter(d => d.severity === "error");
       assert.equal(errs.length, 0, `${filename}: ${errs.map(e=>e.message).join(", ")}`);

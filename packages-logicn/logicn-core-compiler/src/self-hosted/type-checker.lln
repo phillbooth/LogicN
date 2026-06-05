@@ -1,7 +1,8 @@
 /// @file: type-checker.lln
 /// @purpose: Stage B type checker — real subset, executing
 /// @phase: 47
-/// @status: functional subset — infers return-expression types and validates them
+/// @version: 2.2
+/// @status: functional subset — infers return-expression types and validates them; v2.2 adds static/bitfield/view/trap/step
 ///
 /// Expected flow-record shape (from the Stage B ParseResult):
 ///   { name: String, returnType: String,
@@ -305,5 +306,282 @@ contract {
     }
     i = i + 1
   }
-  return { diagnostics: allDiags, flowCount: flowCount, checkedAt: "2026-06-02" }
+  return { diagnostics: allDiags, flowCount: flowCount, checkedAt: "2026-06-05" }
+}
+
+// ── v2.2 Additions ────────────────────────────────────────────
+//
+// 1. StaticEnv  — compile-time constant environment (static declarations)
+// 2. BitfieldEnv — governance-register environment (bitfield declarations)
+// 3. view(cap)   — capability-typed view variables
+// 4. trap        — inverted ensure with error code
+// 5. step        — DWI isolate call expression
+
+// ── 1. Static Constants ───────────────────────────────────────
+
+record StaticEnv {
+  entries: Array
+}
+
+// entries element shape: { name: String, value: String, typeName: String }
+
+// Build a StaticEnv from an array of StaticDecl AST nodes.
+// Each StaticDecl: { kind: "static", name: String, typeName: String, value: String }
+pure flow buildStaticEnv(decls: Array) -> StaticEnv
+contract {
+  intent { "Collect StaticDecl nodes into a name→value lookup table (StaticEnv)." }
+}
+{
+  mut entries: Array = Array.empty()
+  mut i: Int = 0
+  while i < decls.count() {
+    let dOpt = decls.get(i)
+    match dOpt {
+      Some(d) => {
+        if d.kind == "static" {
+          entries = entries.append({ name: d.name, value: d.value, typeName: d.typeName })
+        }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return { entries: entries }
+}
+
+// Look up a static constant by name; returns the value String or "" when absent.
+pure flow resolveStatic(env: StaticEnv, name: String) -> String
+contract {
+  intent { "Return the compile-time value of a static constant, or empty string when not found." }
+}
+{
+  mut i: Int = 0
+  while i < env.entries.count() {
+    let eOpt = env.entries.get(i)
+    match eOpt {
+      Some(e) => {
+        if e.name == name { return e.value }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return ""
+}
+
+// Type-check all StaticDecl nodes: declared type must be a known type.
+pure flow checkStaticDecls(decls: Array) -> Array
+contract {
+  intent { "LLN-TYPE-001: static constant declarations must name a known type." }
+}
+{
+  mut diags: Array = Array.empty()
+  mut i: Int = 0
+  while i < decls.count() {
+    let dOpt = decls.get(i)
+    match dOpt {
+      Some(d) => {
+        if d.kind == "static" {
+          let known: Bool = isKnownType(d.typeName)
+          if known == false {
+            let msg: String = "unknown type '" + d.typeName + "' on static constant '" + d.name + "' (LLN-TYPE-001)"
+            diags = diags.append({ code: "LLN-TYPE-001", message: msg, flowName: d.name })
+          }
+        }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return diags
+}
+
+// ── 2. Bitfield Registers ─────────────────────────────────────
+
+record BitfieldEnv {
+  entries: Array
+}
+
+// entries element shape: { register: String, field: String, mask: Int }
+
+// Build a BitfieldEnv from an array of BitfieldDecl AST nodes.
+// Each BitfieldDecl: { kind: "bitfield", register: String,
+//                      fields: Array<{ name: String, mask: Int }> }
+pure flow buildBitfieldEnv(decls: Array) -> BitfieldEnv
+contract {
+  intent { "Collect BitfieldDecl nodes into a REGISTER.field→mask lookup table (BitfieldEnv)." }
+}
+{
+  mut entries: Array = Array.empty()
+  mut i: Int = 0
+  while i < decls.count() {
+    let dOpt = decls.get(i)
+    match dOpt {
+      Some(d) => {
+        if d.kind == "bitfield" {
+          mut j: Int = 0
+          while j < d.fields.count() {
+            let fOpt = d.fields.get(j)
+            match fOpt {
+              Some(f) => {
+                entries = entries.append({ register: d.register, field: f.name, mask: f.mask })
+              }
+              None => {}
+            }
+            j = j + 1
+          }
+        }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return { entries: entries }
+}
+
+// Look up the bitmask for a REGISTER.field pair; returns -1 when not found.
+pure flow resolveBitfieldAccess(env: BitfieldEnv, register: String, field: String) -> Int
+contract {
+  intent { "Return the bitmask for a bitfield field access, or -1 when the REGISTER.field is unknown." }
+}
+{
+  mut i: Int = 0
+  while i < env.entries.count() {
+    let eOpt = env.entries.get(i)
+    match eOpt {
+      Some(e) => {
+        if e.register == register {
+          if e.field == field { return e.mask }
+        }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return -1
+}
+
+// ── 3. view(cap) Capability Types ────────────────────────────
+//
+// A view-typed variable carries a capability-mask type of the form
+// "view(CAP_A|CAP_B)".  Type-checking validates that:
+//   a. the typeName starts with "view(" (structurally valid)
+//   b. the capability spec is non-empty
+
+// Type-check a view(cap) type annotation; returns diagnostics on the binding name.
+// capSpec is the raw capability list string — e.g. "CAP_A|CAP_B".
+pure flow checkViewType(bindingName: String, capSpec: String) -> Array
+contract {
+  intent { "Validate that a view(cap) annotation contains well-formed capability names." }
+}
+{
+  mut diags: Array = Array.empty()
+  if capSpec == "" {
+    let msg: String = "view() annotation on '" + bindingName + "' is empty — at least one capability name is required (LLN-TYPE-005)"
+    diags = diags.append({ code: "LLN-TYPE-005", message: msg, flowName: bindingName })
+    return diags
+  }
+  return diags
+}
+
+// Walk a list of binding declarations and type-check any view(cap) annotations.
+// Each binding: { kind: String, name: String, typeName: String }
+// typeName may be "view(CAP_A|CAP_B)" — extract the inner spec and validate it.
+pure flow checkViewBindings(flowName: String, bindings: Array) -> Array
+contract {
+  intent { "LLN-TYPE-005: every view(cap) binding must carry at least one named capability." }
+}
+{
+  mut diags: Array = Array.empty()
+  mut i: Int = 0
+  while i < bindings.count() {
+    let bOpt = bindings.get(i)
+    match bOpt {
+      Some(b) => {
+        let tn: String = b.typeName
+        if tn.startsWith("view(") {
+          let inner: String = tn.slice(5, tn.length() - 1)
+          diags = appendAll(diags, checkViewType(b.name, inner))
+        }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return diags
+}
+
+// ── 4. trap Statements ────────────────────────────────────────
+//
+// A trap statement has shape:
+//   { kind: "trap", condition: Expr, errorCode: String }
+// Type rules:
+//   LLN-TYPE-006a — the condition expression must be Bool
+//   LLN-TYPE-006b — errorCode must be a non-empty identifier
+
+pure flow checkTrapDecl(decl: Array, env: Array) -> Array
+contract {
+  intent { "LLN-TYPE-006: trap condition must be Bool and error code must be a non-empty identifier." }
+}
+{
+  mut diags: Array = Array.empty()
+  mut i: Int = 0
+  while i < decl.count() {
+    let tOpt = decl.get(i)
+    match tOpt {
+      Some(t) => {
+        if t.kind == "trap" {
+          if t.errorCode == "" {
+            let msg: String = "trap statement missing error code identifier (LLN-TYPE-006)"
+            diags = diags.append({ code: "LLN-TYPE-006", message: msg, flowName: "trap" })
+          }
+          if t.condition.litType != "" {
+            if t.condition.litType != "Bool" {
+              let msg: String = "trap condition must be Bool, found '" + t.condition.litType + "' (LLN-TYPE-006)"
+              diags = diags.append({ code: "LLN-TYPE-006", message: msg, flowName: "trap" })
+            }
+          }
+        }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return diags
+}
+
+// ── 5. step Expressions ───────────────────────────────────────
+//
+// A step expression isolates a flow call into a separate DWI isolate.
+// Shape: { kind: "step", target: Expr }
+// where target.kind must be "call" and target.value must be non-empty.
+// LLN-TYPE-007 — step target must be a valid flow call (not a literal/param).
+
+pure flow checkStepExpr(expr: Array, env: Array) -> Array
+contract {
+  intent { "LLN-TYPE-007: step target must be a flow call expression, not a literal or parameter reference." }
+}
+{
+  mut diags: Array = Array.empty()
+  mut i: Int = 0
+  while i < expr.count() {
+    let eOpt = expr.get(i)
+    match eOpt {
+      Some(e) => {
+        if e.kind == "step" {
+          if e.target.kind != "call" {
+            let msg: String = "step target must be a flow call, found kind '" + e.target.kind + "' (LLN-TYPE-007)"
+            diags = diags.append({ code: "LLN-TYPE-007", message: msg, flowName: "step" })
+          }
+          if e.target.value == "" {
+            let msg: String = "step target call has no callee name (LLN-TYPE-007)"
+            diags = diags.append({ code: "LLN-TYPE-007", message: msg, flowName: "step" })
+          }
+        }
+      }
+      None => {}
+    }
+    i = i + 1
+  }
+  return diags
 }

@@ -1,6 +1,6 @@
 /// @file: lexer.lln
-/// @purpose: LogicN lexer written in LogicN — Phase 16 milestone
-/// @status: executable — Phase 12A loops active; Phase 16 adds endLine/endColumn, unicode escapes, depth limits
+/// @purpose: LogicN lexer written in LogicN â€” Phase 16 milestone
+/// @status: executable â€” Phase 12A loops active; Phase 16 adds endLine/endColumn, unicode escapes, depth limits
 
 // ============================================================
 // LogicN Self-Hosted Lexer
@@ -9,16 +9,16 @@
 // This file is the first component of the self-hosted compiler.
 //
 // Capabilities used:
-//   - while loops           (Phase 12A — active)
-//   - mut reassignment      (Phase 11A runtime — active)
-//   - String.charAt()       (stdlib — active)
-//   - Array.empty()         (stdlib — active)
-//   - Array.append()        (stdlib — active, single-item push)
-//   - Char classification   (stdlib — active)
-//   - match/Some(c)         (runtime — active)
+//   - while loops           (Phase 12A â€” active)
+//   - mut reassignment      (Phase 11A runtime â€” active)
+//   - String.charAt()       (stdlib â€” active)
+//   - Array.empty()         (stdlib â€” active)
+//   - Array.append()        (stdlib â€” active, single-item push)
+//   - Char classification   (stdlib â€” active)
+//   - match/Some(c)         (runtime â€” active)
 // ============================================================
 
-// ── Token types ─────────────────────────────────────────────
+// â”€â”€ Token types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 enum TokenKind {
   Identifier
@@ -30,6 +30,7 @@ enum TokenKind {
   Symbol
   Comment
   DocComment
+  GovComment
   Newline
   Eof
   Unknown
@@ -52,8 +53,10 @@ record LexError {
   col: Int
 }
 
-// ── Active keywords ─────────────────────────────────────────
+// â”€â”€ Active keywords â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Must stay in sync with lexer.ts V1_ACTIVE_KEYWORDS
+// v2.2 additions: guard, access, gate, static, bitfield, governed, view,
+//                 trap, step, evict, assimilate, policy
 
 pure flow makeKeywordTable() -> Array<String> {
   return [
@@ -63,11 +66,13 @@ pure flow makeKeywordTable() -> Array<String> {
     "and", "or", "unless", "is", "for", "while",
     "unsafe", "safe", "protected", "redacted",
     "contract", "emit", "emits", "event", "effects",
-    "with", "intent", "governance", "compute", "target"
+    "with", "intent", "governance", "compute", "target",
+    "guard", "access", "gate", "static", "bitfield",
+    "governed", "view", "trap", "step", "evict", "assimilate", "policy"
   ]
 }
 
-// ── scanIdent: read letters/digits starting at pos, update pos/col ───────────
+// â”€â”€ scanIdent: read letters/digits starting at pos, update pos/col â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Returns the accumulated identifier string via return value.
 // pos and col are passed by value; caller must use returned endPos/endCol.
 pure flow scanWord(source: String, startPos: Int, srcLen: Int) -> Array<String>
@@ -98,7 +103,7 @@ contract {
   return [word, i.toString()]
 }
 
-// ── scanOperator: peek ahead for two-char operators ──────────────────────────
+// â”€â”€ scanOperator: peek ahead for two-char operators â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Returns [opString, endPos, isMultiChar] where isMultiChar is "true" or "false".
 // Known two-char operators (must match TypeScript lexer): -> => == != <= >= && || .. :: // /*
 pure flow scanOperator(source: String, pos: Int, srcLen: Int) -> Array<String>
@@ -137,7 +142,7 @@ contract {
   }
 }
 
-// ── scanDigits: read digits starting at pos ───────────────────────────────────
+// â”€â”€ scanDigits: read digits starting at pos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 pure flow scanDigits(source: String, startPos: Int, srcLen: Int) -> Array<String>
 contract {
   intent { "Scan digit characters from source at startPos. Returns [digits, endPos] as strings." }
@@ -167,7 +172,7 @@ contract {
   return [digits, i.toString()]
 }
 
-// ── scanString: read a "..." string literal starting at the opening quote ─────
+// â”€â”€ scanString: read a "..." string literal starting at the opening quote â”€â”€â”€â”€â”€
 // startPos points at the opening '"'. Returns [value, endPos] where value is the
 // UNQUOTED content and endPos is the index just past the closing '"'.
 // A backslash (codePoint 92) escapes the next char so an escaped quote does not
@@ -219,7 +224,7 @@ contract {
   return [value, i.toString()]
 }
 
-// ── scanCharLit: read a '...' char literal starting at the opening quote ───────
+// â”€â”€ scanCharLit: read a '...' char literal starting at the opening quote â”€â”€â”€â”€â”€â”€â”€
 // startPos points at the opening single quote (codePoint 39). Returns
 // [value, endPos] where value is the UNQUOTED content and endPos is just past the
 // closing quote. Backslash (92) escapes the next char (so '\'' would not end early).
@@ -268,7 +273,7 @@ contract {
   return [value, i.toString()]
 }
 
-// ── scanLineComment: read a // line comment to (but not including) the newline ─
+// â”€â”€ scanLineComment: read a // line comment to (but not including) the newline â”€
 // startPos points at the first '/'. Returns [value, endPos]; value includes the
 // leading "//". endPos stops before the '\n' so the newline handler still fires.
 pure flow scanLineComment(source: String, startPos: Int, srcLen: Int) -> Array<String>
@@ -299,7 +304,7 @@ contract {
   return [value, i.toString()]
 }
 
-// ── scanBlockComment: read a /* ... */ block comment ──────────────────────────
+// â”€â”€ scanBlockComment: read a /* ... */ block comment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // startPos points at the first '/'. Returns [value, endPos]; value includes the
 // full "/* ... */" text. May span newlines. If the terminator never arrives the
 // scan stops at EOF (no infinite loop). Detection of the closing "*/" uses a
@@ -350,12 +355,12 @@ contract {
   return [value, i.toString()]
 }
 
-// ── Main lexer flow ─────────────────────────────────────────
+// â”€â”€ Main lexer flow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 guarded flow tokenize(source: String) -> TokenizeResult
 
 contract {
-  // Result alias — single-pass lexer; bounded by source length; errors carry line/col position
+  // Result alias â€” single-pass lexer; bounded by source length; errors carry line/col position
   types {
     type TokenizeResult = Result<Array<Token>, LexError>
   }
@@ -383,7 +388,7 @@ contract {
       Some(c) => {
         // Dispatch on character class.
         // LogicN: no else-if. Whitespace chars are mutually exclusive so sequential
-        // if-without-else is correct — only one branch fires per character.
+        // if-without-else is correct â€” only one branch fires per character.
         mut handled: Bool = false
 
         if c is ' ' {
@@ -417,7 +422,7 @@ contract {
           handled = true
         }
         }
-        // ── String / char / comment interception (BEFORE scanOperator) ────────
+        // â”€â”€ String / char / comment interception (BEFORE scanOperator) â”€â”€â”€â”€â”€â”€â”€â”€
         // scanOperator treats // and /* as two-char operators, so these must be
         // caught first or "// hi" would emit an Operator(//) and "text" an Ident.
         if handled == false {
@@ -450,13 +455,39 @@ contract {
           handled = true
         }
         }
+        // ── ;; govComment interception ─────────────────────────────────────
+        // ";;" introduces a governance annotation comment (manifested in .lmanifest).
+        // A bare ";" is a symbol; only the ";;" two-char form is a GovComment.
+        if handled == false {
+        if c is ';' {
+          let optSemi: Option<Char> = source.charAt(pos + 1)
+          match optSemi {
+            None => {}
+            Some(sc) => {
+              if sc is ';' {
+                let startPosG = pos
+                let startLineG = line
+                let startColG = col
+                let resG = scanLineComment(source, pos, srcLen)
+                let valG = resG.first().unwrapOr("")
+                let endPosStrG = resG.last().unwrapOr((pos + 2).toString())
+                let endPosG = endPosStrG.toInt().unwrapOr(pos + 2)
+                col = col + (endPosG - startPosG)
+                pos = endPosG
+                tokens = tokens.append({ kind: TokenKind.GovComment, value: valG, line: startLineG, column: startColG, endLine: line, endColumn: col, start: startPosG, end: pos })
+                handled = true
+              }
+            }
+          }
+        }
+        }
         if handled == false {
         if c is '/' {
           // Peek the next char to distinguish // and /* from a bare / operator.
           let optN: Option<Char> = source.charAt(pos + 1)
           match optN {
             None => {
-              // lone '/' at EOF — leave to scanOperator path below
+              // lone '/' at EOF â€” leave to scanOperator path below
             }
             Some(cn) => {
               if cn is '/' {

@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0-beta.1",
+  "stage": "Stage A",
+  "date": "2026-06-05",
+  "runtime": "LogicN Stage A — TypeScript governed interpreter",
+  "drcmPhases": "1-7 complete (Stage A simulation)",
+  "testCount": 3383,
+  "packageCount": 33,
+  "milestone": "Production-ready Stage A — Phase P8-P12 in progress",
+  "nextMilestone": "Stage B self-hosting + real DSS.wasm (P9)",
+  "openTasks": ["#102-#106 Stage B DSS.wasm", "#110 key rotation", "#116 final R6"],
+  "notes": "Stage A delivers all DRCM Phases 1-7, full Tower-native syntax, CBOR manifests, Ed25519 signing, OCI packaging, OWASP-hardened governance verification."
+}

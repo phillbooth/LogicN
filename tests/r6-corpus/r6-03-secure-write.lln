@@ -1,0 +1,17 @@
+// EXPECT: ACCEPT
+// R6 corpus 03 — secure flow with database.write + audit.write
+// Exercises: secure qualifier, effects { database.write audit.write }, AuditLog.write
+
+secure flow persistEntry(amount: Int) -> Result<Int, String>
+contract {
+  intent { "Persist a financial entry and emit an audit event." }
+  effects { database.write, audit.write }
+  audit { require runtime report }
+}
+{
+  if amount < 0 {
+    return Err("negative amount")
+  }
+  AuditLog.write("entry persisted: " + amount.toStr())
+  return Ok(amount)
+}

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "lln.manifest.v1",
+  "sourceHash": "sha256:d1de62ce5e70b198205fab8b55cb9da044d29f8742bae00b1240cdde8edbb131",
+  "sourceFile": "tests/r6-corpus/r6-03-secure-write.lln",
+  "flowCount": 1,
+  "policyResolutionDag": {
+    "allowedEffects": 24,
+    "deniedEffects": 0,
+    "conflictsResolved": 0,
+    "resolvedAt": "2026-06-05T16:11:54.488Z"
+  },
+  "behavioralFingerprint": "sha256:a71491ea9c484115c5c6172d22e99f026877b55d54135684e2cd0662c8ba38ea",
+  "derivedConstraints": [
+    "persistEntry: Flow persistEntry declares required effects [via contract.effects]",
+    "persistEntry: Flow persistEntry has a contract declaration [via contract]"
+  ],
+  "proofObligations": [
+    {
+      "flowName": "persistEntry",
+      "kind": "effect-safety",
+      "description": "secure flow declares effects [database.write, audit.write]",
+      "verified": "static"
+    },
+    {
+      "flowName": "intent_declared:persistEntry",
+      "kind": "governance-obligation",
+      "description": "intent_declared:persistEntry",
+      "verified": "static"
+    },
+    {
+      "flowName": "audit_required:persistEntry",
+      "kind": "governance-obligation",
+      "description": "audit_required:persistEntry",
+      "verified": "static"
+    }
+  ],
+  "generatedAt": "2026-06-05T16:11:54.488Z",
+  "governanceSignature": {
+    "algorithm": "Ed25519+ML-DSA-65",
+    "ed25519": "placeholder:sha256:42b9c0153f06ff8de0bbff88f7f7416dabb198e8501b763d68ea1dac62863cd7",
+    "mlDsa65": "placeholder:sha256:42b9c0153f06ff8de0bbff88f7f7416dabb198e8501b763d68ea1dac62863cd7",
+    "signerNote": "Placeholder signatures — real ML-DSA-65 signing requires key custody spec (DRCM task #34). The canonical JSON body hash above is stable and verifiable today."
+  }
+}
