@@ -33,79 +33,76 @@ LogicN is built for organisations where software failure is not acceptable — f
 
 ## Build Progress
 
-> **Benchmark headline (Phase 27 WASM):** arithmetic-threshold = **4.0B ops/sec** — 2.9× faster than Rust, 5.2× faster than Node.js
-> **GPU headline (Phase 38 Deno WebGPU):** NVIDIA RTX 2060 = **4.01M ops/sec** — first real GPU number
-
-**Post-Quantum and Hardware Security** — CHERI capability hardware, ML-DSA-65 attestation (NIST FIPS 204), ARM MTE, TEE
-
+**Post-Quantum and Hardware Security**
 ```
-▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   8%  (Ed25519 Phase 39 · ML-DSA-65 hybrid Phase 55 · HW trust profiles spec · CUDA backend Phase 58 pending PATH)
+████████████░░░░░░░░░░░░░░░░░░░░  38%
 ```
 
-**Photonic / Ternary Computing** — TriState types, balanced ternary logic, photonic backend bridge
-
+**Photonic / Ternary Computing**
 ```
-▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   3%  (TriState type · Tri stdlib ops · GIRTensorInfo.photonic_compatible · NativeCapabilityId.PhotonicBridge reserved)
-```
-
-**Passive Execution Plans and Target Bridges** — Phase 13: GIR → Plan → CPU/GPU/NPU/WASM/Photonic
-
-```
-▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░  22%  (plan types + builder + executePlan wired · WAT emitter Phase 24 · wasm-hybrid Phase 25)
+▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   3%
 ```
 
-**Runtime written in LogicN** — Stage B: LogicN compiler compiles itself ← Major achievement milestone
-
+**Passive Execution Plans and Target Bridges**
 ```
-████████████████████████████████  100%  (cross-module imports, record literals, for loops, observable effects, String/Int methods. 21 bootstrap tests. LogicN is its own runtime.)
-```
-
-
-**TypeScript Runtime** — Stage A: compiler pipeline + execution engine running on Node.js
-
-```
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  100%  (3,109 compiler · 15 economics · 95 graph · 14 security = 3,233 (core) · 127 devtools/ext = 3,360 full total · 0 failures · reproduce: `node scripts/run-all-tests.js --core`)
+▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░  22%
 ```
 
-| Layer | Status | % |
-|---|---|---|
-| **Specification / KB** | 400+ docs, 223/223 CEC stable, governed-runtime research, ASIC/cyber-physical hardening, C++ bridge, fortified typed logic, wasmtime roadmap | 100% |
-| **Lexer** | All v1 keywords, TokenKindId, LLN-LEX-001..006, FlatTokenStream; `Array<Int>=` fused-token fix | 98% |
-| **Parser** | `for` loops (range + iterator), record literals, `match Some(x)` destructuring, cross-module `import`, generic type skip | 96% |
-| **Type checker** | LLN-TYPE-001..022 + tensor, `Auto` deferral (LLN-TYPE-023), `Int.toStr()` + `String.length()` + method dispatch widened | 84% |
-| **Value-state checker** | Secret sink trilogy (LLN-SECRET-001/002/003); list/record/inter-flow taint; `source_from` annotation (Network → auto-tainted) | 100% |
-| **Effect checker** | LLN-EFFECT-001..005, LLN-STDLIB-001, EffectCheckerFlags | 84% |
-| **Governance verifier** | LLN-GOV-001..020 + LLN-TERM-001; ProofGraph + sha256_seal EpilogueReceipt; LiabilityProfile auto-calc; `decreases` annotation | 100% |
-| **Contract blocks** | All 16 blocks parsed + validated — `limits {}` typo (GOV-019), broad authority (GOV-020), high-risk proof nudge (GOV-006), intent mismatch (GOV-001) | 100% |
-| **GIR emitter** | GIR v1, tensor metadata, `field`/`arrlit`/`reclit`/`matche`/`arm` ops, WAT emitter + SIMD ops | 80% |
-| **Stdlib** | 40+ functions: path sandbox, ReDoS guard, BCrypt/Argon2, SSRF guard, `toStr()` `length()` `contains()` `append()` `unwrapOr()` | 75% |
-| **Runtime interpreter** | sync fast-path (14×), tier telemetry (5 tiers); Stage B: `RunResult{retVal, auditLog}`, record literals, for loops, cross-module imports | 85% |
-| **WAT emitter + assembler** | i32 arithmetic, if/else, while, locals — Phase 27 complete; wabt assembly; governance-cost: **3.2K/s → 1.88M/s via WASM (588×)** | 88% |
-| **WASM Execution** | 10/10 benchmarks; arithmetic-threshold **4.0B/s**; gpu-compute 4.17M/s (RTX 2060); governed wins data-query outright | 100% |
-| **Economics Layer** | CostGraph, ValueGraph, IBM breach-risk matrix, RouteDecision; `contract.economics {}` auto-by-default | 68% |
-| **Governance Signatures** | Ed25519 v1 + ML-DSA-65 hybrid (NIST FIPS 204); sha256_seal live; zk_snark_receipt Phase 1 stub | 65% |
-| **Security (Taint/Profiles)** | LLN-TAINT-001..006, LLN-PROFILE-001..007+005B, OWASP 24-boundary, **PCI DSS 4.0.1** (LLN-PCI-001..010) | 80% |
-| **Stage B self-hosting** | **100%** — LogicN compiles and runs itself. 21 bootstrap tests. Strings, records, lists, for/match, observable effects, cross-module imports. | **100%** |
-| **DevTools** | naming · context receipts · BM25 search · data lineage · **PCI DSS 4.0.1 audit** · security audit (3,127 tests) | 100% |
-| **Ext packages** | `logicn-ext-secrets-vault` (Vault, dual-token rotation, zero-wipe) · `logicn-ext-proof-snarkjs` (Groth16 Phase 1) | 75% |
-| **Live .lln services** | 39 files: auth-service routes + aerospace/healthcare/AI/wasm examples — all parse 0 errors | 97% |
-| **Password API** | BCrypt → Password facade → Argon2id → auto-migration | 90% |
-| **Tier Telemetry** | executionTier + fallbackReason on every FlowExecutionResult — 5 tiers | 100% |
-| **Governance Diff CLI** | `logicn diff` — governance delta, exit 2 on authority widening | 82% |
-| **Package resolver** | LLN-PKG-001..005, 11-package type registry, cross-module import resolution | 75% |
+**Governed Runtime (DRCM Phases 1–7)**
+```
+████████████████████████████████  100%
+```
+
+**TypeScript Runtime — Stage A**
+```
+████████████████████████████████  100%
+```
+
+**Tests — 33/33 packages**
+```
+████████████████████████████████  100%  (3,383 tests · 0 failures)
+```
+
+**Stage B Self-Hosting (WAT Linear Memory)**
+```
+█████████████████████████░░░░░░░  87%
+```
+
+**AI Inference Tower (BitNet / GroqCloud / NVFP4)**
+```
+████░░░░░░░░░░░░░░░░░░░░░░░░░░░░  12%
+```
+
+| Layer | % |
+|---|---|
+| **Specification / KB** | 100% |
+| **Lexer** | 100% |
+| **Parser** | 100% |
+| **Governance Verifier** | 100% |
+| **Contract blocks** | 100% |
+| **Value-state checker** | 100% |
+| **DRCM Phases 1–7** | 100% |
+| **CBOR Manifests (RFC 8949)** | 100% |
+| **Tower (DSS.wasm) — Stage A simulation** | 100% |
+| **Tests — full suite** | 100% |
+| **DevTools** | 100% |
+| **Security audit (0 findings)** | 100% |
+| **Type checker** | 90% |
+| **Effect checker** | 90% |
+| **WAT emitter** | 88% |
+| **Runtime interpreter** | 87% |
+| **Stage B self-hosting — governance verified** | 87% |
+| **Stage B self-hosting — WASM execution** | 0% ← P9.2 blocker |
+| **Ext packages** | 80% |
+| **Governance signatures (ML-DSA-65)** | 75% |
+| **Package resolver** | 75% |
+| **Economics Layer** | 68% |
+| **AI Inference Tower** | 12% |
+| **Production deployment (P9 pending)** | 75% |
 
 ---
 
-### Roadmap — next phases
-
-| Layer | Current | Target | Notes |
-|---|---|---|---|
-| **Bytecode VM** | 50% | 80% | Int32Array opcodes, callExpr support — accelerates the tree-walker interim tier |
-| **Passive execution plans** | 40% | 70% | Plan types + hashPassivePlan + executePlan — needed for multi-target dispatch |
-| **CLI / Package layout** | 75% | 100% | Refactoring to support `npm install -g @logicn/cli`, Linux server deployment |
-| **Stage B → native WASM** | — | — | Compile `runtime.lln` itself through WAT emitter → `wasmtime logicn-runtime.wasm program.lln` (no Node.js). Baseline recorded: governance-cost 3.2K/s → target ~500M/s |
-| **SoA Arena** | 35% | 60% | SoANodeArena, FlatTokenStream — high-performance data layout for hot paths |
-| **GPU/NPU/APU dispatch** | 16% | 40% | WebGPUComputePlan, NPUKernelPlan — full heterogeneous hardware routing |
+> **Full roadmap** → [docs/Knowledge-Bases/logicn-build-roadmap.md](docs/Knowledge-Bases/logicn-build-roadmap.md) — all 125 tasks, Phase 5–9 sequencing, AI inference tower roadmap
 
 ---
 
