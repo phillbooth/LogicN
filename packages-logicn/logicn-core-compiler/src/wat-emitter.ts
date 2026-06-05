@@ -202,7 +202,15 @@ export function logicNTypeToWAT(typeName: string): WATValType {
     case "Int64": case "UInt64": return "i64";
     case "Float16": case "Float32": case "Float": return "f32";
     case "Float64": case "Double": case "Decimal": return "f64";
-    default: return "externref"; // records, strings, tensors — passed as externref in hybrid mode
+    // P9.2: String and all complex types (Array, Record, Option, Result, Char, Tensor)
+    // are represented as opaque i32 handles in the Stage B self-hosted compiler.
+    // String parameters in flows like scanWord/scanOperator are passed as integer indices
+    // into the host string table — they never carry GC references at the WASM boundary.
+    // Using i32 keeps the WASM type stack consistent: function bodies already emit
+    // all local variables as (local $x i32), so parameters must match.
+    // Phase 22B (full linear-memory string layout) will revisit this when the host
+    // string table and char-access intrinsics are wired into the WASM import table.
+    default: return "i32"; // opaque handle — Stage B: all non-numeric types as i32
   }
 }
 
@@ -261,6 +269,12 @@ export function renderWAT(module: WATModule): string {
   }
   if (module.imports.length > 0) lines.push("");
 
+  // P9.3 global: mutable i32 for temporary array ID during listLiteral emission.
+  // Used by $__lln_tmp_arr pattern: create → set-global → append items → get-global.
+  lines.push(`  ;; P9.3: temporary array ID register for listLiteral WAT emission`);
+  lines.push(`  (global $__lln_tmp_arr (mut i32) (i32.const 0))`);
+  lines.push(``);
+
   // Function definitions.
   // Pure flows with a real body (fn.body !== "unreachable") emit actual instructions.
   // All other flows use (unreachable) which is valid WAT — polymorphic bottom type.
@@ -300,6 +314,55 @@ export function renderWAT(module: WATModule): string {
 // ---------------------------------------------------------------------------
 // Phase 25 — AST-based WAT code generator for pure flows
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// String intern table — maps string value → i32 ID (opaque handle)
+//
+// The host registers interned strings with the WASM instance at load time.
+// The WASM guest uses the ID (i32) everywhere as an opaque string handle.
+// 0 is reserved for the empty string "".
+// ---------------------------------------------------------------------------
+
+const _stringTable = new Map<string, number>();
+let _nextStringId = 1; // 0 reserved for ""
+
+/**
+ * Interns a string literal value and returns its i32 ID.
+ * Strips surrounding quotes if present. Returns 0 for the empty string.
+ */
+function internString(value: string): number {
+  if (value === "" || value === '""') return 0;
+  // Strip surrounding double-quotes if present
+  const stripped = value.startsWith('"') && value.endsWith('"') && value.length >= 2
+    ? value.slice(1, -1) : value;
+  if (stripped === "") return 0;
+  const existing = _stringTable.get(stripped);
+  if (existing !== undefined) return existing;
+  const id = _nextStringId++;
+  _stringTable.set(stripped, id);
+  return id;
+}
+
+/**
+ * Renders the current string intern table as WAT comment lines.
+ * The host reconstructs this mapping to register strings at WASM load time.
+ */
+export function renderStringTableComments(): string {
+  const lines: string[] = [";; String intern table (for host reconstruction):", ";; 0 = \"\""];
+  for (const [str, id] of _stringTable) {
+    lines.push(`;; ${id} = "${str}"`);
+  }
+  return lines.join("\n");
+}
+
+/**
+ * Resets the string intern table. Call before emitting a new module to avoid
+ * IDs leaking across compilation units.
+ */
+export function resetStringTable(): void {
+  _stringTable.clear();
+  _nextStringId = 1;
+}
 
 /**
  * Maps a binary operator string to its WAT i32 instruction.
@@ -396,10 +459,119 @@ export function emitWATExpr(
     }
 
     case "callExpr": {
-      // Flow-to-flow calls within pure flows.
       const name = node.value ?? "";
+      // Record literals are parsed as callExpr with value "#record" or "#record-update".
+      // These require heap allocation (P9.3 — pending).
+      if (name === "#record" || name === "#record-update") {
+        const fieldCount = node.children?.length ?? 0;
+        return `(i32.const 0) ;; record-literal: ${fieldCount} fields (heap allocation pending P9.3)`;
+      }
+      // Flow-to-flow calls within pure flows.
       const args = (node.children ?? []).map((c) => emitWATExpr(c, vars, staticConsts));
       return `(call $${name} ${args.join(" ")})`.trimEnd();
+    }
+
+    case "boolLiteral": {
+      // Boolean: true = 1, false = 0 (standard WASM i32 convention)
+      const val = node.value === "true" || node.value === "1" ? 1 : 0;
+      return `(i32.const ${val}) ;; bool: ${node.value}`;
+    }
+
+    case "stringLiteral": {
+      // String: intern the value and return its i32 ID (opaque handle).
+      // The host registers the string table at WASM load time.
+      const id = internString(node.value ?? "");
+      const preview = (node.value ?? "").slice(0, 20);
+      return `(i32.const ${id}) ;; string: ${preview}`;
+    }
+
+    case "listLiteral": {
+      // P9.3: List/Array literals using host-side array manager.
+      // Pattern: call __array_create → get arr_id, then __array_append for each item.
+      // The host maintains the actual array; WASM passes i32 IDs.
+      //
+      // WAT emission strategy: use a block that produces the array ID.
+      // Since we can't easily use a local variable here (we're inside an expr),
+      // we emit a call sequence using nested blocks with drops.
+      const items = node.children ?? [];
+      if (items.length === 0) {
+        return `(call $host___array_create) ;; empty list []`;
+      }
+      // For non-empty lists, we need a temporary. Emit as a sequence:
+      // The WAT block approach: use the host's array create + appends.
+      // We rely on the fact that most list literals in the lexer are small (2-3 items).
+      // Emit: append all items to a newly created array, return its ID.
+      // Because WAT doesn't have a clean "do this then return that" for expressions,
+      // we use: (block (result i32) create set-global append... get-global)
+      // using global $__lln_tmp_arr as a mutable temporary.
+      const appends = items.map(item => {
+        const itemWat = emitWATExpr(item, vars, staticConsts);
+        return `(call $host___array_append (global.get $__lln_tmp_arr) ${itemWat})`;
+      }).join("\n  ");
+      return [
+        `(block (result i32)`,
+        `  (global.set $__lln_tmp_arr (call $host___array_create))`,
+        `  ${appends}`,
+        `  (global.get $__lln_tmp_arr)`,
+        `)`,
+      ].join("\n");
+    }
+
+    case "block": {
+      // An anonymous block expression — evaluate the last child as the value.
+      // Used in match arm bodies and similar value-producing blocks.
+      const stmts = node.children ?? [];
+      if (stmts.length === 0) return "(i32.const 0) ;; empty block";
+      const last = stmts[stmts.length - 1]!;
+      // If the last statement is a returnStmt, use its child value
+      if (last.kind === "returnStmt") {
+        return last.children?.[0] ? emitWATExpr(last.children[0], vars, staticConsts) : "(i32.const 0)";
+      }
+      // Otherwise try to emit the last statement as a value expression
+      return emitWATExpr(last, vars, staticConsts);
+    }
+
+    case "matchExpr": {
+      // match VALUE { ARM => { BODY } ... }
+      // WAT: if/else chain on integer discriminants (most common case in self-hosted compiler).
+      const subject = node.children?.[0];
+      const arms = node.children?.slice(1).filter(c => c.kind === "matchArm") ?? [];
+
+      if (subject === undefined || arms.length === 0) {
+        return `(i32.const 0) ;; empty match`;
+      }
+
+      const subjectWat = emitWATExpr(subject, vars, staticConsts);
+
+      // Build an if/else chain for each arm.
+      // The last wildcard/default arm provides the else value.
+      // Emit innermost-first so the default wraps the chain.
+      const buildMatchChain = (armIdx: number): string => {
+        if (armIdx >= arms.length) return "(i32.const 0) ;; no default arm";
+        const arm = arms[armIdx]!;
+        const pattern = arm.value ?? "_";
+        const body = arm.children?.[0];
+        const bodyWat = body ? emitWATExpr(body, vars, staticConsts) : "(i32.const 0)";
+
+        if (pattern === "_" || pattern === "else" || pattern === "None" || pattern === "default") {
+          // Wildcard / default arm — no condition needed
+          return bodyWat;
+        }
+
+        // Try to parse as an integer constant for equality comparison
+        const asInt = parseInt(pattern, 10);
+        if (!isNaN(asInt)) {
+          const rest = buildMatchChain(armIdx + 1);
+          return `(if (result i32) (i32.eq ${subjectWat} (i32.const ${asInt}))\n  (then ${bodyWat})\n  (else ${rest})\n)`;
+        }
+
+        // Pattern is a constructor name (e.g. "Some") or enum variant — treat as opaque i32 comparison
+        const patternId = internString(pattern);
+        const rest = buildMatchChain(armIdx + 1);
+        return `(if (result i32) (i32.eq ${subjectWat} (i32.const ${patternId}))\n  (then ${bodyWat})\n  (else ${rest})\n)`;
+      };
+
+      return buildMatchChain(0);
     }
 
     default:
@@ -446,7 +618,9 @@ function emitBlockLastExpr(
     return last.children?.[0] ? emitWATExpr(last.children[0], vars, staticConsts) : "(i32.const 0)";
   }
   if (last.kind === "binaryExpr" || last.kind === "callExpr" ||
-      last.kind === "identifier"  || last.kind === "numberLiteral") {
+      last.kind === "identifier"  || last.kind === "numberLiteral" ||
+      last.kind === "boolLiteral" || last.kind === "stringLiteral" ||
+      last.kind === "matchExpr"   || last.kind === "listLiteral") {
     return emitWATExpr(last, vars, staticConsts);
   }
   return "(i32.const 0) ;; unresolved block expr";
@@ -638,6 +812,83 @@ function emitBlockStatements(
       case "callExpr": {
         const callExpr = emitWATExpr(stmt, vars, staticConsts);
         bodyLines.push(`(drop ${callExpr})`);
+        break;
+      }
+
+      case "matchExpr": {
+        // Match used as a statement.
+        // The subject (child[0]) is the discriminant; children[1..] are matchArm nodes.
+        // Each arm's body is a block of statements — emit using emitBlockStatements recursively.
+        const matchSubject = stmt.children?.[0];
+        const matchArms = (stmt.children ?? []).slice(1).filter(c => c.kind === "matchArm");
+
+        if (matchSubject === undefined || matchArms.length === 0) break;
+
+        const subjectWat = emitWATExpr(matchSubject, vars, staticConsts);
+
+        // Emit as a chain of (if (i32.eq subject pattern) (then ...) (else ...))
+        // For statement match, we use (if COND (then STMTS)) with no result type.
+        const emitMatchArmStmt = (armIdx: number): void => {
+          if (armIdx >= matchArms.length) return;
+          const arm = matchArms[armIdx]!;
+          const pattern = arm.value ?? "_";
+          const armBody = arm.children?.[0];
+
+          const armLines: string[] = [];
+          if (armBody !== undefined) {
+            emitBlockStatements(armBody, vars, localDecls, armLines, labelCounter, true, staticConsts);
+          }
+
+          if (pattern === "_" || pattern === "else" || pattern === "None" || pattern === "default") {
+            // Default/wildcard: emit unconditional block
+            for (const line of armLines) bodyLines.push(line);
+          } else {
+            // Conditional: wrap in (if COND (then ...))
+            const asInt = parseInt(pattern, 10);
+            const condWat = !isNaN(asInt)
+              ? `(i32.eq ${subjectWat} (i32.const ${asInt}))`
+              : `(i32.eq ${subjectWat} (i32.const ${internString(pattern)}))`;
+
+            bodyLines.push(`(if ${condWat}`);
+            bodyLines.push(`  (then`);
+            for (const line of armLines) bodyLines.push(`    ${line}`);
+            bodyLines.push(`  )`);
+            // If there are remaining arms, emit them as the else branch
+            const restArms = matchArms.slice(armIdx + 1);
+            if (restArms.length > 0) {
+              bodyLines.push(`  (else`);
+              // Recursively emit remaining arms inside else
+              const elseLines: string[] = [];
+              // Create a synthetic matchExpr node for the rest
+              const restArm = restArms[0]!;
+              const restPattern = restArm.value ?? "_";
+              const restBody = restArm.children?.[0];
+              const restArmLines: string[] = [];
+              if (restBody !== undefined) {
+                emitBlockStatements(restBody, vars, localDecls, restArmLines, labelCounter, true, staticConsts);
+              }
+              if (restPattern === "_" || restPattern === "else" || restPattern === "None" || restPattern === "default") {
+                for (const line of restArmLines) elseLines.push(line);
+              } else {
+                const restAsInt = parseInt(restPattern, 10);
+                const restCond = !isNaN(restAsInt)
+                  ? `(i32.eq ${subjectWat} (i32.const ${restAsInt}))`
+                  : `(i32.eq ${subjectWat} (i32.const ${internString(restPattern)}))`;
+                elseLines.push(`(if ${restCond}`);
+                elseLines.push(`  (then`);
+                for (const line of restArmLines) elseLines.push(`    ${line}`);
+                elseLines.push(`  )`);
+              }
+              for (const line of elseLines) bodyLines.push(`    ${line}`);
+              bodyLines.push(`  )`);
+            }
+            bodyLines.push(`)`);
+            return; // handled remaining arms above
+          }
+          emitMatchArmStmt(armIdx + 1);
+        };
+
+        emitMatchArmStmt(0);
         break;
       }
 
@@ -1140,6 +1391,50 @@ export function buildWATModule(
     }
   }
   const imports = getWATImportsForEffects(allEffects);
+
+  // ── Host Runtime Imports (P9.3 — Stage B self-hosting support) ─────────────
+  // These host functions provide the bridge between WASM i32 opaque handles
+  // and the host JavaScript runtime's rich type system.
+  //
+  // Array manager: creates and manages Array<T> on the host side.
+  //   The WASM guest receives/passes i32 IDs; the host owns the actual arrays.
+  // String operations: the host registers the intern table and provides ops.
+  //   All strings are opaque i32 IDs in WASM; host resolves them to real strings.
+  //
+  // These are always included so Stage B .lln files can call them freely.
+  // In production Stage A runs, the host provides implementations.
+  // In production Stage B WASM-only runs, DSS.wasm provides them via WASI imports.
+  const HOST_RUNTIME_IMPORTS: WATImport[] = [
+    // Array manager
+    { module: "host", name: "__array_create",   effect: "stdlib.array", type: { params: [],                results: ["i32"] } },
+    { module: "host", name: "__array_append",   effect: "stdlib.array", type: { params: ["i32", "i32"],   results: []      } },
+    { module: "host", name: "__array_get",      effect: "stdlib.array", type: { params: ["i32", "i32"],   results: ["i32"] } },
+    { module: "host", name: "__array_length",   effect: "stdlib.array", type: { params: ["i32"],          results: ["i32"] } },
+    { module: "host", name: "__array_contains", effect: "stdlib.array", type: { params: ["i32", "i32"],   results: ["i32"] } },
+    { module: "host", name: "__array_first",    effect: "stdlib.array", type: { params: ["i32"],          results: ["i32"] } },
+    { module: "host", name: "__array_last",     effect: "stdlib.array", type: { params: ["i32"],          results: ["i32"] } },
+    // String operations
+    { module: "host", name: "__str_concat",     effect: "stdlib.string", type: { params: ["i32", "i32"],  results: ["i32"] } },
+    { module: "host", name: "__str_length",     effect: "stdlib.string", type: { params: ["i32"],          results: ["i32"] } },
+    { module: "host", name: "__str_char_at",    effect: "stdlib.string", type: { params: ["i32", "i32"],  results: ["i32"] } },
+    { module: "host", name: "__str_to_int",     effect: "stdlib.string", type: { params: ["i32"],          results: ["i32"] } },
+    { module: "host", name: "__int_to_str",     effect: "stdlib.string", type: { params: ["i32"],          results: ["i32"] } },
+    { module: "host", name: "__str_eq",         effect: "stdlib.string", type: { params: ["i32", "i32"],  results: ["i32"] } },
+    // Char classification (for self-hosted lexer)
+    { module: "host", name: "__char_is_letter", effect: "stdlib.char",  type: { params: ["i32"],          results: ["i32"] } },
+    { module: "host", name: "__char_is_digit",  effect: "stdlib.char",  type: { params: ["i32"],          results: ["i32"] } },
+    { module: "host", name: "__char_to_string", effect: "stdlib.char",  type: { params: ["i32"],          results: ["i32"] } },
+    // Result/Option helpers
+    { module: "host", name: "__unwrap_or",      effect: "stdlib.result", type: { params: ["i32", "i32"],  results: ["i32"] } },
+    { module: "host", name: "__option_some",    effect: "stdlib.result", type: { params: ["i32"],          results: ["i32"] } },
+    { module: "host", name: "__option_none",    effect: "stdlib.result", type: { params: [],               results: ["i32"] } },
+  ];
+  // Merge — avoid duplicates
+  for (const hi of HOST_RUNTIME_IMPORTS) {
+    if (!imports.some(imp => imp.module === hi.module && imp.name === hi.name)) {
+      imports.push(hi);
+    }
+  }
 
   // Build function definitions.
   // Pure flows (qualifier === "pure", no declaredEffects) get real WAT bodies via emitWATBody.

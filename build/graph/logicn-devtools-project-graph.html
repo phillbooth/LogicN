@@ -7,7 +7,7 @@
 </head>
 <body>
 <h1>LogicN Project Graph</h1>
-<p>2893 nodes, 3630 relationships.</p>
+<p>2905 nodes, 3649 relationships.</p>
 <h2>Nodes</h2>
 <ul><li><strong>logicn-core</strong> <span>Package</span></li>
 <li><strong>logicn-core-compiler</strong> <span>Package</span></li>
@@ -571,12 +571,14 @@
 <li><strong>logicn-governed-apu-memory.md</strong> <span>Document</span></li>
 <li><strong>logicn-governed-design-synthesis.md</strong> <span>Document</span></li>
 <li><strong>logicn-governed-identity.md</strong> <span>Document</span></li>
+<li><strong>logicn-governed-inference-tower.md</strong> <span>Document</span></li>
 <li><strong>logicn-governed-memory-blocks.md</strong> <span>Document</span></li>
 <li><strong>logicn-governed-request-execution.md</strong> <span>Document</span></li>
 <li><strong>logicn-governed-resource-contracts.md</strong> <span>Document</span></li>
 <li><strong>logicn-governed-runtime-research-2026-06-03.md</strong> <span>Document</span></li>
 <li><strong>logicn-governed-tower-specification.md</strong> <span>Document</span></li>
 <li><strong>logicn-gradual-capability-inference.md</strong> <span>Document</span></li>
+<li><strong>logicn-hardened-border.md</strong> <span>Document</span></li>
 <li><strong>logicn-hardware-amd.md</strong> <span>Document</span></li>
 <li><strong>logicn-hardware-apple.md</strong> <span>Document</span></li>
 <li><strong>logicn-hardware-arm.md</strong> <span>Document</span></li>
@@ -1725,6 +1727,14 @@
 <li><strong>NodeFlags</strong> <span>Type</span></li>
 <li><strong>NodeFlagsMask</strong> <span>Type</span></li>
 <li><strong>parseProgram</strong> <span>Flow</span></li>
+<li><strong>PluginManifest</strong> <span>Type</span></li>
+<li><strong>PluginDataSchema</strong> <span>Type</span></li>
+<li><strong>PluginField</strong> <span>Type</span></li>
+<li><strong>validatePluginInput</strong> <span>Flow</span></li>
+<li><strong>PluginSchemaViolation</strong> <span>Type</span></li>
+<li><strong>computeComplianceHash</strong> <span>Flow</span></li>
+<li><strong>hardErase</strong> <span>Flow</span></li>
+<li><strong>ErasureReceipt</strong> <span>Type</span></li>
 <li><strong>checkProductionReadiness</strong> <span>Flow</span></li>
 <li><strong>ProfileDiagnostic</strong> <span>Type</span></li>
 <li><strong>LLN_PROFILE_001</strong> <span>Type</span></li>
@@ -2000,6 +2010,8 @@
 <li><strong>logicNTypeToWAT</strong> <span>Flow</span></li>
 <li><strong>DEFAULT_WAT_MEMORY</strong> <span>Type</span></li>
 <li><strong>renderWAT</strong> <span>Flow</span></li>
+<li><strong>renderStringTableComments</strong> <span>Flow</span></li>
+<li><strong>resetStringTable</strong> <span>Flow</span></li>
 <li><strong>emitWATExpr</strong> <span>Flow</span></li>
 <li><strong>emitWATFromFlowAST</strong> <span>Flow</span></li>
 <li><strong>extractFlowParamNames</strong> <span>Flow</span></li>
@@ -3200,6 +3212,8 @@
 <li>doc:docs/Knowledge-Bases/logicn-audit-writer-spec.md <code>documents</code> package:logicn-core-reports</li>
 <li>doc:docs/Knowledge-Bases/logicn-benchmark-situation-prompt.md <code>documents</code> package:logicn-core</li>
 <li>doc:docs/Knowledge-Bases/logicn-benchmark-situation-prompt.md <code>documents</code> package:logicn-core-compiler</li>
+<li>doc:docs/Knowledge-Bases/logicn-build-roadmap.md <code>documents</code> package:logicn-ai</li>
+<li>doc:docs/Knowledge-Bases/logicn-build-roadmap.md <code>documents</code> package:logicn-ai-lowbit</li>
 <li>doc:docs/Knowledge-Bases/logicn-cache-aware-execution.md <code>documents</code> package:logicn-ai</li>
 <li>doc:docs/Knowledge-Bases/logicn-calibration-data.md <code>documents</code> package:logicn-core</li>
 <li>doc:docs/Knowledge-Bases/logicn-cbor-manifest-spec.md <code>documents</code> package:logicn-core</li>
@@ -3399,9 +3413,7 @@
 <li>doc:docs/Knowledge-Bases/logicn-governance-diff-ci.md <code>documents</code> package:logicn-core-config</li>
 <li>doc:docs/Knowledge-Bases/logicn-governance-diff-ci.md <code>documents</code> package:logicn-core-reports</li>
 <li>doc:docs/Knowledge-Bases/logicn-governance-diff-ci.md <code>documents</code> package:logicn-core-cli</li>
-<li>doc:docs/Knowledge-Bases/logicn-hardware-amd.md <code>documents</code> package:logicn-core</li>
-<li>doc:docs/Knowledge-Bases/logicn-hardware-google.md <code>documents</code> package:logicn-core</li>
-<li>doc:docs/Knowledge-Bases/logicn-hardware-nvidia.md <code>documents</code> package:logicn-core</li>
-<li>doc:docs/Knowledge-Bases/logicn-hardware-targets.md <code>documents</code> package:logicn-core</li></ul>
+<li>doc:docs/Knowledge-Bases/logicn-governed-inference-tower.md <code>documents</code> package:logicn-core</li>
+<li>doc:docs/Knowledge-Bases/logicn-governed-inference-tower.md <code>documents</code> package:logicn-core-compiler</li></ul>
 </body>
 </html>

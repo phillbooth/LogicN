@@ -53,6 +53,7 @@
 | `logicn-contract-authoring-guide.md` | Layer 2B: Syntax Reference | Official grammar blueprint — contract syntax, policy {} vs domain guard disambiguation. | Three-block structure: contract → policy → body |
 | `logicn-contract-clause-reference.md` | Layer 2B: Syntax Reference | Per-clause reference for all contract sub-blocks including resilience/observability/invariant, plus `access {}` Default Deny, `guard {}`, `gate {}`, `import`, `static`, `bitfield`. | Status, syntax, auto-defaults, LLN codes, minimal examples |
 | `logicn-tower-native-syntax.md` | Layer 2B: Syntax Reference | Tower-native security primitives §1–§10: `trap`, `governed`, `view()`, `match`, `static`, `bitfield`, `gate`, `access`, `import`, `import plugin`. | WAT output, V_DPM bitmask, Default Deny, assimilation, govComment manifest |
+| `logicn-governed-inference-tower.md` | Layer 2B: Syntax Reference | Three-tier AI governance (BitNet/GroqCloud/NVFP4), Promotion Pipeline CLI, `ai {}` contract structure | governance_tier, audit_depth, fallback_approved, .lmanifest engine passport, tasks #118–#124 |
 | `logicn-deterministic-runtime-containment.md` | Layer 3: Physical Runtime | DRCM 7-module architecture, 4 locked decisions (DSS/DWI/V_DPM/step). | DSS.wasm, V_DPM 32-bit register, DWI 4MB isolates, fuel injection |
 
 ### Security, Governance & Policies

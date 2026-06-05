@@ -1,0 +1,41 @@
+/*
+ * Diagnostic: Resource Exhaustion Detection
+ * Measures: limit enforcement speed, recovery after boundary hit
+ *
+ * Simulates flows approaching resource ceilings.
+ * The contract limits enforce hard boundaries via invariants.
+ */
+
+secure flow processLargePayload(payloadSizeKb: Int, iterations: Int) -> Result<Int, Error>
+contract {
+  intent "Process payload — resource limit enforcement test"
+  effects { allow audit.write }
+  invariant {
+    ensure payloadSizeKb > 0
+    ensure payloadSizeKb <= 4096   ;; 4MB DWI memory ceiling
+    ensure iterations > 0
+    ensure iterations <= 10000     ;; compute budget ceiling
+  }
+}
+{
+  trap payloadSizeKb <= 0 : ERR_ZERO_PAYLOAD
+  trap payloadSizeKb > 4096 : ERR_PAYLOAD_EXCEEDS_DWI_CEILING    ;; simulates DWI memory limit
+  trap iterations <= 0 : ERR_ZERO_ITERATIONS
+  trap iterations > 10000 : ERR_COMPUTE_BUDGET_EXCEEDED           ;; simulates fuel exhaustion
+
+  let result = payloadSizeKb * iterations
+  return Ok(result)
+}
+
+;; Boundary: just below the ceiling (should complete successfully)
+secure flow processAtCeiling(payloadSizeKb: Int, iterations: Int) -> Result<Int, Error>
+contract {
+  intent "Process at ceiling — verify boundary behaviour"
+  effects { allow audit.write }
+}
+{
+  trap payloadSizeKb > 4096 : ERR_PAYLOAD_EXCEEDS_DWI_CEILING
+  trap iterations > 10000 : ERR_COMPUTE_BUDGET_EXCEEDED
+  let result = payloadSizeKb * iterations
+  return Ok(result)
+}

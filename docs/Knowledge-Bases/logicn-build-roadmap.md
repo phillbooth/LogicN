@@ -170,6 +170,24 @@ Tasks #1–67 + #71 + #73 + #74 + #79–89 + #92–#94 (see task list for full d
 | **#69** | Floor-specific dev tools graphs | Phase 7 |
 | **#90** | `policy {}` State Mutation Governance | Phase 5 |
 | **#91** | Migrate `vdpm.lln` to `bitfield V_DPM {}` | After #87 ✅ |
+| **#118** | `logicn-ext-bridge-groq` GroqCloud HTTP wrapper | Track B |
+| **#119** | `logicn-ext-bridge-bitnet` BitNet CPU WASI-NN backend | Track A |
+| **#120** | `logicn wrap` C++ wrapper generator | CLI |
+| **#121** | `logicn promote` full promotion pipeline | CLI |
+| **#122** | `logicn-ext-bridge-nvfp4` NVFP4 TensorRT-LLM backend | Hardware-gated |
+| **#123** | `governance_tier` boot.lln mapping | Parser |
+| **#124** | `audit_depth full` AuditEvent AI inference fields | Verifier |
+
+### Governed Inference Tower (Track A/B)
+| Task | What | Priority |
+|---|---|---|
+| **#118** | `logicn-ext-bridge-groq`: GroqCloud HTTP wrapper — governed `step()` via WASI-HTTP, `ai {}` enforcement (max_token_cost, max_latency_ms, approved_models), AuditEvent CBOR Tag 410 | Track B |
+| **#119** | `logicn-ext-bridge-bitnet`: BitNet CPU WASI-NN Wasmtime backend — `wasmtime-wasi-nn-bitnet` Rust crate, BitNet.cpp FFI, TL2/TL1 kernel selection, wired into `logicn-ai-lowbit` | Track A |
+| **#120** | `logicn wrap`: governance wrapper generator from C++ headers → `.lln` flow + `_host.rs` Wasmtime registration | CLI |
+| **#121** | `logicn promote`: full promotion pipeline (wrap + static analysis + sign) → `build/engine.wasm` + signed `.lmanifest` with license/commit metadata | CLI |
+| **#122** | `logicn-ext-bridge-nvfp4`: NVFP4 TensorRT-LLM backend — Apache 2.0 + NOTICE; hardware-gated (Blackwell B200/RTX5090) | Hardware-gated |
+| **#123** | `governance_tier` mapping in `boot.lln`: `ai_tier_1/2/3` → assimilated plugin routing; no flow-code changes to switch backends | Parser |
+| **#124** | `audit_depth full`: enhanced AuditEvent fields for AI inference — token_count, latency_ms, input_hash, output_hash, model_version, engine_id | Verifier |
 
 ### ⬜ DRCM (Gated)
 `#40–44`: Phase 5–7 (step keyword, DSS.wasm, Epilogue Receipt, OWASP tests, OCI)
@@ -205,12 +223,12 @@ See `logicn-tower-native-syntax.md` for full grammar, semantics, and cross-refer
 
 ---
 
-## Knowledge Base (Current — 33 docs, v6.0 additions reflected in layer listing)
+## Knowledge Base (Current — 34 docs, v6.0 additions reflected in layer listing)
 
 **Layer 0:** `architecture-charter.md`  
 **Layer 1:** `logicn-governance-rules.md` (37+ LLN codes)  
 **Layer 2A:** `logicn-architecture-patterns.md`  
-**Layer 2B:** `logicn-contract-authoring-guide.md` · `logicn-contract-clause-reference.md` · `logicn-resilience-observability-design.md` · `logicn-domain-guard-policies.md` · `logicn-governance-cicd-pipeline.md` · `logicn-cbor-manifest-spec.md` · `logicn-tower-native-syntax.md` ← NEW  
+**Layer 2B:** `logicn-contract-authoring-guide.md` · `logicn-contract-clause-reference.md` · `logicn-resilience-observability-design.md` · `logicn-domain-guard-policies.md` · `logicn-governance-cicd-pipeline.md` · `logicn-cbor-manifest-spec.md` · `logicn-tower-native-syntax.md` · `logicn-governed-inference-tower.md` ← NEW  
 **Layer 3:** `logicn-deterministic-runtime-containment.md` · `logicn-drcm-phase1-specs.md`  
 **Topology:** `logicn-topological-graph-engine.md`  
 **Patterns:** `logicn-agile-governance-pattern.md` · `logicn-proof-tracing-design.md`  

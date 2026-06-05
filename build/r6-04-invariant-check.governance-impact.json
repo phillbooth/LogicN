@@ -2,7 +2,7 @@
   "schemaVersion": "lln.governance-impact.v1",
   "sourceFile": "tests/r6-corpus/r6-04-invariant-check.lln",
   "sourceHash": "sha256:1ea64bb462650f62274a26a3286caa7998dc338abbe03ab3a86a56896f700e98",
-  "generatedAt": "2026-06-05T16:11:54.696Z",
+  "generatedAt": "2026-06-05T19:59:02.943Z",
   "flowCount": 1,
   "flows": [
     {

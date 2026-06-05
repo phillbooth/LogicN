@@ -18,7 +18,10 @@
     "run:http":               "node benchmarks/http-throughput/benchmark.mjs",
     "compare":                "node src/compare.mjs",
     "build:native":           "node src/build-native.mjs",
-    "bench":                  "node src/runner.mjs --quick && node src/compare.mjs"
+    "bench":                  "node src/runner.mjs --quick && node src/compare.mjs",
+    "run:diagnostic":         "node src/diagnostic-runner.mjs",
+    "run:diagnostic-suite":   "node src/runner.mjs --diagnostic",
+    "run:fault-injection":    "node src/diagnostic-runner.mjs --benchmark toxic-input --benchmark governance-violation"
   },
   "dependencies": {
     "@logicn/core-compiler": "file:../logicn-core-compiler"

@@ -224,10 +224,26 @@ export const LLN_GOV_012 = {
 //                     files cannot promote plugins to Hot-Code Residency.
 // LLN-ASSIMILATE-002  assimilation_memory_budget not declared in boot.lln governance {}
 //                     block but an assimilated plugin exists in the project.
-//                     Add: governance { assimilation_memory_budget: 50MB } to boot.lln.
+//                     When omitted, the runtime auto-calculates: min(RAM * 0.20, 256MB).
+//                     Declare explicitly only to override the auto ceiling.
+//                     Add: governance { assimilation_memory_budget: auto } or
+//                          governance { assimilation_memory_budget: 50MB } to boot.lln.
 // LLN-ASSIMILATE-003  assimilated plugin contract {} has no access { grant } block.
 //                     All assimilated plugins must declare explicit capability grants —
 //                     they are pre-warmed at boot so V_DPM bits must be known ahead of time.
+
+// ── LLN-BORDER codes (Hardened Border protocol) ───────────────────────────────────
+//
+// LLN-BORDER-001  Plugin input missing required field — schema deviation detected.
+//                 Treated as potential schema poisoning attack. Plugin call blocked.
+// LLN-BORDER-002  Plugin input type mismatch — expected vs actual type differs.
+//                 Schema deviation treated as hostile input. Logged as SECURITY_ALERT.
+// LLN-BORDER-003  Plugin input field too large — exceeds maxLength constraint.
+//                 Possible buffer overflow attempt. Plugin call blocked.
+// LLN-BORDER-004  Plugin input value out of range — below minimum or above maximum.
+//                 Range violation treated as boundary probe. Plugin call blocked.
+// LLN-BORDER-005  Plugin triggered unexpected trap (panic-as-security event).
+//                 Plugin version automatically blacklisted. AuditEvent generated.
 
 // ── LLN-GATE codes ────────────────────────────────────────────────────────────────
 //
@@ -2975,7 +2991,7 @@ class GovernanceVerifier {
           `Only boot.lln may grant Hot-Code Residency. ` +
           `Move this declaration to boot.lln. (Full enforcement in Stage B multi-file compilation.)`,
           node.location,
-          `Move 'import plugin assimilate ...' to boot.lln and add governance { assimilation_memory_budget: 50MB }.`,
+          `Move 'import plugin assimilate ...' to boot.lln. The assimilation_memory_budget will auto-calculate from available RAM when omitted.`,
         ));
       }
 

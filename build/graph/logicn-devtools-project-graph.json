@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-06-05T16:11:39.336Z",
+  "generatedAt": "2026-06-05T19:58:47.059Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -5115,6 +5115,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-governed-inference-tower.md",
+      "kind": "Document",
+      "label": "logicn-governed-inference-tower.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-governed-inference-tower.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-governed-memory-blocks.md",
       "kind": "Document",
       "label": "logicn-governed-memory-blocks.md",
@@ -5164,6 +5173,15 @@
       "kind": "Document",
       "label": "logicn-gradual-capability-inference.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-gradual-capability-inference.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-hardened-border.md",
+      "kind": "Document",
+      "label": "logicn-hardened-border.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-hardened-border.md",
       "tags": [
         "document"
       ]
@@ -16362,6 +16380,86 @@
       ]
     },
     {
+      "id": "type:logicn-core-compiler:PluginManifest",
+      "kind": "Type",
+      "label": "PluginManifest",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/plugin-schema.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:PluginDataSchema",
+      "kind": "Type",
+      "label": "PluginDataSchema",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/plugin-schema.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:PluginField",
+      "kind": "Type",
+      "label": "PluginField",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/plugin-schema.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:validatePluginInput",
+      "kind": "Flow",
+      "label": "validatePluginInput",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/plugin-schema.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:PluginSchemaViolation",
+      "kind": "Type",
+      "label": "PluginSchemaViolation",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/plugin-schema.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:computeComplianceHash",
+      "kind": "Flow",
+      "label": "computeComplianceHash",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/plugin-schema.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:hardErase",
+      "kind": "Flow",
+      "label": "hardErase",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/plugin-schema.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:ErasureReceipt",
+      "kind": "Type",
+      "label": "ErasureReceipt",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/plugin-schema.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "flow:logicn-core-compiler:checkProductionReadiness",
       "kind": "Flow",
       "label": "checkProductionReadiness",
@@ -19105,6 +19203,26 @@
       "id": "flow:logicn-core-compiler:renderWAT",
       "kind": "Flow",
       "label": "renderWAT",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:renderStringTableComments",
+      "kind": "Flow",
+      "label": "renderStringTableComments",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:resetStringTable",
+      "kind": "Flow",
+      "label": "resetStringTable",
       "sourcePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts",
       "tags": [
         "function",
@@ -30213,6 +30331,20 @@
       "evidencePath": "docs/Knowledge-Bases/logicn-benchmark-situation-prompt.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/logicn-build-roadmap.md",
+      "to": "package:logicn-ai",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-build-roadmap.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-build-roadmap.md",
+      "to": "package:logicn-ai-lowbit",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-build-roadmap.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/logicn-cache-aware-execution.md",
       "to": "package:logicn-ai",
       "kind": "documents",
@@ -31604,6 +31736,55 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/Knowledge-Bases/logicn-governance-diff-ci.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-governed-inference-tower.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-governed-inference-tower.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-governed-inference-tower.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-governed-inference-tower.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-governed-inference-tower.md",
+      "to": "package:logicn-ai",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-governed-inference-tower.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-governed-inference-tower.md",
+      "to": "package:logicn-ai-lowbit",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-governed-inference-tower.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-governed-inference-tower.md",
+      "to": "package:logicn-ai-neural",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-governed-inference-tower.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-hardened-border.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-hardened-border.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-hardened-border.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-hardened-border.md"
     },
     {
       "from": "doc:docs/Knowledge-Bases/logicn-hardware-amd.md",
@@ -43493,6 +43674,62 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:PluginManifest",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/plugin-schema.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:PluginDataSchema",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/plugin-schema.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:PluginField",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/plugin-schema.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:validatePluginInput",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/plugin-schema.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:PluginSchemaViolation",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/plugin-schema.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:computeComplianceHash",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/plugin-schema.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:hardErase",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/plugin-schema.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:ErasureReceipt",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/plugin-schema.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "flow:logicn-core-compiler:checkProductionReadiness",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -45412,6 +45649,20 @@
     {
       "from": "package:logicn-core-compiler",
       "to": "flow:logicn-core-compiler:renderWAT",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:renderStringTableComments",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:resetStringTable",
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts"

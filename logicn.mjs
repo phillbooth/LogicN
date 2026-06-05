@@ -20,11 +20,64 @@
  * This WASM path:                                  ~1,880,000 ops/sec  (588×)
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, appendFileSync } from "node:fs";
 import { join, basename, dirname } from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
+import { totalmem, freemem } from "node:os";
+
+// ── Auto assimilation memory budget ──────────────────────────────────────────
+// Called when boot.lln declares `assimilation_memory_budget: auto`
+// OR when the governance block is omitted entirely (auto is the default).
+//
+// Formula: min(available_RAM * 0.20, 256MB)
+// Conservative: 20% of currently free RAM, hard ceiling of 256MB.
+//
+// Tiers based on available RAM:
+//   < 4GB  → 10% of free RAM, ceiling 50MB   (constrained / container)
+//   4–16GB → 20% of free RAM, ceiling 128MB  (developer workstation)
+//   > 16GB → 20% of free RAM, ceiling 256MB  (server / production)
+//
+// Developers can always override with an explicit value:
+//   governance { assimilation_memory_budget: 50MB }  ← fixed ceiling
+//   governance { assimilation_memory_budget: auto }  ← this function
+//   governance { assimilation_memory_budget: auto max 100MB } ← auto with cap
+function computeAutoAssimilationBudgetMB(explicitMaxMB = null) {
+  const totalMB  = Math.round(totalmem()  / (1024 * 1024));
+  const freeMB   = Math.round(freemem()   / (1024 * 1024));
+
+  let ceilingMB;
+  if (totalMB < 4096)       ceilingMB = 50;   // < 4GB  → 50MB ceiling
+  else if (totalMB < 16384) ceilingMB = 128;  // 4–16GB → 128MB ceiling
+  else                      ceilingMB = 256;  // > 16GB → 256MB ceiling
+
+  // If explicit max provided, use the smaller of the two
+  if (explicitMaxMB !== null) ceilingMB = Math.min(ceilingMB, explicitMaxMB);
+
+  const autoBudgetMB = Math.round(freeMB * 0.20);
+  return Math.min(autoBudgetMB, ceilingMB);
+}
+
+// ── Plugin blacklist (panic-as-security) ──────────────────────────────────
+// Any plugin that fires an unexpected trap (not from a governed invariant)
+// is blacklisted. The Tower refuses to load blacklisted plugin versions.
+function loadPluginBlacklist() {
+  const path = "build/plugin-blacklist.json";
+  if (!existsSync(path)) return [];
+  try { return JSON.parse(readFileSync(path, "utf-8")); } catch { return []; }
+}
+
+function blacklistPlugin(pluginId, reason) {
+  const path = "build/plugin-blacklist.json";
+  mkdirSync("build", { recursive: true });
+  const list = loadPluginBlacklist();
+  if (!list.find(e => e.pluginId === pluginId)) {
+    list.push({ pluginId, reason, blacklistedAt: new Date().toISOString() });
+    writeFileSync(path, JSON.stringify(list, null, 2));
+    console.log(`  [BLACKLISTED] Plugin blacklisted: ${pluginId} — ${reason}`);
+  }
+}
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const compilerPath = new URL("packages-logicn/logicn-core-compiler/dist/index.js", import.meta.url).href;
@@ -47,7 +100,10 @@ Commands:
   logicn init-env                                      validate capabilities against root policy
   logicn keygen                                        generate Ed25519 signing keypair for manifests
   logicn deploy <file.lln> [--tag <image>]            run full deploy pipeline (check+build+verify+health)
+  logicn budget                                        show auto assimilation_memory_budget for this machine
   logicn version                                      show version and runtime status
+  logicn diagnostic                                    run diagnostic fault-injection benchmark suite
+  logicn border-check                                  validate all plugin schemas in governance/plugins/
 
 Examples:
   logicn run   governance-cost.lln --invoke main
@@ -322,6 +378,68 @@ Baseline comparison (governance-cost):
     process.exit(violations > 0 ? 2 : 0);
   }
 
+  // ── logicn budget — show auto assimilation_memory_budget for this machine ──
+  if (command === "budget") {
+    const totalMB = Math.round(totalmem() / (1024 * 1024));
+    const freeMB  = Math.round(freemem()  / (1024 * 1024));
+    const autoBudget = computeAutoAssimilationBudgetMB();
+    console.log(`\n  🏰 LogicN Assimilation Memory Budget`);
+    console.log(`  ─────────────────────────────────────`);
+    console.log(`  Total RAM:          ${totalMB} MB`);
+    console.log(`  Available RAM:      ${freeMB} MB`);
+    console.log(`  Auto budget (20%):  ${Math.round(freeMB * 0.20)} MB (before ceiling)`);
+    console.log(`  Resolved budget:    ${autoBudget} MB  ← what 'auto' uses`);
+    console.log();
+    console.log(`  boot.lln options:`);
+    console.log(`    governance { }                                           → ${autoBudget} MB (omitted = auto)`);
+    console.log(`    governance { assimilation_memory_budget: auto }         → ${autoBudget} MB`);
+    console.log(`    governance { assimilation_memory_budget: auto max 50MB }→ ${computeAutoAssimilationBudgetMB(50)} MB`);
+    console.log(`    governance { assimilation_memory_budget: 100MB }        → 100 MB (explicit)`);
+    console.log();
+    console.log(`  Ceiling tiers: <4GB RAM → 50MB · 4–16GB → 128MB · >16GB → 256MB\n`);
+    process.exit(0);
+  }
+
+  // ── logicn border-check — validate plugin schemas in governance/plugins/ ──
+  if (command === "border-check") {
+    console.log("\n  Hardened Border Check");
+    console.log("  ─────────────────────────");
+    const pluginsDir = "governance/plugins";
+    if (!existsSync(pluginsDir)) {
+      console.log("  No plugins directory found at governance/plugins/");
+      process.exit(0);
+    }
+    const plugins = readdirSync(pluginsDir);
+    let clean = 0, issues = 0;
+    for (const plugin of plugins) {
+      const schemaPath = join(pluginsDir, plugin, "schemas/data_types.json");
+      const manifestPath = join(pluginsDir, plugin, "manifest.json");
+      const hasSchema = existsSync(schemaPath);
+      const hasManifest = existsSync(manifestPath);
+      if (hasSchema && hasManifest) {
+        const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+        const blacklisted = manifest.blacklisted ? "[BLACKLISTED]" : "[OK]";
+        console.log(`  ${blacklisted}  ${plugin}  (tier-${manifest.governanceTier}, ${manifest.license})`);
+        clean++;
+      } else {
+        console.log(`  [MISSING]  ${plugin}  — missing ${!hasSchema ? "schemas/" : "manifest.json"}`);
+        issues++;
+      }
+    }
+    console.log(`\n  ${clean} plugins validated · ${issues} issues\n`);
+    process.exit(issues > 0 ? 1 : 0);
+  }
+
+  // ── logicn diagnostic — run diagnostic fault-injection benchmark suite ──────
+  if (command === "diagnostic") {
+    const { execSync: execS } = await import("node:child_process");
+    execS(
+      "node packages-logicn/logicn-devtools-benchmarks/src/diagnostic-runner.mjs " + rest.join(" "),
+      { stdio: "inherit", cwd: process.cwd() }
+    );
+    process.exit(0);
+  }
+
   const m = await import(compilerPath);
 
   const llnFile = rest[0];
@@ -486,6 +604,31 @@ Baseline comparison (governance-cost):
   //
   // LLN-MANIFEST-TAMPER: sourceHash mismatch — binary may have been modified
   // LLN-MANIFEST-MISSING: no .lmanifest found for this source file
+  // ── logicn budget ─────────────────────────────────────────────────────────
+  // Shows the auto-computed assimilation_memory_budget for this machine.
+  // Helps developers understand what boot.lln `auto` will resolve to.
+  if (command === "budget") {
+    const totalMB = Math.round(totalmem() / (1024 * 1024));
+    const freeMB  = Math.round(freemem()  / (1024 * 1024));
+    const autoBudget = computeAutoAssimilationBudgetMB();
+
+    console.log(`\n  🏰 LogicN Assimilation Memory Budget`);
+    console.log(`  ─────────────────────────────────────`);
+    console.log(`  Total RAM:          ${totalMB} MB`);
+    console.log(`  Available RAM:      ${freeMB} MB`);
+    console.log(`  Auto budget (20%):  ${Math.round(freeMB * 0.20)} MB (before ceiling)`);
+    console.log(`  Resolved budget:    ${autoBudget} MB  ← what 'auto' uses`);
+    console.log();
+    console.log(`  boot.lln options:`);
+    console.log(`    governance { assimilation_memory_budget: auto }        → ${autoBudget} MB`);
+    console.log(`    governance { assimilation_memory_budget: auto max 50MB } → ${computeAutoAssimilationBudgetMB(50)} MB`);
+    console.log(`    governance { }                                          → ${autoBudget} MB (omitted = auto)`);
+    console.log(`    governance { assimilation_memory_budget: 100MB }       → 100 MB (explicit)`);
+    console.log();
+    console.log(`  Ceiling tiers: <4GB RAM → 50MB · 4–16GB → 128MB · >16GB → 256MB\n`);
+    process.exit(0);
+  }
+
   if (command === "verify") {
     const name = basename(llnFile, ".lln");
     const manifestPath = `build/${name}.lmanifest`;
@@ -755,13 +898,68 @@ Baseline comparison (governance-cost):
     const flowName = invokeIdx >= 0 ? rest[invokeIdx + 1] : "main";
     const args = invokeIdx >= 0 ? rest.slice(invokeIdx + 2).map(Number) : [];
 
-    const result = await WebAssembly.instantiate(assembled.wasm);
+    // ── Host Runtime (P9.3) — array manager + string intern table ──────────────
+    // Provides the bridge between WASM i32 opaque handles and host JS types.
+    // The string intern table is reconstructed from WAT comment annotations.
+    const _hostArrays = new Map();   // i32 ID → Array
+    let _nextArrId = 1;
+    const _hostStrings = new Map();  // i32 ID → string
+    let _nextStrId = 1;
+    _hostStrings.set(0, "");         // 0 = empty string (reserved)
+
+    // Reconstruct string intern table from WAT ;; ID = "value" comments
+    for (const line of (assembled.wat ?? "").split("\n")) {
+      const m = line.match(/^;;\s+(\d+)\s*=\s*"(.*)"$/);
+      if (m) { const id = parseInt(m[1]); if (id > 0) { _hostStrings.set(id, m[2]); if (id >= _nextStrId) _nextStrId = id + 1; } }
+    }
+
+    function _strFromId(id) { return _hostStrings.get(id) ?? ""; }
+    function _strIntern(s) {
+      for (const [id, v] of _hostStrings) { if (v === s) return id; }
+      const id = _nextStrId++;
+      _hostStrings.set(id, s);
+      return id;
+    }
+
+    const hostRuntime = {
+      host: {
+        __array_create:   () => { const id = _nextArrId++; _hostArrays.set(id, []); return id; },
+        __array_append:   (arr, item) => { _hostArrays.get(arr)?.push(item); },
+        __array_get:      (arr, i) => _hostArrays.get(arr)?.[i] ?? 0,
+        __array_length:   (arr) => _hostArrays.get(arr)?.length ?? 0,
+        __array_contains: (arr, item) => (_hostArrays.get(arr)?.includes(item) ? 1 : 0),
+        __array_first:    (arr) => _hostArrays.get(arr)?.[0] ?? 0,
+        __array_last:     (arr) => { const a = _hostArrays.get(arr); return a?.length ? a[a.length-1] : 0; },
+        __str_concat:     (a, b) => _strIntern(_strFromId(a) + _strFromId(b)),
+        __str_length:     (id) => _strFromId(id).length,
+        __str_char_at:    (id, pos) => _strFromId(id).charCodeAt(pos) || 0,
+        __str_to_int:     (id) => parseInt(_strFromId(id), 10) || 0,
+        __int_to_str:     (n) => _strIntern(String(n)),
+        __str_eq:         (a, b) => (_strFromId(a) === _strFromId(b) ? 1 : 0),
+        __char_is_letter: (c) => (/[a-zA-Z_]/.test(String.fromCharCode(c)) ? 1 : 0),
+        __char_is_digit:  (c) => (c >= 48 && c <= 57 ? 1 : 0),
+        __char_to_string: (c) => _strIntern(String.fromCharCode(c)),
+        __unwrap_or:      (val, def) => val === 0 ? def : val,
+        __option_some:    (val) => val,
+        __option_none:    () => 0,
+      }
+    };
+
+    const result = await WebAssembly.instantiate(assembled.wasm, hostRuntime);
     const fn = result.instance.exports[flowName];
     if (typeof fn !== "function") {
       console.error(`Flow '${flowName}' not found. Available: ${Object.keys(result.instance.exports).filter(k => k !== "memory").join(", ")}`);
       process.exit(1);
     }
-    const output = fn(...args);
+    const rawOutput = fn(...args);
+    // If output is an array ID, resolve it to a readable form
+    let output = rawOutput;
+    if (typeof rawOutput === "number" && _hostArrays.has(rawOutput)) {
+      const arr = _hostArrays.get(rawOutput);
+      output = "[" + arr.map(id => typeof id === "number" && _hostStrings.has(id) ? `"${_hostStrings.get(id)}"` : id).join(", ") + "]";
+    } else if (typeof rawOutput === "number" && _hostStrings.has(rawOutput) && rawOutput > 0) {
+      output = `"${_hostStrings.get(rawOutput)}"`;
+    }
     console.log(output);
     return;
   }

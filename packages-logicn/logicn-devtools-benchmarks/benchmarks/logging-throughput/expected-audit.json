@@ -1,0 +1,29 @@
+{
+  "benchmarkId": "logging-throughput",
+  "description": "Measures the Audit Tax: latency overhead of full audit trail vs minimal audit surface.",
+  "scenarios": {
+    "minimal audit (pure flow)": {
+      "flow": "computeMinimal",
+      "args": [42, 1000],
+      "expectTrap": false,
+      "auditDepth": "minimal",
+      "note": "pure flow — no audit.write effect, no AuditEvent emitted on clean run"
+    },
+    "full audit (secure flow)": {
+      "flow": "computeFullAudit",
+      "args": [42, 1000],
+      "expectTrap": false,
+      "auditDepth": "full",
+      "note": "secure flow — govComment annotations collected into manifest narrative"
+    }
+  },
+  "complianceChecks": {
+    "bothMustSucceed": true,
+    "auditTaxShouldBeBelow50Pct": true,
+    "note": "If auditTaxPct > 50%, governance observability overhead is considered excessive"
+  },
+  "interpretation": {
+    "auditTaxPct": "((fullAuditMsPerOp - minimalMsPerOp) / minimalMsPerOp) * 100",
+    "goal": "Make the audit tax as small as possible. Stage B WASM path target: < 5%."
+  }
+}
