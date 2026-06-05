@@ -1,0 +1,107 @@
+[
+  {
+    "id": "toxic-input",
+    "category": "diagnostic",
+    "timestamp": "2026-06-05T19:56:28.496Z",
+    "scenarios": {
+      "toxic variants (gov check)": {
+        "mode": "gov-check",
+        "iterations": 50,
+        "elapsedMs": 8203,
+        "msPerOp": "164.06",
+        "successes": 50,
+        "governanceComplianceCheck": true,
+        "trapDeclarationsInSource": 8,
+        "invariantClausesInSource": 5,
+        "stageNote": "Stage A: trap coverage verified via governance check (compile-time). Stage B: runtime V_DPM signal path."
+      },
+      "valid baseline (gov check)": {
+        "mode": "gov-check",
+        "iterations": 50,
+        "elapsedMs": 8174,
+        "msPerOp": "163.48",
+        "successes": 50,
+        "governanceComplianceCheck": true,
+        "trapDeclarationsInSource": 8,
+        "invariantClausesInSource": 5,
+        "stageNote": "Stage A: trap coverage verified via governance check (compile-time). Stage B: runtime V_DPM signal path."
+      }
+    }
+  },
+  {
+    "id": "governance-violation",
+    "category": "diagnostic",
+    "timestamp": "2026-06-05T19:56:45.059Z",
+    "scenarios": {
+      "role-denied (gov check)": {
+        "mode": "gov-check",
+        "iterations": 50,
+        "elapsedMs": 8158,
+        "msPerOp": "163.16",
+        "successes": 50,
+        "governanceComplianceCheck": true,
+        "trapDeclarationsInSource": 8,
+        "invariantClausesInSource": 4,
+        "stageNote": "Stage A: trap coverage verified via governance check (compile-time). Stage B: runtime V_DPM signal path."
+      },
+      "authorised (gov check)": {
+        "mode": "gov-check",
+        "iterations": 50,
+        "elapsedMs": 8167,
+        "msPerOp": "163.34",
+        "successes": 50,
+        "governanceComplianceCheck": true,
+        "trapDeclarationsInSource": 8,
+        "invariantClausesInSource": 4,
+        "stageNote": "Stage A: trap coverage verified via governance check (compile-time). Stage B: runtime V_DPM signal path."
+      }
+    }
+  },
+  {
+    "id": "resource-exhaustion",
+    "category": "diagnostic",
+    "timestamp": "2026-06-05T19:57:01.551Z",
+    "scenarios": {
+      "ceiling/over-budget (gov)": {
+        "mode": "gov-check",
+        "iterations": 50,
+        "elapsedMs": 8210,
+        "msPerOp": "164.20",
+        "successes": 50,
+        "governanceComplianceCheck": true,
+        "trapDeclarationsInSource": 6,
+        "invariantClausesInSource": 4,
+        "stageNote": "Stage A: trap coverage verified via governance check (compile-time). Stage B: runtime V_DPM signal path."
+      }
+    }
+  },
+  {
+    "id": "logging-throughput",
+    "category": "diagnostic",
+    "timestamp": "2026-06-05T19:57:09.923Z",
+    "scenarios": {
+      "minimal audit (gov check)": {
+        "mode": "gov-check",
+        "iterations": 100,
+        "elapsedMs": 16231,
+        "msPerOp": "162.31",
+        "successes": 100,
+        "governanceComplianceCheck": true,
+        "trapDeclarationsInSource": 5,
+        "invariantClausesInSource": 4,
+        "stageNote": "Stage A: trap coverage verified via governance check (compile-time). Stage B: runtime V_DPM signal path."
+      },
+      "full audit   (gov check)": {
+        "mode": "gov-check",
+        "iterations": 100,
+        "elapsedMs": 16238,
+        "msPerOp": "162.38",
+        "successes": 100,
+        "governanceComplianceCheck": true,
+        "trapDeclarationsInSource": 5,
+        "invariantClausesInSource": 4,
+        "stageNote": "Stage A: trap coverage verified via governance check (compile-time). Stage B: runtime V_DPM signal path."
+      }
+    }
+  }
+]

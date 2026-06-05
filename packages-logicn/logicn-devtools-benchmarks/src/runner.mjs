@@ -226,6 +226,44 @@ async function main() {
   const outPath = join(resultsDir, "latest.json");
   writeFileSync(outPath, JSON.stringify(all, null, 2));
   console.log(`\nResults: ${outPath}`);
+
+  // ── Diagnostic Benchmark Suite ────────────────────────────────────────────
+  // Only run when --diagnostic flag is passed, or always if --benchmark diagnostic
+  if (process.argv.includes("--diagnostic") || filter === "diagnostic") {
+    console.log("\n═══════════════════════════════════════════════════");
+    console.log("  Diagnostic Benchmarks — Governance Fidelity");
+    console.log("═══════════════════════════════════════════════════");
+    const { runDiagnosticBenchmarks } = await import(
+      "../benchmarks/diagnostic/bench-diagnostic.mjs"
+    );
+    const diagResults = await runDiagnosticBenchmarks();
+
+    // Print results
+    for (const t of diagResults.tests) {
+      if (t.category === "logging-throughput") {
+        const tax = t.auditTaxPercent;
+        console.log(`  [AUDIT TAX] ${t.test}`);
+        console.log(`             pure:${t.pureFlowMsPerOp}ms  secure:${t.secureFlowMsPerOp}ms  tax:${tax}%`);
+      } else {
+        const icon = t.governancePass ? "OK" : "FAIL";
+        const traps = t.trapDeclarationsFound !== undefined ? `  traps:${t.trapDeclarationsFound}` : "";
+        const ensures = t.invariantClausesFound !== undefined ? `  ensures:${t.invariantClausesFound}` : "";
+        console.log(`  [${icon}] ${t.test}${traps}${ensures}  ${t.msPerOp}ms/op`);
+      }
+    }
+
+    const s = diagResults.summary;
+    const compliant = s.governanceCompliant ? "PASS" : "FAIL";
+    console.log(`\n  Governance Fidelity:  ${compliant} (all 5 flows)`);
+    console.log(`  Total trap decls:     ${s.totalTrapDeclarationsAcrossSuite} across suite`);
+    console.log(`  Audit Tax (Stage A):  ${s.auditTaxPercent}% (gov-check variance)`);
+    console.log(`  Stage B target:       ${s.stageBTarget}`);
+
+    // Save diagnostic results
+    const diagPath = join(resultsDir, "diagnostic-latest.json");
+    writeFileSync(diagPath, JSON.stringify(diagResults, null, 2));
+    console.log(`\n  Results: ${diagPath}`);
+  }
 }
 
 main().catch(e => { console.error(e); process.exitCode=1; });

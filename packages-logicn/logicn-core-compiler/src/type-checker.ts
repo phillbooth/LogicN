@@ -1285,9 +1285,12 @@ class TypeChecker {
         // Skip LLN-TYPE-002 when the declared type has a governance qualifier (protected/redacted)
         // — those bindings accept inferred protected/redacted types and the boundary checks
         // (LLN-VALUESTATE-006/007 in value-state-checker.ts) cover the reverse direction.
+        // Also skip for view() MMCP types (view:cap1|cap2) — the governance verifier
+        // validates capability-pointer access; type assignment is always the underlying type.
         const hasGovernanceQualifier = typeSection.startsWith("protected ") || typeSection.startsWith("redacted ");
+        const isViewType = typeSection.startsWith("view:");
         const initNode = node.children?.[0];
-        if (!hasGovernanceQualifier && initNode !== undefined) {
+        if (!hasGovernanceQualifier && !isViewType && initNode !== undefined) {
           const inferredType = this.inferType(initNode);
           if (inferredType !== undefined && !isAssignmentCompatible(declaredBase, inferredType)) {
             this.diagnostics.push(makeTCDiag(
@@ -1658,6 +1661,12 @@ class TypeChecker {
 
   private checkTypeRef(rawValue: string, location: SourceLocation | undefined): void {
     if (rawValue === "" || rawValue === "<unknown>") return;
+
+    // ── MMCP view() type: view:cap1|cap2 — capability-masked pointer (task #78) ──
+    // These are first-class type annotations emitted by the parser as "view:<capMask>".
+    // The governance verifier validates capability bits; the type checker only verifies
+    // that the syntax is structurally well-formed. No LLN-TYPE-001 for view: types.
+    if (rawValue.startsWith("view:")) return;
 
     const { base, args } = parseTypeString(rawValue);
 

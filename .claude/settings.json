@@ -35,7 +35,9 @@
       "test-all":       "node scripts/run-all-tests.js",
       "benchmark":      "cd packages-logicn/logicn-devtools-benchmarks && npm run run",
       "benchmark-quick":"cd packages-logicn/logicn-devtools-benchmarks && npm run run:quick",
-      "graph":          "node packages-logicn/logicn-core-cli/dist/index.js graph --out build/graph"
+      "graph":          "node packages-logicn/logicn-core-cli/dist/index.js graph --out build/graph",
+      "tower-citizen":  "node packages-logicn/logicn-tower-citizen/dist/index.js",
+      "bridge-bitnet":  "node packages-logicn/logicn-ext-bridge-bitnet/dist/index.js"
     },
     "devtools-added-2026-06-03": [
       "logicn-devtools-naming       — LLN-NAMING-001..005 naming standard enforcement (abbreviations, missing intent, generic types)",

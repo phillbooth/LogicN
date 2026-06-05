@@ -1,0 +1,14 @@
+{
+  "name": "groq-inference",
+  "version": "1.0.0",
+  "governanceTier": 2,
+  "license": "MIT",
+  "sourceHash": "sha256:pending-logicn-promote",
+  "resourceLimits": {
+    "maxMemoryMB": 64,
+    "maxCpuCycles": 10000000,
+    "maxWallMs": 5000
+  },
+  "capabilities": ["ai.inference", "network.outbound", "audit.write"],
+  "blacklisted": false
+}

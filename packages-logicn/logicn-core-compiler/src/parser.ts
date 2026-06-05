@@ -2067,6 +2067,31 @@ class Parser {
       this.advance();
       const name = tok.value;
 
+      // `step flowName(args)` — DWI isolate call (DRCM Phase 5, task #40).
+      // `step` is an identifier (not a keyword) followed by a flow call.
+      // Parsed as: { kind: "callExpr", value: "step:<flowName>", children: args }
+      // The interpreter executes the inner call normally and returns its result.
+      // Full DWI isolation (fuel, shared-nothing) is WASM-tier only (task #103/#104).
+      if (name === "step") {
+        this.skipNewlines();
+        const targetTok = this.current();
+        if (targetTok.kind === "identifier") {
+          const targetName = targetTok.value;
+          this.advance(); // consume flow name
+          if (this.currentIs("symbol", "(")) {
+            this.advance(); // consume (
+            const stepArgs = this.parseArgList();
+            this.expect("symbol", ")");
+            return { kind: "callExpr", value: `step:${targetName}`, location: loc, children: stepArgs };
+          }
+          // Not a call — put back by returning both as identifiers chained
+          // (fallback: just return step as identifier, next token re-parsed)
+          // This case is unusual; emit the target as a memberExpr of step.
+          return { kind: "identifier", value: "step", location: loc };
+        }
+        return { kind: "identifier", value: "step", location: loc };
+      }
+
       if (this.currentIs("symbol", "(")) {
         // Function call
         this.advance(); // (

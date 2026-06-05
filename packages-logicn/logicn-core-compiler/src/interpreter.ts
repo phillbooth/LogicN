@@ -1126,7 +1126,17 @@ class Interpreter {
         const elseBlock = node.children?.[2];
         if (condition === undefined || thenBlock === undefined) return undefined;
         const condVal = await this.evalExpr(condition);
-        if (condVal.__tag === "bool" && condVal.value) return await this.executeBlock(thenBlock);
+        // Truthy check: bool true, non-zero int/float, some, ok, non-void/non-none value
+        const isTruthy =
+          (condVal.__tag === "bool" && condVal.value) ||
+          (condVal.__tag === "int" && condVal.value !== 0) ||
+          (condVal.__tag === "float" && condVal.value !== 0) ||
+          condVal.__tag === "some" ||
+          condVal.__tag === "ok" ||
+          (condVal.__tag === "string" && condVal.value !== "") ||
+          condVal.__tag === "secure" ||
+          condVal.__tag === "protected";
+        if (isTruthy) return await this.executeBlock(thenBlock);
         if (elseBlock !== undefined) {
           // else if: the else branch may be another ifStmt node (not a block)
           if (elseBlock.kind === "ifStmt" || elseBlock.kind === "block") {
@@ -1174,7 +1184,14 @@ class Interpreter {
             break;
           }
           const cond = await this.evalExpr(conditionNode);
-          if (cond.__tag !== "bool" || !cond.value) break;
+          // Same truthy check as ifStmt: bool, non-zero int, some, ok
+          const condTruthy =
+            (cond.__tag === "bool" && cond.value) ||
+            (cond.__tag === "int" && cond.value !== 0) ||
+            (cond.__tag === "float" && cond.value !== 0) ||
+            cond.__tag === "some" ||
+            cond.__tag === "ok";
+          if (!condTruthy) break;
           const bodyResult = await this.executeBlock(bodyNode);
           if (bodyResult !== undefined) return bodyResult;
         }
@@ -1409,6 +1426,20 @@ class Interpreter {
   private async evalCall(node: AstNode): Promise<LogicNValue> {
     const methodName = node.value ?? "";
     const children = node.children ?? [];
+
+    // `step:flowName(args)` — DWI isolate call (DRCM Phase 5, parser task #40).
+    // In Stage A the isolation is simulated: the inner flow is called normally.
+    // Full shared-nothing isolation + fuel injection is deferred to the WASM tier (tasks #103/#104).
+    // Emit a dwi_allocated audit event to record that a step boundary was crossed.
+    if (methodName.startsWith("step:")) {
+      const targetFlowName = methodName.slice("step:".length);
+      this.auditEntries.push({
+        event: "drcm.dwi_allocated",
+        fields: { target: targetFlowName },
+        timestamp: new Date().toISOString(),
+      });
+      return await this.runNestedFlow(targetFlowName, children);
+    }
 
     // Record literal: { field: expr, ... } parsed as callExpr { value: "#record" }
     // Each child is an identifier { value: "fieldName", children: [valueExpr] }
@@ -1693,7 +1724,20 @@ class Interpreter {
     }
 
     if (this.flowIndex.has(methodName)) {
-      return await this.runNestedFlow(methodName, args);
+      // Regular flow-to-flow call: evaluate args in current scope, then call on THIS interpreter.
+      // Do NOT create a new Interpreter — that breaks recursive flows and wastes memory.
+      // Only step:* DWI calls create a new Interpreter (for shared-nothing isolation).
+      const callArgs = new Map<string, LogicNValue>();
+      const flowNode = this.flowIndex.get(methodName);
+      const params = (flowNode?.children ?? []).filter((c) => c.kind === "paramDecl");
+      for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
+        if (arg === undefined) continue;
+        const paramName = extractParamName(params[i]?.value ?? `arg${i}`);
+        callArgs.set(paramName, await this.evalExpr(arg));
+      }
+      const nestedResult = await this.runFlow(methodName, callArgs);
+      return nestedResult.value;
     }
 
     if (receiver !== undefined) {

@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "strict": true,
+  "inputs": [
+    { "name": "prompt", "type": "String", "required": true, "maxLength": 32768 },
+    { "name": "maxTokens", "type": "Int", "required": true, "minValue": 1, "maxValue": 4096 },
+    { "name": "model", "type": "String", "required": true, "maxLength": 64 }
+  ],
+  "outputs": [
+    { "name": "completion", "type": "String", "required": true },
+    { "name": "tokenCount", "type": "Int", "required": true },
+    { "name": "latencyMs", "type": "Int", "required": true }
+  ]
+}
