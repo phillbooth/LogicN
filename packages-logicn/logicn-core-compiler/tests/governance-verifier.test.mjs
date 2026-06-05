@@ -1394,6 +1394,41 @@ contract {
     assert.equal(diag?.severity, "warning", "Should be a warning");
   });
 
+  it("LLN-INV-004: undefined symbol in ensure → error (not silent WAT degradation)", () => {
+    const result = parseAndVerify(`
+pure flow t(amount: Int) -> Int
+contract {
+  intent { "Test." }
+  invariant { ensure nonexistent > 0; }
+}
+{ return amount }
+`);
+    assert.ok(hasDiag(result, "LLN-INV-004"), "Expected LLN-INV-004 for undefined symbol");
+    const diag = result.diagnostics.find(d => d.code === "LLN-INV-004");
+    assert.ok(diag?.message.includes("nonexistent"), "Message should name the unresolved symbol");
+  });
+
+  it("LLN-INV-004: flow parameter is in scope — no error", () => {
+    const result = parseAndVerify(`
+pure flow t(amount: Int) -> Int
+contract {
+  intent { "Test." }
+  invariant { ensure amount > 0; }
+}
+{ return amount }
+`);
+    assert.ok(!hasDiag(result, "LLN-INV-004"), "No INV-004 for valid parameter ref");
+  });
+
+  it("LLN-INV-004: builtins (true/false/None) are always in scope", () => {
+    const result = parseAndVerify(`
+pure flow t(x: Int) -> Int
+contract { intent { "Test." } invariant { ensure true; } }
+{ return x }
+`);
+    assert.ok(!hasDiag(result, "LLN-INV-004"), "No INV-004 for builtin 'true'");
+  });
+
   it("multiple ensure statements: each evaluated independently", () => {
     const result = parseAndVerify(`
 pure flow multiInv(x: Int) -> Int

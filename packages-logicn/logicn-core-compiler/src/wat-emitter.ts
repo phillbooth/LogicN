@@ -660,12 +660,20 @@ export function emitWATFromFlowAST(
   // ── DRCM Phase 2: invariant {} WAT assertion gates (task #36 Unit 3) ──────
   // Emit pre-condition assertion gates for `runtime-precheck` invariants.
   // `statically_verified` invariants emit NOTHING (Goal A: zero runtime overhead).
-  // Pre-condition fires before the body; post-condition fires at the single exit.
   //
-  // Architecture (per notes/28 WAT injection spec):
-  //   1. Pre-condition gates — evaluated before body executes
-  //   2. Body (single-exit via $exit block — early returns become br $exit)
-  //   3. Post-condition gates — evaluated at the single exit point
+  // PHASE 2 SCOPE (parameter-only invariants, enforced by LLN-INV-004):
+  //   Parameters are immutable (local.get never changes them). The pre-condition
+  //   gate at entry is sufficient — if `ensure max > min` passes at entry, it will
+  //   pass at any exit point because max and min haven't changed.
+  //   Post-condition is emitted but REDUNDANT for parameter invariants (provides
+  //   belt-and-suspenders on the non-early-return path only).
+  //
+  // PHASE 4 REQUIREMENT (computed-result invariants, SMT scope):
+  //   `ensure ledger.credits == ledger.debits` references body-computed state.
+  //   Post-conditions become meaningful ONLY here. Phase 4 will add the
+  //   single-exit body transformation (local $result + br $exit pattern) to
+  //   guarantee the post-condition fires on ALL return paths including early returns.
+  //   See: logicn-floor3-proof-zone-graph.md — Single-Exit Transformation section.
   //
   // Security: `unreachable` is atomic — Wasmtime fires a hardware trap before
   // the next instruction pointer advances. No TOCTOU window.

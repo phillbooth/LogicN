@@ -81,10 +81,19 @@ CBOR Tag = Major Type 6, followed by the tagged value.
 
 ### Reserved Range
 
-**Tags 409–499:** Reserved for future experimental types. Examples under consideration:
-- Tag 410: `ZkProofEvidence` — zero-knowledge proof bundle for ZKP audit workflows
-- Tag 411: `FheCircuitRef` — Fully Homomorphic Encryption circuit descriptor
-- Tag 412: `AgentCapabilityToken` — V_DPM bitmask as unforgeable agent identity token
+**Tags 409–499:** Reserved for future use. Assigned:
+
+| Tag | LogicN Type | Purpose |
+|---|---|---|
+| **Tag 410** | `AuditEvent` | **LLN-INV-000 runtime governance violation record** — emitted by DSS.wasm when `unreachable` trap fires. Contains: flowId, contractHash, meterSnapshot, trapKind, vdpmAtTrap, rollbackStatus, timestamp. |
+| Tag 411 | `ZkProofEvidence` | Zero-knowledge proof bundle (ZKP audit workflows, future) |
+| Tag 412 | `FheCircuitRef` | Fully Homomorphic Encryption circuit descriptor (future) |
+| Tag 413 | `AgentCapabilityToken` | V_DPM bitmask as unforgeable agent identity token (DRCM Phase 5) |
+| **Tag 414** | **`ExecutionDAG`** | **Authorized state transitions — Topological Graph Engine (#77)** |
+| **Tag 415** | **`CapabilityPointer`** | **MMCP typed memory view with capability mask (#78)** |
+| **Tag 416** | **`PolicyResolutionDAG`** | **Pre-resolved policy conflict matrix (#79)** |
+| **Tag 417** | **`BehavioralFingerprint`** | **CFG hash for execution path deviation detection (#80)** |
+| 418–499 | Reserved | Future LogicN experimental types |
 
 ### Tag Implementation Rules
 

@@ -7,7 +7,7 @@
 </head>
 <body>
 <h1>LogicN Project Graph</h1>
-<p>2857 nodes, 3596 relationships.</p>
+<p>2867 nodes, 3603 relationships.</p>
 <h2>Nodes</h2>
 <ul><li><strong>logicn-core</strong> <span>Package</span></li>
 <li><strong>logicn-core-compiler</strong> <span>Package</span></li>
@@ -445,6 +445,7 @@
 <li><strong>local-low-bit-ai-review.md</strong> <span>Document</span></li>
 <li><strong>logic-architecture-policy.md</strong> <span>Document</span></li>
 <li><strong>logicn-adaptive-runtime-profiles.md</strong> <span>Document</span></li>
+<li><strong>logicn-agile-governance-pattern.md</strong> <span>Document</span></li>
 <li><strong>logicn-ai-ergonomics.md</strong> <span>Document</span></li>
 <li><strong>logicn-ai-memory-efficiency.md</strong> <span>Document</span></li>
 <li><strong>logicn-ai-neural-npu-targets.md</strong> <span>Document</span></li>
@@ -548,6 +549,7 @@
 <li><strong>logicn-engineering-goals.md</strong> <span>Document</span></li>
 <li><strong>logicn-execution-graph-kernel-architecture.md</strong> <span>Document</span></li>
 <li><strong>logicn-explicitness-principles.md</strong> <span>Document</span></li>
+<li><strong>logicn-floor3-proof-zone-graph.md</strong> <span>Document</span></li>
 <li><strong>logicn-flow-contracts.md</strong> <span>Document</span></li>
 <li><strong>logicn-flow-entry-points.md</strong> <span>Document</span></li>
 <li><strong>logicn-fortified-typed-logic.md</strong> <span>Document</span></li>
@@ -573,6 +575,7 @@
 <li><strong>logicn-governed-request-execution.md</strong> <span>Document</span></li>
 <li><strong>logicn-governed-resource-contracts.md</strong> <span>Document</span></li>
 <li><strong>logicn-governed-runtime-research-2026-06-03.md</strong> <span>Document</span></li>
+<li><strong>logicn-governed-tower-specification.md</strong> <span>Document</span></li>
 <li><strong>logicn-gradual-capability-inference.md</strong> <span>Document</span></li>
 <li><strong>logicn-hardware-amd.md</strong> <span>Document</span></li>
 <li><strong>logicn-hardware-apple.md</strong> <span>Document</span></li>
@@ -640,6 +643,7 @@
 <li><strong>logicn-platform-infographic-concept.md</strong> <span>Document</span></li>
 <li><strong>logicn-post-quantum-hardware-security.md</strong> <span>Document</span></li>
 <li><strong>logicn-proof-chain-spec.md</strong> <span>Document</span></li>
+<li><strong>logicn-proof-tracing-design.md</strong> <span>Document</span></li>
 <li><strong>logicn-quantum-target-bridge.md</strong> <span>Document</span></li>
 <li><strong>logicn-r6-bootstrap-corpus.md</strong> <span>Document</span></li>
 <li><strong>logicn-readable-logic-forms.md</strong> <span>Document</span></li>
@@ -683,6 +687,7 @@
 <li><strong>logicn-tensor-arity-decision.md</strong> <span>Document</span></li>
 <li><strong>logicn-tensor-numeric-performance.md</strong> <span>Document</span></li>
 <li><strong>logicn-testing-model.md</strong> <span>Document</span></li>
+<li><strong>logicn-topological-graph-engine.md</strong> <span>Document</span></li>
 <li><strong>logicn-trust-sensitivity-type-rules.md</strong> <span>Document</span></li>
 <li><strong>logicn-type-checker-architecture.md</strong> <span>Document</span></li>
 <li><strong>logicn-type-improvements-phase-8.md</strong> <span>Document</span></li>
@@ -1612,13 +1617,18 @@
 <li><strong>LazyIteratorChain</strong> <span>Type</span></li>
 <li><strong>buildLazyIteratorChain</strong> <span>Flow</span></li>
 <li><strong>MANIFEST_SCHEMA_VERSION</strong> <span>Type</span></li>
+<li><strong>PolicyResolutionDag</strong> <span>Type</span></li>
 <li><strong>LManifest</strong> <span>Type</span></li>
 <li><strong>ProofObligation</strong> <span>Type</span></li>
 <li><strong>ManifestSignature</strong> <span>Type</span></li>
 <li><strong>canonicalJson</strong> <span>Flow</span></li>
+<li><strong>encodeCBOR</strong> <span>Flow</span></li>
+<li><strong>decodeCBOR</strong> <span>Flow</span></li>
 <li><strong>sha256Hex</strong> <span>Flow</span></li>
 <li><strong>generateManifest</strong> <span>Flow</span></li>
 <li><strong>serializeManifest</strong> <span>Flow</span></li>
+<li><strong>serializeManifestCBOR</strong> <span>Flow</span></li>
+<li><strong>verifyManifestRoundTrip</strong> <span>Flow</span></li>
 <li><strong>prettyManifest</strong> <span>Flow</span></li>
 <li><strong>LOGICN_CBOR_TAGS</strong> <span>Type</span></li>
 <li><strong>MonkeyPatchDiagnostic</strong> <span>Type</span></li>
@@ -3343,6 +3353,8 @@
 <li>doc:docs/Knowledge-Bases/logicn-engineering-goals.md <code>documents</code> package:logicn-core</li>
 <li>doc:docs/Knowledge-Bases/logicn-engineering-goals.md <code>documents</code> package:logicn-core-security</li>
 <li>doc:docs/Knowledge-Bases/logicn-execution-graph-kernel-architecture.md <code>documents</code> package:logicn-core</li>
+<li>doc:docs/Knowledge-Bases/logicn-floor3-proof-zone-graph.md <code>documents</code> package:logicn-core</li>
+<li>doc:docs/Knowledge-Bases/logicn-floor3-proof-zone-graph.md <code>documents</code> package:logicn-core-compiler</li>
 <li>doc:docs/Knowledge-Bases/logicn-framework-api-server-implementation.md <code>documents</code> package:logicn-core</li>
 <li>doc:docs/Knowledge-Bases/logicn-framework-api-server-implementation.md <code>documents</code> package:logicn-core-runtime</li>
 <li>doc:docs/Knowledge-Bases/logicn-framework-api-server-implementation.md <code>documents</code> package:logicn-core-network</li>
@@ -3364,8 +3376,6 @@
 <li>doc:docs/Knowledge-Bases/logicn-hardware-amd.md <code>documents</code> package:logicn-core</li>
 <li>doc:docs/Knowledge-Bases/logicn-hardware-google.md <code>documents</code> package:logicn-core</li>
 <li>doc:docs/Knowledge-Bases/logicn-hardware-nvidia.md <code>documents</code> package:logicn-core</li>
-<li>doc:docs/Knowledge-Bases/logicn-hardware-targets.md <code>documents</code> package:logicn-core</li>
-<li>doc:docs/Knowledge-Bases/logicn-ide-tooling.md <code>documents</code> package:logicn-ai</li>
-<li>doc:docs/Knowledge-Bases/logicn-intent-graph.md <code>documents</code> package:logicn-core</li></ul>
+<li>doc:docs/Knowledge-Bases/logicn-hardware-targets.md <code>documents</code> package:logicn-core</li></ul>
 </body>
 </html>

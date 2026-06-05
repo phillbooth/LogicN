@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-06-04T21:53:20.926Z",
+  "generatedAt": "2026-06-05T07:04:08.361Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -3981,6 +3981,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-agile-governance-pattern.md",
+      "kind": "Document",
+      "label": "logicn-agile-governance-pattern.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-agile-governance-pattern.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-ai-ergonomics.md",
       "kind": "Document",
       "label": "logicn-ai-ergonomics.md",
@@ -4908,6 +4917,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-floor3-proof-zone-graph.md",
+      "kind": "Document",
+      "label": "logicn-floor3-proof-zone-graph.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-floor3-proof-zone-graph.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-flow-contracts.md",
       "kind": "Document",
       "label": "logicn-flow-contracts.md",
@@ -5128,6 +5146,15 @@
       "kind": "Document",
       "label": "logicn-governed-runtime-research-2026-06-03.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-governed-runtime-research-2026-06-03.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-governed-tower-specification.md",
+      "kind": "Document",
+      "label": "logicn-governed-tower-specification.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-governed-tower-specification.md",
       "tags": [
         "document"
       ]
@@ -5736,6 +5763,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-proof-tracing-design.md",
+      "kind": "Document",
+      "label": "logicn-proof-tracing-design.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-proof-tracing-design.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-quantum-target-bridge.md",
       "kind": "Document",
       "label": "logicn-quantum-target-bridge.md",
@@ -6118,6 +6154,15 @@
       "kind": "Document",
       "label": "logicn-testing-model.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-testing-model.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-topological-graph-engine.md",
+      "kind": "Document",
+      "label": "logicn-topological-graph-engine.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-topological-graph-engine.md",
       "tags": [
         "document"
       ]
@@ -15238,6 +15283,16 @@
       ]
     },
     {
+      "id": "type:logicn-core-compiler:PolicyResolutionDag",
+      "kind": "Type",
+      "label": "PolicyResolutionDag",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "type:logicn-core-compiler:LManifest",
       "kind": "Type",
       "label": "LManifest",
@@ -15278,6 +15333,26 @@
       ]
     },
     {
+      "id": "flow:logicn-core-compiler:encodeCBOR",
+      "kind": "Flow",
+      "label": "encodeCBOR",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:decodeCBOR",
+      "kind": "Flow",
+      "label": "decodeCBOR",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "flow:logicn-core-compiler:sha256Hex",
       "kind": "Flow",
       "label": "sha256Hex",
@@ -15301,6 +15376,26 @@
       "id": "flow:logicn-core-compiler:serializeManifest",
       "kind": "Flow",
       "label": "serializeManifest",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:serializeManifestCBOR",
+      "kind": "Flow",
+      "label": "serializeManifestCBOR",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:verifyManifestRoundTrip",
+      "kind": "Flow",
+      "label": "verifyManifestRoundTrip",
       "sourcePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts",
       "tags": [
         "function",
@@ -31112,6 +31207,20 @@
       "evidencePath": "docs/Knowledge-Bases/logicn-execution-graph-kernel-architecture.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/logicn-floor3-proof-zone-graph.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-floor3-proof-zone-graph.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-floor3-proof-zone-graph.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-floor3-proof-zone-graph.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/logicn-framework-api-server-implementation.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -42362,6 +42471,13 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:PolicyResolutionDag",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:LManifest",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -42390,6 +42506,20 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:encodeCBOR",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:decodeCBOR",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "flow:logicn-core-compiler:sha256Hex",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -42405,6 +42535,20 @@
     {
       "from": "package:logicn-core-compiler",
       "to": "flow:logicn-core-compiler:serializeManifest",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:serializeManifestCBOR",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:verifyManifestRoundTrip",
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/manifest-generator.ts"

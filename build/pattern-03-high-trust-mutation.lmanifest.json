@@ -1,8 +1,15 @@
 {
   "schemaVersion": "lln.manifest.v1",
-  "sourceHash": "sha256:e45d3a2d88bf61087bf6557148dcfd9039698f0974b038c6439c89c8525e221d",
+  "sourceHash": "sha256:4d507651fff4bd81ca7012c41cbc4456bbf411cd8b0a5fd11521aa9bb9afc342",
   "sourceFile": "tests/patterns/pattern-03-high-trust-mutation.lln",
   "flowCount": 1,
+  "policyResolutionDag": {
+    "allowedEffects": 28,
+    "deniedEffects": 0,
+    "conflictsResolved": 0,
+    "resolvedAt": "2026-06-05T07:02:56.761Z"
+  },
+  "behavioralFingerprint": "sha256:3cb5ac96682c221385dc02e611f4027db564947d6bec3d172960752e9b87de6b",
   "derivedConstraints": [
     "transferFunds: Flow transferFunds declares required effects [via contract.effects]",
     "transferFunds: Flow transferFunds has a contract declaration [via contract]",
@@ -26,13 +33,19 @@
       "kind": "governance-obligation",
       "description": "audit_required:transferFunds",
       "verified": "static"
+    },
+    {
+      "flowName": "invariant_runtime:transferFunds:ensure payload.amount > 0:runtime-precheck",
+      "kind": "governance-obligation",
+      "description": "invariant_runtime:transferFunds:ensure payload.amount > 0:runtime-precheck",
+      "verified": "static"
     }
   ],
-  "generatedAt": "2026-06-04T20:28:38.463Z",
+  "generatedAt": "2026-06-05T07:02:56.761Z",
   "governanceSignature": {
     "algorithm": "Ed25519+ML-DSA-65",
-    "ed25519": "placeholder:sha256:721fd1f0ffc28ba0371e5c64f1bafe8eea1d8563cd8af1fe0f647cfbf19d0ec0",
-    "mlDsa65": "placeholder:sha256:721fd1f0ffc28ba0371e5c64f1bafe8eea1d8563cd8af1fe0f647cfbf19d0ec0",
+    "ed25519": "placeholder:sha256:35d063c21fb5ee44eb47c5e91718ee5dec20ba31094626e681d2505412707335",
+    "mlDsa65": "placeholder:sha256:35d063c21fb5ee44eb47c5e91718ee5dec20ba31094626e681d2505412707335",
     "signerNote": "Placeholder signatures — real ML-DSA-65 signing requires key custody spec (DRCM task #34). The canonical JSON body hash above is stable and verifiable today."
   }
 }

@@ -918,6 +918,14 @@ Under `@experimental_profile(drcm_core_v1)`, the compiler:
 | LLN-DEP-001 | Lifecycle | Deprecated syntax in use — migration available | PLANNED (post-DRCM) |
 | LLN-RES-001 | Resilience | `retry` on `database.write`/`gateway.charge` without `idempotent: true` | ENFORCED (task #58) |
 | LLN-OBS-001 | Observability | Explicit `observability {}` on a `pure` flow (no side effects to observe) | ENFORCED (task #58) |
+| LLN-INV-000 | Invariant | **RUNTIME** — `unreachable` hardware trap fired; DSS emits Audit Event (CBOR Tag 410) | PLANNED DRCM Phase 5 (#76) |
+| LLN-INV-001 | Invariant | `ensure expr` statically proved false at compile time | ENFORCED (task #36) |
+| LLN-INV-003 | Invariant | `invariant {}` block declared but empty | ENFORCED (task #36) |
+| LLN-INV-004 | Invariant | `ensure` expression references symbol not in flow's parameter scope | ENFORCED (task INV-004) |
+| LLN-ASSUME-001 | Proof-Tracing | `assuming {}` condition not found in referenced flow's manifest ProofObligations | PLANNED (task #73) |
+| LLN-ASSUME-002 | Proof-Tracing | Referenced manifest signature invalid or expired | PLANNED (task #74) |
+| LLN-ASSUME-003 | Proof-Tracing | Manifest sourceHash mismatch — referenced flow has changed since manifest was signed | PLANNED (task #74) |
+| LLN-ASSUME-004 | Proof-Tracing | Condition found as `runtime-precheck` only (partial proof — WAT gate still needed) | PLANNED (task #74) |
 
 ---
 

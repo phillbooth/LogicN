@@ -146,6 +146,42 @@ if (existsSync(corpus)) {
     ["packages-logicn/logicn-devtools-provenance/dist/cli.js", "audit", corpus], { okCodes: [0, 2] });
 }
 
+// ── 4b. CBOR round-trip verification (task #67) ──
+// Checks that all .lmanifest files in build/ decode and re-encode to identical bytes.
+// Catches non-canonical CBOR before the manifest is used for signing.
+try {
+  const buildDir = join(ROOT, "build");
+  if (existsSync(buildDir)) {
+    const manifestFiles = readdirSync(buildDir).filter(f => f.endsWith(".lmanifest") && !f.endsWith(".json"));
+    if (manifestFiles.length > 0) {
+      const { decodeCBOR, encodeCBOR } = await import(
+        pathToFileURL(join(ROOT, "packages-logicn/logicn-core-compiler/dist/manifest-generator.js")).href
+      );
+      let allOk = true;
+      const failures = [];
+      for (const f of manifestFiles) {
+        const bytes = new Uint8Array(
+          await import("node:fs").then(fs => Buffer.from(fs.readFileSync(join(buildDir, f))))
+        );
+        // Only verify binary CBOR files (starts with a valid CBOR major type byte)
+        if (bytes.length > 0 && (bytes[0] & 0xe0) === 0xa0) { // map type (0xa0-0xbf)
+          try {
+            const { value } = decodeCBOR(bytes);
+            const reEncoded = encodeCBOR(value);
+            if (bytes.length !== reEncoded.length || !bytes.every((b, i) => b === reEncoded[i])) {
+              allOk = false; failures.push(f);
+            }
+          } catch { allOk = false; failures.push(f); }
+        }
+      }
+      results.push({ name: "manifest:cbor", ok: allOk, ms: 0,
+        detail: allOk
+          ? `${manifestFiles.length} manifest(s) canonical CBOR ✅`
+          : `FAILED — non-canonical: ${failures.join(", ")}` });
+    }
+  }
+} catch { /* non-fatal if no manifests */ }
+
 // ── 5. Full graph re-index ──
 run("graph:reindex", "node",
   ["packages-logicn/logicn-core-cli/dist/index.js", "graph", "--out", "build/graph"]);

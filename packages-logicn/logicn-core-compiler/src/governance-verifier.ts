@@ -30,9 +30,10 @@
 //   LLN-TERM-001 TERMINATION_ANNOTATION_MISSING (recursive strict/deterministic flow, no decreases)
 //
 // DRCM Phase 2 — invariant {} block (task #36):
-//   LLN-INV-001  PRE_CONDITION_VIOLATED    ensure expr evaluates false at call site (statically proved)
-//   LLN-INV-002  POST_CONDITION_VIOLATED   ensure expr evaluates false after body (statically proved)
-//   LLN-INV-003  INVARIANT_MISPLACED       invariant {} outside contract {} block
+//   LLN-INV-001  PRE_CONDITION_STATICALLY_FALSE  ensure expr constant-folds to false
+//   LLN-INV-002  POST_CONDITION_VIOLATED          (future: post-body invariant violation)
+//   LLN-INV-003  INVARIANT_BLOCK_EMPTY            invariant {} with no ensure statements
+//   LLN-INV-004  SYMBOL_UNRESOLVED_IN_INVARIANT   ensure references a name not in parameter scope
 // =============================================================================
 
 import { type AstNode, type AstNodeKind, type FlowMeta, type SourceLocation } from "./parser.js";
@@ -975,6 +976,39 @@ export function extractArenaLimitMB(flowNode: AstNode): number | undefined {
 // Verifier implementation
 // ---------------------------------------------------------------------------
 
+/**
+ * LLN-INV-004: Collect all identifier references in an ensure expression that
+ * are NOT in the flow's parameter scope. These would silently emit (i32.const 0)
+ * in the WAT emitter — catching them in the Verifier (Floor 3) instead keeps the
+ * emitter "dumb" and gives developers actionable error messages.
+ *
+ * Built-in names (true/false/None) are always in scope and excluded.
+ */
+function collectUnresolvedIdentifiers(
+  expr: AstNode,
+  paramNames: ReadonlySet<string>,
+): readonly string[] {
+  const BUILTIN_NAMES = new Set(["true", "false", "None", "Some", "Ok", "Err"]);
+  const unresolved = new Set<string>();
+
+  function walk(node: AstNode): void {
+    if (node.kind === "identifier") {
+      const name = node.value ?? "";
+      if (name !== "" && !paramNames.has(name) && !BUILTIN_NAMES.has(name) && !/^\d/.test(name)) {
+        unresolved.add(name);
+      }
+    }
+    // Recurse into binary/unary/call children; skip member expressions
+    // (e.g. `runtime::getBalance(...)` — the receiver name is a module path, not a local)
+    if (node.kind !== "memberExpr") {
+      for (const child of node.children ?? []) walk(child);
+    }
+  }
+
+  walk(expr);
+  return [...unresolved];
+}
+
 class GovernanceVerifier {
   private readonly diagnostics: GovernanceDiagnostic[] = [];
   private readonly intentStatus = new Map<string, "satisfied" | "missing" | "mismatch">();
@@ -1710,6 +1744,17 @@ class GovernanceVerifier {
     );
     if (invariantBlock === undefined) return;
 
+    // Build the set of names that are in scope for ensure expressions.
+    // In scope: flow parameters (from paramDecl children).
+    // The WAT emitter maps these to $p0, $p1, … via local.get.
+    // Any identifier in ensure that's NOT in this set → LLN-INV-004.
+    const paramNames = new Set<string>(
+      (flowNode.children ?? [])
+        .filter(c => c.kind === "paramDecl")
+        .map(c => ((c.value ?? "").split(":")[0] ?? "").trim())
+        .filter(n => n.length > 0)
+    );
+
     // Scan children for ensureDecl nodes
     let invariantCount = 0;
     for (const child of invariantBlock.children ?? []) {
@@ -1717,6 +1762,22 @@ class GovernanceVerifier {
       invariantCount++;
       const exprNode = child.children?.[0];
       if (exprNode === undefined) continue;
+
+      // LLN-INV-004: check all identifier references in ensure expr are in parameter scope.
+      // The emitter silently emits (i32.const 0) for unresolved names — catch this here.
+      const unresolvedNames = collectUnresolvedIdentifiers(exprNode, paramNames);
+      for (const name of unresolvedNames) {
+        this.diagnostics.push(makeGovDiag(
+          "LLN-INV-004",
+          "SYMBOL_UNRESOLVED_IN_INVARIANT",
+          "error",
+          `Flow '${flow.name}': invariant 'ensure ${this.describeExpr(exprNode)}' references ` +
+          `'${name}' which is not a parameter of this flow. ` +
+          `Available parameters: [${[...paramNames].join(", ") || "none"}].`,
+          loc,
+          `Check the spelling of '${name}' or use a flow parameter name instead.`,
+        ));
+      }
 
       // Attempt lightweight static evaluation (constant fold)
       const staticResult = this.tryStaticEval(exprNode);

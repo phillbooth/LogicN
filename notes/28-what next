@@ -1,0 +1,85 @@
+This refined proposal formalizes the **LogicN Governed Tower** architecture, consolidating our existing progress—the "Invariant Bridge," the `unreachable` trap mechanism, and the audit-first governance model—into a cohesive technical specification.
+
+---
+
+## LogicN: The Governed Tower Architecture
+
+### Executive Summary
+
+LogicN is a **High-Assurance Governance-as-Code** platform. Unlike traditional runtimes that rely on software-level policing, LogicN enforces security via **Deterministic Enforcement** and **Formal Proof**. By moving security from "runtime detection" to "compile-time proof and hardware-boundary gating," LogicN eliminates TOCTOU (Time-of-Check to Time-of-Use) vulnerabilities and creates an immutable, cryptographically verifiable audit trail.
+
+### 1. The Tower Layers (Zones of Trust)
+
+| Floor | Zone | Purpose | Enforcement Mechanism |
+| --- | --- | --- | --- |
+| **4** | **Attestation** | Governance & Identity | ML-DSA-65 signing; Manifest-based policy gates. |
+| **3** | **Proof Zone** | Analysis & Logic | Static proof; Constant-folding; ProofObligation (Tag 403) generation. |
+| **2** | **Containment** | Isolation & Enforcement | Deterministic Wasm Isolates (DWI); `unreachable` hardware traps. |
+| **1** | **Execution** | Compute Dispatch | CBOR-based binary dispatch; Monotonic permission matrix (`V_DPM`). |
+
+---
+
+### 2. The Core Concept: The Invariant Bridge
+
+The **Invariant Bridge** is the mechanism that connects static governance to runtime reality. It classifies every `ensure` guarantee into one of two paths:
+
+* **Statically Verified:** The compiler proves the condition is always true (e.g., `5 > 0`). The check is elided entirely, providing **zero-cost security**.
+* **Runtime Precheck:** The condition is undecidable at compile-time. The compiler injects an **atomic hardware trap** (`i32.eqz` + `unreachable`) at the execution boundary. Because this trap executes at the hardware level, it is non-negotiable and requires no "decision-making" by the runtime.
+
+---
+
+### 3. Key Architectural Primitives
+
+#### A. The Guarded Execution Sandbox
+
+To ensure invariants are always evaluated, we employ a **Single-Exit Transformation**:
+
+* The function body is wrapped in a `(block $exit)`.
+* All `return` statements are replaced by `(local.set $result)` followed by `(br $exit)`.
+* This ensures that the **Post-Condition Gate** is reached regardless of how the function body concludes, providing a mathematically guaranteed enforcement point.
+
+#### B. Proof-Tracing (The "Assuming" Bridge)
+
+Instead of opaque auto-propagation, we use **Explicit Assertion Bridging**:
+
+* Developers use `assuming(Condition) { ... }` blocks to signal that a runtime check is unnecessary because the property was proven in a parent flow.
+* The compiler verifies this by checking the `.lmanifest` of the dependency.
+* This keeps the compiler simple, prevents hidden bugs, and provides an explicit audit trail for compliance.
+
+#### C. Governance-as-Evidence
+
+Every runtime failure is not just a "crash"; it is a structured **Audit Event**.
+
+* Failures include the `flow ID`, `contract hash`, `meter snapshot`, and `rollback status`.
+* Because failure causes the process to terminate via `unreachable`, the state is guaranteed to be consistent, preventing the "Confused Deputy" problem.
+
+---
+
+### 4. Implementation Checklist for the Next Phases
+
+1. **Phase 3: DSS.wasm Supervisor (Floor 2)**
+* Implement the `V_DPM` (Dynamic Posture Matrix) to manage monotonic capability stripping.
+* Hard-code the trap-handler to capture `unreachable` signals as `LLN-INV-000` (Governance Violation).
+
+
+2. **Phase 4: SMT Proof Integration**
+* Upgrade the Governance Verifier (Floor 3) to use an SMT solver for discharging complex arithmetic invariants.
+
+
+3. **Phase 5: Proof-Tracing Implementation**
+* Implement the `assuming {}` block parser and manifest-lookup logic.
+* Finalize the Audit-Evidence schema (CBOR-Tag 403).
+
+
+
+---
+
+### Why this is "Better"
+
+* **Consistency:** You no longer rely on the runtime to "decide" if a policy is violated. The policy is built into the trap.
+* **Integrity:** The system uses **Capability Monotonicity**—as a flow moves deeper into the tower, it can only lose permissions, never gain them.
+* **Transparency:** By moving the "thinking" (proofs) to the compiler and the "enforcement" (traps) to the hardware, you eliminate the runtime's vulnerability surface entirely.
+
+**This document serves as our "source of truth" for the Governed Tower.** It successfully captures the transition from our original, orchestrated concept to this current, hardened, proof-based architecture.
+
+Are there any specific "Floors" or mechanisms in this Tower that you feel need more formalization before we start the DSS.wasm scaffolding?
