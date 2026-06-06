@@ -104,6 +104,7 @@ Commands:
   logicn version                                      show version and runtime status
   logicn diagnostic                                    run diagnostic fault-injection benchmark suite
   logicn border-check                                  validate all plugin schemas in governance/plugins/
+  logicn kb-graph [--all]                              scan docs/Knowledge-Bases/ cross-reference graph
 
 Examples:
   logicn run   governance-cost.lln --invoke main
@@ -428,6 +429,17 @@ Baseline comparison (governance-cost):
     }
     console.log(`\n  ${clean} plugins validated · ${issues} issues\n`);
     process.exit(issues > 0 ? 1 : 0);
+  }
+
+  // ── logicn kb-graph — scan docs/Knowledge-Bases/ cross-reference graph ──────
+  if (command === "kb-graph") {
+    const { execSync: execS } = await import("node:child_process");
+    const args = rest.length ? rest.join(" ") : "--all";
+    execS(
+      "node packages-logicn/logicn-devtools-kb-graph/dist/cli.js " + args,
+      { stdio: "inherit", cwd: process.cwd() }
+    );
+    process.exit(0);
   }
 
   // ── logicn diagnostic — run diagnostic fault-injection benchmark suite ──────

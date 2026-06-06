@@ -1,0 +1,13 @@
+{
+  "packageName": "@logicn/ext-bridge-cpp",
+  "allowedExternal": [
+    "@logicn/tower-citizen",
+    "node:child_process",
+    "node:fs",
+    "node:module",
+    "node:os",
+    "node:path",
+    "node:url"
+  ],
+  "note": "Baseline auto-generated. Edit allowedExternal to widen/narrow the border. `--check` fails if an import appears that is not listed here."
+}

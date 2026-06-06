@@ -710,4 +710,4 @@ One contract. One governed execution. Complete economics.
 | [logicn-pii-handling.md](logicn-pii-handling.md) | PII type rules, lineage, redaction |
 | [logicn-concept-governed-execution-plan.md](logicn-concept-governed-execution-plan.md) | Governed execution plan — pre-execution planning |
 | [logicn-governance-diff-ci.md](logicn-governance-diff-ci.md) | Machine-readable change impact for CAB |
-| [logicn-phase27-ai-native.md](logicn-phase27-ai-native.md) | AI inference governance and NPU dispatch |
+| [logicn-phase-27-ai-native.md](logicn-phase-27-ai-native.md) | AI inference governance and NPU dispatch |

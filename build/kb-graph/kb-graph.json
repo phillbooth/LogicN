@@ -34,12 +34,13 @@
       "id": "KNOWLEDGE-BASE-INDEX",
       "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\KNOWLEDGE-BASE-INDEX.md",
       "title": "LogicN Core Knowledge Base — Master Navigation Guide & TCB Map",
-      "version": "1.2",
+      "version": "1.1",
       "layer": "Layer 0",
-      "wordCount": 1799,
+      "wordCount": 1806,
       "lnlCodes": [
         "LLN-ACCESS-001",
         "LLN-ASSIMILATE-001",
+        "LLN-BORDER-001",
         "LLN-CAP-001",
         "LLN-GOV-004",
         "LLN-IMPORT-001",
@@ -47,7 +48,7 @@
         "LLN-OBS-002",
         "LLN-RES-001"
       ],
-      "lastModified": "2026-06-05T11:58:59.259Z"
+      "lastModified": "2026-06-06T06:59:41.640Z"
     },
     {
       "id": "ai-as-untrusted-reasoning-worker",
@@ -659,7 +660,7 @@
       "title": "Documentation Layer Model",
       "wordCount": 482,
       "lnlCodes": [],
-      "lastModified": "2026-06-05T11:57:29.655Z"
+      "lastModified": "2026-06-06T06:59:57.681Z"
     },
     {
       "id": "effect-checker-and-boundary-checker",
@@ -1094,11 +1095,11 @@
       "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\logicn-architecture-high-roi-ideas.md",
       "title": "LogicN — High-ROI Architecture Ideas (Reviewed 2026-05-31)",
       "status": "`capabilityHost.ts`, `contractEnforcer.ts`, `LLN-EFFECT-*` series implemented.",
-      "wordCount": 1143,
+      "wordCount": 1144,
       "lnlCodes": [
         "LLN-STDLIB-001"
       ],
-      "lastModified": "2026-06-05T11:57:36.819Z"
+      "lastModified": "2026-06-06T07:00:04.638Z"
     },
     {
       "id": "logicn-architecture-layers",
@@ -1210,7 +1211,7 @@
       "title": "LogicN — Build Roadmap",
       "version": "6.0",
       "layer": "Layer 0",
-      "wordCount": 1571,
+      "wordCount": 1965,
       "lnlCodes": [
         "LLN-ACCESS-001",
         "LLN-ASSIMILATE-001",
@@ -1224,7 +1225,7 @@
         "LLN-OBS-002",
         "LLN-TRAP-001"
       ],
-      "lastModified": "2026-06-05T11:06:50.845Z"
+      "lastModified": "2026-06-06T06:46:48.037Z"
     },
     {
       "id": "logicn-cache-aware-execution",
@@ -2605,7 +2606,7 @@
         "LLN-AI-003",
         "LLN-ECON-001"
       ],
-      "lastModified": "2026-06-05T11:57:46.045Z"
+      "lastModified": "2026-06-06T06:59:44.132Z"
     },
     {
       "id": "logicn-governance-hierarchy",
@@ -2711,9 +2712,9 @@
       "id": "logicn-governance-signature",
       "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\logicn-governance-signature.md",
       "title": "LogicN — GovernanceSignature",
-      "wordCount": 828,
+      "wordCount": 825,
       "lnlCodes": [],
-      "lastModified": "2026-06-05T11:57:52.883Z"
+      "lastModified": "2026-06-06T07:00:06.393Z"
     },
     {
       "id": "logicn-governance-verifier-architecture",
@@ -2762,7 +2763,7 @@
       "status": "Phase 14 — Future architecture",
       "wordCount": 1959,
       "lnlCodes": [],
-      "lastModified": "2026-06-05T11:58:11.332Z"
+      "lastModified": "2026-06-06T06:59:05.744Z"
     },
     {
       "id": "logicn-governed-design-synthesis",
@@ -2782,6 +2783,16 @@
       "wordCount": 978,
       "lnlCodes": [],
       "lastModified": "2026-06-02T07:44:50.184Z"
+    },
+    {
+      "id": "logicn-governed-inference-tower",
+      "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\logicn-governed-inference-tower.md",
+      "title": "LogicN — Governed Inference Tower",
+      "version": "1.0",
+      "status": "Architecture specification — implementation roadmap active",
+      "wordCount": 1182,
+      "lnlCodes": [],
+      "lastModified": "2026-06-05T18:02:27.197Z"
     },
     {
       "id": "logicn-governed-memory-blocks",
@@ -2851,6 +2862,21 @@
       "lastModified": "2026-06-02T07:44:50.185Z"
     },
     {
+      "id": "logicn-hardened-border",
+      "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\logicn-hardened-border.md",
+      "title": "LogicN Hardened Border — Plugin DMZ Specification",
+      "status": "Stage A implemented (schema validation, blacklist, border-check CLI)",
+      "wordCount": 1011,
+      "lnlCodes": [
+        "LLN-BORDER-001",
+        "LLN-BORDER-002",
+        "LLN-BORDER-003",
+        "LLN-BORDER-004",
+        "LLN-BORDER-005"
+      ],
+      "lastModified": "2026-06-05T19:42:07.239Z"
+    },
+    {
       "id": "logicn-hardware-amd",
       "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\logicn-hardware-amd.md",
       "title": "LogicN — AMD Hardware Support",
@@ -2881,7 +2907,7 @@
       "status": "Phase 13/14 — Future architecture",
       "wordCount": 2186,
       "lnlCodes": [],
-      "lastModified": "2026-06-05T11:58:16.839Z"
+      "lastModified": "2026-06-06T06:59:20.001Z"
     },
     {
       "id": "logicn-hardware-compatibility-matrix",
@@ -3061,7 +3087,7 @@
       "status": "Phase 13 — Core architecture principle",
       "wordCount": 1854,
       "lnlCodes": [],
-      "lastModified": "2026-06-05T11:58:24.628Z"
+      "lastModified": "2026-06-06T06:59:30.876Z"
     },
     {
       "id": "logicn-master-architecture",
@@ -3412,7 +3438,7 @@
         "LLN-TYPE-030",
         "LLN-TYPE-031"
       ],
-      "lastModified": "2026-06-05T11:58:30.835Z"
+      "lastModified": "2026-06-06T07:00:09.508Z"
     },
     {
       "id": "logicn-phase-26-healthcare",
@@ -3886,17 +3912,11 @@
       "id": "logicn-runtime-status-SOT",
       "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\logicn-runtime-status-SOT.md",
       "title": "LogicN — Runtime Status: Single Source of Truth (SOT)",
-      "wordCount": 2553,
+      "wordCount": 1793,
       "lnlCodes": [
-        "LLN-EFFECT-001",
-        "LLN-EFFECT-004",
-        "LLN-GOV-002",
-        "LLN-LEX-001",
-        "LLN-TYPE-001",
-        "LLN-TYPE-002",
-        "LLN-VAL-001"
+        "LLN-MATCH-001"
       ],
-      "lastModified": "2026-06-03T16:15:33.410Z"
+      "lastModified": "2026-06-05T16:08:15.394Z"
     },
     {
       "id": "logicn-runtime-value-model",
@@ -4648,7 +4668,7 @@
       "title": "Policy Architecture",
       "wordCount": 743,
       "lnlCodes": [],
-      "lastModified": "2026-06-05T11:58:38.802Z"
+      "lastModified": "2026-06-06T07:00:11.357Z"
     },
     {
       "id": "polymorphism",
@@ -5554,6 +5574,11 @@
     },
     {
       "from": "KNOWLEDGE-BASE-INDEX",
+      "to": "logicn-governed-inference-tower",
+      "linkText": "logicn-governed-inference-tower.md"
+    },
+    {
+      "from": "KNOWLEDGE-BASE-INDEX",
       "to": "logicn-deterministic-runtime-containment",
       "linkText": "logicn-deterministic-runtime-containment.md"
     },
@@ -5581,6 +5606,11 @@
       "from": "KNOWLEDGE-BASE-INDEX",
       "to": "logicn-resilience-observability-design",
       "linkText": "logicn-resilience-observability-design.md"
+    },
+    {
+      "from": "KNOWLEDGE-BASE-INDEX",
+      "to": "logicn-hardened-border",
+      "linkText": "logicn-hardened-border.md"
     },
     {
       "from": "KNOWLEDGE-BASE-INDEX",
@@ -6128,11 +6158,6 @@
       "linkText": "logicn-ai-semantic-graph-output.md"
     },
     {
-      "from": "logicn-architecture-high-roi-ideas",
-      "to": "AI_INDEX",
-      "linkText": "AI_INDEX.md"
-    },
-    {
       "from": "logicn-architecture-layers",
       "to": "logicn-gir-schema",
       "linkText": "logicn-gir-schema.md"
@@ -6274,6 +6299,11 @@
     },
     {
       "from": "logicn-build-roadmap",
+      "to": "logicn-phase-9-roadmap",
+      "linkText": "logicn-phase-9-roadmap.md"
+    },
+    {
+      "from": "logicn-build-roadmap",
       "to": "logicn-tower-native-syntax",
       "linkText": "logicn-tower-native-syntax.md"
     },
@@ -6321,6 +6351,11 @@
       "from": "logicn-build-roadmap",
       "to": "logicn-cbor-manifest-spec",
       "linkText": "logicn-cbor-manifest-spec.md"
+    },
+    {
+      "from": "logicn-build-roadmap",
+      "to": "logicn-governed-inference-tower",
+      "linkText": "logicn-governed-inference-tower.md"
     },
     {
       "from": "logicn-build-roadmap",
@@ -7573,11 +7608,6 @@
       "linkText": "logicn-roadmap-phase26-41.md"
     },
     {
-      "from": "logicn-governance-signature",
-      "to": "logicn-signed-attestation",
-      "linkText": "logicn-signed-attestation.md"
-    },
-    {
       "from": "logicn-governed-apu-memory",
       "to": "logicn-hardware-as-capabilities",
       "linkText": "Hardware as Governed Capabilities"
@@ -7604,12 +7634,7 @@
     },
     {
       "from": "logicn-governed-apu-memory",
-      "to": "logicn-core-reports-v02",
-      "linkText": "Runtime Reports"
-    },
-    {
-      "from": "logicn-governed-apu-memory",
-      "to": "effect-checker-and-boundary-checker",
+      "to": "logicn-effect-checker-architecture",
       "linkText": "Effects System"
     },
     {
@@ -7641,6 +7666,31 @@
       "from": "logicn-governed-design-synthesis",
       "to": "logicn-governed-runtime-research-2026-06-03",
       "linkText": "logicn-governed-runtime-research-2026-06-03.md"
+    },
+    {
+      "from": "logicn-governed-inference-tower",
+      "to": "logicn-tower-native-syntax",
+      "linkText": "logicn-tower-native-syntax.md"
+    },
+    {
+      "from": "logicn-governed-inference-tower",
+      "to": "logicn-contract-clause-reference",
+      "linkText": "logicn-contract-clause-reference.md"
+    },
+    {
+      "from": "logicn-governed-inference-tower",
+      "to": "logicn-build-roadmap",
+      "linkText": "logicn-build-roadmap.md"
+    },
+    {
+      "from": "logicn-governed-inference-tower",
+      "to": "logicn-governed-tower-specification",
+      "linkText": "logicn-governed-tower-specification.md"
+    },
+    {
+      "from": "logicn-governed-inference-tower",
+      "to": "logicn-cbor-manifest-spec",
+      "linkText": "logicn-cbor-manifest-spec.md"
     },
     {
       "from": "logicn-governed-request-execution",
@@ -7871,11 +7921,6 @@
       "from": "logicn-hardware-as-capabilities",
       "to": "logicn-passive-execution-plans",
       "linkText": "Passive Execution Plans"
-    },
-    {
-      "from": "logicn-hardware-as-capabilities",
-      "to": "logicn-core-reports-v02",
-      "linkText": "Runtime Reports"
     },
     {
       "from": "logicn-hardware-compatibility-matrix",
@@ -8236,11 +8281,6 @@
       "from": "logicn-logical-planning-target-emission",
       "to": "logicn-static-capability-proofs",
       "linkText": "Static Capability Proofs"
-    },
-    {
-      "from": "logicn-logical-planning-target-emission",
-      "to": "logicn-core-reports-v02",
-      "linkText": "Runtime Reports"
     },
     {
       "from": "logicn-master-architecture",
@@ -9034,11 +9074,6 @@
     },
     {
       "from": "logicn-runtime-status-SOT",
-      "to": "logicn-selfhosting-roadmap-axisB",
-      "linkText": "logicn-selfhosting-roadmap-axisB.md"
-    },
-    {
-      "from": "logicn-runtime-status-SOT",
       "to": "logicn-runtime-in-logicn-roadmap",
       "linkText": "logicn-runtime-in-logicn-roadmap.md"
     },
@@ -9713,9 +9748,9 @@
   ],
   "staleLinks": [],
   "stats": {
-    "totalDocs": 422,
-    "totalEdges": 881,
-    "totalLlnCodes": 577,
+    "totalDocs": 424,
+    "totalEdges": 884,
+    "totalLlnCodes": 582,
     "orphanCount": 131,
     "staleLinkCount": 0
   }

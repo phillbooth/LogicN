@@ -1,0 +1,139 @@
+{
+  "packageName": "@logicn/tower-citizen",
+  "nodes": [
+    "src/audit-logger.ts",
+    "src/bridge/interface.ts",
+    "src/bridge/stub-provider.ts",
+    "src/governance-enforcer.ts",
+    "src/hybrid-engine.ts",
+    "src/index.ts",
+    "src/plugin-sandbox.ts",
+    "src/precision-strategy.ts",
+    "src/tower-runtime.ts",
+    "src/tpl-simulator.ts"
+  ],
+  "internalEdges": [
+    {
+      "from": "src/bridge/interface.ts",
+      "to": "src/precision-strategy.ts"
+    },
+    {
+      "from": "src/bridge/stub-provider.ts",
+      "to": "src/tpl-simulator.ts"
+    },
+    {
+      "from": "src/bridge/stub-provider.ts",
+      "to": "src/governance-enforcer.ts"
+    },
+    {
+      "from": "src/bridge/stub-provider.ts",
+      "to": "src/audit-logger.ts"
+    },
+    {
+      "from": "src/bridge/stub-provider.ts",
+      "to": "src/bridge/interface.ts"
+    },
+    {
+      "from": "src/hybrid-engine.ts",
+      "to": "src/tower-runtime.ts"
+    },
+    {
+      "from": "src/hybrid-engine.ts",
+      "to": "src/plugin-sandbox.ts"
+    },
+    {
+      "from": "src/hybrid-engine.ts",
+      "to": "src/precision-strategy.ts"
+    },
+    {
+      "from": "src/index.ts",
+      "to": "src/tower-runtime.ts"
+    },
+    {
+      "from": "src/index.ts",
+      "to": "src/audit-logger.ts"
+    },
+    {
+      "from": "src/index.ts",
+      "to": "src/plugin-sandbox.ts"
+    },
+    {
+      "from": "src/index.ts",
+      "to": "src/hybrid-engine.ts"
+    },
+    {
+      "from": "src/index.ts",
+      "to": "src/precision-strategy.ts"
+    },
+    {
+      "from": "src/index.ts",
+      "to": "src/tpl-simulator.ts"
+    },
+    {
+      "from": "src/index.ts",
+      "to": "src/governance-enforcer.ts"
+    },
+    {
+      "from": "src/index.ts",
+      "to": "src/bridge/interface.ts"
+    },
+    {
+      "from": "src/index.ts",
+      "to": "src/bridge/stub-provider.ts"
+    },
+    {
+      "from": "src/tower-runtime.ts",
+      "to": "src/audit-logger.ts"
+    },
+    {
+      "from": "src/tower-runtime.ts",
+      "to": "src/plugin-sandbox.ts"
+    },
+    {
+      "from": "src/tpl-simulator.ts",
+      "to": "src/audit-logger.ts"
+    },
+    {
+      "from": "src/tpl-simulator.ts",
+      "to": "src/governance-enforcer.ts"
+    }
+  ],
+  "externalDeps": [
+    {
+      "specifier": "node:crypto",
+      "kind": "node_core",
+      "importedBy": [
+        "src/governance-enforcer.ts",
+        "src/hybrid-engine.ts",
+        "src/plugin-sandbox.ts"
+      ]
+    },
+    {
+      "specifier": "node:fs",
+      "kind": "node_core",
+      "importedBy": [
+        "src/audit-logger.ts"
+      ]
+    },
+    {
+      "specifier": "node:path",
+      "kind": "node_core",
+      "importedBy": [
+        "src/audit-logger.ts"
+      ]
+    }
+  ],
+  "orphans": [],
+  "entryPoints": [
+    "src/index.ts"
+  ],
+  "stats": {
+    "fileCount": 10,
+    "internalEdgeCount": 21,
+    "externalDepCount": 3,
+    "nodeCoreCount": 3,
+    "workspaceCount": 0,
+    "thirdpartyCount": 0,
+    "orphanCount": 0
+  }
+}

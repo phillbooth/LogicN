@@ -162,7 +162,7 @@ The compiler derives `Arena` from this declaration and embeds it in the lowering
 ## Standing Rules
 
 - Explicitness principles: `docs/Knowledge-Bases/logicn-explicitness-principles.md`
-- WASM architecture rule: recorded in project memory (`project_wasm_architecture_rule.md`)
+- WASM architecture rule: recorded in project memory (**project_wasm_architecture_rule**)
 - Stage B definition: `docs/Knowledge-Bases/logicn-phase16-20-decisions.md` (Decision 1)
 - Package system (both registry + manifests): `logicn-phase16-20-decisions.md` (Decision 2)
 - executePlan() scope (all flows): `logicn-phase16-20-decisions.md` (Decision 3)

@@ -7,7 +7,7 @@
     "allowedEffects": 0,
     "deniedEffects": 0,
     "conflictsResolved": 0,
-    "resolvedAt": "2026-06-05T19:59:48.251Z"
+    "resolvedAt": "2026-06-06T06:46:19.707Z"
   },
   "behavioralFingerprint": "sha256:fbedc53cb859b90b0079581c766ef5a6b55af97ecde18e04fbbf8863085a66e7",
   "derivedConstraints": [
@@ -81,11 +81,11 @@
     "\" introduces a governance annotation comment (manifested in .lmanifest).",
     "\" two-char form is a GovComment."
   ],
-  "generatedAt": "2026-06-05T19:59:48.251Z",
+  "generatedAt": "2026-06-06T06:46:19.707Z",
   "governanceSignature": {
     "algorithm": "Ed25519+ML-DSA-65",
-    "ed25519": "placeholder:sha256:ae520526dcf505e41ef1d48f36371fe6fb1661467e5a5aea7e12d5c8e9de4744",
-    "mlDsa65": "placeholder:sha256:ae520526dcf505e41ef1d48f36371fe6fb1661467e5a5aea7e12d5c8e9de4744",
+    "ed25519": "placeholder:sha256:080ca37be3dfe0f0998905e1d3b187ae7054a503d8c54d8acb1add0498c2a815",
+    "mlDsa65": "placeholder:sha256:080ca37be3dfe0f0998905e1d3b187ae7054a503d8c54d8acb1add0498c2a815",
     "signerNote": "Placeholder signatures — real ML-DSA-65 signing requires key custody spec (DRCM task #34). The canonical JSON body hash above is stable and verifiable today."
   }
 }

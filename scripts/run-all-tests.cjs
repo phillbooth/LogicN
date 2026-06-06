@@ -92,11 +92,45 @@ function discover() {
   return [...mid, ...last];
 }
 
+// Expand a glob like "tests/*.test.mjs" against a package dir into real paths.
+// Cross-platform: cmd.exe (shell:true) does NOT expand globs, so we do it in JS.
+function expandTestGlob(dir, glob) {
+  // glob form: "<subdir>/<pattern>.mjs" — support a single * in the basename.
+  const slash = glob.lastIndexOf('/');
+  const sub = slash >= 0 ? glob.slice(0, slash) : '.';
+  const pat = slash >= 0 ? glob.slice(slash + 1) : glob;
+  const subDir = path.join(dir, sub);
+  if (!fs.existsSync(subDir)) return [];
+  const re = new RegExp('^' + pat.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$');
+  return fs.readdirSync(subDir).filter((f) => re.test(f)).map((f) => path.join(sub, f));
+}
+
 function runOne({ name, dir }) {
   if (!fs.existsSync(dir)) return { name, status: 'missing', tests: null, ms: 0 };
   if (!hasTestScript(dir)) return { name, status: 'no-test', tests: null, ms: 0 };
   const t0 = Date.now();
-  const r = spawnSync('npm', ['test'], { cwd: dir, encoding: 'utf8', shell: true, timeout: 600_000 });
+
+  // Smart dispatch: if the test script needs a build (npm run typecheck/build) but
+  // dist/ already exists, run only the `node --test <globs>` portion directly,
+  // expanding globs in JS (cmd.exe doesn't). Avoids requiring tsc on PATH.
+  const pkg = readPkg(dir);
+  const testScript = pkg?.scripts?.test ?? '';
+  const distExists = fs.existsSync(path.join(dir, 'dist'));
+  const needsBuild = /npm run (typecheck|build[:a-z]*)/.test(testScript);
+  const nodeTestMatch = testScript.match(/node\s+--test\s+(.+?)(?:\s*&&|\s*$)/);
+
+  let r;
+  if (needsBuild && distExists && nodeTestMatch) {
+    const globs = nodeTestMatch[1].trim().split(/\s+/);
+    const files = globs.flatMap((g) => expandTestGlob(dir, g));
+    if (files.length > 0) {
+      r = spawnSync('node', ['--test', ...files], { cwd: dir, encoding: 'utf8', shell: false, timeout: 600_000 });
+    } else {
+      r = spawnSync('npm', ['test'], { cwd: dir, encoding: 'utf8', shell: true, timeout: 600_000 });
+    }
+  } else {
+    r = spawnSync('npm', ['test'], { cwd: dir, encoding: 'utf8', shell: true, timeout: 600_000 });
+  }
   const ms = Date.now() - t0;
   const out = `${r.stdout || ''}\n${r.stderr || ''}`;
   const counts = parseCounts(out);

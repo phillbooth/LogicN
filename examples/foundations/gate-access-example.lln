@@ -1,9 +1,26 @@
 /*
  * Example: gate {} admission guards and access {} Default Deny
- * Demonstrates flow-level access control and capability negotiation.
+ *
+ * WHAT THIS TEACHES
+ *   gate(cond) {}   An ADMISSION guard around one or more flows. It answers
+ *                   "WHO may call this code?" — only callers that satisfy the
+ *                   condition (here: holding a guard capability) can even reach
+ *                   the flows inside. Maps to V_DPM bit 8 (the admission bit):
+ *                   if the bit is unset for the caller, the call never enters.
+ *
+ *   access { grant } A capability boundary on a single flow, enforcing DEFAULT
+ *                   DENY. It answers "WHAT may cross the boundary INTO this flow?"
+ *                   Only the explicitly granted capabilities pass; every other
+ *                   capability is denied automatically — there is no implicit grant.
+ *
+ *   gate vs access  gate = perimeter admission (which callers get in at all).
+ *                   access = per-flow capability gate (what those callers may
+ *                   bring across once admitted). They compose: a caller must
+ *                   pass the gate AND hold the granted capabilities.
  */
 
-;; Domain ceiling for administrative operations
+;; Domain ceiling for administrative operations — the capability a caller must
+;; hold to be admitted through the gate below.
 guard AdminOperationsGuard {
   permitted_effects {
     database.write
@@ -12,8 +29,9 @@ guard AdminOperationsGuard {
   }
 }
 
-;; gate {} — only flows inside are reachable from authorized callers
-;; The condition references a declared guard — compiler validates at Stage B
+;; gate {} — admission perimeter. Only callers holding AdminOperationsGuard are
+;; admitted to ANY flow inside. The condition references a declared guard; the
+;; compiler records the admission requirement and the runtime checks V_DPM bit 8.
 gate(AdminOperationsGuard) {
   secure flow deleteRecord(recordId: String) -> Result<Bool, Error>
   contract {
@@ -24,21 +42,26 @@ gate(AdminOperationsGuard) {
     }
   }
   {
-    ;; Only reachable if caller holds AdminOperationsGuard capability
+    ;; Unreachable unless the caller cleared the gate (held AdminOperationsGuard).
+    ;; Inside the gate, normal input interrogation still applies.
     trap recordId == "" : ERR_EMPTY_RECORD_ID
     return Ok(true)
   }
 }
 
-;; access {} with Default Deny — callers must have listed capabilities
+;; access {} with Default Deny — this flow accepts callers generally, but only
+;; the two listed capabilities may cross the boundary into it. Anything not
+;; granted (filesystem, shell, secret.access, ...) is denied with no exception.
 secure flow processRequest(payload: String) -> Result<Bool, Error>
 contract {
   intent "Process an incoming request"
   effects { allow database.write, allow audit.write }
 }
 access {
-  grant database.write
-  grant audit.write
+  grant database.write    ;; explicitly admitted capability
+  grant audit.write       ;; explicitly admitted capability
+  ;; <-- everything else is implicitly DENIED. Default Deny means the absence
+  ;;     of a grant is a denial; you never write `deny`, you simply omit.
 }
 {
   trap payload == "" : ERR_EMPTY_PAYLOAD

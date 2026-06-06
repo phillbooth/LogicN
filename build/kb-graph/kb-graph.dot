@@ -5,7 +5,7 @@ digraph KBGraph {
 
   "00-KB-INDEX" [label="LogicN Knowledge Base — Index\n7 LLN codes", fillcolor="#f5f5f5", color=gray, penwidth=2];
   "AI_INDEX" [label="LogicN — AI Canonical Index\n5 LLN codes", fillcolor="#f5f5f5"];
-  "KNOWLEDGE-BASE-INDEX" [label="LogicN Core Knowledge Base — Master Navigation Guide & TCB Map\n(Layer 0)\n8 LLN codes", fillcolor="#ffe0b2"];
+  "KNOWLEDGE-BASE-INDEX" [label="LogicN Core Knowledge Base — Master Navigation Guide & TCB Map\n(Layer 0)\n9 LLN codes", fillcolor="#ffe0b2"];
   "ai-as-untrusted-reasoning-worker" [label="AI As Untrusted Reasoning Worker", fillcolor="#f5f5f5"];
   "ai-compute-plan" [label="AI Compute Plan", fillcolor="#f5f5f5"];
   "ai-friendly-architecture-documentation" [label="AI-Friendly Architecture Documentation", fillcolor="#f5f5f5", color=gray, penwidth=2];
@@ -209,12 +209,14 @@ digraph KBGraph {
   "logicn-governed-apu-memory" [label="LogicN — Governed Memory Boundaries and APU Memory Sharing", fillcolor="#f5f5f5"];
   "logicn-governed-design-synthesis" [label="LogicN — Governed Design Synthesis", fillcolor="#f5f5f5"];
   "logicn-governed-identity" [label="LogicN — Governed Identity System", fillcolor="#f5f5f5", color=gray, penwidth=2];
+  "logicn-governed-inference-tower" [label="LogicN — Governed Inference Tower", fillcolor="#f5f5f5"];
   "logicn-governed-memory-blocks" [label="LogicN Governed Memory Blocks\n1 LLN code", fillcolor="#f5f5f5"];
   "logicn-governed-request-execution" [label="logicn-governed-request-execution\n2 LLN codes", fillcolor="#f5f5f5"];
   "logicn-governed-resource-contracts" [label="logicn-governed-resource-contracts\n4 LLN codes", fillcolor="#f5f5f5", color=gray, penwidth=2];
   "logicn-governed-runtime-research-2026-06-03" [label="LogicN — Governed Runtime Architecture Research\n1 LLN code", fillcolor="#f5f5f5"];
   "logicn-governed-tower-specification" [label="LogicN — The Governed Tower: Master Technical Specification\n(Layer 0)\n3 LLN codes", fillcolor="#ffe0b2"];
   "logicn-gradual-capability-inference" [label="LogicN — Gradual Capability and Effect Inference", fillcolor="#f5f5f5"];
+  "logicn-hardened-border" [label="LogicN Hardened Border — Plugin DMZ Specification\n5 LLN codes", fillcolor="#f5f5f5"];
   "logicn-hardware-amd" [label="LogicN — AMD Hardware Support", fillcolor="#f5f5f5"];
   "logicn-hardware-apple" [label="LogicN — Apple Silicon Support", fillcolor="#f5f5f5"];
   "logicn-hardware-arm" [label="LogicN — ARM Hardware Support", fillcolor="#f5f5f5"];
@@ -300,7 +302,7 @@ digraph KBGraph {
   "logicn-runtime-interpreter-roadmap" [label="LogicN — Runtime / Interpreter Improvement Roadmap\n3 LLN codes", fillcolor="#f5f5f5"];
   "logicn-runtime-lifecycle" [label="LogicN Runtime Lifecycle", fillcolor="#f5f5f5"];
   "logicn-runtime-rationale" [label="LogicN Runtime Rationale", fillcolor="#f5f5f5"];
-  "logicn-runtime-status-SOT" [label="LogicN — Runtime Status: Single Source of Truth (SOT)\n7 LLN codes", fillcolor="#f5f5f5"];
+  "logicn-runtime-status-SOT" [label="LogicN — Runtime Status: Single Source of Truth (SOT)\n1 LLN code", fillcolor="#f5f5f5"];
   "logicn-runtime-value-model" [label="LogicN Runtime Value Model", fillcolor="#f5f5f5", color=gray, penwidth=2];
   "logicn-security-anti-abuse" [label="LogicN — Security: Anti-Abuse Architecture\n7 LLN codes", fillcolor="#f5f5f5"];
   "logicn-security-compile-time-crypto" [label="LogicN Security — Compile-Time Cryptographic Parameters\n8 LLN codes", fillcolor="#f5f5f5", color=gray, penwidth=2];
@@ -502,12 +504,14 @@ digraph KBGraph {
   "KNOWLEDGE-BASE-INDEX" -> "logicn-contract-authoring-guide" [label="logicn-contract-authoring-guid"];
   "KNOWLEDGE-BASE-INDEX" -> "logicn-contract-clause-reference" [label="logicn-contract-clause-referen"];
   "KNOWLEDGE-BASE-INDEX" -> "logicn-tower-native-syntax" [label="logicn-tower-native-syntax.md"];
+  "KNOWLEDGE-BASE-INDEX" -> "logicn-governed-inference-tower" [label="logicn-governed-inference-towe"];
   "KNOWLEDGE-BASE-INDEX" -> "logicn-deterministic-runtime-containment" [label="logicn-deterministic-runtime-c"];
   "KNOWLEDGE-BASE-INDEX" -> "logicn-domain-guard-policies" [label="logicn-domain-guard-policies.m"];
   "KNOWLEDGE-BASE-INDEX" -> "logicn-drcm-phase1-specs" [label="logicn-drcm-phase1-specs.md"];
   "KNOWLEDGE-BASE-INDEX" -> "logicn-cbor-manifest-spec" [label="logicn-cbor-manifest-spec.md"];
   "KNOWLEDGE-BASE-INDEX" -> "logicn-governance-cicd-pipeline" [label="logicn-governance-cicd-pipelin"];
   "KNOWLEDGE-BASE-INDEX" -> "logicn-resilience-observability-design" [label="logicn-resilience-observabilit"];
+  "KNOWLEDGE-BASE-INDEX" -> "logicn-hardened-border" [label="logicn-hardened-border.md"];
   "KNOWLEDGE-BASE-INDEX" -> "logicn-engineering-goals" [label="logicn-engineering-goals.md"];
   "KNOWLEDGE-BASE-INDEX" -> "logicn-governed-design-synthesis" [label="logicn-governed-design-synthes"];
   "KNOWLEDGE-BASE-INDEX" -> "logicn-governed-runtime-research-2026-06-03" [label="logicn-governed-runtime-resear"];
@@ -617,7 +621,6 @@ digraph KBGraph {
   "logicn-architecture-high-roi-ideas" -> "logicn-tensor-numeric-performance" [label="logicn-tensor-numeric-performa"];
   "logicn-architecture-high-roi-ideas" -> "logicn-passive-execution-plans" [label="logicn-passive-execution-plans"];
   "logicn-architecture-high-roi-ideas" -> "logicn-ai-semantic-graph-output" [label="logicn-ai-semantic-graph-outpu"];
-  "logicn-architecture-high-roi-ideas" -> "AI_INDEX" [label="AI_INDEX.md"];
   "logicn-architecture-layers" -> "logicn-gir-schema" [label="logicn-gir-schema.md"];
   "logicn-architecture-layers" -> "logicn-audit-writer-spec" [label="logicn-audit-writer-spec.md"];
   "logicn-architecture-layers" -> "logicn-proof-chain-spec" [label="logicn-proof-chain-spec.md"];
@@ -646,6 +649,7 @@ digraph KBGraph {
   "logicn-build-roadmap" -> "logicn-agile-governance-pattern" [label="logicn-agile-governance-patter"];
   "logicn-build-roadmap" -> "logicn-proof-tracing-design" [label="logicn-proof-tracing-design.md"];
   "logicn-build-roadmap" -> "logicn-topological-graph-engine" [label="logicn-topological-graph-engin"];
+  "logicn-build-roadmap" -> "logicn-phase-9-roadmap" [label="logicn-phase-9-roadmap.md"];
   "logicn-build-roadmap" -> "logicn-tower-native-syntax" [label="logicn-tower-native-syntax.md"];
   "logicn-build-roadmap" -> "architecture-charter" [label="architecture-charter.md"];
   "logicn-build-roadmap" -> "logicn-governance-rules" [label="logicn-governance-rules.md"];
@@ -656,6 +660,7 @@ digraph KBGraph {
   "logicn-build-roadmap" -> "logicn-domain-guard-policies" [label="logicn-domain-guard-policies.m"];
   "logicn-build-roadmap" -> "logicn-governance-cicd-pipeline" [label="logicn-governance-cicd-pipelin"];
   "logicn-build-roadmap" -> "logicn-cbor-manifest-spec" [label="logicn-cbor-manifest-spec.md"];
+  "logicn-build-roadmap" -> "logicn-governed-inference-tower" [label="logicn-governed-inference-towe"];
   "logicn-build-roadmap" -> "logicn-deterministic-runtime-containment" [label="logicn-deterministic-runtime-c"];
   "logicn-build-roadmap" -> "logicn-drcm-phase1-specs" [label="logicn-drcm-phase1-specs.md"];
   "logicn-build-roadmap" -> "logicn-engineering-goals" [label="logicn-engineering-goals.md"];
@@ -906,20 +911,23 @@ digraph KBGraph {
   "logicn-governance-scope" -> "logicn-hybrid-wasm-native-architecture-v1" [label="logicn-hybrid-wasm-native-arch"];
   "logicn-governance-signature" -> "logicn-governance-hierarchy" [label="logicn-governance-hierarchy.md"];
   "logicn-governance-signature" -> "logicn-roadmap-phase26-41" [label="logicn-roadmap-phase26-41.md"];
-  "logicn-governance-signature" -> "logicn-signed-attestation" [label="logicn-signed-attestation.md"];
   "logicn-governed-apu-memory" -> "logicn-hardware-as-capabilities" [label="Hardware as Governed Capabilit"];
   "logicn-governed-apu-memory" -> "logicn-logical-planning-target-emission" [label="Separate Logical Planning From"];
   "logicn-governed-apu-memory" -> "ai-linear-algebra-accelerator-support" [label="AI and Linear Algebra Accelera"];
   "logicn-governed-apu-memory" -> "logicn-passive-execution-plans" [label="Passive Execution Plans"];
   "logicn-governed-apu-memory" -> "logicn-static-capability-proofs" [label="Static Capability Proofs"];
-  "logicn-governed-apu-memory" -> "logicn-core-reports-v02" [label="Runtime Reports"];
-  "logicn-governed-apu-memory" -> "effect-checker-and-boundary-checker" [label="Effects System"];
+  "logicn-governed-apu-memory" -> "logicn-effect-checker-architecture" [label="Effects System"];
   "logicn-governed-design-synthesis" -> "logicn-domain-guard-policies" [label="logicn-domain-guard-policies.m"];
   "logicn-governed-design-synthesis" -> "logicn-deterministic-runtime-containment" [label="logicn-deterministic-runtime-c"];
   "logicn-governed-design-synthesis" -> "logicn-governance-rules" [label="logicn-governance-rules.md"];
   "logicn-governed-design-synthesis" -> "logicn-architecture-patterns" [label="logicn-architecture-patterns.m"];
   "logicn-governed-design-synthesis" -> "logicn-engineering-goals" [label="logicn-engineering-goals.md"];
   "logicn-governed-design-synthesis" -> "logicn-governed-runtime-research-2026-06-03" [label="logicn-governed-runtime-resear"];
+  "logicn-governed-inference-tower" -> "logicn-tower-native-syntax" [label="logicn-tower-native-syntax.md"];
+  "logicn-governed-inference-tower" -> "logicn-contract-clause-reference" [label="logicn-contract-clause-referen"];
+  "logicn-governed-inference-tower" -> "logicn-build-roadmap" [label="logicn-build-roadmap.md"];
+  "logicn-governed-inference-tower" -> "logicn-governed-tower-specification" [label="logicn-governed-tower-specific"];
+  "logicn-governed-inference-tower" -> "logicn-cbor-manifest-spec" [label="logicn-cbor-manifest-spec.md"];
   "logicn-governed-request-execution" -> "logicn-flow-entry-points" [label="logicn-flow-entry-points.md"];
   "logicn-governed-request-execution" -> "logicn-contract-full-model" [label="logicn-contract-full-model.md"];
   "logicn-governed-request-execution" -> "logicn-static-capability-proofs" [label="logicn-static-capability-proof"];
@@ -966,7 +974,6 @@ digraph KBGraph {
   "logicn-hardware-as-capabilities" -> "ai-compute-plan" [label="AI Compute Plan"];
   "logicn-hardware-as-capabilities" -> "logicn-static-capability-proofs" [label="Static Capability Proofs"];
   "logicn-hardware-as-capabilities" -> "logicn-passive-execution-plans" [label="Passive Execution Plans"];
-  "logicn-hardware-as-capabilities" -> "logicn-core-reports-v02" [label="Runtime Reports"];
   "logicn-hardware-compatibility-matrix" -> "logicn-hardware-compute-fabric" [label="logicn-hardware-compute-fabric"];
   "logicn-hardware-compatibility-matrix" -> "logicn-hardware-targets" [label="logicn-hardware-targets.md"];
   "logicn-hardware-compatibility-matrix" -> "logicn-calibration-data" [label="logicn-calibration-data.md"];
@@ -1039,7 +1046,6 @@ digraph KBGraph {
   "logicn-logical-planning-target-emission" -> "logicn-passive-execution-plans" [label="Passive Execution Plans"];
   "logicn-logical-planning-target-emission" -> "logicn-metadata-erasure" [label="Metadata Erasure"];
   "logicn-logical-planning-target-emission" -> "logicn-static-capability-proofs" [label="Static Capability Proofs"];
-  "logicn-logical-planning-target-emission" -> "logicn-core-reports-v02" [label="Runtime Reports"];
   "logicn-master-architecture" -> "logicn-governance-hierarchy" [label="logicn-governance-hierarchy.md"];
   "logicn-master-architecture" -> "logicn-governance-scope" [label="logicn-governance-scope.md"];
   "logicn-master-architecture" -> "logicn-hardware-targets" [label="logicn-hardware-targets.md"];
@@ -1198,7 +1204,6 @@ digraph KBGraph {
   "logicn-runtime-lifecycle" -> "logicn-compiler-pipeline" [label="logicn-compiler-pipeline.md"];
   "logicn-runtime-lifecycle" -> "logicn-adaptive-runtime-profiles" [label="logicn-adaptive-runtime-profil"];
   "logicn-runtime-status-SOT" -> "logicn-audit-2026-06-02" [label="logicn-audit-2026-06-02.md"];
-  "logicn-runtime-status-SOT" -> "logicn-selfhosting-roadmap-axisB" [label="logicn-selfhosting-roadmap-axi"];
   "logicn-runtime-status-SOT" -> "logicn-runtime-in-logicn-roadmap" [label="logicn-runtime-in-logicn-roadm"];
   "logicn-runtime-status-SOT" -> "logicn-roadmap-phases-41-60" [label="logicn-roadmap-phases-41-60.md"];
   "logicn-runtime-status-SOT" -> "logicn-roadmap-next10-phases" [label="logicn-roadmap-next10-phases.m"];

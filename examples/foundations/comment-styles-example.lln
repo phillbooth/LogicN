@@ -1,10 +1,25 @@
 /*
  * Example: LogicN Comment Styles
  *
- * Three comment forms, each with a distinct purpose:
- *   ;;   govComment   governance annotation (stored in .lmanifest)
- *   //   comment      code documentation (discarded after parse)
- *   block comments    multi-line code notes (discarded after parse)
+ * LogicN has THREE comment forms, each with a distinct purpose. Choosing the
+ * right one matters because one of them is load-bearing — it survives into the
+ * signed manifest and becomes part of the governance record.
+ *
+ *   ;;   govComment      Governance annotation. PRESERVED through parsing and
+ *                        written into the .lmanifest alongside the flow. Use it
+ *                        to state security reasoning, proof obligations, and the
+ *                        V_DPM capabilities a construct relies on. Auditors and
+ *                        AI tools read these to understand intent.
+ *
+ *   //   line comment    Ordinary code documentation. DISCARDED after parse —
+ *                        never reaches the manifest. Use for local how-it-works
+ *                        notes that do not constitute governance reasoning.
+ *
+ *   block comment        Slash-star ... star-slash. Multi-line code notes.
+ *                        Also DISCARDED after parse (this header is one).
+ *
+ * Rule of thumb: if the note explains WHY the code is safe/permitted, use ;;.
+ * If it explains HOW the code works, use // or a block comment.
  */
 
 ;; This flow handles payment validation for the Tower's Floor 3 (Proof Zone)

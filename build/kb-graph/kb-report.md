@@ -1,14 +1,14 @@
 # LogicN KB Graph Report
-Generated: 2026-06-05
+Generated: 2026-06-06
 
 ## Stats
-- Docs: 422 | Edges: 881 | Orphans: 131 | Stale links: 0 | LLN codes: 577
+- Docs: 424 | Edges: 884 | Orphans: 131 | Stale links: 0 | LLN codes: 582
 
 ## Document Registry (auto-generated)
 
 | Doc | Layer | Version | Status | LLN Codes |
 |---|---|---|---|---|
-| KNOWLEDGE-BASE-INDEX.md | Layer 0 | 1.2 | — | LLN-ACCESS-001, LLN-ASSIMILATE-001, LLN-CAP-001, LLN-GOV-004, LLN-IMPORT-001 …+3 |
+| KNOWLEDGE-BASE-INDEX.md | Layer 0 | 1.1 | — | LLN-ACCESS-001, LLN-ASSIMILATE-001, LLN-BORDER-001, LLN-CAP-001, LLN-GOV-004 …+4 |
 | logicn-build-roadmap.md | Layer 0 | 6.0 | — | LLN-ACCESS-001, LLN-ASSIMILATE-001, LLN-CAP-001, LLN-GATE-001, LLN-IMPORT-001 …+6 |
 | logicn-engineering-goals.md | Layer 0 | 1.0 | — | LLN-CAP-003, LLN-RESOURCE-001 |
 | logicn-governed-tower-specification.md | Layer 0 | 1.0 | Authoritative architecture specification — supersedes individual component documents | LLN-INV-000, LLN-INV-001, LLN-INV-004 |
@@ -217,11 +217,13 @@ Generated: 2026-06-05
 | logicn-governed-apu-memory.md | — | — | Phase 14 — Future architecture | — |
 | logicn-governed-design-synthesis.md | — | 1.0 | Knowledge base reference — findings to inform future design. Do not divert current implementation work; add new items as tasks. | — |
 | logicn-governed-identity.md | — | — | - Phase 17+ — Design Proposal | — |
+| logicn-governed-inference-tower.md | — | 1.0 | Architecture specification — implementation roadmap active | — |
 | logicn-governed-memory-blocks.md | — | — | — | LLN-GOV-003 |
 | logicn-governed-request-execution.md | — | — | — | LLN-CONTEXT-001, LLN-GOV-003 |
 | logicn-governed-resource-contracts.md | — | — | — | LLN-EFFECT-001, LLN-GOV-003, LLN-GOV-012, LLN-VALUESTATE-003 |
 | logicn-governed-runtime-research-2026-06-03.md | — | — | — | LLN-SECRET-001 |
 | logicn-gradual-capability-inference.md | — | — | — | — |
+| logicn-hardened-border.md | — | — | Stage A implemented (schema validation, blacklist, border-check CLI) | LLN-BORDER-001, LLN-BORDER-002, LLN-BORDER-003, LLN-BORDER-004, LLN-BORDER-005 |
 | logicn-hardware-amd.md | — | — | — | — |
 | logicn-hardware-apple.md | — | — | — | — |
 | logicn-hardware-arm.md | — | — | — | — |
@@ -306,7 +308,7 @@ Generated: 2026-06-05
 | logicn-runtime-interpreter-roadmap.md | — | — | — | LLN-SEC-020, LLN-SEC-021, LLN-TYPE-021 |
 | logicn-runtime-lifecycle.md | — | — | — | — |
 | logicn-runtime-rationale.md | — | — | — | — |
-| logicn-runtime-status-SOT.md | — | — | — | LLN-EFFECT-001, LLN-EFFECT-004, LLN-GOV-002, LLN-LEX-001, LLN-TYPE-001 …+2 |
+| logicn-runtime-status-SOT.md | — | — | — | LLN-MATCH-001 |
 | logicn-runtime-value-model.md | — | — | — | — |
 | logicn-security-anti-abuse.md | — | — | ✅ Phase R4 — `process.spawn`, `worker.spawn`, and `event.schedule` added to | LLN-EFFECT-001, LLN-NET-001, LLN-NET-002, LLN-PKG-005, LLN-RUNTIME-006 …+2 |
 | logicn-security-compile-time-crypto.md | — | — | — | LLN-CRYPTO-001, LLN-CRYPTO-002, LLN-CRYPTO-003, LLN-CRYPTO-004, LLN-CRYPTO-005 …+3 |

@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-06-05T19:58:47.059Z",
+  "generatedAt": "2026-06-06T06:51:38.702Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -30329,6 +30329,20 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/Knowledge-Bases/logicn-benchmark-situation-prompt.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-build-roadmap.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-build-roadmap.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-build-roadmap.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-build-roadmap.md"
     },
     {
       "from": "doc:docs/Knowledge-Bases/logicn-build-roadmap.md",

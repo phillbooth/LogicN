@@ -98,6 +98,40 @@ export class AuditLogger {
     return events;
   }
 
+  /**
+   * Log a TPL (Ternary Photonic Logic) state transition.
+   *
+   * Every virtual photonic gate trigger is captured here with its correlation ID,
+   * so the reasoning for each ternary state change is immutable and queryable.
+   * Audit is recorded at the vector/operation level (not per-bit) to avoid
+   * overwhelming the ledger — see TPL Standard v1.0 §3.
+   */
+  logTransition(t: {
+    correlationId: string;
+    artifactHash?: string;
+    engineId?: string;
+    fromState: number;   // -1 | 0 | 1
+    toState: number;     // -1 | 0 | 1
+    operation: string;   // "TMAC" | "GATE_COMMIT" | "GATE_HOLD" | ...
+    authorized?: boolean;
+  }): TowerAuditEvent {
+    return this.append({
+      phase: "EXEC",
+      correlationId: t.correlationId,
+      artifactHash: t.artifactHash ?? "sha256:tpl-vpp",
+      engineId: t.engineId ?? "logicn-tpl-vpp",
+      severity: "INFO",
+      category: "AUDIT_TRAIL",
+      details: {
+        action: "tpl_transition",
+        fromState: t.fromState,
+        toState: t.toState,
+        operation: t.operation,
+      },
+      governancePass: t.authorized ?? true,
+    });
+  }
+
   /** Return the LOAD→EXEC→ERASE lifecycle for a correlationId */
   getLifecycle(correlationId: string): { complete: boolean; phases: TowerAuditEvent["phase"][]; violations: string[] } {
     const events = this.query({ correlationId });

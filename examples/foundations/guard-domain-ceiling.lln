@@ -1,34 +1,60 @@
 /*
  * Example: Guard domain ceilings and Differential Proof
- * Shows how guard {} defines a permission ceiling that contracts must satisfy.
+ *
+ * WHAT THIS TEACHES
+ *   guard {}              A domain ceiling — the MAXIMUM set of permissions any
+ *                         contract beneath it may request. Think of it as the
+ *                         outer wall: a contract can ask for less, never more.
+ *   parent_policy:        Hierarchical inheritance. A child guard's permitted_effects
+ *                         MUST be a subset of its parent (child ⊆ parent), so you can
+ *                         carve narrower ceilings without ever widening one.
+ *   [conforms_to: G]      Differential Proof. At COMPILE TIME the verifier proves
+ *                         the contract's effects ⊆ guard G's permitted_effects. If a
+ *                         flow requests an effect the ceiling does not grant, the build
+ *                         fails — privilege escalation is impossible by construction.
+ *
+ * The guard is the "what is the most this service may ever do" boundary; the
+ * contract is the "what does THIS flow actually do" declaration. The compiler
+ * checks the second never exceeds the first.
  */
 
-;; Project-level domain ceiling — defines the maximum permissions for this service
+;; Project-level domain ceiling — the maximum permissions for the whole service.
+;; Nothing under this guard may use an effect not listed here.
 guard PaymentServiceGuard {
+  ;; permitted_effects — the allow-list of capabilities. Each entry is a door the
+  ;; ceiling opens; absence of a door (e.g. shell.exec) means it is permanently shut.
   permitted_effects {
-    database.write
-    database.read
-    audit.write
-    network.outbound
+    database.write       ;; may mutate the database
+    database.read        ;; may read the database
+    audit.write          ;; may emit AuditEvents (always advisable for governed work)
+    network.outbound     ;; may make outbound network calls
   }
+  ;; enforced_limits — resource ceilings the runtime clamps to. Even a conforming
+  ;; flow cannot exceed these; they bound the blast radius of any single execution.
   enforced_limits {
-    max_memory_ceiling: 16MB
-    max_compute_budget: 1000
+    max_memory_ceiling: 16MB     ;; hard memory cap for flows under this guard
+    max_compute_budget: 1000     ;; compute-unit budget (CostGraph enforced)
   }
 }
 
-;; Narrower child guard — only a subset of the parent's effects
+;; Narrower CHILD guard — inherits from the parent and then restricts further.
+;; Because child ⊆ parent is enforced, InvoiceReadGuard can only ever be a
+;; read-only slice of PaymentServiceGuard. It cannot re-introduce database.write.
 guard InvoiceReadGuard {
-  parent_policy: PaymentServiceGuard
+  parent_policy: PaymentServiceGuard   ;; inherit the parent ceiling, then narrow it
   permitted_effects {
-    database.read
+    database.read                      ;; read-only — a strict subset of the parent
   }
 }
 
-;; Flow that conforms to the ceiling — compiler validates effects ⊆ guard
+;; Flow that conforms to the full ceiling.
+;; [conforms_to: PaymentServiceGuard] triggers the Differential Proof:
+;; the verifier proves { database.write, audit.write } ⊆ PaymentServiceGuard.
 secure flow processPayment(amount: Int) -> Result<Bool, Error>
 contract [conforms_to: PaymentServiceGuard] {
   intent "Process a payment within the payment service ceiling"
+  ;; effects requested here are a SUBSET of the guard's permitted_effects.
+  ;; Adding e.g. shell.exec would fail the conformance proof at compile time.
   effects { database.write, audit.write }
   invariant {
     ensure amount > 0
@@ -41,7 +67,9 @@ contract [conforms_to: PaymentServiceGuard] {
   return Ok(true)
 }
 
-;; Flow that conforms to narrower child guard
+;; Flow that conforms to the NARROWER child guard.
+;; It may only read — requesting database.write here would fail conformance
+;; against InvoiceReadGuard even though the grandparent permits writes.
 secure flow getInvoiceTotal(invoiceId: String) -> Int
 contract [conforms_to: InvoiceReadGuard] {
   intent "Read invoice total — read-only, no mutations"

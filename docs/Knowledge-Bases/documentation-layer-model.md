@@ -27,8 +27,8 @@ docs/examples/example-*.md
 ```
 
 The prefix is part of the indexing strategy. It keeps files sortable and avoids
-near-duplicate names such as `model-contracts.md`, `contract-model.md` and
-`framework_model_contract.md`.
+near-duplicate names such as **model-contracts**, **contract-model** and
+**framework_model_contract**.
 
 ## Framework Docs
 

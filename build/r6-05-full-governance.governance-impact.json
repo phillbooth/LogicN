@@ -2,7 +2,7 @@
   "schemaVersion": "lln.governance-impact.v1",
   "sourceFile": "tests/r6-corpus/r6-05-full-governance.lln",
   "sourceHash": "sha256:0ed8ecea8d563550be2146f3ff1db7b019d4c851f97d7aa9d7ef912a99b01475",
-  "generatedAt": "2026-06-05T19:59:03.165Z",
+  "generatedAt": "2026-06-06T06:51:54.567Z",
   "flowCount": 1,
   "flows": [
     {

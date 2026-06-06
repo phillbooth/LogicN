@@ -227,7 +227,7 @@ Generate `logicn.ai.json` containing flows, contracts, types, effects, capabilit
 Massively reduces AI token usage.
 
 **Status:** `buildAiGraph()` returns `LogicNAiGraph` with flows, governance, diagnostics.
-`AI_SUMMARY.md` per KB level, `docs/AI/` primers, `docs/patterns/` library.
+**AI_SUMMARY** files per KB level, `docs/AI/` primers, `docs/patterns/` library.
 See `logicn-ai-semantic-graph-output.md`.
 
 ---

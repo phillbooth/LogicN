@@ -65,6 +65,7 @@
 | `logicn-cbor-manifest-spec.md` | CBOR anatomy (RFC 8949), 9 custom tags 400-408, 5 security controls (depth/duplicates/overflow/canon/type) |
 | `logicn-governance-cicd-pipeline.md` | CI/CD governance architecture — change-class gates, manifest signing, future tech (FHE/AI agents/PQS/ZKP) |
 | `logicn-resilience-observability-design.md` | resilience {} + observability {} approved design — circuit_breaker, DPM integration, LLN-RES-001/LLN-OBS-001 |
+| `logicn-hardened-border.md` | Plugin DMZ "Toxic Border" spec — 5-stage load/execute/erase cycle, LLN-BORDER-001–005 SECURITY_ALERTs, blacklist protocol, `logicn border-check` CLI |
 
 ### Research & Engineering Goals
 
@@ -231,4 +232,4 @@ When an AI tool is generating LogicN code for this project:
 | Can I write `step` / `invariant` today? | `logicn-architecture-patterns.md` (Feature Profile Reference) |
 | How do `secrets {}` and `epilogue {}` work? | `logicn-design-secrets-epilogue-blocks.md` |
 | How is `economics {}` auto-inferred? | `logicn-contract-economics.md` |
-| What did the governed runtime research find? | `governed-runtime-research-2026-06-03.md` |
+| What did the governed runtime research find? | `logicn-governed-runtime-research-2026-06-03.md` |

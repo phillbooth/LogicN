@@ -36,14 +36,22 @@
       "benchmark":      "cd packages-logicn/logicn-devtools-benchmarks && npm run run",
       "benchmark-quick":"cd packages-logicn/logicn-devtools-benchmarks && npm run run:quick",
       "graph":          "node packages-logicn/logicn-core-cli/dist/index.js graph --out build/graph",
+      "package-graph":  "node packages-logicn/logicn-devtools-package-graph/dist/cli.js --scope <package-path>",
+      "package-graph-check": "node packages-logicn/logicn-devtools-package-graph/dist/cli.js --scope <package-path> --check",
       "tower-citizen":  "node packages-logicn/logicn-tower-citizen/dist/index.js",
-      "bridge-bitnet":  "node packages-logicn/logicn-ext-bridge-bitnet/dist/index.js"
+      "bridge-bitnet":  "node packages-logicn/logicn-ext-bridge-bitnet/dist/index.js",
+      "bridge-cpp":     "node packages-logicn/logicn-ext-bridge-cpp/dist/index.js"
     },
     "devtools-added-2026-06-03": [
       "logicn-devtools-naming       — LLN-NAMING-001..005 naming standard enforcement (abbreviations, missing intent, generic types)",
       "logicn-devtools-context      — Context Receipt generator: 51-97% token reduction for AI code windows",
       "logicn-devtools-intelligence — BM25 hybrid code search: indexes .lln files, queries by semantic tokens + structural filters",
       "logicn-devtools-provenance   — Data lineage tracker: maps source→transform→sink with trust boundary visualization"
+    ],
+    "devtools-added-2026-06-05": [
+      "logicn-devtools-package-graph — Per-package boundary governance: internal edges, external-dependency surface, orphan detection. Writes .graph/BOUNDARY.md inside each scanned package. `--check` = Hardened Border CI gate (fails on new external deps). Run: package-graph --scope <pkg>",
+      "logicn-ext-bridge-cpp        — First real implements InferenceBridge: BitNet ternary CPU/GPU bridges (MIT). Real hardware detection (AVX2/NEON kernel family + NVIDIA GPU via nvidia-smi). Native N-API addon is a documented seam; TPLSimulator is the deterministic fallback.",
+      "logicn-tower-citizen         — Unified Hybrid Inference Engine (Brain): TPL ternary VPP (BitNet-faithful I2_S), precision router (BitNet/NVFP4/Groq), InferenceBridge contract, governed Load/Execute/Erase lifecycle."
     ]
   }
 }

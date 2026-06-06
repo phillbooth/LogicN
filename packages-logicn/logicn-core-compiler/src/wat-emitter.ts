@@ -245,35 +245,57 @@ export const DEFAULT_WAT_MEMORY: WATMemory = {
  * Phase 22: full instruction emission from PassiveExecutionPlan steps.
  */
 export function renderWAT(module: WATModule): string {
+  // ── Usage scan ──────────────────────────────────────────────────────────────
+  // Only emit host imports / the listLiteral global that are ACTUALLY referenced
+  // by some function body. Pure integer flows (e.g. recursive arithmetic) use
+  // none of them — emitting unused imports forced the minimal JS assembler to
+  // mis-resolve local indices, breaking integer recursion. Conditional emission
+  // restores the clean module shape for simple flows while preserving the host
+  // bridge for string/array/char flows (the self-hosted compiler).
+  const allBodyText = module.functions.map((fn) => fn.body ?? "").join("\n");
+  const usesTmpArr = allBodyText.includes("$__lln_tmp_arr");
+
   const lines: string[] = ["(module"];
 
-  // Memory declaration — "(memory <min> <max>)" is valid WAT.
-  // Named memory ($lln_mem) requires WASM multi-memory proposal; use unnamed form
-  // for broadest wat2wasm compatibility.
-  const maxStr = module.memory.maxPages !== null ? ` ${module.memory.maxPages}` : "";
-  lines.push(`  (memory ${module.memory.minPages}${maxStr})`);
-  lines.push(`  (export "memory" (memory 0))`);
-  lines.push("");
-
-  // Imports — valid WAT import syntax:
+  // ── Imports FIRST ─────────────────────────────────────────────────────────
+  // WASM spec (and strict wat2wasm) require ALL imports to appear before any
+  // non-import definition (memory, global, func). Emitting memory before the
+  // imports produces: "imports must occur before all non-import definitions".
+  // Valid WAT import syntax:
   //   (import "module" "name" (func $id (param ...) (result ...)))
   // "." in WAT identifiers is illegal; replace with "_".
+  // Only emit imports whose host-id appears in a function body (usage-gated).
+  let emittedImports = 0;
   for (const imp of module.imports) {
     const id = `$host_${imp.name.replace(/\./g, "_")}`;
+    // Usage-gate ONLY the stdlib runtime bridge (names start with "__": __array_*,
+    // __str_*, __char_*, __option_*, __unwrap_or). Effect-derived imports
+    // (host:db.read, host:audit.write, etc.) are always emitted — they document
+    // the flow's declared effects even when the body is an `unreachable` stub.
+    const isRuntimeBridge = imp.name.startsWith("__");
+    if (isRuntimeBridge && !allBodyText.includes(id)) continue; // unused bridge — skip
     const paramStr = imp.type.params.map((p, i) => `(param $p${i} ${p})`).join(" ");
     const resultStr = imp.type.results.map((r) => `(result ${r})`).join(" ");
     const sig = [paramStr, resultStr].filter(Boolean).join(" ");
     const funcBody = sig ? `(func ${id} ${sig})` : `(func ${id})`;
     lines.push(`  ;; effect: ${imp.effect}`);
     lines.push(`  (import "${imp.module}" "${imp.name}" ${funcBody})`);
+    emittedImports++;
   }
-  if (module.imports.length > 0) lines.push("");
+  if (emittedImports > 0) lines.push("");
 
-  // P9.3 global: mutable i32 for temporary array ID during listLiteral emission.
-  // Used by $__lln_tmp_arr pattern: create → set-global → append items → get-global.
-  lines.push(`  ;; P9.3: temporary array ID register for listLiteral WAT emission`);
-  lines.push(`  (global $__lln_tmp_arr (mut i32) (i32.const 0))`);
-  lines.push(``);
+  // Memory — after imports, before functions.
+  const maxStr = module.memory.maxPages !== null ? ` ${module.memory.maxPages}` : "";
+  lines.push(`  (memory ${module.memory.minPages}${maxStr})`);
+  lines.push(`  (export "memory" (memory 0))`);
+  lines.push("");
+
+  // listLiteral global: only emitted when a body references it.
+  if (usesTmpArr) {
+    lines.push(`  ;; P9.3: temporary array ID register for listLiteral WAT emission`);
+    lines.push(`  (global $__lln_tmp_arr (mut i32) (i32.const 0))`);
+    lines.push(``);
+  }
 
   // Function definitions.
   // Pure flows with a real body (fn.body !== "unreachable") emit actual instructions.
@@ -389,6 +411,61 @@ const BINARY_OP_TO_WAT: ReadonlyMap<string, string> = new Map([
   [">>", "i32.shr_s"],
 ]);
 
+// ---------------------------------------------------------------------------
+// P9.3 — Stdlib method → host import bridge
+//
+// The self-hosted lexer (lexer.lln) calls stdlib methods like `s.charAt(i)`,
+// `arr.append(x)`, `c.isLetter()`, `opt.unwrapOr(d)`. These parse as method-style
+// callExpr nodes (value = method name, callStyle = "method", children = [receiver, ...args]).
+//
+// At the WASM boundary every value is an opaque i32 handle (see logicNTypeToWAT),
+// so each stdlib method maps to a host import with signature (param i32…)(result i32).
+// We emit `(call $host___<name> <receiver> <args…>)`; the host (logicn.mjs
+// hostRuntime) supplies the real implementation. renderWAT usage-gates the host
+// imports on whether `$host___<name>` appears in a body, so emitting the call
+// string is sufficient to pull in the matching import.
+//
+// Only the EXACT method names below are intercepted. Everything else (flow→flow
+// calls like scanWord(...), record constructors) falls through unchanged.
+// ---------------------------------------------------------------------------
+
+/**
+ * Stdlib method name → host import id (the `$host___…` WAT identifier).
+ *
+ * Receiver-passing rule: the receiver is emitted as the FIRST argument followed
+ * by the call's own arguments — `s.charAt(i)` → `(call $host___str_char_at s i)`,
+ * `n.toString()` → `(call $host___int_to_str n)`.
+ *
+ * P9.3 ambiguities (resolved pragmatically; do not block wat2wasm assembly):
+ *   - `length`: String.length vs Array.length — both host funcs share the
+ *     (param i32)(result i32) signature; default to str_length. (Array.length → P9.4)
+ *   - `toString`: Int.toString vs Char.toString — same signature; default to
+ *     int_to_str. Char/Int discrimination needs type info → P9.4.
+ *   - `Array.empty()` is handled specially in emitWATExpr (zero-arg host call).
+ */
+const STDLIB_HOST_MAP: Record<string, string> = {
+  charAt:   "$host___str_char_at",
+  length:   "$host___str_length",   // String.length / Array.length (shared sig)
+  toInt:    "$host___str_to_int",
+  toStr:    "$host___int_to_str",
+  toString: "$host___int_to_str",   // Int.toString (Char.toString → P9.4)
+  concat:   "$host___str_concat",
+  isLetter: "$host___char_is_letter",
+  isDigit:  "$host___char_is_digit",
+  append:   "$host___array_append",
+  get:      "$host___array_get",
+  contains: "$host___array_contains",
+  first:    "$host___array_first",
+  last:     "$host___array_last",
+  unwrapOr: "$host___unwrap_or",
+};
+
+/** Plain (non-method) stdlib calls — constructors mapped to host imports. */
+const STDLIB_HOST_CALL_MAP: Record<string, string> = {
+  Some: "$host___option_some",
+  // None is an identifier (no call); resolves via the host_none import at link time.
+};
+
 /**
  * Emits a single WAT s-expression for an AST expression node.
  *
@@ -463,26 +540,72 @@ export function emitWATExpr(
       // Record literals are parsed as callExpr with value "#record" or "#record-update".
       // These require heap allocation (P9.3 — pending).
       if (name === "#record" || name === "#record-update") {
-        const fieldCount = node.children?.length ?? 0;
-        return `(i32.const 0) ;; record-literal: ${fieldCount} fields (heap allocation pending P9.3)`;
+        // No trailing ;; comment — a line comment would swallow the closing paren
+        // of any enclosing S-expression when this is used as an inline argument.
+        return `(i32.const 0)`;
       }
+      const children = node.children ?? [];
+
+      // ── P9.3: stdlib method calls → host import bridge ──────────────────────
+      // Method-style calls (s.charAt(i), c.isLetter(), arr.append(x), …) parse as
+      // callExpr with callStyle "method" and children = [receiver, ...args].
+      if (node.callStyle === "method") {
+        const receiverNode = children[0];
+        const argNodes = children.slice(1);
+
+        // Special case: Array.empty() — receiver is the `Array` type, host func
+        // takes zero params, so drop the receiver and pass no arguments.
+        const receiverIsArrayType =
+          receiverNode?.kind === "identifier" && receiverNode.value === "Array";
+        if (name === "empty" && receiverIsArrayType) {
+          return `(call $host___array_create)`;
+        }
+
+        const hostFn = STDLIB_HOST_MAP[name];
+        if (hostFn !== undefined) {
+          // Static-form stdlib calls — e.g. String.charAt(s, i) — name the type
+          // as the receiver. In that case the real receiver is the first ARG, so
+          // we must NOT also emit the type identifier. Detect a capitalised type
+          // receiver (String / Int / Char / Array) and drop it.
+          const recvName = receiverNode?.kind === "identifier" ? (receiverNode.value ?? "") : "";
+          const isTypeReceiver =
+            recvName === "String" || recvName === "Int" || recvName === "Char" || recvName === "Array";
+          const operandNodes = isTypeReceiver ? argNodes : children;
+          const operandWats = operandNodes.map((c) => emitWATExpr(c, vars, staticConsts));
+          return `(call ${hostFn} ${operandWats.join(" ")})`.trimEnd();
+        }
+        // Unknown method — fall through to a plain $method call (legacy behaviour).
+        const args = children.map((c) => emitWATExpr(c, vars, staticConsts));
+        return `(call $${name} ${args.join(" ")})`.trimEnd();
+      }
+
+      // ── P9.3: plain stdlib constructor calls (Some(x)) ──────────────────────
+      const hostCallFn = STDLIB_HOST_CALL_MAP[name];
+      if (hostCallFn !== undefined) {
+        const args = children.map((c) => emitWATExpr(c, vars, staticConsts));
+        return `(call ${hostCallFn} ${args.join(" ")})`.trimEnd();
+      }
+
       // Flow-to-flow calls within pure flows.
-      const args = (node.children ?? []).map((c) => emitWATExpr(c, vars, staticConsts));
+      const args = children.map((c) => emitWATExpr(c, vars, staticConsts));
       return `(call $${name} ${args.join(" ")})`.trimEnd();
     }
 
     case "boolLiteral": {
-      // Boolean: true = 1, false = 0 (standard WASM i32 convention)
+      // Boolean: true = 1, false = 0 (standard WASM i32 convention).
+      // No trailing ;; line comment — it would swallow the closing paren of any
+      // enclosing S-expression when this bool is used as an inline argument.
       const val = node.value === "true" || node.value === "1" ? 1 : 0;
-      return `(i32.const ${val}) ;; bool: ${node.value}`;
+      return `(i32.const ${val})`;
     }
 
     case "stringLiteral": {
       // String: intern the value and return its i32 ID (opaque handle).
-      // The host registers the string table at WASM load time.
+      // The host registers the string table at WASM load time (reconstructed from
+      // the ;; ID = "value" table emitted once at module end — NOT inline).
+      // No trailing inline comment: it would break enclosing (call ...) args.
       const id = internString(node.value ?? "");
-      const preview = (node.value ?? "").slice(0, 20);
-      return `(i32.const ${id}) ;; string: ${preview}`;
+      return `(i32.const ${id})`;
     }
 
     case "listLiteral": {
@@ -495,7 +618,7 @@ export function emitWATExpr(
       // we emit a call sequence using nested blocks with drops.
       const items = node.children ?? [];
       if (items.length === 0) {
-        return `(call $host___array_create) ;; empty list []`;
+        return `(call $host___array_create)`;
       }
       // For non-empty lists, we need a temporary. Emit as a sequence:
       // The WAT block approach: use the host's array create + appends.
@@ -1429,12 +1552,10 @@ export function buildWATModule(
     { module: "host", name: "__option_some",    effect: "stdlib.result", type: { params: ["i32"],          results: ["i32"] } },
     { module: "host", name: "__option_none",    effect: "stdlib.result", type: { params: [],               results: ["i32"] } },
   ];
-  // Merge — avoid duplicates
-  for (const hi of HOST_RUNTIME_IMPORTS) {
-    if (!imports.some(imp => imp.module === hi.module && imp.name === hi.name)) {
-      imports.push(hi);
-    }
-  }
+  // NOTE: HOST_RUNTIME_IMPORTS are merged AFTER function bodies are built (below),
+  // and only the bridge functions actually referenced by a body are added. Pure
+  // integer flows reference none, so their module stays import-free — required for
+  // the minimal JS assembler to resolve local indices correctly.
 
   // Build function definitions.
   // Pure flows (qualifier === "pure", no declaredEffects) get real WAT bodies via emitWATBody.
@@ -1545,6 +1666,18 @@ export function buildWATModule(
       return idx !== undefined ? { name, index: idx } : null;
     })
     .filter((e): e is WATExport => e !== null);
+
+  // Usage-gated merge of the stdlib runtime bridge (__array_*, __str_*, __char_*,
+  // __option_*, __unwrap_or). Only add a bridge import if some function body
+  // textually references its host id. This keeps pure integer modules import-free.
+  const allBodyTextForBridge = functions.map((f) => f.body ?? "").join("\n");
+  for (const hi of HOST_RUNTIME_IMPORTS) {
+    const hostId = `$host_${hi.name.replace(/\./g, "_")}`;
+    if (!allBodyTextForBridge.includes(hostId)) continue;
+    if (!imports.some(imp => imp.module === hi.module && imp.name === hi.name)) {
+      imports.push(hi);
+    }
+  }
 
   return {
     schemaVersion: "lln.wat.v1",

@@ -232,7 +232,7 @@ policy-human-summary.md
 | `policy-effective.json` | final merged enforcement per route, flow, response, package or data target |
 | `policy-conflicts.json` | conflicts and deny-wins decisions |
 | `policy-ai-summary.json` | AI-readable security posture summary |
-| `policy-human-summary.md` | human/auditor summary |
+| **policy-human-summary** | human/auditor summary |
 
 ## Efficiency Rule
 

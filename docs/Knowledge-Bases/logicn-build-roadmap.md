@@ -66,6 +66,21 @@
 | **#90** | `policy {}` State Mutation Governance — permitted transitions on `mut` variables | Phase 5 |
 | **#91** | Migrate `vdpm.lln` from verbose VDPM_BIT_* flows to `bitfield V_DPM { }` | After #87 ✅ |
 
+### Phase 9B — Self-Hosting → WASM (in progress)
+The self-hosted compiler sources in `packages-logicn/logicn-core-compiler/src/self-hosted/`
+(`lexer.lln`, `parser.lln`, `type-checker.lln`, `governance-verifier.lln`, …) now
+compile through the Stage-A toolchain. Progress on assembling them to WASM:
+
+| Sub-phase | What | Status |
+|---|---|---|
+| **P9.2** | `externref` lowering fix — host-handle values cross the WASM boundary | ✅ Done — `lexer.lln` now `logicn build`s to `build/lexer.wasm` |
+| **P9.3** | Stdlib host mapping — self-hosted sources resolve stdlib calls to host imports | ✅ Done — lexer + parser link against the host stdlib |
+| **P9.4** | Guarded flow bodies + record types fully lowered to WASM | ⬜ Remaining — `parser.wasm` builds but record/guarded-body lowering is still partial |
+
+**Verify:** `node logicn.mjs build packages-logicn/logicn-core-compiler/src/self-hosted/lexer.lln`
+emits `build/lexer.wasm`; the parser builds too, pending P9.4 for full body lowering.
+See `logicn-phase-9-roadmap.md` (Phase 9B, Stage B1–B5) for the self-hosting plan.
+
 ---
 
 ## ⬜ DRCM Phases 5–7 (Future)

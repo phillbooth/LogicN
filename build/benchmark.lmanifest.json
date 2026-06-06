@@ -1,13 +1,13 @@
 {
   "schemaVersion": "lln.manifest.v1",
   "sourceHash": "sha256:632723a852348a5d02c3f1709a5b8d4dcc0b30492f4b6497f4a2c7b1ca707d90",
-  "sourceFile": "packages-logicn/logicn-devtools-benchmarks/benchmarks/governance-cost/benchmark.lln",
+  "sourceFile": "C:/wwwprojects/LogicN/packages-logicn/logicn-devtools-benchmarks/benchmarks/governance-cost/benchmark.lln",
   "flowCount": 3,
   "policyResolutionDag": {
     "allowedEffects": 0,
     "deniedEffects": 0,
     "conflictsResolved": 0,
-    "resolvedAt": "2026-06-05T20:13:01.099Z"
+    "resolvedAt": "2026-06-06T07:01:18.807Z"
   },
   "behavioralFingerprint": "sha256:c1b5f8c20705e0b901a50dd6eab754721f657e3aa83aab0cfa79c8f23220625e",
   "derivedConstraints": [
@@ -35,11 +35,11 @@
       "verified": "static"
     }
   ],
-  "generatedAt": "2026-06-05T20:13:01.099Z",
+  "generatedAt": "2026-06-06T07:01:18.807Z",
   "governanceSignature": {
     "algorithm": "Ed25519+ML-DSA-65",
-    "ed25519": "placeholder:sha256:ea9947114c1e47c767a0add4c0640f4f6651d8536f98559f38d9b3f0659e571e",
-    "mlDsa65": "placeholder:sha256:ea9947114c1e47c767a0add4c0640f4f6651d8536f98559f38d9b3f0659e571e",
+    "ed25519": "placeholder:sha256:51b107fd9c8a58987b3608e8165176f93657c5507a533fd30d1dd9d90959c8cb",
+    "mlDsa65": "placeholder:sha256:51b107fd9c8a58987b3608e8165176f93657c5507a533fd30d1dd9d90959c8cb",
     "signerNote": "Placeholder signatures — real ML-DSA-65 signing requires key custody spec (DRCM task #34). The canonical JSON body hash above is stable and verifiable today."
   }
 }

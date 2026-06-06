@@ -187,4 +187,4 @@ when it wasn't. The mathematics ensure this even if quantum computers exist.
 - `logicn-governance-hierarchy.md` — the full governance stack
 - `proof-graph.ts` — current ProofGraph implementation
 - `logicn-roadmap-phase26-41.md` — Phase 39 implementation phase
-- `auth-token-verification-boundaries.md` — post-quantum token policy
+- **auth-token-verification-boundaries** — post-quantum token policy
