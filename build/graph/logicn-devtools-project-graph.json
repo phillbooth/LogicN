@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-06-06T18:01:57.921Z",
+  "generatedAt": "2026-06-06T21:36:35.208Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -4125,6 +4125,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-benchmark-enforcement-cost-spec.md",
+      "kind": "Document",
+      "label": "logicn-benchmark-enforcement-cost-spec.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-benchmark-enforcement-cost-spec.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-benchmark-situation-prompt.md",
       "kind": "Document",
       "label": "logicn-benchmark-situation-prompt.md",
@@ -4831,6 +4840,15 @@
       "kind": "Document",
       "label": "logicn-diagnostic-numbering-strategy.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-diagnostic-numbering-strategy.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-diagnostics-spec.md",
+      "kind": "Document",
+      "label": "logicn-diagnostics-spec.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-diagnostics-spec.md",
       "tags": [
         "document"
       ]
@@ -5817,6 +5835,15 @@
       ]
     },
     {
+      "id": "doc:docs/Knowledge-Bases/logicn-residual-risks.md",
+      "kind": "Document",
+      "label": "logicn-residual-risks.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-residual-risks.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
       "id": "doc:docs/Knowledge-Bases/logicn-resilience-observability-design.md",
       "kind": "Document",
       "label": "logicn-resilience-observability-design.md",
@@ -6154,6 +6181,15 @@
       "kind": "Document",
       "label": "logicn-taint-catalogue.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-taint-catalogue.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-task-ledger.md",
+      "kind": "Document",
+      "label": "logicn-task-ledger.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-task-ledger.md",
       "tags": [
         "document"
       ]
@@ -32989,6 +33025,34 @@
       "evidencePath": "docs/Knowledge-Bases/logicn-r6-bootstrap-corpus.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/logicn-residual-risks.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-residual-risks.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-residual-risks.md",
+      "to": "package:logicn-framework-app-kernel",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-residual-risks.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-residual-risks.md",
+      "to": "package:logicn-framework-api-server",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-residual-risks.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-residual-risks.md",
+      "to": "package:logicn-framework-example-app",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-residual-risks.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/logicn-resource-governance.md",
       "to": "package:logicn-ai",
       "kind": "documents",
@@ -33015,6 +33079,13 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/Knowledge-Bases/logicn-roadmap-phase26-50.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-roadmap.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-roadmap.md"
     },
     {
       "from": "doc:docs/Knowledge-Bases/logicn-route-runtime-spec.md",
