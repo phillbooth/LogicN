@@ -9,6 +9,22 @@ Node.js.
 
 ---
 
+> **⚠️ STATUS CORRECTION (2026-06-06).** Much of *this package* README describes an early
+> "prototype (v0.1-beta), Phase 4 next" framing that is **out of date**. `logicn-core` is the
+> **language-specification / foundation** package; the **active production compiler** is
+> [`logicn-core-compiler`](../logicn-core-compiler) (full lexer → parser → type/effect/governance
+> pipeline, **3,279 tests**). Project-wide, verified by running the suites: **44/44 packages ·
+> 4,129 tests · 0 audit findings.** Stage A is production-hardened. **Stage B self-hosting (P9) is
+> *in progress*** — the self-hosted lexer module now wabt-assembles to a real WASM binary (#145a);
+> `tokenize` byte-parity is the remaining gate (#145b → #143). The "Prototype / Phase 4 next"
+> sections below predate this work and are retained for language-design reference only.
+> **Authoritative status:** [`docs/.../logicn-runtime-status-SOT.md`](../../docs/Knowledge-Bases/logicn-runtime-status-SOT.md)
+> · [`docs/.../logicn-roadmap.md`](../../docs/Knowledge-Bases/logicn-roadmap.md).
+> **Honest line:** the compiler/runtime/governance engine is production-grade; the framework/app
+> packages are templates, not implemented.
+
+---
+
 ## Governance Architecture
 
 LogicN's execution model follows a four-stage semantic pipeline:
