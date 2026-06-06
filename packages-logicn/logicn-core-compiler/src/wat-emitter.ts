@@ -255,6 +255,26 @@ let recordLayouts: ReadonlyMap<string, readonly string[]> | null = null;
  *  Populated from `let r: T = …` annotations, `let r = T{…}` literal types, and
  *  record-typed flow params. Lets `r.field` resolve to an i32.load at the slot offset. */
 let recordVarTypes: Map<string, string> | null = null;
+/** enumTypeName → ordered variant names (declaration order = i32 tag). #144: lets
+ *  `EnumType.Variant` lower to its stable i32 tag instead of an `(i32.const 0)`
+ *  placeholder. The tag is an internal convention; the host runtime (#145) maps the
+ *  i32 back to the variant name for byte-parity comparison. null → placeholder. */
+let enumVariants: ReadonlyMap<string, readonly string[]> | null = null;
+
+/** Build the enumTypeName → variant-name-list registry from a program AST's `enum` decls. */
+export function buildEnumVariants(ast: AstNode | undefined): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const node of ast?.children ?? []) {
+    if (node.kind === "enumDecl" && node.value) {
+      const variants = (node.children ?? [])
+        .filter((c) => c.kind === "enumVariant")
+        .map((c) => c.value ?? "")
+        .filter((n) => n.length > 0);
+      out.set(node.value, variants);
+    }
+  }
+  return out;
+}
 
 /** Build the typeName → field-name-list registry from a program AST's `record` decls. */
 export function buildRecordLayouts(ast: AstNode | undefined): Map<string, string[]> {
@@ -511,6 +531,7 @@ const BINARY_OP_TO_WAT: ReadonlyMap<string, string> = new Map([
  */
 const STDLIB_HOST_MAP: Record<string, string> = {
   charAt:   "$host___str_char_at",
+  charCount: "$host___str_count",   // String.charCount() → length (#145 lexer link)
   length:   "$host___str_length",   // String.length / Array.length (shared sig)
   toInt:    "$host___str_to_int",
   toStr:    "$host___int_to_str",
@@ -529,6 +550,8 @@ const STDLIB_HOST_MAP: Record<string, string> = {
 /** Plain (non-method) stdlib calls — constructors mapped to host imports. */
 const STDLIB_HOST_CALL_MAP: Record<string, string> = {
   Some: "$host___option_some",
+  Ok:   "$host___result_ok",   // Result.Ok(x)  (#145 lexer link)
+  Err:  "$host___result_err",  // Result.Err(x) (#145 lexer link)
   // None is an identifier (no call); resolves via the host_none import at link time.
 };
 
@@ -568,6 +591,17 @@ export function emitWATExpr(
         const dottedKey = `${receiverName}.${memberName}`;
         const constVal = staticConsts.get(dottedKey);
         if (constVal !== undefined) return `(i32.const ${constVal}) ;; bitfield ${dottedKey}`;
+
+        // P9.4d (#144): enum-variant access — EnumType.Variant → its declaration-order
+        // i32 tag. NO trailing ;; comment — this is used INLINE (e.g. inside i32.store),
+        // and a line comment would swallow the enclosing S-expression's closing paren.
+        if (enumVariants !== null) {
+          const variants = enumVariants.get(receiverName);
+          if (variants) {
+            const vIdx = variants.indexOf(memberName);
+            if (vIdx >= 0) return `(i32.const ${vIdx})`;
+          }
+        }
 
         // P9.4b: record field access — r.field → i32.load at the field's slot offset.
         // Resolves only when the receiver's record type and the field are known;
@@ -739,7 +773,9 @@ export function emitWATExpr(
       // using global $__lln_tmp_arr as a mutable temporary.
       const appends = items.map(item => {
         const itemWat = emitWATExpr(item, vars, staticConsts);
-        return `(call $host___array_append (global.get $__lln_tmp_arr) ${itemWat})`;
+        // #145a: __array_append now returns the array handle; here it is used as a
+        // statement (the temp array is tracked via $__lln_tmp_arr), so drop the result.
+        return `(drop (call $host___array_append (global.get $__lln_tmp_arr) ${itemWat}))`;
       }).join("\n  ");
       return [
         `(block (result i32)`,
@@ -1183,6 +1219,7 @@ export function emitWATFromFlowAST(
   paramNames: readonly string[],
   staticConsts: ReadonlyMap<string, number> = new Map(),
   layouts: ReadonlyMap<string, readonly string[]> | null = null,
+  enums: ReadonlyMap<string, readonly string[]> | null = null,
 ): string | null {
   // Build variable map: LogicN name → WAT local name.
   // Params are $p0, $p1, … — immutable (parameters are passed by value in WAT).
@@ -1191,11 +1228,13 @@ export function emitWATFromFlowAST(
     vars.set(name, `$p${i}`);
   });
 
-  // P9.4b: record layout + per-flow var-type tracking for field access.
+  // P9.4b/d: record layout + per-flow var-type tracking + enum-variant registry.
   const prevLayouts = recordLayouts;
   const prevVarTypes = recordVarTypes;
+  const prevEnums = enumVariants;
   recordLayouts = layouts;
   recordVarTypes = new Map<string, string>();
+  enumVariants = enums;
   // Seed record-typed parameters (e.g. `flow f(r: TokenizeResult)`) so `r.field`
   // resolves inside the body. Param decls carry "name: Type" in their value.
   if (layouts !== null) {
@@ -1211,7 +1250,7 @@ export function emitWATFromFlowAST(
   // Find the block body of the flow.
   const blockNode = (flowNode.children ?? []).find((c) => c.kind === "block");
   if (blockNode === undefined) {
-    recordLayouts = prevLayouts; recordVarTypes = prevVarTypes; // restore on early exit
+    recordLayouts = prevLayouts; recordVarTypes = prevVarTypes; enumVariants = prevEnums; // restore on early exit
     return null;
   }
 
@@ -1265,10 +1304,11 @@ export function emitWATFromFlowAST(
     emitBlockStatements(blockNode, vars, localDecls, bodyLines, labelCounter, false, staticConsts);
   } finally {
     recordCtx = prevRecordCtx;
-    // Restore record layout/var-type context. Safe here: the remaining tail only
+    // Restore record layout/var-type/enum context. Safe here: the remaining tail only
     // pushes precomputed post-gate lines + joins — no further emitWATExpr calls.
     recordLayouts = prevLayouts;
     recordVarTypes = prevVarTypes;
+    enumVariants = prevEnums;
   }
   if (postGates.length > 0) {
     bodyLines.push(`  ;; --- invariant post-conditions (LLN-INV-002 gate) ---`);
@@ -1681,7 +1721,7 @@ export function buildWATModule(
   const HOST_RUNTIME_IMPORTS: WATImport[] = [
     // Array manager
     { module: "host", name: "__array_create",   effect: "stdlib.array", type: { params: [],                results: ["i32"] } },
-    { module: "host", name: "__array_append",   effect: "stdlib.array", type: { params: ["i32", "i32"],   results: []      } },
+    { module: "host", name: "__array_append",   effect: "stdlib.array", type: { params: ["i32", "i32"],   results: ["i32"] } }, // returns the array handle (#145a: `arr = arr.append(x)`)
     { module: "host", name: "__array_get",      effect: "stdlib.array", type: { params: ["i32", "i32"],   results: ["i32"] } },
     { module: "host", name: "__array_length",   effect: "stdlib.array", type: { params: ["i32"],          results: ["i32"] } },
     { module: "host", name: "__array_contains", effect: "stdlib.array", type: { params: ["i32", "i32"],   results: ["i32"] } },
@@ -1690,6 +1730,10 @@ export function buildWATModule(
     // String operations
     { module: "host", name: "__str_concat",     effect: "stdlib.string", type: { params: ["i32", "i32"],  results: ["i32"] } },
     { module: "host", name: "__str_length",     effect: "stdlib.string", type: { params: ["i32"],          results: ["i32"] } },
+    { module: "host", name: "__str_count",      effect: "stdlib.string", type: { params: ["i32"],          results: ["i32"] } }, // String.charCount() (#145)
+    // Result constructors (#145 — self-hosted lexer tokenize returns Result<List<Token>>)
+    { module: "host", name: "__result_ok",      effect: "stdlib.result", type: { params: ["i32"],          results: ["i32"] } },
+    { module: "host", name: "__result_err",     effect: "stdlib.result", type: { params: ["i32"],          results: ["i32"] } },
     { module: "host", name: "__str_char_at",    effect: "stdlib.string", type: { params: ["i32", "i32"],  results: ["i32"] } },
     { module: "host", name: "__str_to_int",     effect: "stdlib.string", type: { params: ["i32"],          results: ["i32"] } },
     { module: "host", name: "__int_to_str",     effect: "stdlib.string", type: { params: ["i32"],          results: ["i32"] } },
@@ -1724,6 +1768,8 @@ export function buildWATModule(
 
   // P9.4b: record-type → field-name layout, built once for `r.field` offset lowering.
   const recordLayoutRegistry = buildRecordLayouts(gir.ast);
+  // P9.4d (#144): enum-type → variant-name list, for `EnumType.Variant` → i32 tag.
+  const enumVariantRegistry = buildEnumVariants(gir.ast);
   const functions: WATFunction[] = gir.flows.map((flow) => {
     const flowDeclaredEffects = getFlowEffects(flow);
     const isPureFlow = flow.qualifier === "pure" && flowDeclaredEffects.length === 0;
@@ -1752,7 +1798,7 @@ export function buildWATModule(
       const flowAstNode = findFlowNodeInAST(gir.ast, flow.name);
       if (flowAstNode !== undefined) {
         const paramNames = extractFlowParamNames(flowAstNode);
-        const phase25Body = emitWATFromFlowAST(flowAstNode, paramNames, staticConsts, recordLayoutRegistry);
+        const phase25Body = emitWATFromFlowAST(flowAstNode, paramNames, staticConsts, recordLayoutRegistry, enumVariantRegistry);
         if (phase25Body !== null) {
           body = phase25Body;
         } else if (flow.executionPlan !== undefined) {
@@ -1785,7 +1831,7 @@ export function buildWATModule(
       const guardedAstNode = findFlowNodeInAST(gir.ast, flow.name);
       if (guardedAstNode !== undefined) {
         const guardedParamNames = extractFlowParamNames(guardedAstNode);
-        const guardedBody = emitWATFromFlowAST(guardedAstNode, guardedParamNames, staticConsts, recordLayoutRegistry);
+        const guardedBody = emitWATFromFlowAST(guardedAstNode, guardedParamNames, staticConsts, recordLayoutRegistry, enumVariantRegistry);
         if (guardedBody !== null) {
           body = guardedBody;
         }

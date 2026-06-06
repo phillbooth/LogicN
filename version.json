@@ -1,13 +1,17 @@
 {
-  "version": "1.0.0-beta.1",
-  "stage": "Stage A",
-  "date": "2026-06-05",
-  "runtime": "LogicN Stage A — TypeScript governed interpreter",
-  "drcmPhases": "1-7 complete (Stage A simulation)",
-  "testCount": 3383,
-  "packageCount": 33,
-  "milestone": "Production-ready Stage A — Phase P8-P12 in progress",
-  "nextMilestone": "Stage B self-hosting + real DSS.wasm (P9)",
-  "openTasks": ["#102-#106 Stage B DSS.wasm", "#110 key rotation", "#116 final R6"],
-  "notes": "Stage A delivers all DRCM Phases 1-7, full Tower-native syntax, CBOR manifests, Ed25519 signing, OCI packaging, OWASP-hardened governance verification."
+  "version": "1.0.0-beta.2",
+  "stage": "Stage A (production-hardened compiler/runtime) + Stage B self-hosting in progress",
+  "date": "2026-06-06",
+  "runtime": "LogicN Stage A — TypeScript governed interpreter; Stage B (self-hosted → WASM) in progress",
+  "drcmPhases": "1-7 complete (Stage A simulation); real DSS.wasm pending (#102-#106, Post-P9)",
+  "testCount": 4129,
+  "packageCount": 44,
+  "packageCountNote": "44 test-bearing packages pass `npm test`; the workspace also contains template/placeholder packages with no src/tests (see appLayerStatus).",
+  "milestone": "P9 self-hosting bootstrap in progress",
+  "p9Status": "Flow-body WASM emission real (small modules execute via real wabt); #144 enum lowering done; #105 admission gate done. CORRECTION: the self-hosted lexer module does NOT yet wabt-assemble (undefined stdlib fns) — byte-parity gated on #145 (stdlib + string runtime).",
+  "appLayerStatus": "TEMPLATES, NOT IMPLEMENTED: logicn-framework-example-app / -api-server / -app-kernel are design/TODO surfaces, not production app frameworks. Present LogicN as a hardened compiler/runtime engine, not a finished app platform.",
+  "securityNote": "2026-06-06: a previously-committed signing private key (.env.logicn-signing, key id 8eecf4187ebc9341) was found tracked in git history (commit cb5036d). It is now untracked + git-ignored and the key was ROTATED to ab46f4c7e2797b9b. The OLD key is COMPROMISED — any signature from 8eecf4187ebc9341 must be distrusted; git history still contains it (scrub pending, see #149).",
+  "nextMilestone": "Stage B self-hosting + real DSS.wasm (P9 → Post-P9)",
+  "openTasks": ["#149 signing-key history scrub + CI secret scan", "#145 string runtime (P9 byte-parity blocker)", "#102-#106 Stage B DSS.wasm", "#110 secrets{} key rotation"],
+  "notes": "Stage A delivers all DRCM Phases 1-7, full Tower-native syntax, CBOR manifests, Ed25519+ML-DSA-65 signing, OCI packaging, OWASP-hardened governance verification. Test/package counts and Stage status are verified by running the suites (npm test); see docs/Knowledge-Bases/logicn-runtime-status-SOT.md. RECOMMENDED: auto-generate these counts from the test runner to prevent drift (#150)."
 }

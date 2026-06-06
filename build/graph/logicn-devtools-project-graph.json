@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-06-06T13:04:18.471Z",
+  "generatedAt": "2026-06-06T18:01:57.921Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -5911,6 +5911,15 @@
       "kind": "Document",
       "label": "logicn-runtime-component-structure.md",
       "sourcePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/Knowledge-Bases/logicn-runtime-governance-actors.md",
+      "kind": "Document",
+      "label": "logicn-runtime-governance-actors.md",
+      "sourcePath": "docs/Knowledge-Bases/logicn-runtime-governance-actors.md",
       "tags": [
         "document"
       ]
@@ -19048,6 +19057,126 @@
       ]
     },
     {
+      "id": "type:logicn-core-compiler:AdmissionPolicy",
+      "kind": "Type",
+      "label": "AdmissionPolicy",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:RunnerProfile",
+      "kind": "Type",
+      "label": "RunnerProfile",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:WasmAttestation",
+      "kind": "Type",
+      "label": "WasmAttestation",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:AdmissionVerdict",
+      "kind": "Type",
+      "label": "AdmissionVerdict",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:wasmHash",
+      "kind": "Flow",
+      "label": "wasmHash",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:generateRunnerKeypair",
+      "kind": "Flow",
+      "label": "generateRunnerKeypair",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:signWasm",
+      "kind": "Flow",
+      "label": "signWasm",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:verifyWasm",
+      "kind": "Flow",
+      "label": "verifyWasm",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:Observer",
+      "kind": "Type",
+      "label": "Observer",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:HostRuntime",
+      "kind": "Type",
+      "label": "HostRuntime",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:createHostRuntime",
+      "kind": "Flow",
+      "label": "createHostRuntime",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:AdmissionResult",
+      "kind": "Type",
+      "label": "AdmissionResult",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
       "id": "type:logicn-core-compiler:WATAssemblerResult",
       "kind": "Type",
       "label": "WATAssemblerResult",
@@ -19214,6 +19343,46 @@
       "sourcePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts",
       "tags": [
         "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:WAT_HEAP_BASE",
+      "kind": "Type",
+      "label": "WAT_HEAP_BASE",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "type:logicn-core-compiler:WAT_REC_FIELD_SIZE",
+      "kind": "Type",
+      "label": "WAT_REC_FIELD_SIZE",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts",
+      "tags": [
+        "type",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:buildEnumVariants",
+      "kind": "Flow",
+      "label": "buildEnumVariants",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts",
+      "tags": [
+        "function",
+        "logicn-core-compiler"
+      ]
+    },
+    {
+      "id": "flow:logicn-core-compiler:buildRecordLayouts",
+      "kind": "Flow",
+      "label": "buildRecordLayouts",
+      "sourcePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts",
+      "tags": [
+        "function",
         "logicn-core-compiler"
       ]
     },
@@ -33002,6 +33171,20 @@
       "evidencePath": "docs/Knowledge-Bases/logicn-runtime-component-structure.md"
     },
     {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-governance-actors.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-governance-actors.md"
+    },
+    {
+      "from": "doc:docs/Knowledge-Bases/logicn-runtime-governance-actors.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/Knowledge-Bases/logicn-runtime-governance-actors.md"
+    },
+    {
       "from": "doc:docs/Knowledge-Bases/logicn-runtime-in-logicn-roadmap.md",
       "to": "package:logicn-core",
       "kind": "documents",
@@ -45589,6 +45772,90 @@
     },
     {
       "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:AdmissionPolicy",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:RunnerProfile",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:WasmAttestation",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:AdmissionVerdict",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:wasmHash",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:generateRunnerKeypair",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:signWasm",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:verifyWasm",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:Observer",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:HostRuntime",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:createHostRuntime",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:AdmissionResult",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wasm-runtime.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:WATAssemblerResult",
       "kind": "provides",
       "confidence": "EXTRACTED",
@@ -45702,6 +45969,34 @@
     {
       "from": "package:logicn-core-compiler",
       "to": "type:logicn-core-compiler:DEFAULT_WAT_MEMORY",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:WAT_HEAP_BASE",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "type:logicn-core-compiler:WAT_REC_FIELD_SIZE",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:buildEnumVariants",
+      "kind": "provides",
+      "confidence": "EXTRACTED",
+      "evidencePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts"
+    },
+    {
+      "from": "package:logicn-core-compiler",
+      "to": "flow:logicn-core-compiler:buildRecordLayouts",
       "kind": "provides",
       "confidence": "EXTRACTED",
       "evidencePath": "packages-logicn/logicn-core-compiler/src/wat-emitter.ts"

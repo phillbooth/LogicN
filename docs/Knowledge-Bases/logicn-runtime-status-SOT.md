@@ -12,12 +12,12 @@ below was produced by executing something, not by carrying a figure forward.
 ## 1. Verified test counts
 
 Reproduce all at once from the repo root: **`npm test`**
-(all 44 packages). It prints `4119 tests total`, matching the table below.
+(all 44 packages). It prints `4128 tests total`, matching the table below.
 For the SOT four only: `npm run test:core` → 3383 tests total.
 
 | Package | Tests | Pass | Fail | Notes |
 |---|---|---|---|---|
-| logicn-core-compiler | 3,269 | 3,269 | 0 | **P9.4 self-hosting**: record struct layout (construct + field access), guarded-flow export gating, self-hosted lexer (incl. record-returning `tokenize`) compiles to real wabt-assembling WASM — 0 `unreachable` stubs |
+| logicn-core-compiler | 3,278 | 3,278 | 0 | **P9.4 self-hosting**: record struct layout (construct + field access), **#144 enum-variant member lowering** (`EnumType.Variant` → decl-order i32 tag; 0 placeholders in `tokenize`), guarded-flow export gating. Small flows genuinely compile + execute via **real wabt** (verified). **#145a MILESTONE (2026-06-06):** the self-hosted **lexer module now wabt-assembles to a real WASM binary** — `charCount`/`Ok`/`Err` wired to host imports + `__array_append` returns the array handle (the last linking blocker). It LINKS + produces a valid binary (no stub fallback). REMAINING for byte-parity (#145b): token-VALUE correctness needs type-aware string lowering (String `+`→`__str_concat`; `Char.toString`→`__char_to_string`) + the host output reader. Linking is DONE; string SEMANTICS are next. **#105 WASM admission gate** (`wasm-runtime.ts`): attestation-first Ed25519 verify before host linking, closed-allowlist imports, dev/prod = observability-only — `CRITICAL_SECURITY_VIOLATION` fail-closed; proven in real WASM |
 | logicn-core-economics | 15 | 15 | 0 | |
 | logicn-devtools-graph-algorithms | 95 | 95 | 0 | |
 | logicn-core-security | 14 | 14 | 0 | |
@@ -34,7 +34,7 @@ For the SOT four only: `npm run test:core` → 3383 tests total.
 | logicn-core-sentinel-egress | 20 | 20 | 0 | Governed audit egress: ring buffer + batched HMAC-chained tamper-evident flush |
 | logicn-inference-bridge-contract | 4 | 4 | 0 | Neutral Brain/Brawn contract (CF-4): InferenceBridge/BridgeOp/Result + bridge-manifest schema (CF-3) + fixed-point scale + oracle interface; zero deps |
 | *(full suite — supplementary)* | | | | |
-| **FULL PROJECT TOTAL** | **4,119** | **4,119** | **0** | 44/44 packages |
+| **FULL PROJECT TOTAL** | **4,128** | **4,128** | **0** | 44/44 packages |
 
 > Note: the previously-flagged CBOR test failures
 > (`tests/governance/cbor-secure-parser.test.mjs`) no longer appear in the full

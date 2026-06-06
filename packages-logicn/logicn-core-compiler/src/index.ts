@@ -520,6 +520,16 @@ export {
   type WASMExecutionResult,
 } from "./wat-assembler.js";
 
+// P9 (#105) — WASM execution harness as a SECURITY ADMISSION GATE
+export {
+  wasmHash, generateRunnerKeypair, signWasm, verifyWasm,
+  createHostRuntime, admitAndInstantiate,
+} from "./wasm-runtime.js";
+export type {
+  AdmissionPolicy, RunnerProfile, WasmAttestation, AdmissionVerdict,
+  Observer, HostRuntime, AdmissionResult,
+} from "./wasm-runtime.js";
+
 // Phase 19 / 22A / 22 / 27D — WAT Emitter (WebAssembly Text Format) — skeleton + SIMD types + pure bodies + SIMD ops
 export {
   emitWAT,
@@ -529,6 +539,8 @@ export {
   emitWATBody,
   emitWATFromFlowAST,
   emitWATExpr,
+  buildRecordLayouts,
+  buildEnumVariants,
   extractFlowParamNames,
   findFlowNodeInAST,
   getWATImportsForEffects,

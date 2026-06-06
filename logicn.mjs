@@ -24,7 +24,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, append
 import { join, basename, dirname } from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 import { totalmem, freemem } from "node:os";
 
 // ── Auto assimilation memory budget ──────────────────────────────────────────
@@ -150,26 +150,41 @@ Baseline comparison (governance-cost):
     const tagIdx = rest.indexOf("--tag");
     const imageTag = tagIdx >= 0 ? rest[tagIdx + 1] : "logicn-app:latest";
 
+    // SECURITY (2026-06-06): validate the user-supplied path and NEVER interpolate it
+    // into a shell string. A `.lln` path containing shell metacharacters (backticks,
+    // ;, |, $(), …) would otherwise be executed by the shell. We reject obviously
+    // hostile input and dispatch via argv-based spawnSync with shell:false.
+    if (!/^[A-Za-z0-9_./\\-]+\.lln$/.test(llnFile)) {
+      console.error(`❌ Refusing to deploy: '${llnFile}' is not a safe .lln path (alphanumerics, _ . / \\ - only, must end in .lln).`);
+      process.exit(2);
+    }
+    if (!existsSync(llnFile)) {
+      console.error(`❌ Deploy target not found: ${llnFile}`);
+      process.exit(2);
+    }
+
     console.log(`\n🏰 LogicN Deploy — ${llnFile}`);
     console.log(`   Image tag: ${imageTag}\n`);
 
+    const self = "logicn.mjs";
+    // argv arrays — NOT shell strings. spawnSync(shell:false) passes each arg verbatim,
+    // so path contents can never be interpreted as shell syntax.
     const steps = [
-      { name: "Governance check", cmd: `node logicn.mjs check ${llnFile}` },
-      { name: "Build WASM",       cmd: `node logicn.mjs build ${llnFile}` },
-      { name: "Verify manifest",  cmd: `node logicn.mjs verify ${llnFile}` },
-      { name: "Health check",     cmd: `node logicn.mjs run examples/deployment/health-check.lln --invoke getHealthStatus` },
+      { name: "Governance check", argv: [self, "check", llnFile] },
+      { name: "Build WASM",       argv: [self, "build", llnFile] },
+      { name: "Verify manifest",  argv: [self, "verify", llnFile] },
+      { name: "Health check",     argv: [self, "run", "examples/deployment/health-check.lln", "--invoke", "getHealthStatus"] },
     ];
 
     for (const step of steps) {
-      try {
-        process.stdout.write(`  ⏳ ${step.name}...`);
-        execSync(step.cmd, { cwd: process.cwd(), encoding: "utf-8", timeout: 60000 });
-        console.log(`  ✅ ${step.name}`);
-      } catch (err) {
+      process.stdout.write(`  ⏳ ${step.name}...`);
+      const r = spawnSync(process.execPath, step.argv, { cwd: process.cwd(), encoding: "utf-8", timeout: 60000, shell: false });
+      if (r.status !== 0) {
         console.log(`  ❌ ${step.name} FAILED`);
-        console.error(err.message);
+        console.error((r.stderr || r.stdout || r.error?.message || "").toString());
         process.exit(1);
       }
+      console.log(`  ✅ ${step.name}`);
     }
 
     console.log(`\n✅ Deploy pipeline complete`);
@@ -402,7 +417,13 @@ Baseline comparison (governance-cost):
     process.exit(0);
   }
 
-  // ── logicn border-check — validate plugin schemas in governance/plugins/ ──
+  // ── logicn border-check — FAIL-CLOSED plugin admission gate ──────────────────
+  // SECURITY (2026-06-06): previously this only checked file presence and counted a
+  // BLACKLISTED plugin as "clean". A plugin requesting real authority
+  // (ai.inference / network.outbound / audit.write) with a placeholder
+  // "sha256:pending-…" hash sailed through. The gate now DENIES by default and
+  // validates: source-hash format (no pending/placeholder), blacklist state,
+  // capability allowlist, resource-limit ranges, governance tier, and schema file.
   if (command === "border-check") {
     console.log("\n  Hardened Border Check");
     console.log("  ─────────────────────────");
@@ -411,25 +432,69 @@ Baseline comparison (governance-cost):
       console.log("  No plugins directory found at governance/plugins/");
       process.exit(0);
     }
-    const plugins = readdirSync(pluginsDir);
-    let clean = 0, issues = 0;
-    for (const plugin of plugins) {
-      const schemaPath = join(pluginsDir, plugin, "schemas/data_types.json");
+    // Capability allow-list (deny anything not on it). High-authority caps demand a
+    // real, signed, non-pending source hash.
+    const KNOWN_CAPS = new Set([
+      "ai.inference", "network.outbound", "network.inbound", "audit.write", "audit.read",
+      "db.read", "db.write", "filesystem.read", "filesystem.write", "time.read",
+      "crypto.sign", "crypto.verify", "state.read", "state.write", "memory.alloc",
+    ]);
+    const CEILINGS = { maxMemoryMB: 4096, maxCpuCycles: 1e10, maxWallMs: 60000 };
+    const SHA256 = /^sha256:[0-9a-f]{64}$/;
+
+    function validatePlugin(plugin) {
+      const reasons = [];
       const manifestPath = join(pluginsDir, plugin, "manifest.json");
-      const hasSchema = existsSync(schemaPath);
-      const hasManifest = existsSync(manifestPath);
-      if (hasSchema && hasManifest) {
-        const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
-        const blacklisted = manifest.blacklisted ? "[BLACKLISTED]" : "[OK]";
-        console.log(`  ${blacklisted}  ${plugin}  (tier-${manifest.governanceTier}, ${manifest.license})`);
+      const schemaPath = join(pluginsDir, plugin, "schemas/data_types.json");
+      if (!existsSync(manifestPath)) return ["missing manifest.json"];
+      if (!existsSync(schemaPath)) reasons.push("missing schemas/data_types.json");
+      let m;
+      try { m = JSON.parse(readFileSync(manifestPath, "utf-8")); }
+      catch (e) { return [`unparseable manifest.json: ${e.message}`]; }
+      try { JSON.parse(readFileSync(schemaPath, "utf-8")); }
+      catch { reasons.push("unparseable schemas/data_types.json"); }
+      // Source integrity pin — reject placeholders / malformed hashes.
+      if (typeof m.sourceHash !== "string" || !SHA256.test(m.sourceHash)) {
+        reasons.push(`invalid/placeholder sourceHash: ${JSON.stringify(m.sourceHash)} (must be sha256:<64 hex>)`);
+      }
+      // Deny-by-default blacklist.
+      if (m.blacklisted === true) reasons.push("plugin is blacklisted");
+      // Governance tier.
+      if (![1, 2, 3].includes(m.governanceTier)) reasons.push(`invalid governanceTier: ${JSON.stringify(m.governanceTier)}`);
+      // Capabilities: must be a non-empty array, each on the allow-list.
+      if (!Array.isArray(m.capabilities) || m.capabilities.length === 0) {
+        reasons.push("capabilities missing or empty");
+      } else {
+        for (const c of m.capabilities) {
+          if (!KNOWN_CAPS.has(c)) reasons.push(`unknown/unpermitted capability: ${JSON.stringify(c)}`);
+        }
+      }
+      // Resource limits within ceilings.
+      const rl = m.resourceLimits ?? {};
+      for (const k of ["maxMemoryMB", "maxCpuCycles", "maxWallMs"]) {
+        const v = rl[k];
+        if (v !== undefined && (typeof v !== "number" || !Number.isFinite(v) || v <= 0 || v > CEILINGS[k])) {
+          reasons.push(`resourceLimits.${k} out of range: ${JSON.stringify(v)} (1..${CEILINGS[k]})`);
+        }
+      }
+      return reasons;
+    }
+
+    const plugins = readdirSync(pluginsDir);
+    let clean = 0, denied = 0;
+    for (const plugin of plugins) {
+      const reasons = validatePlugin(plugin);
+      if (reasons.length === 0) {
+        console.log(`  [ADMITTED]  ${plugin}`);
         clean++;
       } else {
-        console.log(`  [MISSING]  ${plugin}  — missing ${!hasSchema ? "schemas/" : "manifest.json"}`);
-        issues++;
+        console.log(`  [DENIED]    ${plugin}`);
+        for (const r of reasons) console.log(`              ↳ ${r}`);
+        denied++;
       }
     }
-    console.log(`\n  ${clean} plugins validated · ${issues} issues\n`);
-    process.exit(issues > 0 ? 1 : 0);
+    console.log(`\n  ${clean} admitted · ${denied} denied\n`);
+    process.exit(denied > 0 ? 1 : 0);
   }
 
   // ── logicn kb-graph — scan docs/Knowledge-Bases/ cross-reference graph ──────

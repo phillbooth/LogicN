@@ -101,28 +101,39 @@ export async function assembleWAT(
   // Phase 27: Use wabt npm package for real binary assembly.
   // This replaces the Phase 25 minimal encoder and handles all WAT patterns
   // emitted by the LogicN WAT emitter (arithmetic, locals, if/else, while loops).
-  try {
-    const wabtModule = await loadWabt();
-    if (wabtModule !== null) {
+  // Distinguish "wabt not installed" from "wabt installed but REJECTED this WAT"
+  // (e.g. undefined function references). The old code collapsed both into a
+  // misleading "wabt not available" diagnostic — which masked invalid modules as
+  // valid minimal-encoder stubs. Load wabt first, THEN attempt assembly separately.
+  let wabtModule: unknown = null;
+  try { wabtModule = await loadWabt(); } catch { wabtModule = null; }
+  let wabtError: unknown = null;
+  if (wabtModule !== null) {
+    try {
       return assembleWithWabt(watSource, wabtModule);
+    } catch (e) {
+      // wabt is present but could not assemble THIS module → genuine compile failure,
+      // NOT "unavailable". The minimal-encoder stub below is NOT a faithful compile.
+      wabtError = e;
     }
-  } catch {
-    // wabt not available — fall through to minimal encoder
   }
 
   // Fallback: Phase 25 minimal binary encoder (handles simple constant/identity patterns).
-  // Used when wabt npm package is not installed or unavailable.
   try {
     const binary = encodeMinimalWASM(watSource);
     const valid = binary.length > 8
       && binary[0] === 0x00 && binary[1] === 0x61
       && binary[2] === 0x73 && binary[3] === 0x6d;
+    const wabtRejected = wabtError !== null;
+    const stubMsg = wabtRejected
+      ? `wabt REJECTED this WAT (module does not link — e.g. undefined functions): ${((wabtError as Error)?.message ?? String(wabtError)).slice(0, 180)} — minimal-encoder STUB returned; this is NOT a faithful compile`
+      : "wabt not available — using minimal encoder (limited WAT support)";
     return {
       wasm: binary,
       sourceWAT: watSource,
       valid,
       diagnostics: valid
-        ? [{ message: "wabt not available — using minimal encoder (limited WAT support)" }]
+        ? [{ message: stubMsg }]
         : [{ message: "Minimal encoder: complex WAT patterns not yet supported; install wabt npm package" }],
     };
   } catch (err) {

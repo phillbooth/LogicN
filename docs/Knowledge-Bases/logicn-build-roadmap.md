@@ -1,7 +1,55 @@
 # LogicN — Build Roadmap
 
-**Version:** 6.0 (2026-06-05)  
-**Last updated:** 2026-06-05 — Foundations complete: tasks #86–#94 shipped (static/bitfield/gate/access/guard/import/assimilate); graph 2888 nodes / 3625 edges
+**Version:** 7.0 (2026-06-06)  
+**Last updated:** 2026-06-06 — P9 self-hosting: flow-body emission real (small modules execute via real wabt); **CORRECTION — the lexer module does NOT yet wabt-assemble** (undefined stdlib fns; see §16) + Governed-Tower hardening shipped; graph 2924 nodes / 3673 edges; **44/44 packages · 4,128 tests · 0 fail**; audit:security 31 files / 0 findings; 18 CBOR manifests canonical; governance:diff NEUTRAL (no authority widening); r6 Stage-A parity green
+
+---
+
+## 📍 Current snapshot (2026-06-06)
+
+**Governed Inference Tower hardening (logicn-tower-citizen, 106 tests):**
+- `CF-3/CF-7` **bridge attestation** — Ed25519 sign/verify + sha256 manifest & addon-hash pinning; `ERR_BRIDGE_UNATTESTED` fail-closed; `logicn bridge-attest` CLI (keygen/hash/sign).
+- **P9 Certified Profile** now mandates signed bridges (`ERR_CERTIFIED_NO_ATTESTATION`), governed egress, and per-call `approved_models`+`max_tokens`+`max_token_cost`.
+- **Enforced V_DPM capability gate** — branchless `(required & granted) === required`; `ERR_CAPABILITY_DENIED` before any compute (the bitmask was decorative; now live).
+- **Numeric policy table** — `ai{}` compiled once → packed i32 flags + O(1) `Set` membership + pre-paid certified preconditions (2.04× on the governance-check slice; scales with allow-list size).
+
+**P9 self-hosting bootstrap (logicn-core-compiler) — flow-body emission real; module assembly NOT yet:**
+> CORRECTION (2026-06-06): an earlier claim said the lexer "compiles to a real wabt-assembling WASM module".
+> That was overstated. SMALL flows do compile + execute via real wabt (verified). The LEXER's flow bodies emit
+> real instructions, but the MODULE references undefined stdlib fns (`$charCount`/`$Ok`/`$Some`/`$None`), so real
+> wabt rejects it and `assembleWAT` silently fell back to a 240-byte minimal-encoder stub. Full lexer assembly +
+> execution is gated on the **stdlib runtime (#145)**.
+- `P9.4a` guarded-flow WAT bodies · `P9.4b` record struct layout (construct + `r.field` access, verified in real WASM) · `P9.4c` guarded-flow export gating.
+- **#145a MILESTONE (2026-06-06): the self-hosted lexer module now wabt-assembles to a real WASM binary.**
+  `charCount`/`Ok`/`Err` wired to host imports + `__array_append` returns the array handle (last linking
+  blocker cleared). The module LINKS + produces a valid binary via real wabt (verified, not the stub).
+  REMAINING for tokenize byte-parity (#145b): token-VALUE correctness needs type-aware string lowering
+  (String `+`→`__str_concat`; `Char.toString`→`__char_to_string`) + the host output reader. **Linking done; string semantics next.**
+
+**The single remaining P9 gate → EXECUTION PARITY (next):** run `tokenize.wasm` and byte-compare to the interpreter. Needs the host-import runtime (string table + `__array_*`/`__str_*`/`__char_*` bridge + list/record memory walk) wired into `WebAssembly.instantiate` — i.e. **#105 (real-Wasmtime `logicn run`)**. Interpreter-level Stage-A==Stage-B parity is already locked (lexer-parity + R6 #101).
+
+### Next up (ordered)
+0. ✅ **#105 — WASM admission-gate harness (security core, 2026-06-06):** `wasm-runtime.ts`
+   — attestation-first Ed25519 verify BEFORE host linking (tampered/unsigned → `CRITICAL_SECURITY_VIOLATION`,
+   no instantiation), closed-allowlist host imports (no ambient scope), dev/prod differ ONLY in
+   observability (host-call log / trap memory dump); proven in real WASM (5 tests). The locked
+   security boundary is built.
+1. **Tokenize EXECUTION byte-parity (completes P9):**
+   - ✅ **#144 enum-variant member lowering (2026-06-06)** — `EnumType.Variant` → declaration-order i32 tag
+     (`buildEnumVariants` registry); **all 9 `tokenize` placeholders eliminated**, verified in real WASM
+     incl. enum-in-record round-trip (tests/wat-p9_4d-enum-lowering, 4 tests).
+   - 🔲 **#145 — type-aware STRING semantics (the real bulk, discovered reading lexer.lln):** the lexer builds
+     token values via `value = value + nc.toString()`. Today String `+` lowers to `i32.add` (handle arithmetic)
+     and `Char.toString` → `__int_to_str` (returns the char's *decimal*, not the char). Needs: `__char_to_string`
+     + `__str_concat` host fns **and type-aware lowering** (String `+` → concat; `Char.toString` → char-to-string),
+     which needs String/Char var-type tracking (annotations + `Option<Char>` match bindings). Plus string-intern
+     table exposure + a list/record output reader in `wasm-runtime.ts`. *Then* `tokenize.wasm` == interpreter
+     (golden: lexer-parity). Note: no `;; unresolved` markers remain — the string gaps are SEMANTIC, not marker-flagged.
+2. **#102–#104, #106 — real DSS.wasm (Post-P9, DRCM Phase 4):** `dss/index.lln` → `build/dss.wasm`; Wasmtime component supervises DWI guests; real per-DWI fuel; DSS.wasm signs epilogue receipts.
+3. **CF-4 — extract `@logicn/tpl-oracle`** so the Brawn (`ext-bridge-cpp`) imports NO Tower runtime (currently pulls `StubTernaryBridge`/`GovernanceEnforcer` from `tower-citizen`).
+4. **CF-5 / CF-9 / CF-10** — vector T-MAC commit gate · ECC/TMR · atomic failover.
+5. **Record follow-ons** — `#record-update` lowering + cross-flow return-type tracking (so `let r = someCall()` returning a record resolves field access).
+6. **#110** — key rotation in `secrets {}`; **#69** — floor-specific dev-tools graphs.
 
 ---
 

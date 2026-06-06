@@ -8,3 +8,12 @@ build/.lln-cache/
 packages-logicn/logicn-core/examples/benchmark-results/*.json
 packages-logicn/logicn-devtools-benchmarks/results/history/
 /NOTES TO COVER
+
+# ── Secrets / signing material — NEVER commit (CRITICAL, 2026-06-06) ──
+.env.logicn-signing
+.env.*.signing
+**/*.signing
+*.private.pem
+**/*-private.pem
+.env.local
+.env.*.local

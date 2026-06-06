@@ -62,14 +62,44 @@ describe("P9 ceremony — self-hosted lexer emits real WASM", () => {
     assert.match(wat, /global \$__lln_heap/, "record bump-allocator heap is emitted");
   });
 
-  it("the whole self-hosted lexer module assembles to a valid WASM binary (wabt)", async () => {
-    const { wat } = compileLexer();
+  // Honest assembly check. `assembleWAT` falls back to a 240-byte minimal-encoder
+  // STUB (and a misleading "wabt not available" diagnostic) when real wabt THROWS —
+  // e.g. on undefined function references. So `valid === true` alone does NOT prove a
+  // faithful compile. `usedRealWabt` distinguishes the two: real wabt → no fallback
+  // diagnostic; fallback → the "minimal encoder" message.
+  // Robust signal: real wabt assembly returns EMPTY diagnostics; any fallback path
+  // (wabt-not-installed OR wabt-rejected-this-WAT) attaches a diagnostic message.
+  const usedRealWabt = (asm) => asm.valid && asm.diagnostics.length === 0;
+
+  it("the wabt pipeline genuinely compiles a CLEAN module (control)", async () => {
+    // Proves real wabt is wired and assembleWAT compiles faithfully when the module links.
+    const prog = parseProgram("pure flow add(a: Int, b: Int) -> Int contract { effects {} } { return a + b }", "c.lln");
+    const fx = checkEffects(prog.flows, prog.ast);
+    const { gir } = emitGIR(prog.ast, prog.flows, fx);
+    const wat = renderWAT(buildWATModuleFromGIR(gir, undefined, "c", prog.ast, true));
     const asm = await assembleWAT(wat);
-    assert.equal(asm.valid, true, `lexer.wasm must assemble: ${JSON.stringify(asm.diagnostics)}`);
-    // sanity: real WebAssembly magic header
-    assert.equal(asm.wasm[0], 0x00);
-    assert.equal(asm.wasm[1], 0x61);
-    assert.equal(asm.wasm[2], 0x73);
-    assert.equal(asm.wasm[3], 0x6d);
+    assert.equal(asm.valid, true);
+    assert.equal(usedRealWabt(asm), true, "clean module must compile via REAL wabt, not the fallback");
+    const { instance } = await WebAssembly.instantiate(asm.wasm, {});
+    assert.equal(instance.exports.add(2, 3), 5);
+  });
+
+  it("MILESTONE: the self-hosted lexer module now wabt-assembles to a REAL WASM binary (#145a)", async () => {
+    // 2026-06-06: charCount/Ok/Err wired to host imports (zero undefined calls) AND
+    // __array_append returns the array handle (#145a) — the last linking blocker. The
+    // lexer module now LINKS and assembles via real wabt (not the minimal-encoder stub).
+    const { wat } = compileLexer();
+    assert.match(wat, /\$host___str_count/, "charCount → host import");
+    assert.match(wat, /\$host___result_ok/, "Ok → host import");
+    const noUndefinedCalls = [...wat.matchAll(/\(call \$([A-Za-z0-9_]+)/g)]
+      .map((m) => m[1])
+      .every((c) => c.startsWith("host_") || /^(makeKeywordTable|scanWord|scanOperator|scanDigits|scanString|scanCharLit|scanLineComment|scanBlockComment|tokenize)$/.test(c));
+    assert.equal(noUndefinedCalls, true, "no undefined function calls remain in the lexer");
+    const asm = await assembleWAT(wat);
+    assert.equal(usedRealWabt(asm), true, "lexer module LINKS + assembles via REAL wabt (no stub fallback)");
+    assert.equal(asm.wasm[0], 0x00); assert.equal(asm.wasm[1], 0x61); // \0asm magic header
+    // REMAINING (#145b): the module links + can be instantiated, but token VALUE byte-parity
+    // still needs type-aware string lowering (String `+` → __str_concat; Char.toString →
+    // __char_to_string) + the host output reader. Linking is DONE; string SEMANTICS are next.
   });
 });
