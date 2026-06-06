@@ -40,3 +40,25 @@ Citizen One Standards, so the engine routes through it.
 
 Until that decision is made, treat `logicn-ext-bridge-bitnet` as legacy and do
 not extend it.
+
+---
+
+## NOTE-002 — CF-3/CF-7 bridge attestation landed (2026-06-06)
+
+**Status:** done (in-package) · cross-package follow-up logged below
+
+`BitNetCpuBridge` now carries a `manifest: BridgeManifest` (CF-3) and the native
+addon loader hashes the `.node` binary with SHA-256 **before** `require()`,
+failing closed (`ERR_ADDON_HASH_MISMATCH`) on a pin mismatch (CF-7). The manifest
+ships unsigned (`certificationProfile: "dev"`, `packageHash` = zero placeholder)
+and is signed offline at release time via `logicn bridge-attest sign`. The Tower's
+`HybridInferenceEngine`, under an `AttestationPolicy`, denies any unattested bridge
+with `ERR_BRIDGE_UNATTESTED` before compute.
+
+**Cross-package follow-up (NOT done — needs the release pipeline).**
+1. `packageHash` is a zero placeholder. A release step must compute the real
+   sha256 of the published package tarball and bake it into the manifest (or the
+   `logicn bridge-attest` flow must accept it) so the pin is meaningful.
+2. The certified deployment must pass `loadNativeAddon({ expectedHash })` with the
+   release-pinned addon hash; today no caller supplies it (advisory until a
+   compiled `.node` addon exists).

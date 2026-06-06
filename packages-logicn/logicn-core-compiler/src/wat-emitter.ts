@@ -228,6 +228,63 @@ export const DEFAULT_WAT_MEMORY: WATMemory = {
 };
 
 // ---------------------------------------------------------------------------
+// P9.4b — record struct layout (linear-memory bump allocator)
+// ---------------------------------------------------------------------------
+
+/** Records bump-allocate above this byte offset; the low region stays reserved
+ *  scratch/null (so a 0 handle never collides with a real record base). */
+export const WAT_HEAP_BASE = 1024;
+/** Every record field occupies one i32 slot (a number or an opaque i32 handle). */
+export const WAT_REC_FIELD_SIZE = 4;
+
+/**
+ * Per-flow record-construction scratch. emitWATFromFlowAST sets this before walking
+ * the body and clears it after; the `#record` case in emitWATExpr appends a unique
+ * `(local …)` decl here (so nested records and record-returning calls each get their
+ * OWN base local — no shared-global clobbering) and references the `$__lln_heap`
+ * pointer. null outside a flow-body walk → records fall back to the i32.const 0
+ * placeholder (preserving every non-WAT-emitter code path unchanged).
+ */
+let recordCtx: { localDecls: string[]; counter: { n: number } } | null = null;
+
+/** typeName → ordered field names, built once per module from `record` decls.
+ *  Used to compute field byte offsets for `r.field` loads. null → field access
+ *  falls back to the placeholder. */
+let recordLayouts: ReadonlyMap<string, readonly string[]> | null = null;
+/** varName → record typeName for the flow currently being emitted (reset per flow).
+ *  Populated from `let r: T = …` annotations, `let r = T{…}` literal types, and
+ *  record-typed flow params. Lets `r.field` resolve to an i32.load at the slot offset. */
+let recordVarTypes: Map<string, string> | null = null;
+
+/** Build the typeName → field-name-list registry from a program AST's `record` decls. */
+export function buildRecordLayouts(ast: AstNode | undefined): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const node of ast?.children ?? []) {
+    if (node.kind === "recordDecl" && node.value) {
+      const fields = (node.children ?? [])
+        .filter((c) => c.kind === "paramDecl")
+        .map((c) => (c.value ?? "").split(":")[0]!.trim())
+        .filter((n) => n.length > 0);
+      out.set(node.value, fields);
+    }
+  }
+  return out;
+}
+
+/** The record type a `let`/param binding refers to, or undefined. `raw` is the
+ *  binding's `value` (e.g. "r: TokenizeResult"); `initNode` is its initialiser. */
+function recordTypeOfBinding(raw: string, initNode: AstNode | undefined): string | undefined {
+  if (recordLayouts === null) return undefined;
+  const anno = raw.includes(":") ? raw.split(":")[1]!.trim() : "";
+  if (anno && recordLayouts.has(anno)) return anno;
+  if (initNode?.kind === "callExpr" && initNode.value === "#record") {
+    const tn = (initNode as { typeName?: string }).typeName;
+    if (tn && recordLayouts.has(tn)) return tn;
+  }
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
 // WAT rendering
 // ---------------------------------------------------------------------------
 
@@ -254,6 +311,7 @@ export function renderWAT(module: WATModule): string {
   // bridge for string/array/char flows (the self-hosted compiler).
   const allBodyText = module.functions.map((fn) => fn.body ?? "").join("\n");
   const usesTmpArr = allBodyText.includes("$__lln_tmp_arr");
+  const usesHeap = allBodyText.includes("$__lln_heap"); // P9.4b: record bump-allocator
 
   const lines: string[] = ["(module"];
 
@@ -294,6 +352,14 @@ export function renderWAT(module: WATModule): string {
   if (usesTmpArr) {
     lines.push(`  ;; P9.3: temporary array ID register for listLiteral WAT emission`);
     lines.push(`  (global $__lln_tmp_arr (mut i32) (i32.const 0))`);
+    lines.push(``);
+  }
+
+  // P9.4b: record bump-allocator heap pointer — only emitted when a body constructs
+  // a record. Records allocate above WAT_HEAP_BASE; the low region stays null/scratch.
+  if (usesHeap) {
+    lines.push(`  ;; P9.4b: bump-allocator heap pointer for record struct layout`);
+    lines.push(`  (global $__lln_heap (mut i32) (i32.const ${WAT_HEAP_BASE}))`);
     lines.push(``);
   }
 
@@ -502,6 +568,24 @@ export function emitWATExpr(
         const dottedKey = `${receiverName}.${memberName}`;
         const constVal = staticConsts.get(dottedKey);
         if (constVal !== undefined) return `(i32.const ${constVal}) ;; bitfield ${dottedKey}`;
+
+        // P9.4b: record field access — r.field → i32.load at the field's slot offset.
+        // Resolves only when the receiver's record type and the field are known;
+        // otherwise falls through to the placeholder (preserving all other paths).
+        const recType = recordVarTypes?.get(receiverName);
+        if (recType !== undefined && recordLayouts !== null) {
+          const fields = recordLayouts.get(recType);
+          const idx = fields ? fields.indexOf(memberName) : -1;
+          if (idx >= 0) {
+            const off = idx * WAT_REC_FIELD_SIZE;
+            const local = vars.get(receiverName);
+            const recvWat = local !== undefined ? `(local.get ${local})` : `(i32.const 0)`;
+            // NO trailing ;; comment — this expression is used INLINE (e.g. inside
+            // (i32.add <left> <right>)), and a line comment would swallow the closing
+            // paren of the enclosing S-expression.
+            return `(i32.load (i32.add ${recvWat} (i32.const ${off})))`;
+          }
+        }
       }
       return `(i32.const 0) ;; unresolved member: ${memberName}`;
     }
@@ -538,8 +622,34 @@ export function emitWATExpr(
     case "callExpr": {
       const name = node.value ?? "";
       // Record literals are parsed as callExpr with value "#record" or "#record-update".
-      // These require heap allocation (P9.3 — pending).
-      if (name === "#record" || name === "#record-update") {
+      // P9.4b: lower a `#record` literal to a linear-memory struct — bump-allocate
+      // fieldCount*4 bytes, store each field at its slot offset, evaluate to the base
+      // pointer. Gated on an active flow-body scratch context (recordCtx); outside it
+      // (other pipeline stages) the placeholder is preserved. `#record-update` still
+      // falls back (it needs a base copy — a follow-on).
+      if (name === "#record") {
+        const fields = node.children ?? [];
+        if (recordCtx !== null && fields.length > 0) {
+          const recLocal = `$__lln_rec_${recordCtx.counter.n++}`;
+          recordCtx.localDecls.push(`(local ${recLocal} i32)`);
+          const size = fields.length * WAT_REC_FIELD_SIZE;
+          const parts: string[] = [`(block (result i32)`];
+          // base = heap; heap += size  (per-record local → safe under nesting + calls)
+          parts.push(`  (local.set ${recLocal} (global.get $__lln_heap))`);
+          parts.push(`  (global.set $__lln_heap (i32.add (global.get $__lln_heap) (i32.const ${size})))`);
+          fields.forEach((f, i) => {
+            const valNode = f.children?.[0];
+            const valWat = valNode ? emitWATExpr(valNode, vars, staticConsts) : "(i32.const 0)";
+            const off = i * WAT_REC_FIELD_SIZE;
+            parts.push(`  (i32.store (i32.add (local.get ${recLocal}) (i32.const ${off})) ${valWat}) ;; .${f.value ?? `f${i}`}`);
+          });
+          parts.push(`  (local.get ${recLocal})`);
+          parts.push(`)`);
+          return parts.join("\n");
+        }
+        return `(i32.const 0)`;
+      }
+      if (name === "#record-update") {
         // No trailing ;; comment — a line comment would swallow the closing paren
         // of any enclosing S-expression when this is used as an inline argument.
         return `(i32.const 0)`;
@@ -786,6 +896,12 @@ function emitBlockStatements(
         const varName  = rawName.split(":")[0]?.trim() ?? rawName;
         const watLocal = `$${varName}`;
         const initNode = stmt.children?.[0];
+        // P9.4b: remember the record type of this binding so later `varName.field`
+        // accesses lower to an i32.load at the field offset.
+        if (recordVarTypes !== null) {
+          const recType = recordTypeOfBinding(rawName, initNode);
+          if (recType !== undefined) recordVarTypes.set(varName, recType);
+        }
         const initExpr = initNode ? emitWATExpr(initNode, vars, staticConsts) : "(i32.const 0)";
 
         if (vars.has(varName)) {
@@ -1066,6 +1182,7 @@ export function emitWATFromFlowAST(
   flowNode: AstNode,
   paramNames: readonly string[],
   staticConsts: ReadonlyMap<string, number> = new Map(),
+  layouts: ReadonlyMap<string, readonly string[]> | null = null,
 ): string | null {
   // Build variable map: LogicN name → WAT local name.
   // Params are $p0, $p1, … — immutable (parameters are passed by value in WAT).
@@ -1074,9 +1191,29 @@ export function emitWATFromFlowAST(
     vars.set(name, `$p${i}`);
   });
 
+  // P9.4b: record layout + per-flow var-type tracking for field access.
+  const prevLayouts = recordLayouts;
+  const prevVarTypes = recordVarTypes;
+  recordLayouts = layouts;
+  recordVarTypes = new Map<string, string>();
+  // Seed record-typed parameters (e.g. `flow f(r: TokenizeResult)`) so `r.field`
+  // resolves inside the body. Param decls carry "name: Type" in their value.
+  if (layouts !== null) {
+    const paramDecls = (flowNode.children ?? []).filter((c) => c.kind === "paramDecl");
+    paramDecls.forEach((pd) => {
+      const raw = pd.value ?? "";
+      const nm = raw.split(":")[0]!.trim();
+      const ty = raw.includes(":") ? raw.split(":")[1]!.trim() : "";
+      if (ty && layouts.has(ty) && vars.has(nm)) recordVarTypes!.set(nm, ty);
+    });
+  }
+
   // Find the block body of the flow.
   const blockNode = (flowNode.children ?? []).find((c) => c.kind === "block");
-  if (blockNode === undefined) return null;
+  if (blockNode === undefined) {
+    recordLayouts = prevLayouts; recordVarTypes = prevVarTypes; // restore on early exit
+    return null;
+  }
 
   const localDecls: string[] = [];
   const bodyLines:  string[] = [];
@@ -1118,7 +1255,21 @@ export function emitWATFromFlowAST(
     bodyLines.push(`  ;; --- invariant pre-conditions (LLN-INV-001 gate) ---`);
     bodyLines.push(...preGates);
   }
-  emitBlockStatements(blockNode, vars, localDecls, bodyLines, labelCounter, false, staticConsts);
+  // P9.4b: activate record-construction lowering for this flow body. Record locals
+  // (`$__lln_rec_N`) are appended to localDecls so they render at the top of the
+  // function (WASM requires all locals before instructions). Cleared in finally so
+  // a thrown body never leaks scratch into the next flow.
+  const prevRecordCtx = recordCtx;
+  recordCtx = { localDecls, counter: { n: 0 } };
+  try {
+    emitBlockStatements(blockNode, vars, localDecls, bodyLines, labelCounter, false, staticConsts);
+  } finally {
+    recordCtx = prevRecordCtx;
+    // Restore record layout/var-type context. Safe here: the remaining tail only
+    // pushes precomputed post-gate lines + joins — no further emitWATExpr calls.
+    recordLayouts = prevLayouts;
+    recordVarTypes = prevVarTypes;
+  }
   if (postGates.length > 0) {
     bodyLines.push(`  ;; --- invariant post-conditions (LLN-INV-002 gate) ---`);
     bodyLines.push(...postGates);
@@ -1561,9 +1712,18 @@ export function buildWATModule(
   // Pure flows (qualifier === "pure", no declaredEffects) get real WAT bodies via emitWATBody.
   // All other flows get "unreachable" stub bodies (Phase 22 effectful emission TBD).
   // Phase 27: when exportAllPure is set, all pure flows are entry points for export.
+  // P9.4c: a flow is WASM-exportable when it has a real (non-effectful) body — a
+  // pure flow, or a `guarded` flow with no declared effects (governance is DAG-edge
+  // validation around pure computation, so its body lowers like a pure flow). This
+  // lets `logicn run --invoke <guardedFlow>` reach governed entry points.
+  const isWasmExportable = (f: WATFlowInput): boolean =>
+    f.qualifier === "pure" || (f.qualifier === "guarded" && getFlowEffects(f).length === 0);
   const entrySet = gir.exportAllPure === true
-    ? new Set(gir.flows.filter(f => f.qualifier === "pure").map(f => f.name))
+    ? new Set(gir.flows.filter(isWasmExportable).map(f => f.name))
     : new Set(gir.entryPoints);
+
+  // P9.4b: record-type → field-name layout, built once for `r.field` offset lowering.
+  const recordLayoutRegistry = buildRecordLayouts(gir.ast);
   const functions: WATFunction[] = gir.flows.map((flow) => {
     const flowDeclaredEffects = getFlowEffects(flow);
     const isPureFlow = flow.qualifier === "pure" && flowDeclaredEffects.length === 0;
@@ -1592,7 +1752,7 @@ export function buildWATModule(
       const flowAstNode = findFlowNodeInAST(gir.ast, flow.name);
       if (flowAstNode !== undefined) {
         const paramNames = extractFlowParamNames(flowAstNode);
-        const phase25Body = emitWATFromFlowAST(flowAstNode, paramNames, staticConsts);
+        const phase25Body = emitWATFromFlowAST(flowAstNode, paramNames, staticConsts, recordLayoutRegistry);
         if (phase25Body !== null) {
           body = phase25Body;
         } else if (flow.executionPlan !== undefined) {
@@ -1616,6 +1776,20 @@ export function buildWATModule(
     } else if (isPureFlow) {
       // Fallback: no param info.
       body = "(i32.const 0) ;; Phase 25: no body info available";
+    } else if (flow.qualifier === "guarded" && flowDeclaredEffects.length === 0 && gir.ast !== undefined) {
+      // P9.4: a `guarded` flow is pure computation wrapped in DAG-edge governance —
+      // its body has no real side effects, so it can be lowered exactly like a pure
+      // flow. We only adopt the emitted body when emission FULLY succeeds; otherwise
+      // we keep "unreachable" (unchanged behaviour) so flows whose bodies the emitter
+      // cannot yet lower (e.g. record-returning) are not regressed.
+      const guardedAstNode = findFlowNodeInAST(gir.ast, flow.name);
+      if (guardedAstNode !== undefined) {
+        const guardedParamNames = extractFlowParamNames(guardedAstNode);
+        const guardedBody = emitWATFromFlowAST(guardedAstNode, guardedParamNames, staticConsts, recordLayoutRegistry);
+        if (guardedBody !== null) {
+          body = guardedBody;
+        }
+      }
     }
 
     // Phase 27C — TypedArray lowering hints for Float32 tensor flows.
@@ -1658,7 +1832,7 @@ export function buildWATModule(
   // export every pure flow so callers can invoke any function by name.
   const flowIndexMap = new Map(gir.flows.map((f, i) => [f.name, i]));
   const exportedNames = gir.exportAllPure === true
-    ? gir.flows.filter(f => f.qualifier === "pure").map(f => f.name)
+    ? gir.flows.filter(isWasmExportable).map(f => f.name) // P9.4c: pure + guarded-no-effect
     : gir.entryPoints;
   const exports: WATExport[] = exportedNames
     .map((name) => {

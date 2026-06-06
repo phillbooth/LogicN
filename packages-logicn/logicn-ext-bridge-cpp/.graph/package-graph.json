@@ -39,12 +39,20 @@
   ],
   "externalDeps": [
     {
-      "specifier": "@logicn/tower-citizen",
+      "specifier": "@logicn/inference-bridge-contract",
       "kind": "workspace",
       "importedBy": [
         "src/bitnet-cpu-bridge.ts",
         "src/bitnet-gpu-bridge.ts",
         "src/index.ts"
+      ]
+    },
+    {
+      "specifier": "@logicn/tower-citizen",
+      "kind": "workspace",
+      "importedBy": [
+        "src/bitnet-cpu-bridge.ts",
+        "src/bitnet-gpu-bridge.ts"
       ]
     },
     {
@@ -97,9 +105,9 @@
   "stats": {
     "fileCount": 5,
     "internalEdgeCount": 7,
-    "externalDepCount": 7,
+    "externalDepCount": 8,
     "nodeCoreCount": 6,
-    "workspaceCount": 1,
+    "workspaceCount": 2,
     "thirdpartyCount": 0,
     "orphanCount": 0
   }

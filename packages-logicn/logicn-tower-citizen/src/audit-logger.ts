@@ -21,6 +21,17 @@ export interface TowerAuditEvent {
   readonly category:      "LIFECYCLE" | "RUNTIME_VIOLATION" | "GOVERNANCE_DENIED" | "AUDIT_TRAIL" | "RESOURCE_LIMIT";
   readonly details:       Record<string, unknown>;
   readonly governancePass: boolean;
+  /** Deterministic Logical Tick (from LST/Sentinel-Time) when a tick source is wired.
+   *  Cycle-indexed timing that is replayable regardless of OS clock jitter. */
+  readonly logicalTick?:  number;
+}
+
+/** A governed egress sink (e.g. Sentinel-Egress AuditEgress). The AuditLogger pushes
+ *  serialized records here instead of calling appendFileSync directly, so all ledger
+ *  writes pass through the Hardened Border's batched, tamper-evident write path. */
+export interface EgressSink {
+  push(record: string): void;
+  flush(): unknown;
 }
 
 export interface AuditFilter {
@@ -31,13 +42,60 @@ export interface AuditFilter {
   limit?: number;
 }
 
+export interface AuditLoggerOptions {
+  /**
+   * Batched-async durable mode. When > 0, events buffer in memory and flush to
+   * disk in BATCHES of this size (one `appendFileSync` per N events instead of
+   * one per event). Durable, but a crash can lose up to `batchSize - 1` unflushed
+   * events. Eliminates the per-event disk jitter that breaks constant-time flight.
+   * Ignored in in-memory mode (logDir === null) or when an egress sink is set.
+   */
+  readonly batchSize?: number;
+  /**
+   * Deterministic Logical Tick source (Sentinel-Time). When set, each event is
+   * stamped with `logicalTick = tickSource()` — cycle-indexed timing replayable
+   * regardless of OS clock drift.
+   */
+  readonly tickSource?: () => number;
+  /**
+   * Governed egress sink (Sentinel-Egress). When set, the logger pushes serialized
+   * events to this sink instead of calling appendFileSync — ALL ledger writes go
+   * through the Hardened Border's batched, HMAC-chained, tamper-evident path.
+   * Takes precedence over batchSize/disk.
+   */
+  readonly egress?: EgressSink;
+}
+
 export class AuditLogger {
-  private readonly logPath: string;
+  private readonly logPath: string | null;
+  private readonly inMemory: boolean;
+  private readonly batchSize: number;
+  private readonly tickSource: (() => number) | null;
+  private readonly egress: EgressSink | null;
+  private readonly mem: TowerAuditEvent[] = [];
+  private buffer: string[] = []; // pending unflushed lines (batched mode)
   private seq = 0;
 
-  constructor(logDir = "build/audit-log") {
-    mkdirSync(logDir, { recursive: true });
-    this.logPath = join(logDir, "tower-citizen-audit.jsonl");
+  /**
+   * @param logDir  Directory for the append-only JSONL ledger (default, persistent).
+   *                Pass `null` for IN-MEMORY mode: events are held in memory only,
+   *                no disk writes. Use for ephemeral / high-throughput / benchmark
+   *                contexts where the persistent ledger is not required. In-memory
+   *                mode also makes `query()` O(n) instead of re-reading the file.
+   * @param opts    { batchSize } enables batched-async durable mode (see above).
+   */
+  constructor(logDir: string | null = "build/audit-log", opts: AuditLoggerOptions = {}) {
+    this.batchSize = opts.batchSize && opts.batchSize > 0 ? Math.floor(opts.batchSize) : 0;
+    this.tickSource = opts.tickSource ?? null;
+    this.egress = opts.egress ?? null;
+    if (logDir === null) {
+      this.inMemory = true;
+      this.logPath = null;
+    } else {
+      this.inMemory = false;
+      mkdirSync(logDir, { recursive: true });
+      this.logPath = join(logDir, "tower-citizen-audit.jsonl");
+    }
   }
 
   append(event: Omit<TowerAuditEvent, "eventId" | "timestamp">): TowerAuditEvent {
@@ -45,10 +103,36 @@ export class AuditLogger {
       ...event,
       eventId: `EVT-${Date.now()}-${++this.seq}`,
       timestamp: new Date().toISOString(),
+      // Stamp the deterministic Logical Tick (Sentinel-Time) when wired.
+      ...(this.tickSource ? { logicalTick: this.tickSource() } : {}),
     };
-    appendFileSync(this.logPath, JSON.stringify(full) + "\n");
+    this.mem.push(full); // always keep in memory for O(n) query
+    if (this.egress) {
+      // Governed egress (Sentinel-Egress): all ledger writes pass through the
+      // batched, HMAC-chained, tamper-evident sink — no direct appendFileSync.
+      this.egress.push(JSON.stringify(full));
+    } else if (this.inMemory) {
+      // nothing more — in-memory only
+    } else if (this.batchSize > 0) {
+      this.buffer.push(JSON.stringify(full) + "\n");
+      if (this.buffer.length >= this.batchSize) this.flush();
+    } else {
+      appendFileSync(this.logPath!, JSON.stringify(full) + "\n");
+    }
     return full;
   }
+
+  /** Force any buffered events to durable storage. Flushes the egress sink (if any)
+   *  and the batched disk buffer. Call at flush points and on graceful shutdown. */
+  flush(): void {
+    if (this.egress) this.egress.flush();
+    if (this.buffer.length === 0 || this.logPath === null) return;
+    appendFileSync(this.logPath, this.buffer.join(""));
+    this.buffer = [];
+  }
+
+  /** Number of events buffered but not yet flushed to disk (batched mode). */
+  pendingCount(): number { return this.buffer.length; }
 
   load(correlationId: string, artifactHash: string, engineId: string): TowerAuditEvent {
     return this.append({
@@ -87,9 +171,14 @@ export class AuditLogger {
   }
 
   query(filter: AuditFilter = {}): TowerAuditEvent[] {
-    if (!existsSync(this.logPath)) return [];
-    const lines = readFileSync(this.logPath, "utf-8").trim().split("\n").filter(Boolean);
-    let events = lines.map(l => { try { return JSON.parse(l) as TowerAuditEvent; } catch { return null; } }).filter((e): e is TowerAuditEvent => e !== null);
+    let events: TowerAuditEvent[];
+    if (this.inMemory || this.batchSize > 0 || this.egress) {
+      events = this.mem.slice();
+    } else {
+      if (!existsSync(this.logPath!)) return [];
+      const lines = readFileSync(this.logPath!, "utf-8").trim().split("\n").filter(Boolean);
+      events = lines.map(l => { try { return JSON.parse(l) as TowerAuditEvent; } catch { return null; } }).filter((e): e is TowerAuditEvent => e !== null);
+    }
     if (filter.correlationId) events = events.filter(e => e.correlationId === filter.correlationId);
     if (filter.phase) events = events.filter(e => e.phase === filter.phase);
     if (filter.severity) events = events.filter(e => e.severity === filter.severity);

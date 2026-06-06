@@ -19,6 +19,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@logicn/inference-bridge-contract": "file:../logicn-inference-bridge-contract",
     "@logicn/tower-citizen": "file:../logicn-tower-citizen"
   },
   "devDependencies": {

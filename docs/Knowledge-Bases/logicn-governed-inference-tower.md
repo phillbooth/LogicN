@@ -181,11 +181,54 @@ The Tower runtime refuses to load any engine without a valid, signed `.lmanifest
 
 ---
 
+## Wired Runtime: `logicn infer` (Brain → Brawn → Audit)
+
+As of 2026-06-06 the Tower is wired into the LogicN runtime: a flow's `ai {}`
+contract drives a **real, governed inference**, not just a compile-time check.
+
+```bash
+logicn infer examples/foundations/ai-inference-governed.lln \
+       --prompt "Summarise the Q3 compliance report."
+```
+
+**Pipeline:**
+
+1. **Read the contract.** The CLI parses the target flow's `ai {}` block from the
+   AST — `approved_models`, `governance_tier`, `max_model_calls`, `max_token_cost`
+   — and turns them into hard governance constraints.
+2. **Brain.** `createHybridEngine()` (`logicn-tower-citizen`) plans the per-op
+   precision (BitNet ternary / NVFP4 fp4 / fp8 / fp16) for the deployment tier.
+3. **Brawn.** The engine's `BridgeRegistry` is supplied by
+   `createCppBridgeRegistry()` (`logicn-ext-bridge-cpp`). Ternary ops dispatch to
+   the **BitNet CPU bridge**; with no native addon compiled, the byte-faithful
+   **TPL simulator** runs — `executedNatively: false` is reported honestly. The
+   `ternaryChecksum` is bit-identical whether the stub or the cpp bridge runs
+   (the determinism oracle, Citizen Standard 1).
+4. **Hold-First governance.** An unapproved model or an exhausted call budget
+   **traps before any compute runs** — `ERR_AI_MODEL_NOT_APPROVED` /
+   `ERR_AI_CALL_BUDGET`, exit code 1, with only `LOAD → TRAP → ERASE` in the
+   ledger. This makes `logicn infer` usable as a CI governance gate.
+5. **Audit.** Every precision decision (with its bridge provenance) is written to
+   an append-only JSONL ledger under `build/tower-logs/infer-<corr>.jsonl`.
+
+**Seam remaining:** invoking inference from *inside* a flow body via
+`AI.infer(...)` during `logicn run` needs the in-WASM `host:ai.infer` import
+(string marshaling through the WAT host bridge). `logicn infer` is the Stage-A
+host driver that delivers governed inference today; the in-WASM call is the
+documented follow-up.
+
+---
+
 ## Implementation Status
 
 | Component | Status | Package |
 |---|---|---|
 | `ai {}` contract block parsing | ✅ Implemented | logicn-core-compiler |
+| **Hybrid engine ↔ bridge registry (Brain→Brawn)** | ✅ **Implemented** | logicn-tower-citizen |
+| **BitNet CPU bridge + cpp registry factory** | ✅ **Implemented** | logicn-ext-bridge-cpp |
+| **`ai {}` governance enforcement (approved_models / max_model_calls)** | ✅ **Implemented** | logicn-tower-citizen |
+| **`logicn infer` governed-inference CLI driver** | ✅ **Implemented** | logicn CLI |
+| `AI.infer(...)` in-WASM host import (`host:ai.infer`) | 🔲 Follow-up (string marshaling) | logicn.mjs hostRuntime |
 | `ai.inference` V_DPM bit (bit 5) | ✅ Implemented | capability-types.ts |
 | `logicn-ai` governance layer | ✅ Functional prototype | logicn-ai |
 | `logicn-ai-lowbit` BitNet planning | ✅ Functional prototype | logicn-ai-lowbit |

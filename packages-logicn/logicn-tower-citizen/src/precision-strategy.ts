@@ -31,11 +31,11 @@
 // Axis 1 — Precision technique
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type PrecisionTechnique =
-  | "ternary"    // BitNet b1.58 {-1,0,+1}
-  | "fp4_block"  // NVFP4 E2M1 block-scaled
-  | "fp8"        // intermediate fallback
-  | "fp16";      // full precision (sensitivity-critical layers)
+// The precision/scheduling/op-class TYPES now live in the neutral Brain/Brawn
+// contract package so native bridges depend on it, not on the Tower. The routing
+// LOGIC (sensitivity tables + routePrecision) stays here. Re-exported for back-compat.
+import type { PrecisionTechnique, SchedulingTechnique, InferenceOpClass } from "@logicn/inference-bridge-contract";
+export type { PrecisionTechnique, SchedulingTechnique, InferenceOpClass } from "@logicn/inference-bridge-contract";
 
 /**
  * Provenance — which open-source engine each technique is derived from.
@@ -59,25 +59,8 @@ export const TECHNIQUE_BITS: Readonly<Record<PrecisionTechnique, number>> = {
   fp16: 16,
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Axis 2 — Scheduling technique
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type SchedulingTechnique =
-  | "dynamic"               // standard runtime dispatch
-  | "deterministic_static"; // Groq-style pre-scheduled, zero jitter
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Operation classes — what part of an inference pass we are routing
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type InferenceOpClass =
-  | "embedding"     // token → vector lookup
-  | "attention"     // QKV projection + scaled-dot-product
-  | "feedforward"   // dense FFN / MLP weight matrices
-  | "normalization" // layernorm / rmsnorm
-  | "output_head"   // final logit projection
-  | "kv_cache";     // key/value cache read/write
+// (SchedulingTechnique and InferenceOpClass are defined in
+// @logicn/inference-bridge-contract and re-exported above.)
 
 /**
  * Sensitivity of an operation class to low-precision quantization.

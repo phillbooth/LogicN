@@ -69,3 +69,35 @@ not implemented**. Each needs a decision before it can land in the wider project
   in `manifest-generator.ts` (core compiler), or extend the schema if a TPL-specific
   sub-record is wanted.
 - **Why not here:** Manifest generation + CBOR tags live in `logicn-core-compiler`.
+
+---
+
+## Deep-analysis findings (2026-06-06)
+
+**FIXED this session (governance-first hardening):**
+- ✅ `approvedModels` bypass — omitting `model` under an allow-list now traps
+  `ERR_AI_MODEL_REQUIRED` (was an implicit pass).
+- ✅ Silent host-native fallback — `AiGovernance.denyHostNativeFallback` traps
+  `ERR_HOST_NATIVE_DENIED` for any routed precision with no registered bridge
+  (aerospace/Tier-1 mode). Default permissive.
+- ✅ Corruption masking — `StubTernaryBridge` now TRAPS the illegal `0b11` trit
+  encoding instead of decoding it to 0.
+- ✅ `engine.shutdown()` releases all bridges once at teardown (not per-infer —
+  registry bridges are shared).
+
+**DEFERRED (throughput refactor — the next pass):**
+- **Packed end-to-end:** `StubTernaryBridge` still decodes packed `Int32Array`
+  weights into a `number[]` and reloads a fresh simulator per op. Should execute
+  directly over the packed buffer (no decode/reload, no per-op allocation) to keep
+  the ternary memory-bandwidth advantage.
+- **Fixed-point scale:** `i2_scale` is a JS `number` → IEEE-754 after the integer
+  T-MAC. For bit-exact replay it should be `{ mantissa, shift }` (quantized).
+- **`BridgeOp` metadata:** add matrix shape / strides / layout tags / block-scale /
+  tile + alignment / memory-handle ownership so NVFP4 tensor-core and photonic
+  bridges can be wired without widening the contract later.
+- **`canCommit()` in `execute()`:** the cpp BitNet bridges define `canCommit()` but
+  don't call it before compute — the Governance Signal is aspirational there.
+- **Continuous determinism sampling:** cpp native-vs-simulator cross-check stops
+  after 8 calls; aerospace needs continuous sampling or a certified replay mode.
+- **`tmacVector` COMMIT gate:** the vector T-MAC path logs a transition without
+  consulting `GovernanceEnforcer.checkTransition()` (the single-gate path does).

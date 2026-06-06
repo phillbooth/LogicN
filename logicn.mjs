@@ -105,6 +105,7 @@ Commands:
   logicn diagnostic                                    run diagnostic fault-injection benchmark suite
   logicn border-check                                  validate all plugin schemas in governance/plugins/
   logicn kb-graph [--all]                              scan docs/Knowledge-Bases/ cross-reference graph
+  logicn infer <file.lln> [--invoke F] [--prompt P] [--model M]   run governed AI inference from a flow's ai {} contract
 
 Examples:
   logicn run   governance-cost.lln --invoke main
@@ -442,6 +443,34 @@ Baseline comparison (governance-cost):
     process.exit(0);
   }
 
+  // ── logicn bridge-attest — sign / verify bridge manifests (CF-3/CF-7) ───────
+  if (command === "bridge-attest") {
+    const tc = await import(new URL("packages-logicn/logicn-tower-citizen/dist/index.js", import.meta.url).href);
+    const sub = rest[0];
+    if (sub === "keygen") {
+      const { publicKeyPem, privateKeyPem } = tc.generateAttestationKeypair();
+      console.log("# Ed25519 bridge-attestation keypair");
+      console.log("# Keep the private key offline; pin the public key in the deployment's attestation policy.\n");
+      console.log(publicKeyPem.trim());
+      console.log(privateKeyPem.trim());
+      process.exit(0);
+    }
+    if (sub === "hash" && rest[1]) {
+      const manifest = JSON.parse(readFileSync(rest[1], "utf8"));
+      console.log(tc.attestationHash(manifest));
+      process.exit(0);
+    }
+    if (sub === "sign" && rest[1] && rest[2]) {
+      const manifest = JSON.parse(readFileSync(rest[1], "utf8"));
+      const privateKeyPem = readFileSync(rest[2], "utf8");
+      const attestation = tc.signManifest(manifest, privateKeyPem);
+      console.log(JSON.stringify(attestation, null, 2));
+      process.exit(0);
+    }
+    console.error("Usage: logicn bridge-attest keygen | hash <manifest.json> | sign <manifest.json> <privkey.pem>");
+    process.exit(2);
+  }
+
   // ── logicn diagnostic — run diagnostic fault-injection benchmark suite ──────
   if (command === "diagnostic") {
     const { execSync: execS } = await import("node:child_process");
@@ -460,6 +489,108 @@ Baseline comparison (governance-cost):
   const source = readFileSync(llnFile, "utf8");
   const parsed = m.parseProgram(source, llnFile);
   const errors = (parsed.diagnostics ?? []).filter(d => d.severity === "error");
+
+  // ── logicn infer — run a governed AI inference from a flow's ai {} contract ──
+  // The Governed Inference Tower seam: reads the flow's `ai {}` block (approved
+  // models, governance tier, call budget), builds the Hybrid Inference Engine
+  // (Brain) wired to the BitNet CPU bridge (Brawn) from logicn-ext-bridge-cpp,
+  // runs one governed inference, prints the receipt and writes the audit ledger.
+  if (command === "infer") {
+    const flag = (name, def) => { const i = rest.indexOf(name); return i >= 0 ? rest[i + 1] : def; };
+    const flowName = flag("--invoke", parsed.flows[0]?.name);
+    const prompt = flag("--prompt", "Summarise the input document under governance.");
+    let model = flag("--model", undefined);
+
+    // Extract the `ai {}` contract sub-block for the target flow from the AST.
+    const extractAiBlock = (ast, targetFlow) => {
+      const out = { approvedModels: undefined, governanceTier: undefined, maxModelCalls: undefined, maxTokenCost: undefined };
+      const flow = (ast.children ?? []).find(c => /FlowDecl$/.test(c.kind ?? "") && c.value === targetFlow)
+        ?? (ast.children ?? []).find(c => /FlowDecl$/.test(c.kind ?? ""));
+      if (!flow) return out;
+      const contract = (flow.children ?? []).find(c => c.kind === "contractDecl");
+      if (!contract) return out;
+      const aiBlock = (contract.children ?? []).find(c => c.value === "ai:block");
+      if (!aiBlock) return out;
+      for (const child of aiBlock.children ?? []) {
+        const v = String(child.value ?? "");
+        if (v === "approved_models:block") {
+          const models = (child.children ?? [])
+            .flatMap(d => String(d.value ?? "").replace(/^decl:/, "").split(/\s+/))
+            .filter(Boolean);
+          if (models.length) out.approvedModels = models;
+        } else if (v.startsWith("decl:")) {
+          const body = v.replace(/^decl:/, "").split(";;")[0].trim(); // drop trailing govComment
+          const [key, ...vals] = body.split(/\s+/);
+          if (key === "governance_tier") {
+            const t = parseInt(String(vals[0] ?? "").replace(/[^0-9]/g, ""), 10);
+            if (t >= 1 && t <= 3) out.governanceTier = t;
+          } else if (key === "max_model_calls") {
+            const n = parseInt(vals[0] ?? "", 10);
+            if (Number.isFinite(n)) out.maxModelCalls = n;
+          } else if (key === "max_token_cost") {
+            out.maxTokenCost = vals.join("").replace(/\s+/g, "");
+          }
+        }
+      }
+      return out;
+    };
+
+    const ai = extractAiBlock(parsed.ast, flowName);
+    if (!model && ai.approvedModels?.length) model = ai.approvedModels[0];
+    const tier = ai.governanceTier ?? 1;
+
+    // Brain (engine) + Brawn (cpp BitNet bridge registry).
+    const tc = await import(new URL("packages-logicn/logicn-tower-citizen/dist/index.js", import.meta.url).href);
+    let registry;
+    try {
+      const cpp = await import(new URL("packages-logicn/logicn-ext-bridge-cpp/dist/index.js", import.meta.url).href);
+      registry = cpp.createCppBridgeRegistry();
+    } catch { registry = undefined; } // fall back to the in-package stub registry
+
+    const engine = tc.createHybridEngine({
+      governanceTier: tier,
+      airGapped: tier === 1,
+      ...(registry ? { bridges: registry } : {}),
+      governance: {
+        ...(ai.approvedModels ? { approvedModels: ai.approvedModels } : {}),
+        ...(ai.maxModelCalls !== undefined ? { maxModelCalls: ai.maxModelCalls } : {}),
+      },
+    });
+
+    const correlationId = `INFER-${flowName}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const receipt = await engine.infer({ prompt, correlationId, ...(model ? { model } : {}) });
+
+    console.log(`\n  Governed Inference — ${flowName}  (${llnFile})`);
+    console.log("  ─────────────────────────────────────────────");
+    console.log(`  governance_tier:   tier-${tier} ${tier === 1 ? "(air-gapped CPU · BitNet ternary)" : tier === 2 ? "(cloud)" : "(Blackwell GPU)"}`);
+    console.log(`  approved_models:   ${ai.approvedModels ? ai.approvedModels.join(", ") : "(unrestricted)"}`);
+    console.log(`  model invoked:     ${model ?? "(none specified)"}`);
+    console.log(`  max_model_calls:   ${ai.maxModelCalls ?? "(unbounded)"}`);
+    if (ai.maxTokenCost) console.log(`  max_token_cost:    ${ai.maxTokenCost}`);
+    console.log("  ─────────────────────────────────────────────");
+    if (receipt.trapFired) {
+      console.log(`  ❌ TRAP: ${receipt.trapCode} — inference denied at the governance boundary (no compute ran)`);
+    } else {
+      console.log(`  ✅ ${receipt.text}`);
+      console.log(`  engines blended:   ${receipt.enginesBlended.join(" + ")}`);
+      console.log(`  bridges executed:  ${receipt.bridgesUsed.join(", ") || "(host-native only)"}`);
+      console.log(`  executed natively: ${receipt.executedNatively} ${receipt.executedNatively ? "" : "(deterministic simulator — native addon not compiled)"}`);
+      console.log(`  ternary checksum:  ${receipt.ternaryChecksum}  (bit-identical across CPU/GPU/photonic)`);
+      console.log(`  avg bits/weight:   ${receipt.avgBitsPerWeight}`);
+      console.log(`  latency:           ${receipt.latencyMs}ms`);
+    }
+
+    // Append-only audit ledger (one JSONL per inference, like the tower-log journal).
+    try {
+      const events = engine.getAudit().query({ correlationId });
+      mkdirSync("build/tower-logs", { recursive: true });
+      const ledgerPath = `build/tower-logs/infer-${correlationId}.jsonl`;
+      writeFileSync(ledgerPath, events.map(e => JSON.stringify(e)).join("\n") + "\n");
+      console.log(`  audit ledger:      ${ledgerPath} (${events.length} events)\n`);
+    } catch { /* non-fatal */ }
+
+    process.exit(receipt.trapFired ? 1 : 0);
+  }
 
   if (command === "check") {
     const fx = m.checkEffects(parsed.flows, parsed.ast);

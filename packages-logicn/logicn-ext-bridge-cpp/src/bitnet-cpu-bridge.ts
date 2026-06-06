@@ -14,14 +14,20 @@
  *      native addon reads the same buffer (no serialisation in the hot path).
  */
 
+// Contract types/values come from the NEUTRAL package (Brain/Brawn seam).
 import {
-  StubTernaryBridge,
-  GovernanceEnforcer,
-  AuditLogger,
   assertDeterminism,
   type InferenceBridge,
   type BridgeOp,
   type BridgeResult,
+  type BridgeManifest,
+} from "@logicn/inference-bridge-contract";
+// The determinism oracle + governance/audit are the Tower's reference
+// implementation (still imported from the Tower — oracle extraction deferred).
+import {
+  StubTernaryBridge,
+  GovernanceEnforcer,
+  AuditLogger,
 } from "@logicn/tower-citizen";
 import { loadNativeAddon, type BitNetNativeAddon } from "./addon-loader.js";
 import { detectCpu, type CpuCapability } from "./hardware-detect.js";
@@ -30,6 +36,11 @@ export class BitNetCpuBridge implements InferenceBridge {
   readonly bridgeId = "bitnet-cpu";
   readonly technique = "ternary" as const;
   readonly nativeAvailable: boolean;
+  /** CF-3/CF-7 self-description. `nativeAddonHash` is the SHA-256 the loader
+   *  computed over the `.node` binary (present only when a native addon loaded);
+   *  it ships unsigned (`certificationProfile: "dev"`) until `logicn bridge-attest
+   *  sign` signs it offline for a certified deployment. */
+  readonly manifest: BridgeManifest;
 
   readonly cpu: CpuCapability;
   private readonly native: BitNetNativeAddon | null;
@@ -46,6 +57,18 @@ export class BitNetCpuBridge implements InferenceBridge {
     this.cpu = detectCpu();
     this.governance = governance ?? new GovernanceEnforcer();
     this.reference = new StubTernaryBridge(logger, this.governance);
+    this.manifest = {
+      bridgeId: this.bridgeId,
+      packageName: "@logicn/ext-bridge-cpp",
+      packageHash: "0".repeat(64), // filled by `logicn bridge-attest` at release time
+      ...(load.addonHash !== undefined ? { nativeAddonHash: load.addonHash } : {}),
+      sourceEngine: "microsoft/BitNet",
+      precision: "ternary",
+      layoutVersion: "i2s-v1",
+      hardwareIdentity: `${this.cpu.arch}-${this.cpu.kernelFamily}`,
+      determinismMode: "exact",
+      certificationProfile: "dev",
+    };
   }
 
   initialize(): void {

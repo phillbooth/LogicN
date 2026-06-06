@@ -16,7 +16,7 @@ export type { BitNetNativeAddon, AddonLoadResult } from "./addon-loader.js";
 
 import { BitNetCpuBridge } from "./bitnet-cpu-bridge.js";
 import { BitNetGpuBridge } from "./bitnet-gpu-bridge.js";
-import type { InferenceBridge, BridgeRegistry } from "@logicn/tower-citizen";
+import type { InferenceBridge, BridgeRegistry } from "@logicn/inference-bridge-contract";
 
 /**
  * Build the best available ternary bridge for this machine:

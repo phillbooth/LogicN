@@ -12,7 +12,8 @@
  */
 
 import { createRequire } from "node:module";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -41,6 +42,11 @@ export interface AddonLoadResult {
   readonly addon: BitNetNativeAddon | null;
   readonly searchedPaths: readonly string[];
   readonly reason: string;
+  /** Resolved path of the addon that was found (if any). */
+  readonly addonPath?: string;
+  /** CF-7: SHA-256 hex of the `.node` binary, computed BEFORE `require()`.
+   *  Feeds the bridge manifest's `nativeAddonHash` for supply-chain attestation. */
+  readonly addonHash?: string;
 }
 
 const CANDIDATE_PATHS = [
@@ -49,18 +55,27 @@ const CANDIDATE_PATHS = [
   join(__dir, "..", "prebuilds", `bitnet_addon-${process.platform}-${process.arch}.node`),
 ];
 
-export function loadNativeAddon(): AddonLoadResult {
+export function loadNativeAddon(opts: { expectedHash?: string } = {}): AddonLoadResult {
   const searched: string[] = [];
   for (const p of CANDIDATE_PATHS) {
     searched.push(p);
     if (!existsSync(p)) continue;
+    // CF-7: hash the binary BEFORE loading it. In a certified deployment the
+    // caller passes the expected hash; a mismatch FAILS CLOSED (no require()).
+    const addonHash = createHash("sha256").update(readFileSync(p)).digest("hex");
+    if (opts.expectedHash !== undefined && opts.expectedHash !== addonHash) {
+      return {
+        loaded: false, addon: null, searchedPaths: searched, addonPath: p, addonHash,
+        reason: `ERR_ADDON_HASH_MISMATCH at ${p}: expected ${opts.expectedHash}, got ${addonHash}`,
+      };
+    }
     try {
       const addon = require(p) as BitNetNativeAddon;
       // Minimal contract check.
       if (typeof addon.tmac === "function" && typeof addon.init === "function") {
-        return { loaded: true, addon, searchedPaths: searched, reason: `loaded ${p}` };
+        return { loaded: true, addon, searchedPaths: searched, reason: `loaded ${p}`, addonPath: p, addonHash };
       }
-      return { loaded: false, addon: null, searchedPaths: searched, reason: `addon at ${p} missing required exports` };
+      return { loaded: false, addon: null, searchedPaths: searched, addonPath: p, addonHash, reason: `addon at ${p} missing required exports` };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return { loaded: false, addon: null, searchedPaths: searched, reason: `failed to load ${p}: ${msg}` };

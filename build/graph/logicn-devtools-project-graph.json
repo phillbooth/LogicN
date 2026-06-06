@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "generatedAt": "2026-06-06T06:51:38.702Z",
+  "generatedAt": "2026-06-06T13:04:18.471Z",
   "nodes": [
     {
       "id": "package:logicn-core",
@@ -7477,6 +7477,24 @@
       "kind": "Document",
       "label": "README.md",
       "sourcePath": "docs/README.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/reports/logicn-ground-up-security-architectural-audit-report.md",
+      "kind": "Document",
+      "label": "logicn-ground-up-security-architectural-audit-report.md",
+      "sourcePath": "docs/reports/logicn-ground-up-security-architectural-audit-report.md",
+      "tags": [
+        "document"
+      ]
+    },
+    {
+      "id": "doc:docs/reports/logicn-tower-hard-wall-resilience-improvement-suggestions.md",
+      "kind": "Document",
+      "label": "logicn-tower-hard-wall-resilience-improvement-suggestions.md",
+      "sourcePath": "docs/reports/logicn-tower-hard-wall-resilience-improvement-suggestions.md",
       "tags": [
         "document"
       ]
@@ -34942,6 +34960,34 @@
       "kind": "documents",
       "confidence": "INFERRED",
       "evidencePath": "docs/README.md"
+    },
+    {
+      "from": "doc:docs/reports/logicn-ground-up-security-architectural-audit-report.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/reports/logicn-ground-up-security-architectural-audit-report.md"
+    },
+    {
+      "from": "doc:docs/reports/logicn-ground-up-security-architectural-audit-report.md",
+      "to": "package:logicn-core-compiler",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/reports/logicn-ground-up-security-architectural-audit-report.md"
+    },
+    {
+      "from": "doc:docs/reports/logicn-tower-hard-wall-resilience-improvement-suggestions.md",
+      "to": "package:logicn-core",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/reports/logicn-tower-hard-wall-resilience-improvement-suggestions.md"
+    },
+    {
+      "from": "doc:docs/reports/logicn-tower-hard-wall-resilience-improvement-suggestions.md",
+      "to": "package:logicn-core-cli",
+      "kind": "documents",
+      "confidence": "INFERRED",
+      "evidencePath": "docs/reports/logicn-tower-hard-wall-resilience-improvement-suggestions.md"
     },
     {
       "from": "doc:docs/REQUIREMENTS.md",

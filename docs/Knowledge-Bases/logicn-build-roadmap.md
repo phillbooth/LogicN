@@ -249,3 +249,67 @@ See `logicn-tower-native-syntax.md` for full grammar, semantics, and cross-refer
 **Patterns:** `logicn-agile-governance-pattern.md` · `logicn-proof-tracing-design.md`  
 **Root:** `logicn-engineering-goals.md` · `logicn-build-roadmap.md` (this doc) · `KNOWLEDGE-BASE-INDEX.md`  
 **Research:** `logicn-governed-design-synthesis.md` · `logicn-governed-tower-specification.md` · `logicn-platform-infographic-concept.md` · `logicn-floor3-proof-zone-graph.md`
+
+---
+
+## P9 Completion Roadmap (2026-06-06)
+
+State: **44/44 packages · 4,089 tests · 0 fail.** Stage A compiler 100%; the
+Governed Inference Tower + 6 Sentinels + neutral bridge contract are built, wired,
+governed, and benchmarked. The single gate to P9 is self-hosting (Stage B).
+
+### P9 — self-hosting bootstrap (the gate)
+- **#120 P9.4a — guarded flow WAT bodies** ✅ DONE (2026-06-06): the WAT emitter now
+  lowers `guarded` flow bodies via `emitWATFromFlowAST` (only when emission fully
+  succeeds, else `unreachable` — protects the 3,259 compiler tests). Verified: a
+  guarded flow emits real `i32.add` and the suite stays green.
+- **#120 P9.4b — record struct layout** ✅ CONSTRUCTION DONE (2026-06-06): a `#record`
+  literal now bump-allocates `fieldCount*4` bytes above `$__lln_heap` (base 1024),
+  stores each field at its slot offset, and evaluates to the base pointer — per-record
+  `$__lln_rec_N` locals make it safe under nesting + record-returning calls. Verified
+  end-to-end: a record-returning flow assembles via wabt and executes in real WASM with
+  the correct struct in linear memory (tests/wat-p9_4b-record-layout). **Field ACCESS
+  also DONE** (2026-06-06): `r.field` → `i32.load` at the slot offset, resolved via a
+  `buildRecordLayouts` registry + per-flow var→type tracking (from `let r: T`/`let r =
+  T{…}` literal types + record-typed params); round-trips in real WASM (build a record,
+  read fields back — 5 tests). REMAINING: `#record-update` still emits the placeholder
+  (needs a base-copy), and `let r = someCall()` returning a record isn't type-tracked
+  (cross-flow return-type inference) — neither blocks the self-hosted `tokenize` path.
+- **#120 P9.4c — export gating for governed flows** ✅ DONE (2026-06-06): a `guarded`
+  flow with no declared effects is now WASM-exportable (it lowers like a pure flow), so
+  `logicn run --invoke <guardedFlow>` reaches governed entry points. Verified: a guarded
+  flow is exported and invocable in real WASM (tests/wat-p9_4c-export-gating, 2 tests).
+- **Ceremony — EMISSION half ✅ DONE (2026-06-06):** the self-hosted lexer
+  (`src/self-hosted/lexer.lln`) now compiles to a real, wabt-assembling WASM module —
+  **all 9 flows have real bodies (0 `unreachable` stubs)**, `tokenize` (record-returning)
+  included, using the P9.4b record heap (tests/wat-p9-ceremony-emission, 3 tests). This
+  is the milestone "self-hosted `tokenize` emits real WASM". Interpreter-level Stage-A ==
+  Stage-B parity is already locked (lexer-parity.test.mjs, PARITY_ACHIEVED=true; R6 #101).
+- **Ceremony — EXECUTION-PARITY half 🔲 REMAINING (Post-P9, overlaps #105):** running
+  `tokenize.wasm` and byte-comparing its output to the interpreter needs the full
+  host-import runtime (string table + `__array_*`/`__str_*`/`__char_*` bridge +
+  list/record memory walk) wired into `WebAssembly.instantiate`. That is the real-Wasmtime
+  `logicn run` harness (#105), not a compiler-emitter gap.
+
+### Post-P9 — real DSS.wasm (DRCM Phase 4)
+- #102 dss/index.lln → build/dss.wasm via Stage B
+- #103 Wasmtime component supervises DWI guests · #104 real fuel · #105 `logicn run`
+  on the real DSS component · #106 receipt signing in DSS.wasm
+
+### Parallel hardening track (regulated-assurance lens, from the security audits)
+- **CF-3 finish** — Tower verifies `sha256(canonicalManifestString)` + signature;
+  `requireSignedBridge` in the Certified Profile; `logicn bridge attest` tool.
+- **CF-4 finish** — extract the TPL oracle (`TPLSimulator`/`StubTernaryBridge`) into
+  `@logicn/tpl-oracle` so the Brawn imports NO Tower runtime.
+- **CF-5** — vector T-MAC commit gate (`canCommit()` in `execute()`).
+- Packed-array refactor + fixed-point `i2_scale` (Phase 2 throughput).
+- ✅ Numeric policy table (2026-06-06) — `compilePolicy()` compiles `ai{}` ONCE into
+  packed i32 flags + an O(1) membership Set + pre-paid certified preconditions; the
+  hot path is branchless flag tests + `Set.has` (2.04× on the governance-check slice,
+  scales with allow-list size). [Contract → runtime CLI manifest reparse still open.]
+
+### After P9: foundations to 100%
+Once the bootstrap ceremony passes, drive the remaining Stage B pipeline modules
+(parser/type-checker/effect/govern/emit/runtime `.lln`) from "partial" to "full"
+so LogicN compiles and runs LogicN end-to-end — then port `logicn-tower-citizen`
+itself to `.lln:tri` (compiler can host it; oracle preserved).

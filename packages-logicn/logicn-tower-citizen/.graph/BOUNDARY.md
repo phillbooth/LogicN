@@ -10,10 +10,10 @@
 | Metric | Count |
 |---|---|
 | Files | 10 |
-| Internal edges | 21 |
-| External dependencies | 3 |
+| Internal edges | 23 |
+| External dependencies | 4 |
 | ├─ Node core | 3 |
-| ├─ Workspace (@logicn/*) | 0 |
+| ├─ Workspace (@logicn/*) | 1 |
 | └─ Third-party | 0 |
 | Orphan files | 0 |
 
@@ -25,7 +25,7 @@
 - `node:path`
 
 ### Workspace (@logicn/*)
-_none_
+- `@logicn/inference-bridge-contract`
 
 ### Third-party
 _none_

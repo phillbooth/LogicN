@@ -1211,7 +1211,7 @@
       "title": "LogicN — Build Roadmap",
       "version": "6.0",
       "layer": "Layer 0",
-      "wordCount": 1965,
+      "wordCount": 2300,
       "lnlCodes": [
         "LLN-ACCESS-001",
         "LLN-ASSIMILATE-001",
@@ -1225,7 +1225,7 @@
         "LLN-OBS-002",
         "LLN-TRAP-001"
       ],
-      "lastModified": "2026-06-06T06:46:48.037Z"
+      "lastModified": "2026-06-06T12:41:54.698Z"
     },
     {
       "id": "logicn-cache-aware-execution",
@@ -2790,9 +2790,9 @@
       "title": "LogicN — Governed Inference Tower",
       "version": "1.0",
       "status": "Architecture specification — implementation roadmap active",
-      "wordCount": 1182,
+      "wordCount": 1509,
       "lnlCodes": [],
-      "lastModified": "2026-06-05T18:02:27.197Z"
+      "lastModified": "2026-06-06T09:07:35.371Z"
     },
     {
       "id": "logicn-governed-memory-blocks",
@@ -3912,11 +3912,11 @@
       "id": "logicn-runtime-status-SOT",
       "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\logicn-runtime-status-SOT.md",
       "title": "LogicN — Runtime Status: Single Source of Truth (SOT)",
-      "wordCount": 1793,
+      "wordCount": 1994,
       "lnlCodes": [
         "LLN-MATCH-001"
       ],
-      "lastModified": "2026-06-05T16:08:15.394Z"
+      "lastModified": "2026-06-06T13:01:52.111Z"
     },
     {
       "id": "logicn-runtime-value-model",

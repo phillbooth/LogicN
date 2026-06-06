@@ -1,0 +1,65 @@
+// bridge-attestation.test.mjs — CF-3 / CF-7: the bridge registry is no longer
+// trusted input. A bridge must present a valid signed/pinned manifest or it is
+// denied (ERR_BRIDGE_UNATTESTED) before any compute.
+
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import {
+  createHybridEngine, StubTernaryBridge, AuditLogger,
+  signManifest, verifyAttestation, generateAttestationKeypair, attestBridge, attestationHash,
+} from "../dist/index.js";
+
+const cid = (s) => `ATT-${s}-${process.pid}-${Math.random().toString(36).slice(2, 7)}`;
+const inMem = () => new AuditLogger(null);
+
+test("verifyAttestation: signed manifest verifies; tampered fails", () => {
+  const { publicKeyPem, privateKeyPem } = generateAttestationKeypair();
+  const bridge = new StubTernaryBridge(inMem());
+  const att = signManifest(bridge.manifest, privateKeyPem);
+
+  assert.equal(verifyAttestation(att, { requireSigned: true, publicKeyPem }).ok, true);
+  // tamper the manifest after signing → signature no longer matches
+  const forged = { manifest: { ...att.manifest, hardwareIdentity: "evil-kernel" }, signature: att.signature };
+  assert.equal(verifyAttestation(forged, { requireSigned: true, publicKeyPem }).ok, false);
+  // missing attestation → denied
+  assert.equal(verifyAttestation(undefined, { requireSigned: true, publicKeyPem }).ok, false);
+  // a different key cannot verify
+  const other = generateAttestationKeypair();
+  assert.equal(verifyAttestation(att, { requireSigned: true, publicKeyPem: other.publicKeyPem }).ok, false);
+});
+
+test("hash pinning: only a pinned manifest hash passes", () => {
+  const bridge = new StubTernaryBridge(inMem());
+  const att = { manifest: bridge.manifest };
+  const good = attestationHash(bridge.manifest);
+  assert.equal(verifyAttestation(att, { allowedHashes: [good] }).ok, true);
+  assert.equal(verifyAttestation(att, { allowedHashes: ["b".repeat(64)] }).ok, false);
+});
+
+test("engine DENIES an unattested bridge under an attestation policy", async () => {
+  const { publicKeyPem } = generateAttestationKeypair();
+  // default stub registry — bridges have a manifest but NO signature.
+  const eng = createHybridEngine({ airGapped: true, governanceTier: 1, attestation: { requireSigned: true, publicKeyPem } });
+  const r = await eng.infer({ prompt: "x", correlationId: cid("deny"), opClasses: ["feedforward"] });
+  assert.equal(r.trapFired, true);
+  assert.equal(r.trapCode, "ERR_BRIDGE_UNATTESTED");
+});
+
+test("engine PERMITS an attested (signed) bridge registry", async () => {
+  const { publicKeyPem, privateKeyPem } = generateAttestationKeypair();
+  const signed = attestBridge(new StubTernaryBridge(inMem()), privateKeyPem);
+  const registry = new Map([[signed.technique, signed]]);
+  const eng = createHybridEngine({
+    airGapped: true, governanceTier: 1, bridges: registry,
+    attestation: { requireSigned: true, publicKeyPem },
+  });
+  const r = await eng.infer({ prompt: "x", correlationId: cid("ok"), opClasses: ["feedforward"] });
+  assert.equal(r.trapFired, false);
+  assert.ok(r.bridgesUsed.includes("stub-ternary"));
+});
+
+test("no attestation policy ⇒ unchanged behaviour (back-compat)", async () => {
+  const eng = createHybridEngine({ airGapped: true, governanceTier: 1 });
+  const r = await eng.infer({ prompt: "x", correlationId: cid("compat"), opClasses: ["feedforward"] });
+  assert.equal(r.trapFired, false);
+});

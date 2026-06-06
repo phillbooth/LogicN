@@ -50,7 +50,30 @@ contract {
   trap documentText == "" : ERR_EMPTY_DOCUMENT      ;; toxic input blocked at the border
   trap maxLength <= 0 : ERR_INVALID_MAX_LENGTH      ;; resource bound enforced
 
-  ;; The summary call would dispatch through the governed inference suite.
-  ;; Stage A: returns a placeholder. Stage B: real BitNet/Groq/NVFP4 call.
+  ;; The summary call dispatches through the Governed Inference Tower.
+  ;; Stage A: the flow body returns a placeholder (it compiles to WASM normally);
+  ;; the GOVERNED inference itself is driven from the ai {} contract above.
   return Ok("summary-placeholder")
 }
+
+;; ── Running the governed inference ───────────────────────────────────────────
+;; The ai {} contract block above is not decoration — it drives a real, governed
+;; inference through the Tower (Brain → Brawn → audit). Run it with:
+;;
+;;     logicn infer examples/foundations/ai-inference-governed.lln \
+;;            --prompt "Summarise the Q3 compliance report."
+;;
+;; What happens:
+;;   1. The CLI reads this flow's ai {} block (approved_models, governance_tier,
+;;      max_model_calls) — these become HARD limits, not hints.
+;;   2. governance_tier tier_1 selects the air-gapped CPU path: the Unified Hybrid
+;;      Inference Engine (logicn-tower-citizen, the "Brain") routes ternary ops to
+;;      the BitNet CPU bridge (logicn-ext-bridge-cpp, the "Brawn"). With no native
+;;      addon compiled the byte-faithful TPL simulator runs, deterministically.
+;;   3. Every precision decision is written to an append-only audit ledger under
+;;      build/tower-logs/ — the provable mixed-precision trail.
+;;
+;; Governance is enforced at the boundary BEFORE any compute:
+;;     logicn infer …  --model gpt-untrusted   →  ERR_AI_MODEL_NOT_APPROVED (exit 1)
+;; An unapproved model is denied with only LOAD->TRAP->ERASE in the ledger — proof
+;; that no inference ran. This makes `logicn infer` usable as a CI governance gate.

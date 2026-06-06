@@ -14,10 +14,6 @@
   ],
   "internalEdges": [
     {
-      "from": "src/bridge/interface.ts",
-      "to": "src/precision-strategy.ts"
-    },
-    {
       "from": "src/bridge/stub-provider.ts",
       "to": "src/tpl-simulator.ts"
     },
@@ -44,6 +40,18 @@
     {
       "from": "src/hybrid-engine.ts",
       "to": "src/precision-strategy.ts"
+    },
+    {
+      "from": "src/hybrid-engine.ts",
+      "to": "src/bridge/stub-provider.ts"
+    },
+    {
+      "from": "src/hybrid-engine.ts",
+      "to": "src/bridge/interface.ts"
+    },
+    {
+      "from": "src/hybrid-engine.ts",
+      "to": "src/audit-logger.ts"
     },
     {
       "from": "src/index.ts",
@@ -100,6 +108,14 @@
   ],
   "externalDeps": [
     {
+      "specifier": "@logicn/inference-bridge-contract",
+      "kind": "workspace",
+      "importedBy": [
+        "src/bridge/interface.ts",
+        "src/precision-strategy.ts"
+      ]
+    },
+    {
       "specifier": "node:crypto",
       "kind": "node_core",
       "importedBy": [
@@ -129,10 +145,10 @@
   ],
   "stats": {
     "fileCount": 10,
-    "internalEdgeCount": 21,
-    "externalDepCount": 3,
+    "internalEdgeCount": 23,
+    "externalDepCount": 4,
     "nodeCoreCount": 3,
-    "workspaceCount": 0,
+    "workspaceCount": 1,
     "thirdpartyCount": 0,
     "orphanCount": 0
   }

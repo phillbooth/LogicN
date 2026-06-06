@@ -12,12 +12,14 @@
  */
 
 import {
-  StubTernaryBridge,
-  GovernanceEnforcer,
-  AuditLogger,
   type InferenceBridge,
   type BridgeOp,
   type BridgeResult,
+} from "@logicn/inference-bridge-contract";
+import {
+  StubTernaryBridge,
+  GovernanceEnforcer,
+  AuditLogger,
 } from "@logicn/tower-citizen";
 import { detectGpu, type GpuCapability } from "./hardware-detect.js";
 

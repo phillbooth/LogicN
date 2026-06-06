@@ -36,6 +36,9 @@ import {
 } from "./precision-strategy.js";
 import { createStubRegistry } from "./bridge/stub-provider.js";
 import { assertDeterminism, type BridgeRegistry, type BridgeOp, type BridgeResult } from "./bridge/interface.js";
+import type { EgressSink } from "./audit-logger.js";
+import { verifyAttestation, type AttestationPolicy } from "./bridge-attestation.js";
+import { compilePolicy, POL_HAS_ALLOWLIST, POL_HAS_CALL_BUDGET, POL_HAS_TOKEN_BUDGET, POL_DENY_HOST_NATIVE, type CompiledPolicy } from "./compiled-policy.js";
 
 // The canonical layer sequence of a transformer inference pass.
 // Real models repeat the attention/feedforward block N times; we route by class,
@@ -68,10 +71,24 @@ export interface HybridInferenceRequest {
  * BEFORE any compute runs (Hold-First), so the trail proves the boundary held.
  */
 export interface AiGovernance {
-  /** `ai { approved_models { … } }` — allow-list; an unlisted model is denied. */
+  /** `ai { approved_models { … } }` — allow-list; an unlisted model is denied.
+   *  When set, a request that omits `model` is ALSO denied (no implicit pass). */
   readonly approvedModels?: readonly string[];
   /** `ai { max_model_calls N }` — per-engine inference budget across its lifetime. */
   readonly maxModelCalls?:  number;
+  /** `ai { max_tokens N }` — per-call output-token ceiling. A request asking for more
+   *  traps `ERR_AI_TOKEN_BUDGET`. Required in certified mode. */
+  readonly maxNewTokens?:   number;
+  /** `ai { max_token_cost X }` — declared monetary ceiling per call (e.g. "GBP0.05").
+   *  Recorded in the receipt/audit; full CostGraph enforcement is a follow-up. Required in certified mode. */
+  readonly maxTokenCost?:   string;
+  /**
+   * Aerospace / Tier-1 strictness. When true, a routed op whose precision has NO
+   * registered bridge is NOT allowed to fall through to the host-native float path
+   * — it traps `ERR_HOST_NATIVE_DENIED`. Silent host-native execution is an
+   * uncontrolled state change in a hardened deployment. Default false (permissive).
+   */
+  readonly denyHostNativeFallback?: boolean;
 }
 
 export interface HybridInferenceReceipt {
@@ -108,6 +125,15 @@ const HYBRID_METADATA: PluginMetadata = {
   maxMemoryMB:     512,
   capabilityMask:  0b00100000, // V_DPM bit 5 (ai.inference)
 };
+
+/**
+ * V_DPM capability bit required to run ANY inference op (ai.inference — bit 5).
+ * The engine's granted `capabilityMask` must cover this or dispatch fails closed.
+ * This is the branchless `(required & granted) === required` gate made REAL: the
+ * V_DPM bitmask was declared on PluginMetadata but never enforced — an engine
+ * constructed without the ai.inference bit could still run inference. Now it can't.
+ */
+const AI_INFERENCE_CAP = 0b00100000;
 
 // ── Deterministic demonstration op ───────────────────────────────────────────
 // Stage A has no real model weights loaded, so each routed op is exercised with a
@@ -170,15 +196,35 @@ export class HybridInferenceEngine {
   private readonly ctx: RoutingContext;
   private readonly bridges: BridgeRegistry;
   private readonly governance: AiGovernance;
+  /** The numeric policy table — ai{} compiled ONCE into packed flags + a membership
+   *  Set + pre-paid certified preconditions. The hot path reads this, not `governance`. */
+  private readonly policy: CompiledPolicy;
+  private readonly certified: boolean;
+  private readonly attestationPolicy: AttestationPolicy | null;
+  /** V_DPM authority this engine actually holds. Inference requires AI_INFERENCE_CAP;
+   *  a granted mask lacking that bit traps ERR_CAPABILITY_DENIED before any compute. */
+  private readonly grantedCapabilityMask: number;
+  private bridgeAttestationDenial: string | null = null; // cached: first offending bridge id, if any
+  private bridgeAttestationChecked = false;
   private bridgesInitialized = false;
   private callCount = 0;
   private initialized = false;
+  // Policy-driven memoization: a HybridPlan is DETERMINISTIC for a fixed routing
+  // context + op set (pure router, no side effects). So we compute it ONCE per
+  // op-signature and reuse it — the hot infer() path becomes a map lookup instead
+  // of re-running routePrecision for every op on every call. This is the runtime
+  // form of "pre-pay the proof at preflight, then pointer-chase the locked plan".
+  private readonly planCache = new Map<string, HybridPlan>();
+  private sealed = false;
 
   constructor(
     ctx: Partial<RoutingContext> = {},
     tower?: TowerRuntime,
     bridges?: BridgeRegistry,
     governance?: AiGovernance,
+    certified = false,
+    attestationPolicy: AttestationPolicy | null = null,
+    grantedCapabilityMask: number = HYBRID_METADATA.capabilityMask,
   ) {
     this.ctx = {
       governanceTier: ctx.governanceTier ?? 1,
@@ -190,16 +236,69 @@ export class HybridInferenceEngine {
     // The Brain→Brawn seam: default to the in-package stub registry (the real
     // TPLSimulator for ternary), which runs on ANY machine. A deployment with
     // native silicon passes a registry built from logicn-ext-bridge-* instead.
-    this.bridges = bridges ?? (createStubRegistry() as BridgeRegistry);
+    // The default registry SHARES the tower's audit logger so the whole governed
+    // pass writes ONE unified trail (and honours the tower's in-memory mode)
+    // rather than each bridge spawning its own disk-backed ledger.
+    this.bridges = bridges ?? (createStubRegistry(this.tower.getAudit()) as BridgeRegistry);
     this.governance = governance ?? {};
+    this.policy = compilePolicy(this.governance, certified); // pre-pay the proof once
+    this.certified = certified;
+    this.attestationPolicy = attestationPolicy;
+    this.grantedCapabilityMask = grantedCapabilityMask;
+  }
+
+  /**
+   * CF-3/CF-7: verify every bridge in the registry against the attestation policy.
+   * Runs once and caches the result. Returns the first offending bridge id (with a
+   * reason via the audit) or null when all bridges are attested.
+   */
+  private checkBridgeAttestation(): string | null {
+    if (this.attestationPolicy === null) return null;
+    if (this.bridgeAttestationChecked) return this.bridgeAttestationDenial;
+    this.bridgeAttestationChecked = true;
+    for (const bridge of this.bridges.values()) {
+      const result = verifyAttestation(bridge.attestation, this.attestationPolicy);
+      if (!result.ok) {
+        this.bridgeAttestationDenial = `${bridge.bridgeId}: ${result.reason ?? "unattested"}`;
+        return this.bridgeAttestationDenial;
+      }
+    }
+    this.bridgeAttestationDenial = null;
+    return null;
   }
 
   initialize(): { plan: HybridPlan } {
     // Pre-plan the standard pass so the deployment can be inspected before any
     // real inference runs. The plan is deterministic for a fixed context.
-    const plan = planHybridInference(STANDARD_INFERENCE_OPS, this.ctx);
+    const plan = this.planFor(STANDARD_INFERENCE_OPS);
     this.initialized = true;
     return { plan };
+  }
+
+  /** Memoized plan lookup — compute once per op-signature, then reuse. */
+  private planFor(ops: readonly InferenceOpClass[]): HybridPlan {
+    const key = ops.join(",");
+    let plan = this.planCache.get(key);
+    if (plan === undefined) {
+      plan = planHybridInference(ops, this.ctx);
+      this.planCache.set(key, plan);
+    }
+    return plan;
+  }
+
+  /**
+   * Preflight: lock the deployment. Pre-computes + caches the plans for the given
+   * op sets (default: the standard transformer pass) so the flight-time infer()
+   * path never re-plans. Returns the locked plans for inspection / a preflight
+   * receipt. After seal(), the engine refuses to compute a NEW (uncached) plan —
+   * an op-set not seen at preflight traps, matching the "no runtime planning in
+   * flight" discipline.
+   */
+  seal(opSets: readonly (readonly InferenceOpClass[])[] = [STANDARD_INFERENCE_OPS]): { plans: HybridPlan[] } {
+    const plans = opSets.map((ops) => this.planFor(ops));
+    this.initialized = true;
+    this.sealed = true;
+    return { plans };
   }
 
   /**
@@ -215,7 +314,10 @@ export class HybridInferenceEngine {
     if (!this.initialized) this.initialize();
 
     const ops = request.opClasses ?? STANDARD_INFERENCE_OPS;
-    const plan = planHybridInference(ops, this.ctx);
+    // A sealed deployment must NOT plan in flight: an op-set never preflighted is a
+    // denial (deny-by-default extended to routing). Otherwise use the memoized plan.
+    const planPreflighted = !this.sealed || this.planCache.has(ops.join(","));
+    const plan = planPreflighted ? this.planFor(ops) : this.planFor(STANDARD_INFERENCE_OPS);
 
     const { sandbox, correlationId } = await this.tower.load(HYBRID_METADATA, request.correlationId);
     const audit = this.tower.getAudit();
@@ -226,7 +328,18 @@ export class HybridInferenceEngine {
       // The boundary must hold before the Brawn ever sees the op. An unapproved
       // model or an exhausted call budget is denied here, leaving an audit trail
       // that proves no compute happened.
-      const govTrap = this.checkAiGovernance(request);
+      // CF-3/CF-7: an unattested bridge in the registry is denied before any compute.
+      // The branchless capability gate is the MOST fundamental authority question —
+      // does this engine even hold the ai.inference V_DPM bit? — so it runs first.
+      const capabilityHeld = (AI_INFERENCE_CAP & this.grantedCapabilityMask) === AI_INFERENCE_CAP;
+      const bridgeDenial = this.checkBridgeAttestation();
+      const govTrap = !capabilityHeld
+        ? { code: "ERR_CAPABILITY_DENIED", details: { required: AI_INFERENCE_CAP, granted: this.grantedCapabilityMask } }
+        : bridgeDenial !== null
+          ? { code: "ERR_BRIDGE_UNATTESTED", details: { bridge: bridgeDenial } }
+          : !planPreflighted
+            ? { code: "ERR_PLAN_NOT_PREFLIGHTED", details: { ops: [...ops] } }
+            : this.checkAiGovernance(request);
       if (govTrap) {
         audit.trap(correlationId, HYBRID_METADATA.artifactHash, HYBRID_METADATA.engineId,
           govTrap.code, govTrap.details);
@@ -246,6 +359,17 @@ export class HybridInferenceEngine {
         // EXEC — dispatch each precision decision through its registered bridge
         // (the Brain→Brawn seam), then record the decision + its provenance.
         const dispatch = this.dispatchPlan(plan, correlationId);
+
+        // Hardened Border: in aerospace mode, a routed precision with no bridge must
+        // NOT silently run host-native — trap it as an uncontrolled state change.
+        if ((this.policy.flags & POL_DENY_HOST_NATIVE) && dispatch.deniedTechniques.length > 0) {
+          audit.trap(correlationId, HYBRID_METADATA.artifactHash, HYBRID_METADATA.engineId,
+            "ERR_HOST_NATIVE_DENIED", { deniedTechniques: dispatch.deniedTechniques });
+          const latencyMs = Date.now() - t0;
+          await this.tower.erase(sandbox, correlationId, execResult);
+          return this.buildReceipt(request, plan, "", latencyMs, "sha256:0", dispatch.bridgesUsed, dispatch.executedNatively, dispatch.ternaryChecksum, true, "ERR_HOST_NATIVE_DENIED");
+        }
+
         bridgesUsed = dispatch.bridgesUsed;
         executedNatively = dispatch.executedNatively;
         ternaryChecksum = dispatch.ternaryChecksum;
@@ -290,13 +414,30 @@ export class HybridInferenceEngine {
    * governance boundary is crossed, or null when the call is permitted.
    */
   private checkAiGovernance(request: HybridInferenceRequest): { code: string; details: Record<string, unknown> } | null {
-    const { approvedModels, maxModelCalls } = this.governance;
-    if (approvedModels && approvedModels.length > 0 && request.model !== undefined &&
-        !approvedModels.includes(request.model)) {
-      return { code: "ERR_AI_MODEL_NOT_APPROVED", details: { requested: request.model, approved: approvedModels } };
+    const p = this.policy; // the numeric policy table — no object-field probing in flight
+
+    // ── P9 Certified Profile: fail closed on missing mandatory governance ──
+    // The certified structural preconditions are INVARIANT, so they were resolved
+    // once at compile time — the hot path returns the precomputed trap, if any.
+    if (p.certifiedTrap !== null) return p.certifiedTrap;
+
+    if (p.flags & POL_HAS_ALLOWLIST) {
+      // An allow-list is in force: a request MUST name a model, and it must be listed.
+      // Omitting `model` is a denial, not an implicit pass (closes the bypass).
+      // Membership is an O(1) Set.has, not an O(n) Array.includes.
+      if (request.model === undefined) {
+        return { code: "ERR_AI_MODEL_REQUIRED", details: { approved: [...p.approvedModels] } };
+      }
+      if (!p.approvedModels.has(request.model)) {
+        return { code: "ERR_AI_MODEL_NOT_APPROVED", details: { requested: request.model, approved: [...p.approvedModels] } };
+      }
     }
-    if (maxModelCalls !== undefined && this.callCount >= maxModelCalls) {
-      return { code: "ERR_AI_CALL_BUDGET", details: { used: this.callCount, budget: maxModelCalls } };
+    if ((p.flags & POL_HAS_CALL_BUDGET) && this.callCount >= p.maxModelCalls) {
+      return { code: "ERR_AI_CALL_BUDGET", details: { used: this.callCount, budget: p.maxModelCalls } };
+    }
+    // Per-call output-token ceiling (CF-2). A request over budget traps before compute.
+    if ((p.flags & POL_HAS_TOKEN_BUDGET) && request.maxNewTokens !== undefined && request.maxNewTokens > p.maxNewTokens) {
+      return { code: "ERR_AI_TOKEN_BUDGET", details: { requested: request.maxNewTokens, max: p.maxNewTokens } };
     }
     return null;
   }
@@ -311,6 +452,7 @@ export class HybridInferenceEngine {
     executedNatively: boolean;
     ternaryChecksum: number;
     byOp: Map<InferenceOpClass, BridgeResult>;
+    deniedTechniques: string[];
   } {
     if (!this.bridgesInitialized) {
       for (const bridge of this.bridges.values()) bridge.initialize();
@@ -318,12 +460,18 @@ export class HybridInferenceEngine {
     }
     const used = new Set<string>();
     const byOp = new Map<InferenceOpClass, BridgeResult>();
+    const denied = new Set<string>();
     let executedNatively = false;
     let ternaryChecksum = 0;
 
     for (const decision of plan.decisions) {
       const bridge = this.bridges.get(decision.precision);
-      if (!bridge) continue; // fp8 / fp16 — no accelerator bridge, host-native path
+      if (!bridge) {
+        // No accelerator bridge for this precision (e.g. fp8/fp16). In permissive
+        // mode it runs host-native; in aerospace mode that silent fallback is denied.
+        denied.add(decision.precision);
+        continue;
+      }
       const op = buildDemoTernaryOp(decision.opClass, decision.precision, correlationId);
       const result = bridge.execute(op);
       assertDeterminism(result); // Citizen Standard 1 — abort on ternary drift
@@ -335,7 +483,14 @@ export class HybridInferenceEngine {
         ternaryChecksum = (ternaryChecksum + (result.value | 0)) | 0;
       }
     }
-    return { bridgesUsed: [...used], executedNatively, ternaryChecksum, byOp };
+    return { bridgesUsed: [...used], executedNatively, ternaryChecksum, byOp, deniedTechniques: [...denied] };
+  }
+
+  /** Release native bridge resources. Call once at engine teardown (NOT per-infer —
+   *  registry bridges are shared across calls). Part of the Erase discipline. */
+  async shutdown(): Promise<void> {
+    for (const bridge of this.bridges.values()) await bridge.shutdown();
+    this.bridgesInitialized = false;
   }
 
   private auditPrecisionDecision(
@@ -414,7 +569,74 @@ export function createHybridEngine(profile: {
   bridges?: BridgeRegistry;
   /** `ai {}` contract constraints to enforce at the boundary. */
   governance?: AiGovernance;
+  /** In-memory audit ledger (no disk writes) — for ephemeral / benchmark contexts. */
+  auditInMemory?: boolean;
+  /** Batched-async durable audit: flush every N events. Constant-time flight without losing durability. */
+  auditBatchSize?: number;
+  /** Governed egress sink (Sentinel-Egress) — all ledger writes route through it. */
+  auditEgress?: EgressSink;
+  /** Deterministic Logical Tick source (Sentinel-Time) for cycle-indexed audit timing. */
+  auditTickSource?: () => number;
+  /**
+   * P9 Certified Runtime Profile. Fails CLOSED — the safety claims become mandatory
+   * invariants rather than optional config:
+   *   - forces `denyHostNativeFallback` (no silent host-native execution)
+   *   - REQUIRES a governed egress sink (no direct fs audit writes) — throws if absent
+   *   - REQUIRES a signed-bridge attestation policy (requireSigned + publicKeyPem) —
+   *     throws ERR_CERTIFIED_NO_ATTESTATION if absent; every bridge must present a
+   *     valid signature or it traps ERR_BRIDGE_UNATTESTED before compute.
+   *   - REQUIRES, per call, a non-empty approved_models + max_tokens + max_token_cost
+   *     (enforced at infer() → ERR_CERTIFIED_*).
+   */
+  certified?: boolean;
+  /**
+   * Bridge attestation policy (CF-3/CF-7). When set, every bridge in the registry
+   * must present a valid signed/pinned manifest or it traps `ERR_BRIDGE_UNATTESTED`
+   * before any compute. Turns the "trusted registry" into an "attested registry".
+   */
+  attestation?: AttestationPolicy;
+  /**
+   * V_DPM capability bitmask this engine is granted (defaults to the hybrid
+   * engine's own ai.inference bit). An engine constructed WITHOUT the ai.inference
+   * bit traps ERR_CAPABILITY_DENIED before any compute — the bitmask gate enforced,
+   * not decorative. A deployment narrows this to express "no inference authority".
+   */
+  capabilityMask?: number;
 } = {}): HybridInferenceEngine {
+  const certified = profile.certified ?? false;
+
+  // Fail closed at construction: certified mode cannot write audit to disk directly.
+  if (certified && !profile.auditEgress) {
+    throw new Error("ERR_CERTIFIED_NO_EGRESS: certified profile requires a governed audit egress sink (no direct filesystem audit writes)");
+  }
+
+  // Fail closed at construction: certified mode mandates signed-bridge attestation.
+  // Without this, a P9 engine would trust an unattested registry — the "wide-open
+  // door" the whole CF-3/CF-7 boundary exists to shut. The policy must verify
+  // signatures (requireSigned + a public key); an unattested or unsigned bridge then
+  // traps ERR_BRIDGE_UNATTESTED before any compute.
+  if (certified && (!profile.attestation || profile.attestation.requireSigned !== true || !profile.attestation.publicKeyPem)) {
+    throw new Error("ERR_CERTIFIED_NO_ATTESTATION: certified profile requires an attestation policy with requireSigned + publicKeyPem (every bridge must present a valid signature)");
+  }
+
+  const needTower = certified || profile.auditInMemory || (profile.auditBatchSize ?? 0) > 0 ||
+    profile.auditEgress || profile.auditTickSource;
+  const tower = needTower
+    ? new TowerRuntime({
+        assimilationMemoryBudgetMB: 512,
+        auditDepth: "full",
+        auditInMemory: profile.auditInMemory ?? false,
+        auditBatchSize: profile.auditBatchSize ?? 0,
+        ...(profile.auditEgress ? { auditEgress: profile.auditEgress } : {}),
+        ...(profile.auditTickSource ? { auditTickSource: profile.auditTickSource } : {}),
+      })
+    : undefined;
+
+  // Certified mode forces the host-native denial on regardless of caller governance.
+  const governance: AiGovernance = certified
+    ? { ...(profile.governance ?? {}), denyHostNativeFallback: true }
+    : (profile.governance ?? {});
+
   return new HybridInferenceEngine(
     {
       governanceTier: profile.governanceTier ?? 1,
@@ -422,8 +644,11 @@ export function createHybridEngine(profile: {
       fp4HardwareAvailable: profile.fp4Hardware ?? false,
       ...(profile.maxLatencyMs !== undefined ? { maxLatencyMs: profile.maxLatencyMs } : {}),
     },
-    undefined,
+    tower,
     profile.bridges,
-    profile.governance,
+    governance,
+    certified,
+    profile.attestation ?? null,
+    profile.capabilityMask ?? HYBRID_METADATA.capabilityMask,
   );
 }

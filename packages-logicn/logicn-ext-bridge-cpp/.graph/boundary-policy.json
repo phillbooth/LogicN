@@ -1,6 +1,7 @@
 {
   "packageName": "@logicn/ext-bridge-cpp",
   "allowedExternal": [
+    "@logicn/inference-bridge-contract",
     "@logicn/tower-citizen",
     "node:child_process",
     "node:fs",

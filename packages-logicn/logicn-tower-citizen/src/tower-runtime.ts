@@ -10,7 +10,7 @@
  *   Erase:   Clear sandbox state → write completion to audit trail
  */
 
-import { AuditLogger, TowerAuditEvent } from "./audit-logger.js";
+import { AuditLogger, TowerAuditEvent, type AuditLoggerOptions, type EgressSink } from "./audit-logger.js";
 import { PluginSandbox, ExecutionResult, PluginMetadata } from "./plugin-sandbox.js";
 
 export type { TowerAuditEvent } from "./audit-logger.js";
@@ -20,6 +20,15 @@ export interface TowerConfig {
   readonly assimilationMemoryBudgetMB: number;  // from boot.lln governance {}
   readonly auditDepth: "minimal" | "standard" | "full";
   readonly maxPlugins: number;
+  /** In-memory audit ledger (no disk writes). For ephemeral / benchmark contexts. */
+  readonly auditInMemory: boolean;
+  /** Batched-async durable audit: flush every N events (one disk write per batch).
+   *  0 = per-event sync (default). Eliminates per-event jitter for constant-time flight. */
+  readonly auditBatchSize: number;
+  /** Deterministic Logical Tick source (Sentinel-Time) for cycle-indexed audit timing. */
+  readonly auditTickSource?: () => number;
+  /** Governed egress sink (Sentinel-Egress) — all ledger writes pass through it. */
+  readonly auditEgress?: EgressSink;
 }
 
 export class TowerRuntime {
@@ -32,8 +41,19 @@ export class TowerRuntime {
       assimilationMemoryBudgetMB: config.assimilationMemoryBudgetMB ?? 256,
       auditDepth: config.auditDepth ?? "full",
       maxPlugins: config.maxPlugins ?? 8,
+      auditInMemory: config.auditInMemory ?? false,
+      auditBatchSize: config.auditBatchSize ?? 0,
+      ...(config.auditTickSource ? { auditTickSource: config.auditTickSource } : {}),
+      ...(config.auditEgress ? { auditEgress: config.auditEgress } : {}),
     };
-    this.audit = new AuditLogger();
+    const auditOpts: AuditLoggerOptions = {
+      batchSize: this.config.auditBatchSize,
+      ...(config.auditTickSource ? { tickSource: config.auditTickSource } : {}),
+      ...(config.auditEgress ? { egress: config.auditEgress } : {}),
+    };
+    this.audit = this.config.auditInMemory
+      ? new AuditLogger(null, auditOpts)
+      : new AuditLogger(undefined, auditOpts);
   }
 
   // ── LOAD ──────────────────────────────────────────────────────────────────

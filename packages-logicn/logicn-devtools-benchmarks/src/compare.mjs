@@ -22,10 +22,15 @@ const LABEL = {
   cpp:            "C++",
   nodejs:         "Node.js",
   python:         "Python",
-  logicnPassive:  "LogicN (passive)",
-  logicnManifest: "LogicN (manifest)",
-  logicnGoverned: "LogicN (governed)",
-  wasm:           "WASM (Phase 27)",
+  // ── Taxonomy (2026-06-06) ──────────────────────────────────────────────────
+  // The three LogicN interpreter tiers are STAGE-A DIAGNOSTIC probes (they exist
+  // to MEASURE the cost of pre-planning vs not, and to verify the WASM compiler
+  // against the reference interpreter). They are NOT the production path. The
+  // production governed runtime is `logicn run` → WAT → WASM (the WASM row).
+  logicnPassive:  "LogicN passive ⟨interp⟩",
+  logicnManifest: "LogicN manifest ⟨interp⟩",
+  logicnGoverned: "LogicN governed ⟨interp⟩",
+  wasm:           "WASM ▶ production",
   denoWebGpu:     "Deno WebGPU (GPU)", // real GPU name filled at runtime from results (see GPU_NAME)
 };
 
@@ -168,10 +173,12 @@ console.log("**Runtimes:**");
 console.log("- **Rust (generic / AVX2)** — native compiled baseline (ceiling).");
 console.log("- **Node.js** — V8 JIT (production baseline for traffic lights).");
 console.log("- **Python** — CPython interpreter (comparison floor).");
-console.log("- **WASM (Phase 27)** — LogicN pure flow → WAT → WebAssembly.instantiate (governed at compile time).");
-console.log("- **LogicN (governed)** — full governance tree-walker (capabilities + audit + proof).");
-console.log("- **LogicN (manifest)** — pre-verified runtime manifest, governance erased at runtime.");
-console.log("- **LogicN (passive)** — pre-compiled deployment model with LRU result cache (warm path).\n");
+console.log("- **WASM ▶ production** — `logicn run` → WAT → WebAssembly. Governance gates compiled IN. **This is the production governed runtime** — the row to read for shipping cost.");
+console.log("");
+console.log("> **Taxonomy — read this before the governance numbers.** The three `⟨interp⟩` rows below are **Stage-A interpreter diagnostic tiers**, NOT the production path. They exist to (a) *measure* the cost of pre-planning vs runtime proving, and (b) *verify* the WASM compiler against the reference interpreter. Do not read the interpreter's governed throughput as the shipping governance cost — read the **WASM ▶ production** row for that.");
+console.log("- **LogicN governed ⟨interp⟩** — Stage-A: full governance tree-walker (capabilities + audit + proof rebuilt per call). *Diagnostic worst-case.*");
+console.log("- **LogicN manifest ⟨interp⟩** — Stage-A: pre-verified runtime manifest, governance erased at runtime. *Diagnostic.*");
+console.log("- **LogicN passive ⟨interp⟩** — Stage-A: pre-compiled deployment model with LRU result cache (warm path). *Diagnostic.*\n");
 console.log("---\n");
 
 console.log("## 1. Throughput — Winner per Benchmark\n");

@@ -1,6 +1,7 @@
 {
   "packageName": "@logicn/tower-citizen",
   "allowedExternal": [
+    "@logicn/inference-bridge-contract",
     "node:crypto",
     "node:fs",
     "node:path"

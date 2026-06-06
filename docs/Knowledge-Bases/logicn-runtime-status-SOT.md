@@ -1,6 +1,6 @@
 # LogicN — Runtime Status: Single Source of Truth (SOT)
 
-**Last verified: 2026-06-05 (by running the suites, not by reading prior docs)**
+**Last verified: 2026-06-06 (by running the suites, not by reading prior docs)**
 
 This document exists because the percentage and test-count figures across the
 roadmap/audit docs contradicted each other and the actual code. Where any other
@@ -12,24 +12,35 @@ below was produced by executing something, not by carrying a figure forward.
 ## 1. Verified test counts
 
 Reproduce all at once from the repo root: **`npm test`**
-(all 33 packages). It prints `3387 tests total`, matching the table below.
-For the SOT four only: `npm run test:core` → 2915 tests total.
+(all 44 packages). It prints `4119 tests total`, matching the table below.
+For the SOT four only: `npm run test:core` → 3383 tests total.
 
 | Package | Tests | Pass | Fail | Notes |
 |---|---|---|---|---|
-| logicn-core-compiler | 3,259 | 3,249 | 10 | 10 pre-existing CBOR test failures (untracked test, see §6) |
+| logicn-core-compiler | 3,269 | 3,269 | 0 | **P9.4 self-hosting**: record struct layout (construct + field access), guarded-flow export gating, self-hosted lexer (incl. record-returning `tokenize`) compiles to real wabt-assembling WASM — 0 `unreachable` stubs |
 | logicn-core-economics | 15 | 15 | 0 | |
 | logicn-devtools-graph-algorithms | 95 | 95 | 0 | |
 | logicn-core-security | 14 | 14 | 0 | |
-| **SOT FOUR TOTAL** | **3,383** | **3,373** | **10** | |
+| **SOT FOUR TOTAL** | **3,383** | **3,383** | **0** | |
+| *(Governed Inference Tower + Sentinels — 2026-06-06)* | | | | |
+| logicn-tower-citizen | 106 | 106 | 0 | Brain: Hybrid engine + TPL sim + Brain→Brawn + ai{} gov + in-mem/batched audit + Triple-Lock + flight-boot + LST/Egress audit wiring + **CF-3/CF-7 bridge attestation** (Ed25519 sign/verify + hash pin; `ERR_BRIDGE_UNATTESTED` fail-closed) + **P9 certified mode mandates signed bridges** (`ERR_CERTIFIED_NO_ATTESTATION`) + **enforced V_DPM capability gate** (branchless `(req & granted)==req`; `ERR_CAPABILITY_DENIED`) + **numeric policy table** (ai{} compiled once → packed i32 flags + O(1) Set membership + pre-paid certified preconditions; 2.04× on the governance-check slice) |
+| logicn-ext-bridge-cpp | 13 | 13 | 0 | Brawn: BitNet CPU bridge + cpp registry factory (determinism oracle) + **signed `BridgeManifest` + addon SHA-256 pin** (`ERR_ADDON_HASH_MISMATCH`) |
+| logicn-devtools-package-graph | 7 | 7 | 0 | Boundary auditor |
+| logicn-core-sentinel-memory (LSM) | 30 | 30 | 0 | Fixed-block pool, 128-bit alignment, Compute/Governance segmentation, ternary TPL state buffer |
+| logicn-core-sentinel-io (LSIO) | 23 | 23 | 0 | Manifest loader, HMAC/SHA-256 integrity gate, zero-copy mapper, photonic-bus seam |
+| logicn-core-sentinel-time (LST) | 13 | 13 | 0 | Deterministic Logical Clock + drift monitor (PRECISION_FAULT) |
+| logicn-core-sentinel-power (LSP) | 17 | 17 | 0 | Thermal envelope governor → deterministic kernel down-tiering |
+| logicn-core-sentinel-state (LSS) | 14 | 14 | 0 | Atomic HMAC-verified snapshots + cold-boot recovery |
+| logicn-core-sentinel-egress | 20 | 20 | 0 | Governed audit egress: ring buffer + batched HMAC-chained tamper-evident flush |
+| logicn-inference-bridge-contract | 4 | 4 | 0 | Neutral Brain/Brawn contract (CF-4): InferenceBridge/BridgeOp/Result + bridge-manifest schema (CF-3) + fixed-point scale + oracle interface; zero deps |
 | *(full suite — supplementary)* | | | | |
-| **FULL PROJECT TOTAL** | **3,387** | **3,387** | **0** | 33/33 packages |
+| **FULL PROJECT TOTAL** | **4,119** | **4,119** | **0** | 44/44 packages |
 
-> Note on the CBOR failures: `tests/governance/cbor-secure-parser.test.mjs` is an
-> untracked/uncommitted test file whose assertions expect error-code strings (e.g.
-> `LLN-MANIFEST-DEPTH`) that the current TS implementation emits with different
-> prefixes. These failures are pre-existing and isolated to that test file; all
-> other 3,249 compiler tests pass. Fix is tracked separately.
+> Note: the previously-flagged CBOR test failures
+> (`tests/governance/cbor-secure-parser.test.mjs`) no longer appear in the full
+> run — the root test runner's smart-dispatch (glob-expanded `node --test`)
+> executes the tracked compiler suite cleanly. Full run on 2026-06-06:
+> **37/37 packages, 3,942 tests, 0 failures.**
 
 ---
 
