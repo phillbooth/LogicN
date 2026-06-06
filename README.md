@@ -58,9 +58,9 @@ LogicN is built for organisations where software failure is not acceptable — f
 ████████████████████████████████  100%
 ```
 
-**Tests — 33/33 packages**
+**Tests — 44/44 packages**
 ```
-████████████████████████████████  100%  (3,383 tests · 0 failures)
+████████████████████████████████  100%  (4,129 tests · 0 failures)
 ```
 
 **Stage B Self-Hosting (WAT Linear Memory)**
@@ -91,10 +91,11 @@ LogicN is built for organisations where software failure is not acceptable — f
 | **Effect checker** | 90% |
 | **WAT emitter** | 88% |
 | **Runtime interpreter** | 87% |
+| **Stage B self-hosting — compilation parity (interpreter)** | 100% (R6 corpus: Stage-A == Stage-B) |
 | **Stage B self-hosting — governance verified** | 87% |
-| **Stage B self-hosting — WASM execution** | 0% ← P9.2 blocker |
+| **Stage B self-hosting — WASM execution (P9)** | ~75% — small flows execute via real wabt; the self-hosted lexer module now wabt-assembles (#145a); tokenize byte-parity pending (#145b) |
 | **Ext packages** | 80% |
-| **Governance signatures (ML-DSA-65)** | 75% |
+| **Governance signatures (ML-DSA-65)** | 100% (keygen + signing + verify shipped) |
 | **Package resolver** | 75% |
 | **Economics Layer** | 68% |
 | **AI Inference Tower** | 12% |
@@ -102,13 +103,17 @@ LogicN is built for organisations where software failure is not acceptable — f
 
 ---
 
-> **Full roadmap** → [docs/Knowledge-Bases/logicn-build-roadmap.md](docs/Knowledge-Bases/logicn-build-roadmap.md) — all 125 tasks, Phase 5–9 sequencing, AI inference tower roadmap
+> **Full roadmap** → [docs/Knowledge-Bases/logicn-roadmap.md](docs/Knowledge-Bases/logicn-roadmap.md) — current forward view (160 tasks), P9 critical path, security remediation, Post-P9 sequencing
 
 ---
 
-*Stage A (TypeScript Runtime) remains the production path.
-Stage B (Runtime in LogicN) is now **100% complete** — LogicN compiles and runs itself end-to-end with no TypeScript in the pipeline.
-The TypeScript bootstrap is the production-hardened entry point; Stage B proves the governance model applies to the compiler itself.*
+*Stage A (TypeScript Runtime) is the **production-hardened path** — 44/44 packages, 4,129 tests, 0 audit findings.
+Stage B (Runtime in LogicN) is **in progress (P9 self-hosting bootstrap)**: the self-hosted lexer/parser/checker `.lln`
+sources reach Stage-A == Stage-B parity through the interpreter (R6 corpus, 100%), small flows compile and execute via
+real wabt, and the self-hosted lexer module now wabt-assembles to a real WASM binary (#145a). The remaining gate is
+`tokenize` byte-parity — type-aware string lowering (#145b) → run + compare (#143). Stage B self-hosting is **not yet
+100%**; see the roadmap. Honest line: the compiler/runtime/governance engine is production-grade; the framework/app
+packages are templates, not implemented.*
 
 ---
 
@@ -138,7 +143,7 @@ LogicN is three things building toward one platform:
 
 **1. A language** — strict typing, explicit errors, declared effects, no hidden nulls, no silent failures. Source files use `.lln`.
 
-**2. A compiler and checker pipeline** — lexer → parser → type checker → value-state/taint checker → effect checker → governance verifier → GIR emitter → tiered runtime. Every check has a diagnostic code. **3,127+ tests, 0 failures**. Stage B self-hosting is **100% complete** — LogicN compiles and runs itself.
+**2. A compiler and checker pipeline** — lexer → parser → type checker → value-state/taint checker → effect checker → governance verifier → GIR emitter → tiered runtime. Every check has a diagnostic code. **4,129 tests, 0 failures**. Stage B self-hosting is **in progress (P9)** — Stage-A == Stage-B interpreter parity is locked (R6 corpus); WASM self-hosting (`tokenize` byte-parity) is the remaining gate.
 
 **3. A governed runtime architecture** — capability-based authority, machine-readable ProofGraph, post-quantum governance signatures, PCI DSS 4.0.1 audit, Deterministic Runtime Containment Model (DRCM) with monotonic security overlays.
 
@@ -277,7 +282,7 @@ LogicN has nine canonical patterns. Patterns 1–6 compile today (`drcm_stable_v
 
 ```
 packages-logicn/
-├── logicn-core-compiler/     ← active: full pipeline, 3,127 tests
+├── logicn-core-compiler/     ← active: full pipeline, 3,279 tests
 ├── logicn-core-runtime/      execution contracts + WASI boundaries
 ├── logicn-core-economics/    CostGraph, ValueGraph, breach-risk matrix
 ├── logicn-core-security/     taint profiles, redaction, OWASP boundaries
@@ -322,7 +327,7 @@ Layer 5: ProofGraph + .lmanifest — cryptographic audit proof (Ed25519 + ML-DSA
 
 ```bash
 # Run tests (core suite)
-node scripts/run-all-tests.cjs --core        # 3,233 tests, 0 failures
+node scripts/run-all-tests.cjs --core        # SOT-four core suite, 0 failures (full: npm test → 44/44 · 4,129)
 
 # Full benchmark suite (~5-10 min)
 cd packages-logicn/logicn-devtools-benchmarks
