@@ -10,11 +10,11 @@ LogicN is built for organisations where software failure is not acceptable — f
 
 **Declares governance in source code.** Every flow declares its intent, effects, capability boundaries, and invariants in a `contract {}` block. The compiler verifies these at build time. There is no runtime surprise.
 
-**Enforces at runtime via the Governed Tower.** The DSS.wasm supervisor runs alongside every execution, tracking the V_DPM (Virtual Dynamic Posture Matrix) register. Every capability use is a bitmask check. Every trap produces a structured AuditEvent. Rollback is always clean — `unreachable` fires before the next CPU instruction.
+**Enforces at runtime via the Governed Tower.** The DSS supervisor tracks the V_DPM (Virtual Dynamic Posture Matrix) register — every capability use is a bitmask check, every trap produces a structured AuditEvent, and rollback is clean (`unreachable` fires before the next instruction). *Today this runs as the Stage-A TypeScript simulation; the real `DSS.wasm` component is Post-P9 (#102–106).*
 
 **Produces a cryptographic audit trail.** Every governed execution generates an Epilogue Receipt (sha256_seal or zk_snark). Every security trap appends to an append-only audit log (CBOR Tag 410 AuditEvent). The manifest carrying the governance contract is signed with ML-DSA-65 (NIST FIPS 204).
 
-**Compiles to WebAssembly.** The output is a WASM binary verified by the compiler's governance pipeline before it runs. The binary is governed — effects, invariants, and capability constraints are enforced, not assumed.
+**Compiles to WebAssembly.** Governance is verified by the compiler's pipeline at build time and enforced on the Stage-A runtime today. Full in-WASM execution enforcement (self-hosting, P9) is *in progress* — small flows already run via real wabt, and the self-hosted lexer module wabt-assembles to a real WASM binary (#145a).
 
 ---
 
@@ -24,7 +24,7 @@ LogicN is built for organisations where software failure is not acceptable — f
 |---|---|
 | **Financial platforms** | Every payment flow declares and enforces its effects. Audit trail by default. PCI DSS governance built in. |
 | **Healthcare systems** | PII/PHI is typed and tracked. Redaction is enforced at the type level before data reaches any audit sink. |
-| **Government / defence** | Air-gapped deployment. No cloud dependency. BitNet CPU inference for governed AI in regulated environments. |
+| **Government / defence** | Designed for air-gapped deployment, no cloud dependency. BitNet CPU inference for governed AI is in early integration (Inference Tower ~12%). |
 | **Enterprise regulated** | OWASP attack vectors blocked at the compiler. Supply chain provenance via ML-DSA-65 signed manifests. |
 
 > **New here?** → [**SETUP.md**](SETUP.md) — install · run your first benchmark · Hello World with full governance comments
@@ -83,7 +83,7 @@ LogicN is built for organisations where software failure is not acceptable — f
 | **Value-state checker** | 100% |
 | **DRCM Phases 1–7** | 100% |
 | **CBOR Manifests (RFC 8949)** | 100% |
-| **Tower (DSS.wasm) — Stage A simulation** | 100% |
+| **Governed Tower — Stage A simulation** (real DSS.wasm is Post-P9, #102–106) | 100% |
 | **Tests — full suite** | 100% |
 | **DevTools** | 100% |
 | **Security audit (0 findings)** | 100% |
