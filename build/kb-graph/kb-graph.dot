@@ -99,6 +99,7 @@ digraph KBGraph {
   "logicn-audit-2026-06-01" [label="LogicN — Full Audit 2026-06-01\n1 LLN code", fillcolor="#f5f5f5"];
   "logicn-audit-2026-06-02" [label="LogicN — Full Audit 2026-06-02\n7 LLN codes", fillcolor="#f5f5f5"];
   "logicn-audit-writer-spec" [label="LogicN Audit Writer Specification", fillcolor="#f5f5f5"];
+  "logicn-benchmark-enforcement-cost-spec" [label="Benchmark Spec — Hardened-Border Enforcement-Cost Suite", fillcolor="#f5f5f5", color=gray, penwidth=2];
   "logicn-benchmark-situation-prompt" [label="LogicN Benchmark Situation — Full Context Prompt", fillcolor="#f5f5f5", color=gray, penwidth=2];
   "logicn-build-roadmap" [label="LogicN — Build Roadmap\n(Layer 0)\n11 LLN codes", fillcolor="#ffe0b2"];
   "logicn-cache-aware-execution" [label="logicn-cache-aware-execution", fillcolor="#f5f5f5"];
@@ -178,6 +179,7 @@ digraph KBGraph {
   "logicn-developer-tools" [label="LogicN Developer Tools — LSP, Diagnostics-with-Fixes, Governance REPL\n18 LLN codes", fillcolor="#f5f5f5"];
   "logicn-developer-ux-phase-8" [label="LogicN Developer Experience Improvements — Phase 8", fillcolor="#f5f5f5", color=gray, penwidth=2];
   "logicn-diagnostic-numbering-strategy" [label="LogicN — Diagnostic Numbering Strategy\n5 LLN codes", fillcolor="#f5f5f5", color=gray, penwidth=2];
+  "logicn-diagnostics-spec" [label="Diagnostics Spec — Forensic Observability for LogicN\n1 LLN code", fillcolor="#f5f5f5", color=gray, penwidth=2];
   "logicn-doc-comment-standard" [label="LogicN Doc Comment Standard", fillcolor="#f5f5f5", color=gray, penwidth=2];
   "logicn-docker-container-profile" [label="LogicN — Docker Container Profile", fillcolor="#f5f5f5"];
   "logicn-domain-guard-policies" [label="LogicN — Domain Guard Policies (Static Manifest Clamping)\n3 LLN codes", fillcolor="#f5f5f5"];
@@ -287,6 +289,7 @@ digraph KBGraph {
   "logicn-quantum-target-bridge" [label="LogicN Architecture: Quantum Computing Support Through Target Bridges", fillcolor="#f5f5f5", color=gray, penwidth=2];
   "logicn-r6-bootstrap-corpus" [label="LogicN — R6 Bootstrap Conformance Corpus\n1 LLN code", fillcolor="#f5f5f5"];
   "logicn-readable-logic-forms" [label="LogicN Language Proposal — Readable Logic Forms\n2 LLN codes", fillcolor="#f5f5f5", color=gray, penwidth=2];
+  "logicn-residual-risks" [label="LogicN — Non-P9 Residual Risks (verified catalogue)", fillcolor="#f5f5f5", color=gray, penwidth=2];
   "logicn-resilience-observability-design" [label="LogicN — Resilience & Observability Contract Blocks (Design Proposal)\n2 LLN codes", fillcolor="#f5f5f5"];
   "logicn-resource-governance" [label="logicn-resource-governance\n2 LLN codes", fillcolor="#f5f5f5", color=gray, penwidth=2];
   "logicn-roadmap-next10-phases" [label="LogicN — Next 10 Phases Roadmap (Phase 28 → 37)\n5 LLN codes", fillcolor="#f5f5f5"];
@@ -295,9 +298,10 @@ digraph KBGraph {
   "logicn-roadmap-phase26-50" [label="LogicN — Roadmap: Phase 26 → Phase 50\n7 LLN codes", fillcolor="#f5f5f5"];
   "logicn-roadmap-phase30-40" [label="LogicN — Phase 30–40 Roadmap\n8 LLN codes", fillcolor="#f5f5f5"];
   "logicn-roadmap-phases-41-60" [label="LogicN — Phases 41–60 Roadmap\n6 LLN codes", fillcolor="#f5f5f5"];
-  "logicn-roadmap" [label="LogicN — Implementation Roadmap\n28 LLN codes", fillcolor="#f5f5f5"];
+  "logicn-roadmap" [label="LogicN — Roadmap (authoritative forward view)", fillcolor="#f5f5f5"];
   "logicn-route-runtime-spec" [label="LogicN Route Runtime Specification", fillcolor="#f5f5f5"];
   "logicn-runtime-component-structure" [label="LogicN — Runtime and Component Structure\n11 LLN codes", fillcolor="#f5f5f5"];
+  "logicn-runtime-governance-actors" [label="LogicN — Runtime Governance Actors (naming map + flow protocol)", fillcolor="#f5f5f5"];
   "logicn-runtime-in-logicn-roadmap" [label="LogicN — Runtime in LogicN: Phased Roadmap\n2 LLN codes", fillcolor="#f5f5f5"];
   "logicn-runtime-interpreter-roadmap" [label="LogicN — Runtime / Interpreter Improvement Roadmap\n3 LLN codes", fillcolor="#f5f5f5"];
   "logicn-runtime-lifecycle" [label="LogicN Runtime Lifecycle", fillcolor="#f5f5f5"];
@@ -324,6 +328,8 @@ digraph KBGraph {
   "logicn-syntax-if-match-optional" [label="LogicN Syntax: if, match, Optional and Type Checking", fillcolor="#f5f5f5"];
   "logicn-syntax-loops-iteration" [label="LogicN Syntax: Loops and Iteration", fillcolor="#f5f5f5"];
   "logicn-taint-catalogue" [label="LogicN — Taint System Catalogue (Phase 28)\n4 LLN codes", fillcolor="#f5f5f5"];
+  "logicn-task-ledger" [label="LogicN — Task Ledger #1–#148 (graph-review checklist)\n3 LLN codes", fillcolor="#f5f5f5"];
+  "logicn-techdebt-gaps-review" [label="P9 Post-Parity Technical-Debt / Gaps Review (2026-06-06)", fillcolor="#f5f5f5", color=gray, penwidth=2];
   "logicn-tensor-arity-decision" [label="LogicN — Tensor Arity Decision\n1 LLN code", fillcolor="#f5f5f5"];
   "logicn-tensor-numeric-performance" [label="logicn-tensor-numeric-performance", fillcolor="#f5f5f5"];
   "logicn-testing-model" [label="LogicN — Testing Model\n1 LLN code", fillcolor="#f5f5f5", color=gray, penwidth=2];
@@ -1187,17 +1193,8 @@ digraph KBGraph {
   "logicn-resource-governance" -> "logicn-governed-memory-blocks" [label="logicn-governed-memory-blocks."];
   "logicn-resource-governance" -> "logicn-passive-execution-plans" [label="logicn-passive-execution-plans"];
   "logicn-roadmap-next10-phases" -> "logicn-performance-plan" [label="logicn-performance-plan.md"];
-  "logicn-roadmap" -> "logicn-roadmap-phase30-40" [label="logicn-roadmap-phase30-40.md"];
-  "logicn-roadmap" -> "logicn-phase-11-decisions" [label="logicn-phase-11-decisions.md"];
-  "logicn-roadmap" -> "logicn-phase-10-roadmap" [label="logicn-phase-10-roadmap.md"];
-  "logicn-roadmap" -> "logicn-governed-memory-blocks" [label="logicn-governed-memory-blocks."];
-  "logicn-roadmap" -> "logicn-contract-full-model" [label="logicn-contract-full-model.md"];
-  "logicn-roadmap" -> "logicn-signed-attestation" [label="logicn-signed-attestation.md"];
-  "logicn-roadmap" -> "logicn-semantic-graph-system" [label="logicn-semantic-graph-system.m"];
-  "logicn-roadmap" -> "logicn-intent-graph" [label="logicn-intent-graph.md"];
-  "logicn-roadmap" -> "logicn-stage-b-root-capability-provider" [label="logicn-stage-b-root-capability"];
-  "logicn-roadmap" -> "logicn-compiler-phase-memory-boundaries" [label="logicn-compiler-phase-memory-b"];
-  "logicn-roadmap" -> "logicn-deterministic-selfhost-verification" [label="logicn-deterministic-selfhost-"];
+  "logicn-roadmap" -> "logicn-task-ledger" [label="logicn-task-ledger.md"];
+  "logicn-roadmap" -> "logicn-runtime-governance-actors" [label="logicn-runtime-governance-acto"];
   "logicn-route-runtime-spec" -> "http-method-declarations" [label="http-method-declarations.md"];
   "logicn-runtime-lifecycle" -> "logicn-core-compiler-manifest-generation-pass-14" [label="logicn-core-compiler-manifest-"];
   "logicn-runtime-lifecycle" -> "logicn-route-runtime-spec" [label="logicn-route-runtime-spec.md"];

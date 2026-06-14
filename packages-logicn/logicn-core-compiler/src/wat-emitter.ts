@@ -260,6 +260,32 @@ let recordVarTypes: Map<string, string> | null = null;
  *  placeholder. The tag is an internal convention; the host runtime (#145) maps the
  *  i32 back to the variant name for byte-parity comparison. null → placeholder. */
 let enumVariants: ReadonlyMap<string, readonly string[]> | null = null;
+/** flowName → declared return type (e.g. "makeKeywordTable" → "Array<String>"). #160:
+ *  lets `let xs = makeKeywordTable()` carry a type so `xs.contains(s)` lowers to the
+ *  value-based __array_contains_str bridge. null/absent → no inference (placeholder). */
+let flowReturnTypes: ReadonlyMap<string, string> | null = null;
+
+/** Build the flowName → return-type registry from a program AST's flow decls.
+ *  Flow node shape (parser): value = name; children = [...paramDecls, retTypeNode, …].
+ *  The return-type node sits immediately after the parameter decls; its `value` is the
+ *  type string (e.g. "Array<String>"). */
+export function buildFlowReturnTypes(ast: AstNode | undefined): Map<string, string> {
+  const out = new Map<string, string>();
+  if (ast === undefined) return out;
+  const walk = (n: AstNode): void => {
+    if (n.kind === "pureFlowDecl" || n.kind === "flowDecl" || n.kind === "secureFlowDecl") {
+      const name = (n.value ?? "").trim();
+      const children = n.children ?? [];
+      const numParams = children.filter((c) => c.kind === "paramDecl").length;
+      const retNode = children[numParams];
+      const rt = retNode?.value;
+      if (name !== "" && typeof rt === "string" && rt.trim() !== "") out.set(name, rt.trim());
+    }
+    for (const c of n.children ?? []) walk(c);
+  };
+  walk(ast);
+  return out;
+}
 
 /** Build the enumTypeName → variant-name-list registry from a program AST's `enum` decls. */
 export function buildEnumVariants(ast: AstNode | undefined): Map<string, string[]> {
@@ -473,6 +499,19 @@ export function resetStringTable(): void {
 }
 
 /**
+ * #145: expose the current string-intern table as handle → literal value, so a host
+ * runtime can SEED its string registry at the exact i32 handles the emitted WASM uses
+ * (handle 0 is always ""). Call AFTER the module is rendered (the table is populated
+ * during emission). The host then registers any runtime input string at the next free
+ * handle (≥ maxHandle+1) to avoid colliding with a literal.
+ */
+export function getInternedStrings(): Array<{ handle: number; value: string }> {
+  const out: Array<{ handle: number; value: string }> = [{ handle: 0, value: "" }];
+  for (const [str, id] of _stringTable) out.push({ handle: id, value: str });
+  return out;
+}
+
+/**
  * Maps a binary operator string to its WAT i32 instruction.
  * Arithmetic, comparison, and bitwise ops — all operating on i32.
  */
@@ -537,10 +576,23 @@ const STDLIB_HOST_MAP: Record<string, string> = {
   toStr:    "$host___int_to_str",
   toString: "$host___int_to_str",   // Int.toString (Char.toString → P9.4)
   concat:   "$host___str_concat",
+  // #162: String-only methods (no Char/Array equivalent that conflicts by name).
+  startsWith: "$host___str_starts_with",
+  endsWith: "$host___str_ends_with",
+  trim:     "$host___str_trim",
+  indexOf:  "$host___str_index_of",
+  slice:    "$host___str_slice",     // String.slice(start, end) — Array.slice → type-directed follow-on
   isLetter: "$host___char_is_letter",
   isDigit:  "$host___char_is_digit",
+  // #169: Char classifiers — Char-only (String has no isUpper/isLower/isWhitespace),
+  // so the name→host mapping is unambiguous. toUpper/toLower are String-ambiguous and
+  // are routed type-directed under #162 instead of mapped here.
+  isUpper:  "$host___char_is_upper",
+  isLower:  "$host___char_is_lower",
+  isWhitespace: "$host___char_is_whitespace",
   append:   "$host___array_append",
   get:      "$host___array_get",
+  count:    "$host___array_length",  // #161: Array.count() → length (reuses the array_length import)
   contains: "$host___array_contains",
   first:    "$host___array_first",
   last:     "$host___array_last",
@@ -554,6 +606,125 @@ const STDLIB_HOST_CALL_MAP: Record<string, string> = {
   Err:  "$host___result_err",  // Result.Err(x) (#145 lexer link)
   // None is an identifier (no call); resolves via the host_none import at link time.
 };
+
+/**
+ * Resolves a char-literal token value to its concrete string (handles the same
+ * escapes as the interpreter's resolveCharEscape, kept in lockstep). Used to lower
+ * `'A'`/`'\n'` to their code point for WAT. Local to the emitter — the interpreter
+ * owns the canonical copy; this mirror avoids a cross-module import cycle.
+ */
+function resolveCharEscapeWAT(value: string): string {
+  if (value.length === 2 && value[0] === "\\") {
+    switch (value[1]) {
+      case "n": return "\n";
+      case "t": return "\t";
+      case "r": return "\r";
+      case "0": return "\0";
+      case "'": return "'";
+      case "\\": return "\\";
+    }
+  }
+  return value;
+}
+
+/**
+ * #168: resolve a match-arm pattern that names a user-declared enum VARIANT to its
+ * declaration-order i32 tag — so `match tok.kind { Keyword => … }` compares against the
+ * integer tag (the same encoding member access uses, see the memberExpr enum path), not
+ * an interned-string id. Returns undefined when the pattern is not an enum variant (the
+ * caller keeps its existing fallback). Built-in Option/Result (None/Some/Ok/Err) are NOT
+ * `enum` decls, so they never appear here — Option is sentinel-dispatched earlier and
+ * Result is #164's separate job.
+ *
+ * Resolution: prefer the subject's enum type when the subject is an enum-typed variable;
+ * otherwise fall back to a reverse lookup across all enums, accepting it only when every
+ * matching enum agrees on the same index (else ambiguous → undefined).
+ */
+function enumVariantTag(pattern: string, subjectNode: AstNode | undefined): number | undefined {
+  if (enumVariants === null) return undefined;
+  // 1. Subject is an enum-typed identifier → use that enum's variant order.
+  if (subjectNode?.kind === "identifier") {
+    const t = recordVarTypes?.get(subjectNode.value ?? "");
+    if (t !== undefined && enumVariants.has(t)) {
+      const idx = (enumVariants.get(t) ?? []).indexOf(pattern);
+      return idx >= 0 ? idx : undefined;
+    }
+  }
+  // 2. Reverse lookup across all enums; accept only an unambiguous index.
+  const indices = new Set<number>();
+  for (const variants of enumVariants.values()) {
+    const idx = variants.indexOf(pattern);
+    if (idx >= 0) indices.add(idx);
+  }
+  return indices.size === 1 ? [...indices][0] : undefined;
+}
+
+/** Inner type of an `Option<T>` / `Result<T, …>` annotation (e.g. "Option<Char>" → "Char"). */
+function optionInnerType(t: string | undefined): string | undefined {
+  if (t === undefined) return undefined;
+  const m = /^(?:Option|Result)<\s*([^,>]+?)\s*[,>]/.exec(t);
+  return m ? m[1] : undefined;
+}
+
+/**
+ * #160: best-effort scalar/builtin type inference for the WAT lowering. Used to pick
+ * type-directed host bridges: String `+` → __str_concat (vs i32.add), Char.toString →
+ * __char_to_string (vs Int.toString). Reads variable types from `recordVarTypes`
+ * (generalised to hold scalar types — Char/Int/String/Bool — alongside record types).
+ * Returns undefined when the type cannot be determined statically (callers default to
+ * the integer/Int interpretation, preserving prior behaviour for untyped flows).
+ */
+function inferExprType(node: AstNode | undefined): string | undefined {
+  if (node === undefined) return undefined;
+  switch (node.kind) {
+    case "stringLiteral": return "String";
+    case "charLiteral":   return "Char";
+    case "numberLiteral": {
+      const raw = node.value ?? "0";
+      return raw.includes(".") || raw.includes("e") || raw.includes("E") ? "Float" : "Int";
+    }
+    case "boolLiteral": return "Bool";
+    case "identifier":  return recordVarTypes?.get(node.value ?? "");
+    case "binaryExpr": {
+      const op = node.value ?? "";
+      if (["==", "!=", "<", ">", "<=", ">=", "and", "or", "&&", "||"].includes(op)) return "Bool";
+      if (op === "+") {
+        const l = inferExprType(node.children?.[0]);
+        const r = inferExprType(node.children?.[1]);
+        return l === "String" || r === "String" ? "String" : "Int";
+      }
+      return "Int"; // - * / % → integer arithmetic
+    }
+    case "callExpr": {
+      const name = node.value ?? "";
+      if (node.callStyle === "method") {
+        if (name === "toString" || name === "toStr" || name === "concat" ||
+            name === "trim" || name === "padStart" || name === "padEnd" || name === "repeat" ||
+            name === "slice") return "String";
+        if (name === "toUpper" || name === "toLower") {
+          return inferExprType(node.children?.[0]) === "Char" ? "Char" : "String";
+        }
+        if (name === "codePoint" || name === "length" || name === "charCount" ||
+            name === "indexOf" || name === "lastIndexOf" || name === "toInt") return "Int";
+        if (name === "isLetter" || name === "isDigit" || name === "isUpper" || name === "isLower" ||
+            name === "isWhitespace" || name === "contains" || name === "startsWith" || name === "endsWith") return "Bool";
+        if (name === "charAt") return "Option<Char>";
+        // unwrapOr(default) yields the default's type — the cleanest way to thread the
+        // element type out of an Option (e.g. `xs.first().unwrapOr("")` ⇒ String).
+        if (name === "unwrapOr") return inferExprType(node.children?.[1]);
+        // first()/last() on an Array<T> → Option<T>; get(i) likewise.
+        if (name === "first" || name === "last" || name === "get") {
+          const inner = optionInnerType(inferExprType(node.children?.[0])?.replace(/^Array</, "Option<"));
+          return inner !== undefined ? `Option<${inner}>` : undefined;
+        }
+        return undefined;
+      }
+      // Non-method call = flow-to-flow call → the callee's declared return type.
+      return flowReturnTypes?.get(name);
+    }
+    default: return undefined;
+  }
+}
 
 /**
  * Emits a single WAT s-expression for an AST expression node.
@@ -639,6 +810,21 @@ export function emitWATExpr(
       const children = node.children ?? [];
       const left  = children[0] ? emitWATExpr(children[0], vars, staticConsts) : "(i32.const 0)";
       const right = children[1] ? emitWATExpr(children[1], vars, staticConsts) : "(i32.const 0)";
+      // #160: type-directed String operators. Strings are opaque interned handles, so
+      // `+` is concatenation and `==`/`!=` are VALUE equality — never i32 ops on handles
+      // (equal-valued strings can have different handles).
+      const lty = inferExprType(children[0]);
+      const rty = inferExprType(children[1]);
+      const stringOperand = lty === "String" || rty === "String";
+      if (op === "+" && stringOperand) {
+        return `(call $host___str_concat ${left} ${right})`;
+      }
+      if (op === "==" && stringOperand) {
+        return `(call $host___str_eq ${left} ${right})`;
+      }
+      if (op === "!=" && stringOperand) {
+        return `(i32.eqz (call $host___str_eq ${left} ${right}))`;
+      }
       if (watOp !== undefined) {
         return `(${watOp} ${left} ${right})`;
       }
@@ -684,8 +870,45 @@ export function emitWATExpr(
         return `(i32.const 0)`;
       }
       if (name === "#record-update") {
-        // No trailing ;; comment — a line comment would swallow the closing paren
-        // of any enclosing S-expression when this is used as an inline argument.
+        // #163: `{ ...base, field: v }` — bump-allocate a fresh record of the base's
+        // type, copy ALL base slots, then overwrite the named update fields at their slot
+        // offsets. Needs the base's record type (→ field layout) and an active recordCtx;
+        // otherwise the placeholder is preserved (unknown base type → can't size it).
+        const updChildren = node.children ?? [];
+        const spreadBase = updChildren.find(c => c.value === "#spread")?.children?.[0];
+        const updates = updChildren.filter(c => c.value !== "#spread");
+        const baseType = spreadBase !== undefined ? inferExprType(spreadBase) : undefined;
+        const layout = (baseType !== undefined && recordLayouts !== null) ? recordLayouts.get(baseType) : undefined;
+        if (recordCtx !== null && spreadBase !== undefined && layout !== undefined) {
+          const recLocal  = `$__lln_rec_${recordCtx.counter.n++}`;
+          const baseLocal = `$__lln_rec_${recordCtx.counter.n++}`;
+          recordCtx.localDecls.push(`(local ${recLocal} i32)`);
+          recordCtx.localDecls.push(`(local ${baseLocal} i32)`);
+          const size = layout.length * WAT_REC_FIELD_SIZE;
+          const baseWat = emitWATExpr(spreadBase, vars, staticConsts);
+          const parts: string[] = [`(block (result i32)`];
+          parts.push(`  (local.set ${baseLocal} ${baseWat})`);
+          parts.push(`  (local.set ${recLocal} (global.get $__lln_heap))`);
+          parts.push(`  (global.set $__lln_heap (i32.add (global.get $__lln_heap) (i32.const ${size})))`);
+          // Copy every base slot, then overwrite the updated fields by slot index.
+          layout.forEach((fname, i) => {
+            const off = i * WAT_REC_FIELD_SIZE;
+            parts.push(`  (i32.store (i32.add (local.get ${recLocal}) (i32.const ${off})) (i32.load (i32.add (local.get ${baseLocal}) (i32.const ${off})))) ;; copy .${fname}`);
+          });
+          for (const u of updates) {
+            const idx = layout.indexOf(u.value ?? "");
+            if (idx < 0) continue;
+            const off = idx * WAT_REC_FIELD_SIZE;
+            const valNode = u.children?.[0];
+            const valWat = valNode ? emitWATExpr(valNode, vars, staticConsts) : "(i32.const 0)";
+            parts.push(`  (i32.store (i32.add (local.get ${recLocal}) (i32.const ${off})) ${valWat}) ;; set .${u.value}`);
+          }
+          parts.push(`  (local.get ${recLocal})`);
+          parts.push(`)`);
+          return parts.join("\n");
+        }
+        // Fallback: unknown base type — keep the null-handle placeholder (no trailing
+        // ;; comment so it stays safe as an inline argument).
         return `(i32.const 0)`;
       }
       const children = node.children ?? [];
@@ -703,6 +926,51 @@ export function emitWATExpr(
           receiverNode?.kind === "identifier" && receiverNode.value === "Array";
         if (name === "empty" && receiverIsArrayType) {
           return `(call $host___array_create)`;
+        }
+
+        // Resolve the *real* receiver: static-form calls (Char.toString(c)) name the
+        // type as the receiver, so the actual value is the first argument.
+        const recvName0 = receiverNode?.kind === "identifier" ? (receiverNode.value ?? "") : "";
+        const isTypeRecv0 = recvName0 === "String" || recvName0 === "Int" || recvName0 === "Char" || recvName0 === "Array";
+        const realReceiver = isTypeRecv0 ? argNodes[0] : receiverNode;
+
+        // #160: codePoint is identity — a Char is already its code point i32. Emit the
+        // receiver value directly (no host call). No trailing comment (used inline).
+        if (name === "codePoint" && realReceiver !== undefined) {
+          return emitWATExpr(realReceiver, vars, staticConsts);
+        }
+
+        // #160: type-directed toString/toStr. Char → __char_to_string (String.fromCodePoint);
+        // everything else defaults to __int_to_str (matches prior behaviour for Int).
+        if ((name === "toString" || name === "toStr") && realReceiver !== undefined) {
+          const recvType = isTypeRecv0 ? recvName0 : inferExprType(realReceiver);
+          const fn = recvType === "Char" ? "$host___char_to_string" : "$host___int_to_str";
+          return `(call ${fn} ${emitWATExpr(realReceiver, vars, staticConsts)})`;
+        }
+
+        // #162: type-directed toUpper/toLower — Char → __char_to_upper/lower (Char→Char);
+        // String (or unknown, the common case) → __str_to_upper/lower (String→String).
+        if ((name === "toUpper" || name === "toLower") && realReceiver !== undefined) {
+          const recvType = isTypeRecv0 ? recvName0 : inferExprType(realReceiver);
+          const isChar = recvType === "Char";
+          const fn = name === "toUpper"
+            ? (isChar ? "$host___char_to_upper" : "$host___str_to_upper")
+            : (isChar ? "$host___char_to_lower" : "$host___str_to_lower");
+          return `(call ${fn} ${emitWATExpr(realReceiver, vars, staticConsts)})`;
+        }
+
+        // #160/#162: type-directed `contains`. String → __str_contains (substring),
+        // Array<String> → __array_contains_str (by-value), else __array_contains (handle).
+        if (name === "contains" && realReceiver !== undefined && argNodes.length === 1) {
+          const recvType = inferExprType(realReceiver);
+          const recvWat = emitWATExpr(realReceiver, vars, staticConsts);
+          const argWat = emitWATExpr(argNodes[0]!, vars, staticConsts);
+          if (recvType === "String") {
+            return `(call $host___str_contains ${recvWat} ${argWat})`;
+          }
+          if (recvType !== undefined && /^Array<\s*String\s*>$/.test(recvType)) {
+            return `(call $host___array_contains_str ${recvWat} ${argWat})`;
+          }
         }
 
         const hostFn = STDLIB_HOST_MAP[name];
@@ -750,6 +1018,16 @@ export function emitWATExpr(
       // No trailing inline comment: it would break enclosing (call ...) args.
       const id = internString(node.value ?? "");
       return `(i32.const ${id})`;
+    }
+
+    case "charLiteral": {
+      // Char: a code point i32 — matches the host convention where String.charAt
+      // returns charCodeAt(i) (see __str_char_at). So `'A'` → (i32.const 65), and a
+      // comparison `c == 'A'` lowers to (i32.eq (local.get $c) (i32.const 65)).
+      // No trailing ;; comment — used inline inside (i32.eq …) and other S-exprs.
+      const resolved = resolveCharEscapeWAT(node.value ?? "");
+      const code = resolved.length > 0 ? resolved.codePointAt(0) ?? 0 : 0;
+      return `(i32.const ${code})`;
     }
 
     case "listLiteral": {
@@ -812,6 +1090,50 @@ export function emitWATExpr(
 
       const subjectWat = emitWATExpr(subject, vars, staticConsts);
 
+      // Body is the LAST child; a leading identifier child is the Some/Ok binding.
+      const armBodyExpr = (arm: AstNode): AstNode | undefined =>
+        arm.children?.[arm.children.length - 1];
+
+      // ── Option<T> match-as-value: None / Some(x) sentinel dispatch (#160) ──
+      // Mirrors the statement path: None ⇒ subject < 0, Some(x) ⇒ subject >= 0 with
+      // x bound to the value. Evaluate the subject once into a scratch local.
+      const noneArm = arms.find(a => a.value === "None");
+      const someArm = arms.find(a => a.value === "Some");
+      if ((noneArm !== undefined || someArm !== undefined) && recordCtx !== null) {
+        const scratch = `$__lln_match_${recordCtx.counter.n++}`;
+        recordCtx.localDecls.push(`(local ${scratch} i32)`);
+        const someBind = ((): string | undefined => {
+          const ch = someArm?.children ?? [];
+          return ch.length >= 2 && ch[0]?.kind === "identifier" ? ch[0]!.value : undefined;
+        })();
+        const noneBody = noneArm ? armBodyExpr(noneArm) : undefined;
+        const someBody = someArm ? armBodyExpr(someArm) : undefined;
+        const noneWat = noneBody ? emitWATExpr(noneBody, vars, staticConsts) : "(i32.const 0)";
+        const someVars: ReadonlyMap<string, string> = someBind !== undefined
+          ? new Map([...vars, [someBind, scratch]]) : vars;
+        // #160: scope the Some binding's type (Option<T> inner) while emitting the arm.
+        const someBindType = optionInnerType(inferExprType(subject));
+        const hadType = someBind !== undefined && recordVarTypes !== null && recordVarTypes.has(someBind);
+        const prevType = someBind !== undefined ? recordVarTypes?.get(someBind) : undefined;
+        if (someBind !== undefined && recordVarTypes !== null && someBindType !== undefined) {
+          recordVarTypes.set(someBind, someBindType);
+        }
+        const someWat = someBody ? emitWATExpr(someBody, someVars, staticConsts) : "(i32.const 0)";
+        if (someBind !== undefined && recordVarTypes !== null) {
+          if (hadType) recordVarTypes.set(someBind, prevType!);
+          else recordVarTypes.delete(someBind);
+        }
+        return [
+          `(block (result i32)`,
+          `  (local.set ${scratch} ${subjectWat})`,
+          `  (if (result i32) (i32.lt_s (local.get ${scratch}) (i32.const 0))`,
+          `    (then ${noneWat})`,
+          `    (else ${someWat})`,
+          `  )`,
+          `)`,
+        ].join("\n");
+      }
+
       // Build an if/else chain for each arm.
       // The last wildcard/default arm provides the else value.
       // Emit innermost-first so the default wraps the chain.
@@ -819,7 +1141,7 @@ export function emitWATExpr(
         if (armIdx >= arms.length) return "(i32.const 0) ;; no default arm";
         const arm = arms[armIdx]!;
         const pattern = arm.value ?? "_";
-        const body = arm.children?.[0];
+        const body = armBodyExpr(arm);
         const bodyWat = body ? emitWATExpr(body, vars, staticConsts) : "(i32.const 0)";
 
         if (pattern === "_" || pattern === "else" || pattern === "None" || pattern === "default") {
@@ -834,9 +1156,15 @@ export function emitWATExpr(
           return `(if (result i32) (i32.eq ${subjectWat} (i32.const ${asInt}))\n  (then ${bodyWat})\n  (else ${rest})\n)`;
         }
 
-        // Pattern is a constructor name (e.g. "Some") or enum variant — treat as opaque i32 comparison
-        const patternId = internString(pattern);
+        // #168: a user-enum variant pattern compares against its i32 tag.
+        const enumTag = enumVariantTag(pattern, subject);
         const rest = buildMatchChain(armIdx + 1);
+        if (enumTag !== undefined) {
+          return `(if (result i32) (i32.eq ${subjectWat} (i32.const ${enumTag}))\n  (then ${bodyWat})\n  (else ${rest})\n)`;
+        }
+
+        // Otherwise a constructor name (e.g. "Some") — opaque interned-id comparison (legacy).
+        const patternId = internString(pattern);
         return `(if (result i32) (i32.eq ${subjectWat} (i32.const ${patternId}))\n  (then ${bodyWat})\n  (else ${rest})\n)`;
       };
 
@@ -934,9 +1262,17 @@ function emitBlockStatements(
         const initNode = stmt.children?.[0];
         // P9.4b: remember the record type of this binding so later `varName.field`
         // accesses lower to an i32.load at the field offset.
+        // #160: also track scalar/builtin types (String/Char/Int/Option<…>) so later
+        // `+` and `.toString()` lower type-directed. Annotation wins; else infer from init.
         if (recordVarTypes !== null) {
           const recType = recordTypeOfBinding(rawName, initNode);
-          if (recType !== undefined) recordVarTypes.set(varName, recType);
+          if (recType !== undefined) {
+            recordVarTypes.set(varName, recType);
+          } else {
+            const anno = rawName.includes(":") ? rawName.split(":")[1]!.trim() : "";
+            const ty = anno !== "" ? anno : inferExprType(initNode);
+            if (ty !== undefined && ty !== "") recordVarTypes.set(varName, ty);
+          }
         }
         const initExpr = initNode ? emitWATExpr(initNode, vars, staticConsts) : "(i32.const 0)";
 
@@ -1101,66 +1437,181 @@ function emitBlockStatements(
 
         const subjectWat = emitWATExpr(matchSubject, vars, staticConsts);
 
+        // ── Option<T> match: None / Some(x) sentinel dispatch (#160) ──────────
+        // Host convention (P9): None is encoded as a negative i32 sentinel (-1);
+        // Some(v) as the value itself (v >= 0). String.charAt() returns this
+        // directly. So `match opt { None => …, Some(c) => … }` lowers to:
+        //   (local.set $scratch <subject>)
+        //   (if (i32.lt_s $scratch 0) (then <None body>) (else <Some body, c=$scratch>))
+        // Previously `None` was mis-treated as an unconditional default arm, so the
+        // None body fired every iteration (tokenize emitted a lone Eof). The `Some`
+        // binding is the arm's leading identifier child; the body is the LAST child.
+        const noneArm = matchArms.find(a => a.value === "None");
+        const someArm = matchArms.find(a => a.value === "Some");
+        if (noneArm !== undefined || someArm !== undefined) {
+          const armBodyNode = (arm: AstNode): AstNode | undefined =>
+            arm.children?.[arm.children.length - 1];
+          const someBind = ((): string | undefined => {
+            const ch = someArm?.children ?? [];
+            return ch.length >= 2 && ch[0]?.kind === "identifier" ? ch[0]!.value : undefined;
+          })();
+          // #160: the Some binding's scalar type = the subject's Option<T> inner type
+          // (e.g. `match opt:Option<Char>` ⇒ c is Char), so `c.toString()` in the arm
+          // lowers to __char_to_string and `… + c` concatenates correctly.
+          const someBindType = optionInnerType(inferExprType(matchSubject));
+
+          // Evaluate the subject once into a scratch local so it can be both tested
+          // (sign check) and bound (Some value). Negative ⇒ None, else ⇒ Some.
+          const scratch = `$__lln_match_${labelCounter.n++}`;
+          localDecls.push(`(local ${scratch} i32)`);
+          bodyLines.push(`(local.set ${scratch} ${subjectWat})`);
+
+          const emitArm = (arm: AstNode | undefined, bind?: string): string[] => {
+            const lines: string[] = [];
+            const body = arm ? armBodyNode(arm) : undefined;
+            if (body === undefined) return lines;
+            // Scope the Some binding (value + type) to this arm body only (save/restore).
+            const hadBind = bind !== undefined && vars.has(bind);
+            const prevBind = bind !== undefined ? vars.get(bind) : undefined;
+            const hadType = bind !== undefined && recordVarTypes !== null && recordVarTypes.has(bind);
+            const prevType = bind !== undefined ? recordVarTypes?.get(bind) : undefined;
+            if (bind !== undefined) {
+              vars.set(bind, scratch);
+              if (recordVarTypes !== null && someBindType !== undefined) recordVarTypes.set(bind, someBindType);
+            }
+            emitBlockStatements(body, vars, localDecls, lines, labelCounter, true, staticConsts);
+            if (bind !== undefined) {
+              if (hadBind) vars.set(bind, prevBind!);
+              else vars.delete(bind);
+              if (recordVarTypes !== null) {
+                if (hadType) recordVarTypes.set(bind, prevType!);
+                else recordVarTypes.delete(bind);
+              }
+            }
+            return lines;
+          };
+
+          const noneLines = emitArm(noneArm);
+          const someLines = emitArm(someArm, someBind);
+
+          bodyLines.push(`(if (i32.lt_s (local.get ${scratch}) (i32.const 0))`);
+          bodyLines.push(`  (then`);
+          for (const line of noneLines) bodyLines.push(`    ${line}`);
+          bodyLines.push(`  )`);
+          bodyLines.push(`  (else`);
+          for (const line of someLines) bodyLines.push(`    ${line}`);
+          bodyLines.push(`  )`);
+          bodyLines.push(`)`);
+          break;
+        }
+
+        // ── Result<T,E> match: Ok(v) / Err(e) dispatch (#164) ─────────────────
+        // A Result is an opaque registry handle. Read its tag (Ok→0/Err→1) and unwrap
+        // the payload via host imports; bind v/e to the unwrapped value (one scratch
+        // holds the subject, one holds the unwrapped payload — only one arm executes).
+        const okArm = matchArms.find(a => a.value === "Ok");
+        const errArm = matchArms.find(a => a.value === "Err");
+        if (okArm !== undefined || errArm !== undefined) {
+          const resBindOf = (arm: AstNode | undefined): string | undefined => {
+            const ch = arm?.children ?? [];
+            return ch.length >= 2 && ch[0]?.kind === "identifier" ? ch[0]!.value : undefined;
+          };
+          // #164: the Ok binding's scalar type = the Result's first type arg (Result<T,E> ⇒ T).
+          const okBindType = optionInnerType(inferExprType(matchSubject));
+          const scratch = `$__lln_match_${labelCounter.n++}`;
+          const valLocal = `$__lln_match_${labelCounter.n++}`;
+          localDecls.push(`(local ${scratch} i32)`);
+          localDecls.push(`(local ${valLocal} i32)`);
+          bodyLines.push(`(local.set ${scratch} ${subjectWat})`);
+          bodyLines.push(`(local.set ${valLocal} (call $host___result_value (local.get ${scratch})))`);
+
+          const emitResArm = (arm: AstNode | undefined, bind: string | undefined, bindType: string | undefined): string[] => {
+            const lines: string[] = [];
+            const body = arm ? arm.children?.[arm.children.length - 1] : undefined;
+            if (body === undefined) return lines;
+            const bodyBlock: AstNode = body.kind === "block"
+              ? body
+              : { kind: "block", children: [body], ...(body.location !== undefined ? { location: body.location } : {}) };
+            const hadBind = bind !== undefined && vars.has(bind);
+            const prevBind = bind !== undefined ? vars.get(bind) : undefined;
+            const hadType = bind !== undefined && recordVarTypes !== null && recordVarTypes.has(bind);
+            const prevType = bind !== undefined ? recordVarTypes?.get(bind) : undefined;
+            if (bind !== undefined) {
+              vars.set(bind, valLocal);
+              if (recordVarTypes !== null && bindType !== undefined) recordVarTypes.set(bind, bindType);
+            }
+            emitBlockStatements(bodyBlock, vars, localDecls, lines, labelCounter, true, staticConsts);
+            if (bind !== undefined) {
+              if (hadBind) vars.set(bind, prevBind!); else vars.delete(bind);
+              if (recordVarTypes !== null) { if (hadType) recordVarTypes.set(bind, prevType!); else recordVarTypes.delete(bind); }
+            }
+            return lines;
+          };
+          const okLines = emitResArm(okArm, resBindOf(okArm), okBindType);
+          const errLines = emitResArm(errArm, resBindOf(errArm), undefined);
+
+          bodyLines.push(`(if (i32.eq (call $host___result_tag (local.get ${scratch})) (i32.const 0))`);
+          bodyLines.push(`  (then`);
+          for (const line of okLines) bodyLines.push(`    ${line}`);
+          bodyLines.push(`  )`);
+          bodyLines.push(`  (else`);
+          for (const line of errLines) bodyLines.push(`    ${line}`);
+          bodyLines.push(`  )`);
+          bodyLines.push(`)`);
+          break;
+        }
+
         // Emit as a chain of (if (i32.eq subject pattern) (then ...) (else ...))
         // For statement match, we use (if COND (then STMTS)) with no result type.
+        // General match → a nested (if COND (then …) (else …)) chain over N arms with
+        // BALANCED parens. The previous version only handled one "rest" arm inline (it
+        // dropped the 3rd+ arm and imbalanced parens) and called emitBlockStatements on a
+        // bare one-liner arm body (emitting its value child as an "unhandled stmt"). This
+        // recurses correctly and wraps one-liner bodies in a synthetic block.
         const emitMatchArmStmt = (armIdx: number): void => {
           if (armIdx >= matchArms.length) return;
           const arm = matchArms[armIdx]!;
           const pattern = arm.value ?? "_";
-          const armBody = arm.children?.[0];
-
+          // Body is the LAST child (a leading identifier child would be a binding).
+          const armBody = arm.children?.[arm.children.length - 1];
           const armLines: string[] = [];
           if (armBody !== undefined) {
-            emitBlockStatements(armBody, vars, localDecls, armLines, labelCounter, true, staticConsts);
+            const bodyBlock: AstNode = armBody.kind === "block"
+              ? armBody
+              : { kind: "block", children: [armBody], ...(armBody.location !== undefined ? { location: armBody.location } : {}) };
+            emitBlockStatements(bodyBlock, vars, localDecls, armLines, labelCounter, true, staticConsts);
           }
 
-          if (pattern === "_" || pattern === "else" || pattern === "None" || pattern === "default") {
-            // Default/wildcard: emit unconditional block
+          const isDefault = pattern === "_" || pattern === "else" || pattern === "None" || pattern === "default";
+          if (isDefault) {
+            // Unconditional arm — any later arms are unreachable.
             for (const line of armLines) bodyLines.push(line);
-          } else {
-            // Conditional: wrap in (if COND (then ...))
-            const asInt = parseInt(pattern, 10);
-            const condWat = !isNaN(asInt)
-              ? `(i32.eq ${subjectWat} (i32.const ${asInt}))`
-              : `(i32.eq ${subjectWat} (i32.const ${internString(pattern)}))`;
-
-            bodyLines.push(`(if ${condWat}`);
-            bodyLines.push(`  (then`);
-            for (const line of armLines) bodyLines.push(`    ${line}`);
-            bodyLines.push(`  )`);
-            // If there are remaining arms, emit them as the else branch
-            const restArms = matchArms.slice(armIdx + 1);
-            if (restArms.length > 0) {
-              bodyLines.push(`  (else`);
-              // Recursively emit remaining arms inside else
-              const elseLines: string[] = [];
-              // Create a synthetic matchExpr node for the rest
-              const restArm = restArms[0]!;
-              const restPattern = restArm.value ?? "_";
-              const restBody = restArm.children?.[0];
-              const restArmLines: string[] = [];
-              if (restBody !== undefined) {
-                emitBlockStatements(restBody, vars, localDecls, restArmLines, labelCounter, true, staticConsts);
-              }
-              if (restPattern === "_" || restPattern === "else" || restPattern === "None" || restPattern === "default") {
-                for (const line of restArmLines) elseLines.push(line);
-              } else {
-                const restAsInt = parseInt(restPattern, 10);
-                const restCond = !isNaN(restAsInt)
-                  ? `(i32.eq ${subjectWat} (i32.const ${restAsInt}))`
-                  : `(i32.eq ${subjectWat} (i32.const ${internString(restPattern)}))`;
-                elseLines.push(`(if ${restCond}`);
-                elseLines.push(`  (then`);
-                for (const line of restArmLines) elseLines.push(`    ${line}`);
-                elseLines.push(`  )`);
-              }
-              for (const line of elseLines) bodyLines.push(`    ${line}`);
-              bodyLines.push(`  )`);
-            }
-            bodyLines.push(`)`);
-            return; // handled remaining arms above
+            return;
           }
-          emitMatchArmStmt(armIdx + 1);
+
+          // #164: a guard arm (`when COND => body`) is stored as value "__guard__" with
+          // children = [guardExpr, body]; its condition IS the guard expression, not a
+          // subject comparison. Otherwise (#168): enum-variant patterns compare against
+          // their i32 tag; int literals against the constant; constructor names fall back
+          // to the interned id.
+          const asInt = parseInt(pattern, 10);
+          const enumTag = enumVariantTag(pattern, matchSubject);
+          const condWat = pattern === "__guard__"
+            ? (arm.children?.[0] ? emitWATExpr(arm.children[0], vars, staticConsts) : "(i32.const 1)")
+            : !isNaN(asInt)
+              ? `(i32.eq ${subjectWat} (i32.const ${asInt}))`
+              : `(i32.eq ${subjectWat} (i32.const ${enumTag !== undefined ? enumTag : internString(pattern)}))`;
+
+          bodyLines.push(`(if ${condWat}`);
+          bodyLines.push(`  (then`);
+          for (const line of armLines) bodyLines.push(`    ${line}`);
+          bodyLines.push(`  )`);
+          if (armIdx + 1 < matchArms.length) {
+            bodyLines.push(`  (else`);
+            emitMatchArmStmt(armIdx + 1); // nested chain appended in order between (else …)
+            bodyLines.push(`  )`);
+          }
+          bodyLines.push(`)`);
         };
 
         emitMatchArmStmt(0);
@@ -1235,15 +1686,15 @@ export function emitWATFromFlowAST(
   recordLayouts = layouts;
   recordVarTypes = new Map<string, string>();
   enumVariants = enums;
-  // Seed record-typed parameters (e.g. `flow f(r: TokenizeResult)`) so `r.field`
-  // resolves inside the body. Param decls carry "name: Type" in their value.
-  if (layouts !== null) {
+  // Seed parameter types (e.g. `flow f(r: TokenizeResult, s: String)`). Record types
+  // enable `r.field` lowering; scalar types (#160) enable type-directed `+` / toString.
+  {
     const paramDecls = (flowNode.children ?? []).filter((c) => c.kind === "paramDecl");
     paramDecls.forEach((pd) => {
       const raw = pd.value ?? "";
       const nm = raw.split(":")[0]!.trim();
       const ty = raw.includes(":") ? raw.split(":")[1]!.trim() : "";
-      if (ty && layouts.has(ty) && vars.has(nm)) recordVarTypes!.set(nm, ty);
+      if (ty && vars.has(nm)) recordVarTypes!.set(nm, ty);
     });
   }
 
@@ -1315,8 +1766,44 @@ export function emitWATFromFlowAST(
     bodyLines.push(...postGates);
   }
 
+  // #160: every WAT flow function is typed `(result i32)`. When the body's last
+  // top-level statement is a `match`/`while`/non-value `if` whose every path returns
+  // (the lexer's helper flows end this way), the implicit fallthrough is unreachable
+  // but still must type-check as [i32] — emit an explicit `(unreachable)` terminator.
+  // This cannot affect flows that already end in a value (returnStmt / value-producing
+  // if): those validate today and are excluded by the check below.
+  if (postGates.length === 0 && bodyTailIsUnreachable(blockNode)) {
+    bodyLines.push(`(unreachable) ;; #160: all match/while arms return — implicit [i32] tail`);
+  }
+
   if (localDecls.length === 0 && bodyLines.length === 0) return null;
   return [...localDecls, ...bodyLines].join("\n");
+}
+
+/**
+ * True when a flow body's last top-level statement leaves no value on the stack and
+ * relies on every internal path returning (statement-form `match`/`while`, or a non
+ * value-producing `if`). Used to emit an `(unreachable)` tail so the `(result i32)`
+ * function signature type-checks. Returns false for returnStmt / value-producing if /
+ * bare value expressions (which already leave the function's i32 result).
+ */
+function bodyTailIsUnreachable(blockNode: AstNode): boolean {
+  const stmts = blockNode.children ?? [];
+  const last = stmts[stmts.length - 1];
+  if (last === undefined) return false;
+  if (last.kind === "matchExpr" || last.kind === "whileStmt") return true;
+  if (last.kind === "ifStmt") {
+    // Value-producing iff both branches exist and each ends with a return (mirrors
+    // the isValueProducing rule in emitBlockStatements). If it IS value-producing it
+    // leaves an i32; otherwise its fallthrough needs the unreachable terminator.
+    const [, thenBlock, elseBlock] = last.children ?? [];
+    const thenRet = (thenBlock?.children ?? []).some(c => c.kind === "returnStmt");
+    const elseRet = elseBlock !== undefined && elseBlock.kind !== "ifStmt"
+      && (elseBlock.children ?? []).some(c => c.kind === "returnStmt");
+    const valueProducing = thenBlock !== undefined && elseBlock !== undefined && thenRet && elseRet;
+    return !valueProducing;
+  }
+  return false;
 }
 
 /**
@@ -1725,6 +2212,7 @@ export function buildWATModule(
     { module: "host", name: "__array_get",      effect: "stdlib.array", type: { params: ["i32", "i32"],   results: ["i32"] } },
     { module: "host", name: "__array_length",   effect: "stdlib.array", type: { params: ["i32"],          results: ["i32"] } },
     { module: "host", name: "__array_contains", effect: "stdlib.array", type: { params: ["i32", "i32"],   results: ["i32"] } },
+    { module: "host", name: "__array_contains_str", effect: "stdlib.array", type: { params: ["i32", "i32"], results: ["i32"] } }, // value-based Array<String> membership (#160)
     { module: "host", name: "__array_first",    effect: "stdlib.array", type: { params: ["i32"],          results: ["i32"] } },
     { module: "host", name: "__array_last",     effect: "stdlib.array", type: { params: ["i32"],          results: ["i32"] } },
     // String operations
@@ -1734,13 +2222,29 @@ export function buildWATModule(
     // Result constructors (#145 — self-hosted lexer tokenize returns Result<List<Token>>)
     { module: "host", name: "__result_ok",      effect: "stdlib.result", type: { params: ["i32"],          results: ["i32"] } },
     { module: "host", name: "__result_err",     effect: "stdlib.result", type: { params: ["i32"],          results: ["i32"] } },
+    { module: "host", name: "__result_tag",     effect: "stdlib.result", type: { params: ["i32"],          results: ["i32"] } }, // #164: Ok→0 / Err→1
+    { module: "host", name: "__result_value",   effect: "stdlib.result", type: { params: ["i32"],          results: ["i32"] } }, // #164: unwrap payload
     { module: "host", name: "__str_char_at",    effect: "stdlib.string", type: { params: ["i32", "i32"],  results: ["i32"] } },
     { module: "host", name: "__str_to_int",     effect: "stdlib.string", type: { params: ["i32"],          results: ["i32"] } },
     { module: "host", name: "__int_to_str",     effect: "stdlib.string", type: { params: ["i32"],          results: ["i32"] } },
     { module: "host", name: "__str_eq",         effect: "stdlib.string", type: { params: ["i32", "i32"],  results: ["i32"] } },
+    // #162 — String methods
+    { module: "host", name: "__str_starts_with", effect: "stdlib.string", type: { params: ["i32", "i32"], results: ["i32"] } },
+    { module: "host", name: "__str_ends_with",  effect: "stdlib.string", type: { params: ["i32", "i32"],  results: ["i32"] } },
+    { module: "host", name: "__str_contains",   effect: "stdlib.string", type: { params: ["i32", "i32"],  results: ["i32"] } },
+    { module: "host", name: "__str_index_of",   effect: "stdlib.string", type: { params: ["i32", "i32"],  results: ["i32"] } },
+    { module: "host", name: "__str_to_lower",   effect: "stdlib.string", type: { params: ["i32"],          results: ["i32"] } },
+    { module: "host", name: "__str_to_upper",   effect: "stdlib.string", type: { params: ["i32"],          results: ["i32"] } },
+    { module: "host", name: "__str_trim",       effect: "stdlib.string", type: { params: ["i32"],          results: ["i32"] } },
+    { module: "host", name: "__str_slice",      effect: "stdlib.string", type: { params: ["i32", "i32", "i32"], results: ["i32"] } },
+    { module: "host", name: "__char_to_upper",  effect: "stdlib.char",  type: { params: ["i32"],          results: ["i32"] } },
+    { module: "host", name: "__char_to_lower",  effect: "stdlib.char",  type: { params: ["i32"],          results: ["i32"] } },
     // Char classification (for self-hosted lexer)
     { module: "host", name: "__char_is_letter", effect: "stdlib.char",  type: { params: ["i32"],          results: ["i32"] } },
     { module: "host", name: "__char_is_digit",  effect: "stdlib.char",  type: { params: ["i32"],          results: ["i32"] } },
+    { module: "host", name: "__char_is_upper",  effect: "stdlib.char",  type: { params: ["i32"],          results: ["i32"] } }, // #169
+    { module: "host", name: "__char_is_lower",  effect: "stdlib.char",  type: { params: ["i32"],          results: ["i32"] } }, // #169
+    { module: "host", name: "__char_is_whitespace", effect: "stdlib.char", type: { params: ["i32"],       results: ["i32"] } }, // #169
     { module: "host", name: "__char_to_string", effect: "stdlib.char",  type: { params: ["i32"],          results: ["i32"] } },
     // Result/Option helpers
     { module: "host", name: "__unwrap_or",      effect: "stdlib.result", type: { params: ["i32", "i32"],  results: ["i32"] } },
@@ -1770,6 +2274,10 @@ export function buildWATModule(
   const recordLayoutRegistry = buildRecordLayouts(gir.ast);
   // P9.4d (#144): enum-type → variant-name list, for `EnumType.Variant` → i32 tag.
   const enumVariantRegistry = buildEnumVariants(gir.ast);
+  // #160: flowName → return type, so `let xs = makeKeywordTable()` carries a type for
+  // type-directed `.contains` / `+` lowering. Module-level for inferExprType; restored below.
+  const prevFlowReturnTypes = flowReturnTypes;
+  flowReturnTypes = buildFlowReturnTypes(gir.ast);
   const functions: WATFunction[] = gir.flows.map((flow) => {
     const flowDeclaredEffects = getFlowEffects(flow);
     const isPureFlow = flow.qualifier === "pure" && flowDeclaredEffects.length === 0;
@@ -1898,6 +2406,8 @@ export function buildWATModule(
       imports.push(hi);
     }
   }
+
+  flowReturnTypes = prevFlowReturnTypes; // #160: restore module-level type context
 
   return {
     schemaVersion: "lln.wat.v1",

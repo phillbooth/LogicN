@@ -8,7 +8,7 @@ This is the single forward-looking view. Where it disagrees with older roadmap t
 
 ## 0. Honest status line (lead with this)
 - **Production-hardened:** the Stage A compiler/runtime, governance pipeline, CBOR manifests, Ed25519+ML-DSA signing, the Governed Inference Tower (CF-3/CF-7 attestation, P9 certified mode, V_DPM capability gate, numeric policy table), 6 Sentinels, and the #105 WASM admission gate.
-- **In progress:** P9 self-hosting bootstrap. **Small flows execute via real wabt; the self-hosted lexer module now wabt-assembles (#145a).** Token byte-parity pending #145b.
+- **P9 byte-parity ACHIEVED (#143, 2026-06-06):** the self-hosted **`lexer.lln` `tokenize` produces a byte-for-byte identical token stream in the Stage-A interpreter AND in real WASM** through the #105 admission gate (12-input corpus; `tests/wat-p9-tokenize-parity.test.mjs`). 3,295/3,295 compiler tests green. Remaining for full self-hosting: parser/type-checker/governance-verifier WASM parity (they execute in Stage-A today).
 - **Templates, NOT implemented:** the framework/app/api-server/app-kernel packages. Present LogicN as a hardened **compiler/runtime engine**, not a finished app platform.
 - **Open critical:** the committed signing key remains in git *history* until scrubbed (#149).
 
@@ -22,9 +22,9 @@ The single gate to "LogicN compiles + runs LogicN".
 | guarded WAT bodies · record layout · enum lowering · export gating | #120, #141, #142, #144 | ✅ |
 | WASM admission-gate harness (security core) | #105 | ✅ core |
 | **lexer module wabt-assembles to a real binary** | **#145a** | ✅ **2026-06-06** |
-| type-aware string lowering: `String +`→`__str_concat`, `Char.toString`→`__char_to_string` (extend #141 var-type tracking to String/Char + `Option<Char>` match-bindings) | **#160 / #145b** | 🔲 **NEXT — largest remaining piece** |
-| string-intern table exposure + host **output reader** (`wasm-runtime.ts`) | #145 | 🔲 |
-| run `tokenize.wasm` → structural (count+kinds) then VALUE parity vs interpreter | **#143** | 🔲 → **completes P9** |
+| type-aware string lowering: `String +`→`__str_concat`, `Char.toString`→`__char_to_string`, String `==`/`!=`→`__str_eq`, `Array<String>.contains`→`__array_contains_str`, Option<Char> None/Some sentinel dispatch + binding, `charLiteral`→codepoint, `codePoint` identity, `(unreachable)` tail terminator (scalar-type inference: `inferExprType` + `flowReturnTypes` + `recordVarTypes`-as-scalar) | **#160 / #145b** | ✅ **2026-06-06** |
+| string-intern table exposure (`getInternedStrings`) + complete host stdlib + **output reader** (`readResult`/`readArray`/`readRecordField`) | #145 | ✅ **2026-06-06** |
+| run `tokenize.wasm` → byte-parity vs interpreter (12-input corpus; `tests/wat-p9-tokenize-parity.test.mjs`) | **#143** | ✅ **2026-06-06 — COMPLETES P9 tokenize parity** |
 
 ---
 

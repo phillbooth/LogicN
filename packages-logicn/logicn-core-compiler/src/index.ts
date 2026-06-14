@@ -541,6 +541,7 @@ export {
   emitWATExpr,
   buildRecordLayouts,
   buildEnumVariants,
+  getInternedStrings,
   extractFlowParamNames,
   findFlowNodeInAST,
   getWATImportsForEffects,

@@ -1,15 +1,15 @@
 # LogicN KB Graph Report
-Generated: 2026-06-06
+Generated: 2026-06-14
 
 ## Stats
-- Docs: 424 | Edges: 884 | Orphans: 131 | Stale links: 0 | LLN codes: 582
+- Docs: 430 | Edges: 875 | Orphans: 135 | Stale links: 2 | LLN codes: 582
 
 ## Document Registry (auto-generated)
 
 | Doc | Layer | Version | Status | LLN Codes |
 |---|---|---|---|---|
 | KNOWLEDGE-BASE-INDEX.md | Layer 0 | 1.1 | — | LLN-ACCESS-001, LLN-ASSIMILATE-001, LLN-BORDER-001, LLN-CAP-001, LLN-GOV-004 …+4 |
-| logicn-build-roadmap.md | Layer 0 | 6.0 | — | LLN-ACCESS-001, LLN-ASSIMILATE-001, LLN-CAP-001, LLN-GATE-001, LLN-IMPORT-001 …+6 |
+| logicn-build-roadmap.md | Layer 0 | 7.0 | — | LLN-ACCESS-001, LLN-ASSIMILATE-001, LLN-CAP-001, LLN-GATE-001, LLN-IMPORT-001 …+6 |
 | logicn-engineering-goals.md | Layer 0 | 1.0 | — | LLN-CAP-003, LLN-RESOURCE-001 |
 | logicn-governed-tower-specification.md | Layer 0 | 1.0 | Authoritative architecture specification — supersedes individual component documents | LLN-INV-000, LLN-INV-001, LLN-INV-004 |
 | layered-rate-limits.md | Layer 1 | — | — | — |
@@ -112,6 +112,7 @@ Generated: 2026-06-06
 | logicn-audit-2026-06-01.md | — | — | — | LLN-HW-001 |
 | logicn-audit-2026-06-02.md | — | — | — | LLN-HW-001, LLN-HW-101, LLN-PROFILE-001, LLN-STYLE-001, LLN-SYNTAX-006 …+2 |
 | logicn-audit-writer-spec.md | — | — | — | — |
+| logicn-benchmark-enforcement-cost-spec.md | — | — | Proposed (2026-06-06) · **Post-P9, non-blocking.** | — |
 | logicn-benchmark-situation-prompt.md | — | — | — | — |
 | logicn-cache-aware-execution.md | — | — | — | — |
 | logicn-calibration-data.md | — | — | — | — |
@@ -188,6 +189,7 @@ Generated: 2026-06-06
 | logicn-developer-tools.md | — | — | — | LLN-CAP-001, LLN-CRYPTO-001, LLN-EFFECT-001, LLN-ERROR-001, LLN-MATCH-001 …+13 |
 | logicn-developer-ux-phase-8.md | — | — | — | — |
 | logicn-diagnostic-numbering-strategy.md | — | — | — | LLN-TYPE-001, LLN-TYPE-002, LLN-TYPE-003, LLN-TYPE-004, LLN-TYPE-009 |
+| logicn-diagnostics-spec.md | — | — | Proposed (2026-06-06) · **Post-P9, non-blocking.** (The draft-agent for this doc hit a 529 overload; authored directly.) | LLN-INV-000 |
 | logicn-doc-comment-standard.md | — | — | — | — |
 | logicn-docker-container-profile.md | — | — | Phase 17 — Design Proposal | — |
 | logicn-domain-guard-policies.md | — | 1.1 | Design proposal — implement in Stage A governance verifier (task #56). | LLN-GOV-004, LLN-GOV-019, LLN-LIMIT-001 |
@@ -293,9 +295,10 @@ Generated: 2026-06-06
 | logicn-quantum-target-bridge.md | — | — | — | — |
 | logicn-r6-bootstrap-corpus.md | — | — | — | LLN-TYPE-002 |
 | logicn-readable-logic-forms.md | — | — | — | LLN-READABLE-001, LLN-READABLE-002 |
+| logicn-residual-risks.md | — | — | — | — |
 | logicn-resilience-observability-design.md | — | 1.1 | Approved for implementation (task #58). Refinements incorporated from review. | LLN-OBS-001, LLN-RES-001 |
 | logicn-resource-governance.md | — | — | — | LLN-RESOURCE-006, LLN-RESOURCE-007 |
-| logicn-roadmap.md | — | — | — | LLN-BINDING-005, LLN-BUILD-001, LLN-CONTEXT-001, LLN-EFFECT-001, LLN-EFFECT-005 …+23 |
+| logicn-roadmap.md | — | — | — | — |
 | logicn-roadmap-next10-phases.md | — | — | — | LLN-PROFILE-001, LLN-SECURITY-001, LLN-SYNTAX-010, LLN-TAINT-001, LLN-TAINT-002 |
 | logicn-roadmap-phase16-20.md | — | — | — | LLN-BUILD-001, LLN-CHERI-001, LLN-NAME-003, LLN-TYPE-001, LLN-TYPE-022 |
 | logicn-roadmap-phase26-41.md | — | — | — | LLN-PROFILE-001, LLN-PROFILE-002, LLN-PROFILE-003, LLN-PROFILE-004, LLN-PROFILE-005 …+2 |
@@ -304,6 +307,7 @@ Generated: 2026-06-06
 | logicn-roadmap-phases-41-60.md | — | — | — | LLN-HW-101, LLN-HW-104, LLN-SYNTAX-010, LLN-TAINT-007, LLN-TYPE-001 …+1 |
 | logicn-route-runtime-spec.md | — | — | — | — |
 | logicn-runtime-component-structure.md | — | — | — | LLN-EFFECT-001, LLN-GOV-001, LLN-GOV-010, LLN-GOV-017, LLN-LEX-001 …+6 |
+| logicn-runtime-governance-actors.md | — | — | KB / documentation-of-reality (2026-06-06). This doc names three governance | — |
 | logicn-runtime-in-logicn-roadmap.md | — | — | — | LLN-PROFILE-001, LLN-SECURITY-001 |
 | logicn-runtime-interpreter-roadmap.md | — | — | — | LLN-SEC-020, LLN-SEC-021, LLN-TYPE-021 |
 | logicn-runtime-lifecycle.md | — | — | — | — |
@@ -329,6 +333,8 @@ Generated: 2026-06-06
 | logicn-syntax-if-match-optional.md | — | — | — | — |
 | logicn-syntax-loops-iteration.md | — | — | — | — |
 | logicn-taint-catalogue.md | — | — | — | LLN-TAINT-001, LLN-TAINT-002, LLN-TAINT-003, LLN-TAINT-004 |
+| logicn-task-ledger.md | — | — | — | LLN-GOV-010, LLN-INV-000, LLN-MATCH-001 |
+| logicn-techdebt-gaps-review.md | — | — | — | — |
 | logicn-tensor-arity-decision.md | — | — | — | LLN-TYPE-009 |
 | logicn-tensor-numeric-performance.md | — | — | — | — |
 | logicn-testing-model.md | — | — | — | LLN-TYPE-001 |
@@ -472,6 +478,7 @@ Docs with no inbound links from other KB docs:
 - `logicn-architecture-direction-v2.md` — LogicN Architecture Review & Future Direction
 - `logicn-architecture-layers.md` — LogicN Architecture Layers
 - `logicn-ast-to-gir.md` — LogicN AST to GIR Transformation
+- `logicn-benchmark-enforcement-cost-spec.md` — Benchmark Spec — Hardened-Border Enforcement-Cost Suite
 - `logicn-benchmark-situation-prompt.md` — LogicN Benchmark Situation — Full Context Prompt
 - `logicn-check-config.md` — LogicN Check Configuration — `logicn.check.json`
 - `logicn-code-examples-full-flow.md` — LogicN — Full Flow Code Examples
@@ -493,6 +500,7 @@ Docs with no inbound links from other KB docs:
 - `logicn-design-primitive-obsession.md` — LogicN Design Principle: Primitive Obsession
 - `logicn-developer-ux-phase-8.md` — LogicN Developer Experience Improvements — Phase 8
 - `logicn-diagnostic-numbering-strategy.md` — LogicN — Diagnostic Numbering Strategy
+- `logicn-diagnostics-spec.md` — Diagnostics Spec — Forensic Observability for LogicN
 - `logicn-doc-comment-standard.md` — LogicN Doc Comment Standard
 - `logicn-governed-identity.md` — LogicN — Governed Identity System
 - `logicn-governed-resource-contracts.md` — logicn-governed-resource-contracts
@@ -518,6 +526,7 @@ Docs with no inbound links from other KB docs:
 - `logicn-photonic-crossover-analysis.md` — LogicN Photonic Compute Crossover Analysis
 - `logicn-quantum-target-bridge.md` — LogicN Architecture: Quantum Computing Support Through Target Bridges
 - `logicn-readable-logic-forms.md` — LogicN Language Proposal — Readable Logic Forms
+- `logicn-residual-risks.md` — LogicN — Non-P9 Residual Risks (verified catalogue)
 - `logicn-resource-governance.md` — logicn-resource-governance
 - `logicn-roadmap-phase16-20.md` — LogicN — Phase 16–20 Implementation Roadmap
 - `logicn-runtime-value-model.md` — LogicN Runtime Value Model
@@ -527,6 +536,7 @@ Docs with no inbound links from other KB docs:
 - `logicn-speed-improvements-phase-8.md` — LogicN Speed Improvements — Phase 8
 - `logicn-supply-chain-package-governance.md` — LogicN Supply Chain Attestation and Package Governance
 - `logicn-symbol-resolver-spec.md` — LogicN Symbol Resolver Specification
+- `logicn-techdebt-gaps-review.md` — P9 Post-Parity Technical-Debt / Gaps Review (2026-06-06)
 - `logicn-testing-model.md` — LogicN — Testing Model
 - `logicn-type-improvements-phase-8.md` — LogicN Type System Improvements — Phase 8
 - `logicn-unified-syntax-governance-and-target-bridge-plan.md` — LogicN Unified Syntax, Governance, and Target Bridge Plan
@@ -571,4 +581,5 @@ Docs with no inbound links from other KB docs:
 ## Stale Links
 Links pointing to missing files:
 
-_No stale links._
+- logicn-benchmark-enforcement-cost-spec → BLOCKED ("BLOCKED.md")
+- logicn-residual-risks → README ("README.md")

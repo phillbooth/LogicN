@@ -14,7 +14,7 @@ LogicN is built for organisations where software failure is not acceptable — f
 
 **Produces a cryptographic audit trail.** Every governed execution generates an Epilogue Receipt (sha256_seal or zk_snark). Every security trap appends to an append-only audit log (CBOR Tag 410 AuditEvent). The manifest carrying the governance contract is signed with ML-DSA-65 (NIST FIPS 204).
 
-**Compiles to WebAssembly.** Governance is verified by the compiler's pipeline at build time and enforced on the Stage-A runtime today. Full in-WASM execution enforcement (self-hosting, P9) is *in progress* — small flows already run via real wabt, and the self-hosted lexer module wabt-assembles to a real WASM binary (#145a).
+**Compiles to WebAssembly.** Governance is verified by the compiler's pipeline at build time and enforced on the Stage-A runtime today. Full in-WASM execution enforcement (self-hosting, P9) is *in progress* — the self-hosted `lexer.lln` `tokenize` now achieves **byte-for-byte Stage-A interpreter == Stage-B real-WASM parity** through the #105 admission gate (#143, 2026-06-06); the remaining gate is extending that parity to the parser/type-checker/governance-verifier flows.
 
 ---
 
@@ -93,7 +93,7 @@ LogicN is built for organisations where software failure is not acceptable — f
 | **Runtime interpreter** | 87% |
 | **Stage B self-hosting — compilation parity (interpreter)** | 100% (R6 corpus: Stage-A == Stage-B) |
 | **Stage B self-hosting — governance verified** | 87% |
-| **Stage B self-hosting — WASM execution (P9)** | ~75% — small flows execute via real wabt; the self-hosted lexer module now wabt-assembles (#145a); tokenize byte-parity pending (#145b) |
+| **Stage B self-hosting — WASM execution (P9)** | `tokenize` byte-parity ACHIEVED (#143 — Stage-A interpreter == Stage-B real WASM, 12-input corpus); parser/type-checker/governance-verifier WASM parity remain |
 | **Ext packages** | 80% |
 | **Governance signatures (ML-DSA-65)** | 100% (keygen + signing + verify shipped) |
 | **Package resolver** | 75% |
@@ -109,9 +109,10 @@ LogicN is built for organisations where software failure is not acceptable — f
 
 *Stage A (TypeScript Runtime) is the **production-hardened path** — 44/44 packages, 4,129 tests, 0 audit findings.
 Stage B (Runtime in LogicN) is **in progress (P9 self-hosting bootstrap)**: the self-hosted lexer/parser/checker `.lln`
-sources reach Stage-A == Stage-B parity through the interpreter (R6 corpus, 100%), small flows compile and execute via
-real wabt, and the self-hosted lexer module now wabt-assembles to a real WASM binary (#145a). The remaining gate is
-`tokenize` byte-parity — type-aware string lowering (#145b) → run + compare (#143). Stage B self-hosting is **not yet
+sources reach Stage-A == Stage-B parity through the interpreter (R6 corpus, 100%), and the self-hosted `lexer.lln`
+`tokenize` now reaches **byte-for-byte Stage-A interpreter == Stage-B real-WASM parity** through the #105 admission
+gate (#143, 2026-06-06; `tests/wat-p9-tokenize-parity.test.mjs`). The remaining gate is extending that WASM parity to
+the parser/type-checker/governance-verifier flows. Stage B self-hosting is **not yet
 100%**; see the roadmap. Honest line: the compiler/runtime/governance engine is production-grade; the framework/app
 packages are templates, not implemented.*
 
@@ -143,7 +144,7 @@ LogicN is three things building toward one platform:
 
 **1. A language** — strict typing, explicit errors, declared effects, no hidden nulls, no silent failures. Source files use `.lln`.
 
-**2. A compiler and checker pipeline** — lexer → parser → type checker → value-state/taint checker → effect checker → governance verifier → GIR emitter → tiered runtime. Every check has a diagnostic code. **4,129 tests, 0 failures**. Stage B self-hosting is **in progress (P9)** — Stage-A == Stage-B interpreter parity is locked (R6 corpus); WASM self-hosting (`tokenize` byte-parity) is the remaining gate.
+**2. A compiler and checker pipeline** — lexer → parser → type checker → value-state/taint checker → effect checker → governance verifier → GIR emitter → tiered runtime. Every check has a diagnostic code. **4,145 tests, 0 failures**. Stage B self-hosting is **in progress (P9)** — Stage-A == Stage-B interpreter parity is locked (R6 corpus) and `tokenize` WASM byte-parity is **achieved** (#143); extending WASM parity to the parser/type-checker/governance-verifier flows is the remaining gate.
 
 **3. A governed runtime architecture** — capability-based authority, machine-readable ProofGraph, post-quantum governance signatures, PCI DSS 4.0.1 audit, Deterministic Runtime Containment Model (DRCM) with monotonic security overlays.
 

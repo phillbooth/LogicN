@@ -143,10 +143,14 @@ export interface HostRuntime {
   readonly imports: WebAssembly.Imports;
   /** Register an input string, returning its i32 handle. */
   internString(s: string): number;
+  /** Set a string at an EXACT handle (for seeding the emitter's intern table, #145). */
+  seedString(handle: number, s: string): void;
   /** Resolve a string handle (created by the host or by `__int_to_str`). */
   readString(handle: number): string | undefined;
   /** Resolve an array handle (created by `__array_create`) to its element list. */
   readArray(handle: number): readonly number[] | undefined;
+  /** Resolve a Result handle (from `__result_ok`/`__result_err`) to its tag + value. */
+  readResult(handle: number): { tag: "ok" | "err"; value: number } | undefined;
   /** Bind the instance's exported memory after instantiation (for record reads). */
   bindMemory(memory: WebAssembly.Memory): void;
   /** Read field `slot` (0-based i32 slots) of a record at linear-memory `ptr`. */
@@ -167,6 +171,7 @@ export interface HostRuntime {
 export function createHostRuntime(observe?: Observer): HostRuntime {
   const strings: string[] = [];
   const arrays: number[][] = [];
+  const results: { tag: "ok" | "err"; value: number }[] = [];
   let memory: WebAssembly.Memory | null = null;
 
   const tap = (name: string, args: number[], ret: number | undefined): number | undefined => {
@@ -184,15 +189,104 @@ export function createHostRuntime(observe?: Observer): HostRuntime {
       // #145a: return the array handle so `arr = arr.append(x)` lowers cleanly.
       return tap("__array_append", [id, item], id) as number;
     },
+    // #170 — index/length by CODE POINT (not UTF-16 unit), as a mutually-consistent
+    // set with __str_length below, matching stdlib.ts charAt/length ([...s], codePointAt).
+    // Char literals lower via codePointAt in the emitter, so this keeps `charAt(i) == 'x'`
+    // correct for non-BMP chars. ASCII is unaffected (code point == code unit).
     __str_char_at: (strHandle: number, idx: number) => {
-      const s = strings[strHandle] ?? "";
-      const code = idx >= 0 && idx < s.length ? s.charCodeAt(idx) : -1;
+      const cps = [...(strings[strHandle] ?? "")];
+      const code = idx >= 0 && idx < cps.length ? (cps[idx]!.codePointAt(0) ?? -1) : -1;
       return tap("__str_char_at", [strHandle, idx], code) as number;
+    },
+    __str_count: (strHandle: number) => {
+      const n = [...(strings[strHandle] ?? "")].length;
+      return tap("__str_count", [strHandle], n) as number;
     },
     __int_to_str: (n: number) => {
       const id = strings.length; strings.push(String(n | 0));
       return tap("__int_to_str", [n], id) as number;
     },
+    __result_ok: (value: number) => {
+      const id = results.length; results.push({ tag: "ok", value });
+      return tap("__result_ok", [value], id) as number;
+    },
+    __result_err: (value: number) => {
+      const id = results.length; results.push({ tag: "err", value });
+      return tap("__result_err", [value], id) as number;
+    },
+    // #164 — read a Result handle's discriminant + payload, so `match r { Ok(v) => …,
+    // Err(e) => … }` can dispatch and bind in WASM. tag: Ok→0, Err→1 (unknown handle→1).
+    __result_tag: (h: number) => tap("__result_tag", [h], results[h]?.tag === "ok" ? 0 : 1) as number,
+    __result_value: (h: number) => tap("__result_value", [h], results[h]?.value ?? 0) as number,
+
+    // ── #145 host stdlib completion (matches src/stdlib.ts + interpreter semantics) ──
+    // Option/Result sentinel convention at the WASM boundary: None / empty / not-found
+    // is encoded as -1; Some(v) is v itself (string/array/char handles are all >= 0).
+    __str_concat: (a: number, b: number) => {
+      const id = strings.length; strings.push((strings[a] ?? "") + (strings[b] ?? ""));
+      return tap("__str_concat", [a, b], id) as number;
+    },
+    __str_length: (h: number) => tap("__str_length", [h], [...(strings[h] ?? "")].length) as number, // #170: code-point length (consistent with __str_count/__str_char_at)
+    __str_eq: (a: number, b: number) => tap("__str_eq", [a, b], (strings[a] ?? "") === (strings[b] ?? "") ? 1 : 0) as number,
+    // #162 — String methods (mirror src/stdlib.ts EXACTLY for byte-parity; note slice/
+    // indexOf are UTF-16 in stdlib while charAt/length are code-point — replicate as-is).
+    __str_starts_with: (h: number, p: number) => tap("__str_starts_with", [h, p], (strings[h] ?? "").startsWith(strings[p] ?? "") ? 1 : 0) as number,
+    __str_ends_with: (h: number, p: number) => tap("__str_ends_with", [h, p], (strings[h] ?? "").endsWith(strings[p] ?? "") ? 1 : 0) as number,
+    __str_contains: (h: number, p: number) => tap("__str_contains", [h, p], (strings[h] ?? "").includes(strings[p] ?? "") ? 1 : 0) as number,
+    __str_index_of: (h: number, p: number) => tap("__str_index_of", [h, p], (strings[h] ?? "").indexOf(strings[p] ?? "")) as number,
+    __str_to_lower: (h: number) => { const id = strings.length; strings.push((strings[h] ?? "").toLowerCase()); return tap("__str_to_lower", [h], id) as number; },
+    __str_to_upper: (h: number) => { const id = strings.length; strings.push((strings[h] ?? "").toUpperCase()); return tap("__str_to_upper", [h], id) as number; },
+    __str_trim: (h: number) => { const id = strings.length; strings.push((strings[h] ?? "").trim()); return tap("__str_trim", [h], id) as number; },
+    __str_slice: (h: number, start: number, end: number) => { const id = strings.length; strings.push((strings[h] ?? "").slice(start, end)); return tap("__str_slice", [h, start, end], id) as number; },
+    // #162/#169 — Char.toUpper/toLower return a Char (code point), not a String handle.
+    __char_to_upper: (code: number) => tap("__char_to_upper", [code], code >= 0 ? (String.fromCodePoint(code).toUpperCase().codePointAt(0) ?? code) : code) as number,
+    __char_to_lower: (code: number) => tap("__char_to_lower", [code], code >= 0 ? (String.fromCodePoint(code).toLowerCase().codePointAt(0) ?? code) : code) as number,
+    __str_to_int: (h: number) => {
+      const n = parseInt(strings[h] ?? "", 10);
+      return tap("__str_to_int", [h], Number.isNaN(n) ? -1 : n) as number; // Option<Int>: -1 = None
+    },
+    // Char ops — a char is its code point i32 (see __str_char_at). Mirrors stdlib.ts.
+    __char_is_letter: (code: number) =>
+      tap("__char_is_letter", [code], code >= 0 && /\p{L}/u.test(String.fromCodePoint(code)) ? 1 : 0) as number,
+    __char_is_digit: (code: number) =>
+      tap("__char_is_digit", [code], code >= 48 && code <= 57 ? 1 : 0) as number,
+    // #169 — Char classifiers (mirror stdlib.ts isUpper/isLower/isWhitespace exactly).
+    __char_is_upper: (code: number) => {
+      if (code < 0) return tap("__char_is_upper", [code], 0) as number;
+      const ch = String.fromCodePoint(code);
+      return tap("__char_is_upper", [code], ch === ch.toUpperCase() && ch !== ch.toLowerCase() ? 1 : 0) as number;
+    },
+    __char_is_lower: (code: number) => {
+      if (code < 0) return tap("__char_is_lower", [code], 0) as number;
+      const ch = String.fromCodePoint(code);
+      return tap("__char_is_lower", [code], ch === ch.toLowerCase() && ch !== ch.toUpperCase() ? 1 : 0) as number;
+    },
+    __char_is_whitespace: (code: number) =>
+      tap("__char_is_whitespace", [code], code >= 0 && /\s/.test(String.fromCodePoint(code)) ? 1 : 0) as number,
+    __char_to_string: (code: number) => {
+      const id = strings.length; strings.push(code >= 0 ? String.fromCodePoint(code) : "");
+      return tap("__char_to_string", [code], id) as number;
+    },
+    // Array ops — handles index `arrays`. Out-of-range / empty ⇒ -1 (None sentinel).
+    __array_get: (id: number, i: number) => {
+      const a = arrays[id] ?? [];
+      return tap("__array_get", [id, i], i >= 0 && i < a.length ? a[i]! : -1) as number;
+    },
+    __array_length: (id: number) => tap("__array_length", [id], (arrays[id] ?? []).length) as number,
+    __array_contains: (id: number, x: number) => tap("__array_contains", [id, x], (arrays[id] ?? []).includes(x) ? 1 : 0) as number,
+    // Value-based membership for Array<String> — compares interned string VALUES, not
+    // handles (equal strings may have distinct handles). Needed for keyword-table lookup.
+    __array_contains_str: (id: number, sh: number) => {
+      const needle = strings[sh] ?? "";
+      const found = (arrays[id] ?? []).some((h) => (strings[h] ?? "") === needle) ? 1 : 0;
+      return tap("__array_contains_str", [id, sh], found) as number;
+    },
+    __array_first: (id: number) => { const a = arrays[id] ?? []; return tap("__array_first", [id], a.length > 0 ? a[0]! : -1) as number; },
+    __array_last: (id: number) => { const a = arrays[id] ?? []; return tap("__array_last", [id], a.length > 0 ? a[a.length - 1]! : -1) as number; },
+    // Option/Result helpers.
+    __unwrap_or: (opt: number, def: number) => tap("__unwrap_or", [opt, def], opt >= 0 ? opt : def) as number,
+    __option_some: (x: number) => tap("__option_some", [x], x) as number,
+    __option_none: () => tap("__option_none", [], -1) as number,
   };
 
   return {
@@ -200,8 +294,10 @@ export function createHostRuntime(observe?: Observer): HostRuntime {
     internString(s: string): number {
       const id = strings.length; strings.push(s); return id;
     },
+    seedString(handle: number, s: string): void { strings[handle] = s; },
     readString(handle: number) { return strings[handle]; },
     readArray(handle: number) { return arrays[handle]; },
+    readResult(handle: number) { return results[handle]; },
     bindMemory(m: WebAssembly.Memory) { memory = m; },
     readRecordField(ptr: number, slot: number): number {
       if (memory === null) throw new Error("readRecordField before bindMemory");

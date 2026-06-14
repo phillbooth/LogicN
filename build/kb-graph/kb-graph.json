@@ -1198,6 +1198,15 @@
       "lastModified": "2026-06-02T07:44:50.147Z"
     },
     {
+      "id": "logicn-benchmark-enforcement-cost-spec",
+      "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\logicn-benchmark-enforcement-cost-spec.md",
+      "title": "Benchmark Spec — Hardened-Border Enforcement-Cost Suite",
+      "status": "Proposed (2026-06-06) · **Post-P9, non-blocking.**",
+      "wordCount": 599,
+      "lnlCodes": [],
+      "lastModified": "2026-06-06T19:35:11.595Z"
+    },
+    {
       "id": "logicn-benchmark-situation-prompt",
       "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\logicn-benchmark-situation-prompt.md",
       "title": "LogicN Benchmark Situation — Full Context Prompt",
@@ -1209,9 +1218,9 @@
       "id": "logicn-build-roadmap",
       "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\logicn-build-roadmap.md",
       "title": "LogicN — Build Roadmap",
-      "version": "6.0",
+      "version": "7.0",
       "layer": "Layer 0",
-      "wordCount": 2300,
+      "wordCount": 3227,
       "lnlCodes": [
         "LLN-ACCESS-001",
         "LLN-ASSIMILATE-001",
@@ -1225,7 +1234,7 @@
         "LLN-OBS-002",
         "LLN-TRAP-001"
       ],
-      "lastModified": "2026-06-06T12:41:54.698Z"
+      "lastModified": "2026-06-06T20:33:51.742Z"
     },
     {
       "id": "logicn-cache-aware-execution",
@@ -2334,6 +2343,17 @@
         "LLN-TYPE-009"
       ],
       "lastModified": "2026-06-02T07:44:50.176Z"
+    },
+    {
+      "id": "logicn-diagnostics-spec",
+      "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\logicn-diagnostics-spec.md",
+      "title": "Diagnostics Spec — Forensic Observability for LogicN",
+      "status": "Proposed (2026-06-06) · **Post-P9, non-blocking.** (The draft-agent for this doc hit a 529 overload; authored directly.)",
+      "wordCount": 558,
+      "lnlCodes": [
+        "LLN-INV-000"
+      ],
+      "lastModified": "2026-06-06T19:35:41.787Z"
     },
     {
       "id": "logicn-doc-comment-standard",
@@ -3689,6 +3709,14 @@
       "lastModified": "2026-06-02T07:44:50.208Z"
     },
     {
+      "id": "logicn-residual-risks",
+      "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\logicn-residual-risks.md",
+      "title": "LogicN — Non-P9 Residual Risks (verified catalogue)",
+      "wordCount": 621,
+      "lnlCodes": [],
+      "lastModified": "2026-06-06T19:34:38.855Z"
+    },
+    {
       "id": "logicn-resilience-observability-design",
       "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\logicn-resilience-observability-design.md",
       "title": "LogicN — Resilience & Observability Contract Blocks (Design Proposal)",
@@ -3807,39 +3835,10 @@
     {
       "id": "logicn-roadmap",
       "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\logicn-roadmap.md",
-      "title": "LogicN — Implementation Roadmap",
-      "wordCount": 4143,
-      "lnlCodes": [
-        "LLN-BINDING-005",
-        "LLN-BUILD-001",
-        "LLN-CONTEXT-001",
-        "LLN-EFFECT-001",
-        "LLN-EFFECT-005",
-        "LLN-EVENT-001",
-        "LLN-GATE-001",
-        "LLN-GOV-003",
-        "LLN-GOV-011",
-        "LLN-GOV-013",
-        "LLN-LEX-004",
-        "LLN-MEMORY-001",
-        "LLN-NAME-001",
-        "LLN-NAME-003",
-        "LLN-NET-001",
-        "LLN-PKG-001",
-        "LLN-PKG-004",
-        "LLN-RAWPTR-001",
-        "LLN-RUNTIME-005",
-        "LLN-SAFETY-001",
-        "LLN-SEC-020",
-        "LLN-STDLIB-001",
-        "LLN-STYLE-001",
-        "LLN-TYPE-003",
-        "LLN-TYPE-004",
-        "LLN-TYPE-010",
-        "LLN-TYPE-030",
-        "LLN-VALUESTATE-005"
-      ],
-      "lastModified": "2026-06-02T07:44:50.212Z"
+      "title": "LogicN — Roadmap (authoritative forward view)",
+      "wordCount": 832,
+      "lnlCodes": [],
+      "lastModified": "2026-06-14T16:32:58.146Z"
     },
     {
       "id": "logicn-route-runtime-spec",
@@ -3868,6 +3867,15 @@
         "LLN-TYPE-001"
       ],
       "lastModified": "2026-06-03T23:31:18.365Z"
+    },
+    {
+      "id": "logicn-runtime-governance-actors",
+      "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\logicn-runtime-governance-actors.md",
+      "title": "LogicN — Runtime Governance Actors (naming map + flow protocol)",
+      "status": "KB / documentation-of-reality (2026-06-06). This doc names three governance",
+      "wordCount": 1309,
+      "lnlCodes": [],
+      "lastModified": "2026-06-06T17:45:15.202Z"
     },
     {
       "id": "logicn-runtime-in-logicn-roadmap",
@@ -3912,11 +3920,11 @@
       "id": "logicn-runtime-status-SOT",
       "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\logicn-runtime-status-SOT.md",
       "title": "LogicN — Runtime Status: Single Source of Truth (SOT)",
-      "wordCount": 1994,
+      "wordCount": 2189,
       "lnlCodes": [
         "LLN-MATCH-001"
       ],
-      "lastModified": "2026-06-06T13:01:52.111Z"
+      "lastModified": "2026-06-14T16:32:28.783Z"
     },
     {
       "id": "logicn-runtime-value-model",
@@ -4175,6 +4183,26 @@
         "LLN-TAINT-004"
       ],
       "lastModified": "2026-06-02T07:44:50.220Z"
+    },
+    {
+      "id": "logicn-task-ledger",
+      "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\logicn-task-ledger.md",
+      "title": "LogicN — Task Ledger #1–#148 (graph-review checklist)",
+      "wordCount": 2466,
+      "lnlCodes": [
+        "LLN-GOV-010",
+        "LLN-INV-000",
+        "LLN-MATCH-001"
+      ],
+      "lastModified": "2026-06-14T18:58:07.760Z"
+    },
+    {
+      "id": "logicn-techdebt-gaps-review",
+      "path": "C:\\wwwprojects\\LogicN\\docs\\Knowledge-Bases\\logicn-techdebt-gaps-review.md",
+      "title": "P9 Post-Parity Technical-Debt / Gaps Review (2026-06-06)",
+      "wordCount": 1326,
+      "lnlCodes": [],
+      "lastModified": "2026-06-14T18:56:42.805Z"
     },
     {
       "id": "logicn-tensor-arity-decision",
@@ -8989,58 +9017,13 @@
     },
     {
       "from": "logicn-roadmap",
-      "to": "logicn-roadmap-phase30-40",
-      "linkText": "logicn-roadmap-phase30-40.md"
+      "to": "logicn-task-ledger",
+      "linkText": "logicn-task-ledger.md"
     },
     {
       "from": "logicn-roadmap",
-      "to": "logicn-phase-11-decisions",
-      "linkText": "logicn-phase-11-decisions.md"
-    },
-    {
-      "from": "logicn-roadmap",
-      "to": "logicn-phase-10-roadmap",
-      "linkText": "logicn-phase-10-roadmap.md"
-    },
-    {
-      "from": "logicn-roadmap",
-      "to": "logicn-governed-memory-blocks",
-      "linkText": "logicn-governed-memory-blocks.md"
-    },
-    {
-      "from": "logicn-roadmap",
-      "to": "logicn-contract-full-model",
-      "linkText": "logicn-contract-full-model.md"
-    },
-    {
-      "from": "logicn-roadmap",
-      "to": "logicn-signed-attestation",
-      "linkText": "logicn-signed-attestation.md"
-    },
-    {
-      "from": "logicn-roadmap",
-      "to": "logicn-semantic-graph-system",
-      "linkText": "logicn-semantic-graph-system.md"
-    },
-    {
-      "from": "logicn-roadmap",
-      "to": "logicn-intent-graph",
-      "linkText": "logicn-intent-graph.md"
-    },
-    {
-      "from": "logicn-roadmap",
-      "to": "logicn-stage-b-root-capability-provider",
-      "linkText": "logicn-stage-b-root-capability-provider.md"
-    },
-    {
-      "from": "logicn-roadmap",
-      "to": "logicn-compiler-phase-memory-boundaries",
-      "linkText": "logicn-compiler-phase-memory-boundaries.md"
-    },
-    {
-      "from": "logicn-roadmap",
-      "to": "logicn-deterministic-selfhost-verification",
-      "linkText": "logicn-deterministic-selfhost-verification.md"
+      "to": "logicn-runtime-governance-actors",
+      "linkText": "logicn-runtime-governance-actors.md"
     },
     {
       "from": "logicn-route-runtime-spec",
@@ -9650,6 +9633,7 @@
     "logicn-architecture-direction-v2",
     "logicn-architecture-layers",
     "logicn-ast-to-gir",
+    "logicn-benchmark-enforcement-cost-spec",
     "logicn-benchmark-situation-prompt",
     "logicn-check-config",
     "logicn-code-examples-full-flow",
@@ -9671,6 +9655,7 @@
     "logicn-design-primitive-obsession",
     "logicn-developer-ux-phase-8",
     "logicn-diagnostic-numbering-strategy",
+    "logicn-diagnostics-spec",
     "logicn-doc-comment-standard",
     "logicn-governed-identity",
     "logicn-governed-resource-contracts",
@@ -9696,6 +9681,7 @@
     "logicn-photonic-crossover-analysis",
     "logicn-quantum-target-bridge",
     "logicn-readable-logic-forms",
+    "logicn-residual-risks",
     "logicn-resource-governance",
     "logicn-roadmap-phase16-20",
     "logicn-runtime-value-model",
@@ -9705,6 +9691,7 @@
     "logicn-speed-improvements-phase-8",
     "logicn-supply-chain-package-governance",
     "logicn-symbol-resolver-spec",
+    "logicn-techdebt-gaps-review",
     "logicn-testing-model",
     "logicn-type-improvements-phase-8",
     "logicn-unified-syntax-governance-and-target-bridge-plan",
@@ -9746,12 +9733,15 @@
     "vault-write-syntax",
     "what-logicn-refuses-to-become"
   ],
-  "staleLinks": [],
+  "staleLinks": [
+    "logicn-benchmark-enforcement-cost-spec → BLOCKED (\"BLOCKED.md\")",
+    "logicn-residual-risks → README (\"README.md\")"
+  ],
   "stats": {
-    "totalDocs": 424,
-    "totalEdges": 884,
+    "totalDocs": 430,
+    "totalEdges": 875,
     "totalLlnCodes": 582,
-    "orphanCount": 131,
-    "staleLinkCount": 0
+    "orphanCount": 135,
+    "staleLinkCount": 2
   }
 }

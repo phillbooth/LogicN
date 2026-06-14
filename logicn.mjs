@@ -236,7 +236,7 @@ Baseline comparison (governance-cost):
   // Stage B: ML-DSA-65 (NIST FIPS 204) — upgrade once Node.js adds FIPS 204 support
   if (command === "keygen") {
     const { generateKeyPairSync, randomBytes } = await import("node:crypto");
-    const { writeFileSync: wfs, mkdirSync: mds } = await import("node:fs");
+    const { writeFileSync: wfs, mkdirSync: mds, chmodSync: chm } = await import("node:fs");
     const { join: pjoin } = await import("node:path");
 
     // Generate Ed25519 keypair (Stage A — will upgrade to ML-DSA-65 in Stage B)
@@ -263,7 +263,10 @@ Baseline comparison (governance-cost):
       `LOGICN_SIGNING_PRIVATE_KEY_B64=${Buffer.from(privateKey).toString("base64")}`,
       ``,
     ].join("\n");
-    wfs(envPath, envContent);
+    // #175: the private key file must not be group/world-readable. Create it 0o600 and
+    // re-enforce on any pre-existing file (writeFileSync's mode only applies on creation).
+    wfs(envPath, envContent, { mode: 0o600 });
+    try { chm(envPath, 0o600); } catch { /* Windows / unsupported FS — mode is best-effort */ }
 
     console.log(`\n✅ LogicN governance signing keypair generated`);
     console.log(`   Algorithm:  Ed25519 (Stage A — ML-DSA-65 in Stage B)`);
@@ -499,13 +502,15 @@ Baseline comparison (governance-cost):
 
   // ── logicn kb-graph — scan docs/Knowledge-Bases/ cross-reference graph ──────
   if (command === "kb-graph") {
-    const { execSync: execS } = await import("node:child_process");
-    const args = rest.length ? rest.join(" ") : "--all";
-    execS(
-      "node packages-logicn/logicn-devtools-kb-graph/dist/cli.js " + args,
-      { stdio: "inherit", cwd: process.cwd() }
+    // #174: pass argv as an array with shell:false — never interpolate user input
+    // into a shell string (the prior execSync concatenation was a command-injection sink).
+    const { spawnSync } = await import("node:child_process");
+    const r = spawnSync(
+      process.execPath,
+      ["packages-logicn/logicn-devtools-kb-graph/dist/cli.js", ...(rest.length ? rest : ["--all"])],
+      { stdio: "inherit", cwd: process.cwd(), shell: false }
     );
-    process.exit(0);
+    process.exit(r.status ?? 0);
   }
 
   // ── logicn bridge-attest — sign / verify bridge manifests (CF-3/CF-7) ───────
@@ -538,12 +543,14 @@ Baseline comparison (governance-cost):
 
   // ── logicn diagnostic — run diagnostic fault-injection benchmark suite ──────
   if (command === "diagnostic") {
-    const { execSync: execS } = await import("node:child_process");
-    execS(
-      "node packages-logicn/logicn-devtools-benchmarks/src/diagnostic-runner.mjs " + rest.join(" "),
-      { stdio: "inherit", cwd: process.cwd() }
+    // #174: argv array + shell:false (no shell-string interpolation of user argv).
+    const { spawnSync } = await import("node:child_process");
+    const r = spawnSync(
+      process.execPath,
+      ["packages-logicn/logicn-devtools-benchmarks/src/diagnostic-runner.mjs", ...rest],
+      { stdio: "inherit", cwd: process.cwd(), shell: false }
     );
-    process.exit(0);
+    process.exit(r.status ?? 0);
   }
 
   const m = await import(compilerPath);

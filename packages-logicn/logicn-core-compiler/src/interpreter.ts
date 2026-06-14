@@ -1755,7 +1755,9 @@ class Interpreter {
         case "toUpper": return { __tag: "string", value: receiver.value.toUpperCase() };
         case "trim": return { __tag: "string", value: receiver.value.trim() };
         case "length":
-        case "charCount": return { __tag: "int", value: receiver.value.length };
+        // #170: count by CODE POINT to match stdlib.ts (String.length/charCount use [...s])
+        // and the WASM host (__str_count/__str_length). ASCII is unaffected.
+        case "charCount": return { __tag: "int", value: [...receiver.value].length };
         case "startsWith": return { __tag: "bool", value: receiver.value.startsWith(safeDisplay(args[0] ?? LLN_VOID)) };
         case "endsWith": return { __tag: "bool", value: receiver.value.endsWith(safeDisplay(args[0] ?? LLN_VOID)) };
         case "contains": return { __tag: "bool", value: receiver.value.includes(safeDisplay(args[0] ?? LLN_VOID)) };

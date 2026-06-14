@@ -122,15 +122,98 @@ which flows/packages depend on the changed node. Status legend: ✅ done · 🔶
 
 ---
 
-## 3. P9 completion blockers (the only thing between here and "P9 done")
-- **#145** (the real work): the self-hosted lexer's `tokenize` uses `charAt`, `charCount`,
-  `codePoint()`, char-literal `is`, string `+` concat, `Char.toString`, a keyword table, and
-  8-field Token records. WASM byte-parity needs the host string/char runtime + **type-aware
-  emitter lowering** (String `+` → `__str_concat` not `i32.add`; `Char.toString` → `__char_to_string`
-  not `__int_to_str`/decimal) with String/Char var-type + `Option<Char>` match-binding inference.
-  This is a multi-part feature — the largest emitter task left.
-- **#143**: once #145 lands, run `tokenize.wasm` through the #105 gate, reconstruct the token
-  list via the output reader, byte-compare to the interpreter (golden: `lexer-parity.test.mjs`).
+## 3. P9 tokenize byte-parity — ✅ DONE (2026-06-06)
+- **#143 / #145 / #160 — ACHIEVED.** `lexer.lln` `tokenize` produces a byte-for-byte
+  identical token stream in the Stage-A interpreter AND in real WASM through the #105
+  admission gate (12-input corpus; `tests/wat-p9-tokenize-parity.test.mjs`). 3,295/3,295
+  compiler tests green. Type-directed emitter lowering (Option<Char> sentinel dispatch,
+  `charLiteral`→codepoint, `Char.toString`→`__char_to_string`, String `+`→`__str_concat`,
+  String `==`/`!=`→`__str_eq`, `Array<String>.contains`→`__array_contains_str`, complete
+  host stdlib + output reader). **Scope:** `tokenize` only; parser/type-checker/governance-
+  verifier WASM parity remain.
+
+## 3b. Post-parity Technical-Debt / Gaps Review — tasks #161–#191
+Full grounded findings + fixes in **`docs/Knowledge-Bases/logicn-techdebt-gaps-review.md`**
+(50 adversarially-verified findings). New tasks (one line each; details in the review doc).
+
+**✅ Landed 2026-06-06 (first batch):** #161 (Array.count), #169 (Char classifiers
+isUpper/isLower/isWhitespace), #170 (code-point host string indexing + interpreter
+charCount reconciliation; non-BMP oracle test), #174 (kb-graph/diagnostic shell-injection
+→ spawnSync), #175 (keygen 0o600), #185 (host-stdlib oracle test), #189 (parity corpus now spans
+string/char literals, line/block comments, string concat, and escape sequences — 21
+inputs, all byte-parity-clean), #191 (README/version.json P9 status), **#168**
+(enum-variant `match tok.kind { Keyword => … }` → i32 tag dispatch via `enumVariantTag`;
+verified in real WASM by `tests/wat-enum-match.test.mjs`). The #168 work also REWROTE the
+statement-path match chain (`emitMatchArmStmt`), fixing two pre-existing #167-class silent
+miscompiles: 3+-arm chains dropped the 3rd+ arm with imbalanced parens, and one-liner arm
+bodies (`Red => return 10`) were mis-emitted as `;; unhandled stmt: numberLiteral`.
+**3,314/3,314 compiler tests green** (tokenize parity preserved through the rewrite);
+`logicn kb-graph` CLI re-verified. No latent bugs in the string-heavy lexer paths —
+#160 type-directed lowering is sound across all token classes.
+
+**✅ Landed 2026-06-06 (second batch — match dispatch):** **#164** Result `Ok(v)`/`Err(e)`
+dispatch (new host `__result_tag`/`__result_value`; reads tag → unwraps payload → binds
+v/e) + guard `when COND => body` arms (condition = the guard expr). Verified in real WASM
+by `tests/wat-result-match.test.mjs`. The statement-path match dispatch is now COMPLETE:
+Option (None/Some) · Result (Ok/Err) · enum variants (#168) · int literals · guard `when`
+· wildcard default — all dispatch + bind correctly. **3,317/3,317 compiler tests green.**
+
+**✅ Landed 2026-06-06 (third batch — host String methods):** **#162** host
+`startsWith`/`endsWith`/`trim`/`indexOf`/`slice` (String-only → STDLIB_HOST_MAP) + type-
+directed `contains` (String → `__str_contains` substring; Array<String> → `__array_contains_str`)
+and `toUpper`/`toLower` (Char → `__char_to_upper/lower`; String → `__str_to_upper/lower`).
+Host fns mirror src/stdlib.ts EXACTLY (slice/indexOf UTF-16, charAt/length code-point — the
+interpreter's own inconsistency replicated for byte-parity). Verified in real WASM by
+`tests/wat-string-methods.test.mjs`. **3,320/3,320 compiler tests green.**
+
+**✅ Landed 2026-06-06 (fourth batch — records):** **#163** `#record-update`
+(`{ ...base, field: v }`) — bump-allocate a fresh record of the base's type, copy ALL
+base slots, overwrite the named fields; was a silent null-handle placeholder. Verified in
+real WASM (`tests/wat-record-update.test.mjs`: overwrite per slot position + base not
+mutated). **3,322/3,322 compiler tests green.** Parser-parity prerequisites now cleared:
+**#161 · #162 · #163 · #164 · #168 · #169 done**; remaining for parser WASM parity:
+#165 (float arithmetic), #192 (match-as-expression parser), #193 (param-naming collision).
+
+> Note: expression-position `match` (`return match …` / `let x = match …`) is a separate
+> PARSER gap (parses `match` as an identifier) — the expression-path Option/enum/Result
+> dispatch is correct by construction but unreachable/untestable until that parsing lands
+> (task **#192**). The statement path (which all self-hosted flows use) is fully exercised.
+
+| # | Task | Sev | Eff |
+|---|------|-----|-----|
+| 161 | Lower `Array.count()` (unblock all self-hosted loops) | high | S |
+| 162 | Add host string methods (slice/startsWith/endsWith/toLower/toUpper/trim/indexOf/substr-contains) | high | M |
+| 163 | Lower `#record-update` instead of null-handle placeholder | high | M |
+| 164 | Sentinel/tag-dispatch Result `Ok/Err` + guard `when` match arms | high | L |
+| 165 | Type-direct float arithmetic to f64 ops + f64 locals | medium | L |
+| 166 | Fix `bodyTailIsUnreachable` for non-exhaustive match / normal-exit while | medium | M |
+| 167 | Make WAT emitter placeholder fallbacks fail-closed (no silent return-0) | medium | M |
+| 168 | Resolve enum-variant match arms (`match tok.kind {…}`) via `enumVariants` | high | M |
+| 169 | Add host Char classifiers (isUpper/isLower/isWhitespace/toUpper/toLower) | low | S |
+| 170 | Code-point-correct host string indexing + reconcile interpreter charCount | medium | S |
+| 171 | Replace in-band `-1` None sentinel with boxed Option/Result handle | high | M |
+| 172 | Stop i32-truncating `__int_to_str` | low | S |
+| 173 | Bind certified-profile + sha256 into WASM admission signature pre-image | high | M |
+| 174 | Fix command injection in `logicn kb-graph` / `diagnostic` | medium | S |
+| 175 | Write keygen private-key file with 0o600 | medium | S |
+| 176 | Import-closure validation + attestation freshness/revocation in #105 gate | medium | M |
+| 177 | Deprecated `policy {}` alias → `accessDecl` (or hard-reject) | low | M |
+| 178 | Cross-module `assuming()` proof-borrowing fail-closed in `--release` | medium | M |
+| 179 | Fail closed on non-numeric RHS in interpreter numeric comparisons | low | S |
+| 180 | Replace placeholder manifest signatures with real ML-DSA-65 (or hard-fail) | low | M |
+| 181 | Wire GovernanceEnforcer 0→1 commit gate into `TowerRuntime.execute` + de-stub outputHash | medium | M |
+| 182 | Make `signAudit` a real signature (or rename misleading `mldsa65:` prefix) | medium | M |
+| 183 | BitNet CPU/GPU `execute()` fail-closed on `canCommit()` (CF-5) | medium | S |
+| 184 | Gate `tmacVector` COMMIT through `checkTransition` | low | S |
+| 185 | Truth-table oracle test for type-directed WAT host fns | medium | S |
+| 186 | Enforce + test disallowed-host-import rejection in #105 gate | medium | M |
+| 187 | Isolated WAT tests for `bodyTailIsUnreachable` ifStmt branch | low | S |
+| 188 | Isolated WAT tests for Option<T> match in expression position | low | M |
+| 189 | Extend tokenize parity corpus: string/char literals + comments | medium | S |
+| 190 | Wrong-key + malformed-signature rejection tests for #105 gate | low | S |
+| 191 | Reconcile README + version.json P9 byte-parity status with SOT | medium | S |
+| 192 | Parser: support `match` in expression position (`return match …` / `let x = match …`) — currently parses `match` as an identifier, splitting arms into stray blocks (found verifying #168) | medium | M |
+| 193 | WAT emitter: a user variable named `p0`/`p1`/`p2`/… collides with the positional param WAT name `$p<i>` → "redefinition of parameter" link error. Prefix params (`$__arg<i>`) or locals to avoid the clash (found verifying #163) | low | S |
 
 ---
 
