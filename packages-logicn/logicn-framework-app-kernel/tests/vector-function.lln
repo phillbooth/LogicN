@@ -1,9 +1,0 @@
-pure vector flow vectorTotal(input: Int) -> Int {
-  return input
-}
-
-secure flow main() -> Result<Void, Error> {
-  let total: Int = vectorTotal(6)
-  console.log("vector total: " . total)
-  return Ok()
-}

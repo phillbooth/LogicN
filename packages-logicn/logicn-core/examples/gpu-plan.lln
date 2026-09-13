@@ -1,9 +1,0 @@
-pure flow matrixScore(weights: Matrix<4, 4, Float32>, input: Vector<4, Float32>) -> Vector<4, Float32> {
-  compute target gpu {
-    fallback cpu
-
-    output = weights * input
-  }
-
-  return output
-}

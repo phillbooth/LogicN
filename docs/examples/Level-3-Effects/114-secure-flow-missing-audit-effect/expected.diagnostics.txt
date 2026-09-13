@@ -1,5 +1,0 @@
-LLN-EFFECT-001
-
-audit.write used but not declared.
-Add audit.write to the effects clause:
-  with effects [database.write, audit.write]

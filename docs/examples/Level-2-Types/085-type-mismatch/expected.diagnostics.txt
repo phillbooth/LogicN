@@ -1,3 +1,0 @@
-LLN-TYPE-002
-
-Type mismatch: expected Int, found String.

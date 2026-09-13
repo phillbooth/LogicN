@@ -1,5 +1,0 @@
-LLN-SECRET-001 (SecretValueLogged)
-
-Protected or secret value sent to console sink.
-Use redact(email) to produce a safe placeholder:
-  print(redact(email))

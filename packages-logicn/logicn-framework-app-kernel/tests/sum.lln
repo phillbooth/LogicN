@@ -1,9 +1,0 @@
-pure flow add(a: Int, b: Int) -> Int {
-  return a + b
-}
-
-secure flow main() -> Result<Void, Error> {
-  let total: Int = add(2, 3)
-  console.log("sum: " . total)
-  return Ok()
-}

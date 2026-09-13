@@ -1,3 +1,0 @@
-LLN-TYPE-009
-
-Tensor expects 2 type parameters (element type, shape), but 1 was supplied.

@@ -1,9 +1,0 @@
-pure flow unsafePhotonicRead(path: String) -> Result<Float, Error> {
-  compute target photonic {
-    fallback cpu
-
-    value = readFile(path)
-  }
-
-  return Ok(value)
-}

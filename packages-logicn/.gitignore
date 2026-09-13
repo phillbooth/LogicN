@@ -1,8 +1,0 @@
-.env
-build/
-.build-dev/
-.build-dev-*/
-dist/
-node_modules/
-logs/
-*.log

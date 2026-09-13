@@ -1,4 +1,0 @@
-LLN-SECRET-002 (SecretComparisonDenied)
-
-SecureString must not be compared with == or !=.
-Use constantTimeEquals(apiKey, suppliedKey) instead.
